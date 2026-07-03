@@ -1,0 +1,3 @@
+export const VIEWPORT_SIZE = 1280
+export const OFFICE_VIEWPORT_RATIO = 0.5625 // 16:9
+export const OFFICE_VIEWPORT_WIDTH = 960

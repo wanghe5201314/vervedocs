@@ -1,0 +1,171 @@
+import { EDITOR_COMPONENT } from '@wanghe1995/docx-editor-schema'
+import { IEditorOption } from '@wanghe1995/docx-editor-schema'
+import { findParent } from '@wanghe1995/docx-editor-schema'
+import { Cursor } from '../cursor/Cursor'
+import { Control } from '../control/Control'
+import { Draw } from '../draw/Draw'
+import { HyperlinkParticle } from '../particle/HyperlinkParticle'
+import { DateParticle } from '../plugin-stubs'
+import { Previewer } from '../particle/previewer/Previewer'
+import { TableTool } from '../particle/table/TableTool'
+import { RangeManager } from '@wanghe1995/docx-editor-state'
+import { CanvasEvent } from './CanvasEvent'
+import { ImageParticle } from '../particle/ImageParticle'
+import { INTERNAL_SHORTCUT_KEY } from '@wanghe1995/docx-editor-schema'
+
+export class GlobalEvent {
+  private draw: Draw
+  private options: Required<IEditorOption>
+  private cursor: Cursor | null
+  private canvasEvent: CanvasEvent
+  private range: RangeManager
+  private previewer: Previewer
+  private tableTool: TableTool
+  private hyperlinkParticle: HyperlinkParticle
+  private control: Control
+  private dateParticle: DateParticle
+  private imageParticle: ImageParticle
+  private dprMediaQueryList: MediaQueryList
+
+  constructor(draw: Draw, canvasEvent: CanvasEvent) {
+    this.draw = draw
+    this.options = draw.getOptions()
+    this.canvasEvent = canvasEvent
+    this.cursor = null
+    this.range = draw.getRange()
+    this.previewer = draw.getPreviewer()
+    this.tableTool = draw.getTableTool()
+    this.hyperlinkParticle = draw.getHyperlinkParticle()
+    this.dateParticle = draw.getDateParticle()
+    this.imageParticle = draw.getImageParticle()
+    this.control = draw.getControl()
+    this.dprMediaQueryList = window.matchMedia(
+      `(resolution: ${window.devicePixelRatio}dppx)`
+    )
+  }
+
+  public register() {
+    this.cursor = this.draw.getCursor()
+    this.addEvent()
+  }
+
+  private addEvent() {
+    window.addEventListener('blur', this.clearSideEffect)
+    document.addEventListener('mousedown', this.clearSideEffect)
+    document.addEventListener('mouseup', this.setCanvasEventAbility)
+    document.addEventListener('wheel', this.setPageScale, { passive: false })
+    document.addEventListener('visibilitychange', this._handleVisibilityChange)
+    this.dprMediaQueryList.addEventListener('change', this._handleDprChange)
+  }
+
+  public removeEvent() {
+    window.removeEventListener('blur', this.clearSideEffect)
+    document.removeEventListener('mousedown', this.clearSideEffect)
+    document.removeEventListener('mouseup', this.setCanvasEventAbility)
+    document.removeEventListener('wheel', this.setPageScale)
+    document.removeEventListener(
+      'visibilitychange',
+      this._handleVisibilityChange
+    )
+    this.dprMediaQueryList.removeEventListener('change', this._handleDprChange)
+  }
+
+  public clearSideEffect = (evt: Event) => {
+    if (!this.cursor) return
+    // 编辑器内部dom
+    const target = <Element>(evt?.composedPath()[0] || evt.target)
+    const pageList = this.draw.getPageList()
+    const innerEditorDom = findParent(
+      target,
+      (node: any) => pageList.includes(node),
+      true
+    )
+    if (innerEditorDom) return
+    // 编辑器外部组件dom
+    const outerEditorDom = findParent(
+      target,
+      (node: Node & Element) =>
+        !!node && node.nodeType === 1 && !!node.getAttribute(EDITOR_COMPONENT),
+      true
+    )
+    if (outerEditorDom) {
+      this.watchCursorActive()
+      return
+    }
+    this.cursor.recoveryCursor()
+    this.range.recoveryRangeStyle()
+    this.previewer.clearResizer()
+    this.tableTool.dispose()
+    this.hyperlinkParticle.clearHyperlinkPopup()
+    this.control.destroyControl()
+    this.dateParticle.clearDatePicker()
+    this.imageParticle.destroyFloatImage()
+  }
+
+  public setCanvasEventAbility = () => {
+    this.canvasEvent.setIsAllowDrag(false)
+    this.canvasEvent.setIsAllowSelection(false)
+  }
+
+  public watchCursorActive() {
+    // 选区闭合&实际光标移出光标代理
+    if (!this.range.getIsCollapsed()) return
+    setTimeout(() => {
+      // 将模拟光标变成失活显示状态
+      if (!this.cursor?.getAgentIsActive()) {
+        this.cursor?.drawCursor({
+          isFocus: false,
+          isBlink: false
+        })
+      }
+    })
+  }
+
+  public setPageScale = (evt: WheelEvent) => {
+    // 设置禁用快捷键
+    if (
+      this.options.shortcutDisableKeys.includes(
+        INTERNAL_SHORTCUT_KEY.PAGE_SCALE
+      )
+    ) {
+      return
+    }
+    // 仅在按下Ctrl键时生效
+    if (!evt.ctrlKey) return
+    evt.preventDefault()
+    const { scale } = this.options
+    if (evt.deltaY < 0) {
+      const nextScale = Math.round(scale * 10 + 1) / 10
+      if (nextScale <= 3.0) {
+        this.draw.setPageScale(nextScale)
+      }
+    } else {
+      const nextScale = Math.round(scale * 10 - 1) / 10
+      if (nextScale >= 0.5) {
+        this.draw.setPageScale(nextScale)
+      }
+    }
+  }
+
+  private _handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      // 页面可见时重新渲染激活页面
+      const range = this.range.getRange()
+      const isSetCursor =
+        !!~range.startIndex &&
+        !!~range.endIndex &&
+        range.startIndex === range.endIndex
+      this.range.replaceRange(range)
+      this.draw.render({
+        isSetCursor,
+        isCompute: false,
+        isSubmitHistory: false,
+        curIndex: range.startIndex
+      })
+    }
+  }
+
+  private _handleDprChange = () => {
+    this.draw.setPageDevicePixel()
+  }
+}

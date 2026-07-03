@@ -1,0 +1,41 @@
+// Element Plus style overrides for PPT Editor
+
+// popover
+.el-popover.el-popper {
+  padding: 12px !important;
+}
+
+// button
+.el-button {
+  &.no-padding {
+    padding: 0;
+  }
+}
+
+// slider
+.el-slider__bar {
+  background-color: #1a73e8;
+}
+.el-slider__button {
+  border-color: #1a73e8;
+}
+
+// select
+.el-select {
+  user-select: none;
+}
+
+// tooltip
+.el-tooltip__popper {
+  font-size: 12px;
+}
+
+// divider
+.el-divider--horizontal {
+  margin: 12px 0;
+}
+
+// input-number
+.el-input-number {
+  width: 100%;
+}

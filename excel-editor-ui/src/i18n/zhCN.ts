@@ -1,0 +1,41 @@
+export default {
+  common: {
+    autoSaved: '所有编辑内容将自动保存到云端',
+    recentSaved: '最近保存: {time}',
+    readOnlyMode: '只读模式',
+    confirm: '确定',
+    cancel: '取消',
+  },
+  sheet: {
+    defaultTitle: '未命名表格',
+    newSheet: '工作表',
+    sheet: '工作表',
+    defaultSheetName: '工作表{index}',
+    duplicateSuffix: ' 副本',
+    defaultWorkbookName: '工作簿',
+  },
+  menu: {
+    file: '文件',
+    edit: '编辑',
+    view: '视图',
+    insert: '插入',
+    format: '格式',
+    data: '数据',
+    help: '帮助',
+  },
+  dialog: {
+    renameSheetTitle: '重命名工作表',
+    renameSheetInputPlaceholder: '请输入工作表名称',
+    deleteSheetTitle: '删除工作表',
+    deleteSheetContent: '确定要删除工作表 "{name}" 吗？',
+    deleteButton: '删除',
+  },
+  message: {
+    importSuccess: '导入成功: {name}',
+    importFailed: '导入失败',
+    exportSuccess: '导出成功',
+    exportFailed: '导出失败',
+    createSuccess: '创建成功',
+    createFailed: '创建失败',
+  },
+}

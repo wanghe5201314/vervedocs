@@ -1,0 +1,96 @@
+{
+  "name": "@wanghe1995/docx-editor-ui",
+  "author": "wanghe",
+  "license": "MIT",
+  "version": "1.2.10",
+  "description": "docx editor完整ui编辑器",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "README.md",
+
+    "CHANGELOG.md",
+    "LICENSE",
+    "package.json"
+  ],
+  "typings": "./dist/src/editor/index.d.ts",
+  "main": "./dist/docx-editor.umd.cjs",
+  "module": "./dist/docx-editor.js",
+  "exports": {
+    ".": {
+      "types": "./dist/src/editor/index.d.ts",
+      "import": "./dist/docx-editor.js",
+      "require": "./dist/docx-editor.umd.cjs"
+    },
+    "./style.css": "./dist/docx-editor-ui.css"
+  },
+  "homepage": "https://gitee.com/wanghe520/docx-editor",
+  "repository": {
+    "type": "git",
+    "url": "https://gitee.com/wanghe520/docx-editor.git"
+  },
+  "keywords": [
+    "docx-editor-ui",
+    "editor",
+    "docx-editor"
+  ],
+  "engines": {
+    "node": ">=16.9.1"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "vite --config vite.config.ts",
+    "lib": "eslint . && vite build --config vite.lib.config.ts",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@esbuild/win32-x64": "^0.28.0",
+    "@rollup/plugin-typescript": "^10.0.1",
+    "@types/node": "^18.19.0",
+    "@types/prismjs": "^1.26.0",
+    "@typescript-eslint/eslint-plugin": "5.62.0",
+    "@typescript-eslint/parser": "5.62.0",
+    "@vitejs/plugin-vue": "^4.6.2",
+    "@vue/language-core": "^3.1.8",
+    "esbuild": "^0.28.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-unused-imports": "^4.4.1",
+    "less": "^4.6.4",
+    "rollup-plugin-visualizer": "^7.0.1",
+    "typescript": "4.9.5",
+    "unplugin-auto-import": "^21.0.0",
+    "unplugin-vue-components": "^32.1.0",
+    "vite": "^5.4.21",
+    "vite-plugin-css-injected-by-js": "^2.1.1",
+    "vite-plugin-dts": "^5.0.2",
+    "vue": "^3.5.27",
+    "vue-eslint-parser": "^10.4.0"
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
+    "@wanghe1995/docx-editor-ai": "^1.0.2",
+    "@wanghe1995/docx-editor-chart": "1.0.3",
+    "@wanghe1995/docx-editor-collaboration": "1.0.0",
+    "@wanghe1995/docx-editor-core": "^3.0.10",
+    "cypress": "^15.15.0",
+    "docx": "^9.5.1",
+    "echarts": "^5.6.0",
+    "element-plus": "^2.13.1",
+    "jsbarcode": "^3.12.3",
+    "jszip": "^3.10.1",
+    "lucide-vue-next": "^1.0.0",
+    "plyr": "^3.7.8",
+    "prismjs": "1.30.0",
+    "qrcode": "^1.5.4",
+    "x-data-spreadsheet": "^1.1.9"
+  },
+  "peerDependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
+    "element-plus": "^2.13.1",
+    "prismjs": "1.30.0",
+    "vue": "^3.5.27"
+  }
+}

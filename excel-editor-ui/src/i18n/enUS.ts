@@ -1,0 +1,41 @@
+export default {
+  common: {
+    autoSaved: 'All changes saved to cloud',
+    recentSaved: 'Last saved: {time}',
+    readOnlyMode: 'Read-only mode',
+    confirm: 'OK',
+    cancel: 'Cancel',
+  },
+  sheet: {
+    defaultTitle: 'Untitled Spreadsheet',
+    newSheet: 'Sheet',
+    sheet: 'Sheet',
+    defaultSheetName: 'Sheet{index}',
+    duplicateSuffix: ' Copy',
+    defaultWorkbookName: 'Workbook',
+  },
+  menu: {
+    file: 'File',
+    edit: 'Edit',
+    view: 'View',
+    insert: 'Insert',
+    format: 'Format',
+    data: 'Data',
+    help: 'Help',
+  },
+  dialog: {
+    renameSheetTitle: 'Rename Sheet',
+    renameSheetInputPlaceholder: 'Enter sheet name',
+    deleteSheetTitle: 'Delete Sheet',
+    deleteSheetContent: 'Are you sure you want to delete sheet "{name}"?',
+    deleteButton: 'Delete',
+  },
+  message: {
+    importSuccess: 'Import successful: {name}',
+    importFailed: 'Import failed',
+    exportSuccess: 'Export successful',
+    exportFailed: 'Export failed',
+    createSuccess: 'Created successfully',
+    createFailed: 'Create failed',
+  },
+}

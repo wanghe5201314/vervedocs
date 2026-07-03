@@ -1,0 +1,395 @@
+<template>
+  <div class="chart-style-panel">
+    <el-button class="full-width-btn" @click="chartDataEditorVisible = true">
+      <IconEdit class="btn-icon" /> 编辑图表数据
+    </el-button>
+
+    <el-divider />
+
+    <template v-if="(handleElement as any)?.chartType === 'line'">
+      <div class="row">
+        <el-checkbox 
+          @change="(checked: any) => updateOptions({ showArea: checked })"
+          :model-value="showArea" 
+          style="flex: 1;"
+        >面积图样式</el-checkbox>
+        <el-checkbox 
+          @change="(checked: any) => updateOptions({ showLine: !checked })"
+          :model-value="!showLine" 
+          style="flex: 1;"
+        >散点图样式</el-checkbox>
+      </div>
+      <div class="row">
+        <el-checkbox 
+          @change="(checked: any) => updateOptions({ lineSmooth: checked })" 
+          :model-value="lineSmooth"
+        >使用平滑曲线</el-checkbox>
+      </div>
+    </template>
+    <div class="row" v-if="(handleElement as any)?.chartType === 'bar'">
+      <el-checkbox 
+        @change="(checked: any) => updateOptions({ horizontalBars: checked })" 
+        :model-value="horizontalBars"
+      >条形图样式</el-checkbox>
+      <el-checkbox 
+        @change="(checked: any) => updateOptions({ stackBars: checked })" 
+        :model-value="stackBars"
+      >堆叠样式</el-checkbox>
+    </div>
+    <div class="row" v-if="(handleElement as any)?.chartType === 'pie'">
+      <el-checkbox 
+        @change="(checked: any) => updateOptions({ donut: checked })" 
+        :model-value="donut"
+      >环形图样式</el-checkbox>
+    </div>
+
+    <el-divider />
+
+    <div class="row">
+      <div style="flex: 2;">图例：</div>
+      <el-select style="flex: 3;" :model-value="legend" @change="(value: any) => updateLegend(value)">
+        <el-option value="" label="不显示"></el-option>
+        <el-option value="top" label="显示在上方"></el-option>
+        <el-option value="bottom" label="显示在下方"></el-option>
+      </el-select>
+    </div>
+
+    <el-divider />
+
+    <div class="row">
+      <div style="flex: 2;">背景填充：</div>
+      <el-popover trigger="click">
+        <ColorPicker
+          :modelValue="fill"
+          @update:modelValue="(value: any) => updateFill(value)"
+        />
+        <template #reference>
+          <ColorButton :color="fill || ''" style="flex: 3;" />
+        </template>
+      </el-popover>
+    </div>
+    <div class="row">
+      <div style="flex: 2;">网格颜色：</div>
+      <el-popover trigger="click">
+        <ColorPicker
+          :modelValue="gridColor"
+          @update:modelValue="(value: any) => updateGridColor(value)"
+        />
+        <template #reference>
+          <ColorButton :color="gridColor" style="flex: 3;" />
+        </template>
+      </el-popover>
+    </div>
+
+    <el-divider />
+
+    <div class="row" v-for="(color, index) in themeColor" :key="index">
+      <div style="flex: 2;">{{index === 0 ? '主题配色：' : ''}}</div>
+      <el-popover trigger="click">
+        <ColorPicker
+          :modelValue="color"
+          @update:modelValue="(value: any) => updateTheme(value, index)"
+        />
+        <template #reference>
+          <div class="color-btn-wrap" style="flex: 3;">
+            <ColorButton :color="color" style="width: 100%;" />
+            <el-tooltip :hide-after="0" :show-after="500" content="删除">
+              <div class="delete-color-btn" @click.stop="deleteThemeColor(index)" v-if="index !== 0"><IconCloseSmall /></div>
+            </el-tooltip>
+          </div>
+        </template>
+      </el-popover>
+    </div>
+    <el-button-group class="row">
+      <el-popover trigger="click" :visible="presetThemesVisible">
+        <div class="preset-themes">
+          <div class="preset-theme" v-for="(item, index) in presetChartThemes" :key="index">
+            <div 
+              class="preset-theme-color" 
+              :class="{ 'select': presetThemeColorHoverIndex[0] === index && itemIndex <= presetThemeColorHoverIndex[1] }"
+              v-for="(color, itemIndex) in item" 
+              :key="color" 
+              :style="{ backgroundColor: color }" 
+              @click="applyPresetTheme(item, itemIndex)"
+              @mouseenter="presetThemeColorHoverIndex = [index, itemIndex]"
+              @mouseleave="presetThemeColorHoverIndex = [-1, -1]"
+            ></div>
+          </div>
+        </div>
+        <template #reference>
+          <el-button class="no-padding" style="flex: 2;">推荐主题</el-button>
+        </template>
+      </el-popover>
+      <el-button 
+        class="no-padding" 
+        :disabled="themeColor.length >= 10" 
+        style="flex: 3;" 
+        @click="addThemeColor()"
+      >
+        <IconPlus class="btn-icon" /> 添加主题色
+      </el-button>
+    </el-button-group>
+
+    <el-divider />
+
+    <ElementOutline />
+
+    <el-dialog
+      v-model="chartDataEditorVisible" 
+      :show-close="false"
+      :close-on-click-modal="true"
+      width="648px"
+      :destroy-on-close="true"
+      align-center
+    >
+      <ChartDataEditor 
+        :data="(handleElement as any)?.data"
+        @close="chartDataEditorVisible = false"
+        @save="value => updateData(value)"
+      />
+    </el-dialog>
+  </div>
+</template>
+
+<script lang="ts">
+import { defineComponent, onUnmounted, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useMainStore, useSlidesStore } from '@/store'
+import { ChartData, ChartOptions, PPTChartElement } from '@/types/slides'
+import emitter, { EmitterEvents } from '@/utils/emitter'
+import useHistorySnapshot from '@/hooks/useHistorySnapshot'
+
+import ElementOutline from '../../common/ElementOutline.vue'
+import ColorButton from '../../common/ColorButton.vue'
+import ChartDataEditor from './ChartDataEditor.vue'
+
+const presetChartThemes = [
+  ['#d87c7c', '#919e8b', '#d7ab82', '#6e7074', '#61a0a8', '#efa18d'],
+  ['#dd6b66', '#759aa0', '#e69d87', '#8dc1a9', '#ea7e53', '#eedd78'],
+  ['#516b91', '#59c4e6', '#edafda', '#93b7e3', '#a5e7f0', '#cbb0e3'],
+  ['#893448', '#d95850', '#eb8146', '#ffb248', '#f2d643', '#ebdba4'],
+  ['#4ea397', '#22c3aa', '#7bd9a5', '#d0648a', '#f58db2', '#f2b3c9'],
+  ['#3fb1e3', '#6be6c1', '#626c91', '#a0a7e6', '#c4ebad', '#96dee8'],
+  ['#fc97af', '#87f7cf', '#f7f494', '#72ccff', '#f7c5a0', '#d4a4eb'],
+  ['#c1232b', '#27727b', '#fcce10', '#e87c25', '#b5c334', '#fe8463'],
+  ['#2ec7c9', '#b6a2de', '#5ab1ef', '#ffb980', '#d87a80', '#8d98b3'],
+  ['#e01f54', '#001852', '#f5e8c8', '#b8d2c7', '#c6b38e', '#a4d8c2'],
+  ['#c12e34', '#e6b600', '#0098d9', '#2b821d', '#005eaa', '#339ca8'],
+  ['#8a7ca8', '#e098c7', '#8fd3e8', '#71669e', '#cc70af', '#7cb4cc'],
+]
+
+export default defineComponent({
+  name: 'chart-style-panel',
+  components: {
+    ElementOutline,
+    ChartDataEditor,
+    ColorButton,
+  },
+  setup() {
+    const mainStore = useMainStore()
+    const slidesStore = useSlidesStore()
+    const { handleElement, handleElementId } = storeToRefs(mainStore)
+    const { theme } = storeToRefs(slidesStore)
+
+    const chartDataEditorVisible = ref(false)
+    const presetThemesVisible = ref(false)
+    const presetThemeColorHoverIndex = ref<[number, number]>([-1, -1])
+
+    const { addHistorySnapshot } = useHistorySnapshot()
+
+    const fill = ref<string>()
+
+    const themeColor = ref<string[]>([])
+    const gridColor = ref('')
+    const legend = ref('')
+
+    const lineSmooth = ref(true)
+    const showLine = ref(true)
+    const showArea = ref(false)
+    const horizontalBars = ref(false)
+    const donut = ref(false)
+    const stackBars = ref(false)
+
+    watch(handleElement, () => {
+      if (!handleElement.value || handleElement.value.type !== 'chart') return
+      fill.value = handleElement.value.fill || '#fff'
+
+      if (handleElement.value.options) {
+        const {
+          lineSmooth: _lineSmooth,
+          showLine: _showLine,
+          showArea: _showArea,
+          horizontalBars: _horizontalBars,
+          donut: _donut,
+          stackBars: _stackBars,
+        } = handleElement.value.options
+
+        if (_lineSmooth !== undefined) lineSmooth.value = _lineSmooth as boolean
+        if (_showLine !== undefined) showLine.value = _showLine
+        if (_showArea !== undefined) showArea.value = _showArea
+        if (_horizontalBars !== undefined) horizontalBars.value = _horizontalBars
+        if (_donut !== undefined) donut.value = _donut
+        if (_stackBars !== undefined) stackBars.value = _stackBars
+      }
+
+      themeColor.value = handleElement.value.themeColor
+      gridColor.value = handleElement.value.gridColor || '#333'
+      legend.value = handleElement.value.legend || ''
+    }, { deep: true, immediate: true })
+
+    const updateElement = (props: Partial<PPTChartElement>) => {
+      slidesStore.updateElement({ id: handleElementId.value, props })
+      addHistorySnapshot()
+    }
+
+    // 设置图表数据
+    const updateData = (data: ChartData) => {
+      chartDataEditorVisible.value = false
+      updateElement({ data })
+    }
+
+    // 设置填充色
+    const updateFill = (value: string) => {
+      updateElement({ fill: value })
+    }
+
+    // 设置其他选项：柱状图转条形图、折线图转面积图、折线图转散点图、饼图转环形图、折线图开关平滑曲线
+    const updateOptions = (optionProps: ChartOptions) => {
+      const _handleElement = handleElement.value as PPTChartElement
+
+      const newOptions = { ..._handleElement.options, ...optionProps }
+      updateElement({ options: newOptions })
+    }
+
+    // 设置主题色
+    const updateTheme = (color: string, index: number) => {
+      const props = {
+        themeColor: themeColor.value.map((c, i) => i === index ? color : c),
+      }
+      updateElement(props)
+    }
+
+    // 添加主题色
+    const addThemeColor = () => {
+      const props = {
+        themeColor: [...themeColor.value, theme.value.themeColor],
+      }
+      updateElement(props)
+    }
+
+    // 使用预置主题配色
+    const applyPresetTheme = (colors: string[], index: number) => {
+      const themeColor = colors.slice(0, index + 1)
+      updateElement({ themeColor })
+      presetThemesVisible.value = false
+    }
+
+    // 删除主题色
+    const deleteThemeColor = (index: number) => {
+      const props = {
+        themeColor: themeColor.value.filter((c, i) => i !== index),
+      }
+      updateElement(props)
+    }
+
+    // 设置网格颜色
+    const updateGridColor = (gridColor: string) => {
+      updateElement({ gridColor })
+    }
+
+    // 设置图例位置/不显示
+    const updateLegend = (legend: '' | 'top' | 'bottom') => {
+      updateElement({ legend })
+    }
+
+    const openDataEditor = () => chartDataEditorVisible.value = true
+
+    emitter.on(EmitterEvents.OPEN_CHART_DATA_EDITOR, openDataEditor)
+    onUnmounted(() => {
+      emitter.off(EmitterEvents.OPEN_CHART_DATA_EDITOR, openDataEditor)
+    })
+
+    return {
+      chartDataEditorVisible,
+      presetThemesVisible,
+      presetThemeColorHoverIndex,
+      handleElement,
+      updateData,
+      fill,
+      updateFill,
+      lineSmooth,
+      showLine,
+      showArea,
+      horizontalBars,
+      donut,
+      stackBars,
+      updateOptions,
+      themeColor,
+      gridColor,
+      legend,
+      updateTheme,
+      addThemeColor,
+      deleteThemeColor,
+      updateGridColor,
+      updateLegend,
+      presetChartThemes,
+      applyPresetTheme,
+    }
+  },
+})
+</script>
+
+<style lang="scss" scoped>
+.chart-style-panel {
+  user-select: none;
+}
+.row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.full-width-btn {
+  width: 100%;
+}
+.btn-icon {
+  margin-right: 3px;
+}
+.color-btn-wrap {
+  position: relative;
+}
+.delete-color-btn {
+  position: absolute;
+  width: 30px;
+  right: 2px;
+  top: 2px;
+  bottom: 2px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #fff;
+  cursor: pointer;
+}
+.preset-themes {
+  width: 250px;
+  display: flex;
+  margin-bottom: -10px;
+
+  @include flex-grid-layout();
+}
+.preset-theme {
+  display: flex;
+  cursor: pointer;
+
+  @include flex-grid-layout-children(2, 48%);
+}
+.preset-theme-color {
+  width: 20px;
+  height: 20px;
+
+  &.select {
+    transform: scale(1.2);
+    transition: transform $transitionDelayFast;
+  }
+}
+</style>

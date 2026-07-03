@@ -1,0 +1,77 @@
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import dts from 'vite-plugin-dts'
+import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js'
+import { resolve } from 'path'
+
+export default defineConfig({
+  plugins: [
+    vue(),
+    cssInjectedByJsPlugin(),
+    dts({
+      include: ['src/**/*.ts', 'src/**/*.vue'],
+      outDir: 'dist',
+      rollupTypes: false
+    })
+  ],
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'src')
+    }
+  },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        api: 'modern-compiler',
+        additionalData: `@use "${resolve(__dirname, 'src/assets/styles/_mixins.scss').replace(/\\/g, '/')}" as *;\n`,
+        silenceDeprecations: ['import', 'global-builtin', 'slash-div'],
+      },
+    },
+  },
+  build: {
+    lib: {
+      entry: resolve(__dirname, 'src/index.ts'),
+      name: 'PptEditorUI',
+      formats: ['es'],
+      fileName: 'ppt-editor-ui'
+    },
+    rollupOptions: {
+      external: [
+        'vue',
+        'element-plus',
+        '@mdi/js',
+        'pinia',
+
+        '@icon-park/vue-next',
+        'chartist',
+        'pptxgenjs',
+        /^prosemirror-.*/,
+        'file-saver',
+        'html-to-image',
+        'lodash',
+        'dexie',
+        'crypto-js',
+        'clipboard',
+        'tinycolor2',
+        'nanoid',
+        'mitt',
+        'vuedraggable',
+        'hfmath',
+        'animate.css',
+        'svg-pathdata',
+        'svg-arc-to-cubic-bezier',
+      ],
+      output: {
+          globals: {
+            vue: 'Vue',
+            'element-plus': 'ElementPlus',
+            '@mdi/js': 'MdiJs',
+            pinia: 'Pinia'
+          },
+          dir: 'dist'
+      }
+    },
+    emptyOutDir: true,
+    outDir: 'dist'
+  }
+})

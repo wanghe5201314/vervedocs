@@ -1,0 +1,47 @@
+/* 单行省略号 */
+.ellipsis-oneline {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 多行省略号 */
+.ellipsis-multiline-2 {
+  word-wrap: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.ellipsis-multiline-3 {
+  word-wrap: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+/* 弹性网格布局 */
+.flex-grid-layout {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+}
+
+/* 溢出覆盖效果 */
+.overflow-overlay {
+  overflow: auto;
+  overflow: overlay;
+}
+
+/* 绝对定位填充整个容器 */
+.absolute-0 {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}

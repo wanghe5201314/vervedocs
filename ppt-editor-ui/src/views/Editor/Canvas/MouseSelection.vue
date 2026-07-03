@@ -1,0 +1,69 @@
+﻿<template>
+  <div :class="`mouse-selection quadrant-${quadrant}`"
+    :style="{
+      top: top + 'px',
+      left: left + 'px',
+      width: width + 'px',
+      height: height + 'px',
+    }"
+  ></div>
+</template>
+
+<script lang="ts">
+import { defineComponent } from 'vue'
+
+export default defineComponent({
+  name: 'mouse-selection',
+  props: {
+    top: {
+      type: Number,
+      required: true,
+    },
+    left: {
+      type: Number,
+      required: true,
+    },
+    width: {
+      type: Number,
+      required: true,
+    },
+    height: {
+      type: Number,
+      required: true,
+    },
+    quadrant: {
+      type: Number,
+      required: true,
+      validator(value: number) {
+        return [1, 2, 3, 4].includes(value)
+      },
+    },
+  }
+})
+</script>
+
+<style  scoped>
+.mouse-selection {
+  position: absolute;
+  background-color: rgba(#1a73e8, 0.1);
+  border: 1px solid #1a73e8;
+  z-index: 200;
+
+  &.quadrant-1 {
+    transform-origin: 0 0;
+    transform: rotate(180deg);
+  }
+  &.quadrant-2 {
+    transform-origin: 50% 0;
+    transform: rotate(180deg);
+  }
+  &.quadrant-3 {
+    transform-origin: 0 50%;
+    transform: rotate(180deg);
+  }
+  &.quadrant-4 {
+    transform-origin: 0 0;
+    transform: rotate(0deg);
+  }
+}
+</style>

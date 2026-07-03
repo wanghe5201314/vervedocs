@@ -1,0 +1,5 @@
+﻿        canvasRef.addEventListener('mouseleave', handleMouseleave)
+        window.addEventListener('mousedown', handleMousedown)
+      }).catch(() => {
+        ElMessage.error('取色吸管初始化失败?)
+        document.body.removeChild(maskRef)

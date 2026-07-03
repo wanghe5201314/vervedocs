@@ -1,0 +1,63 @@
+{
+  "name": "@wanghe1995/excel-editor-ui",
+  "version": "1.0.3",
+  "description": "Excel Editor UI Components for docu-flow",
+  "type": "module",
+  "main": "./dist/excel-editor-ui.js",
+  "module": "./dist/excel-editor-ui.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/excel-editor-ui.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./utils": {
+      "import": "./dist/utils/index.js",
+      "types": "./dist/utils/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "lib": "vite build --mode lib --config vite.config.ts",
+    "dev": "vite --config vite.config.ts",
+    "build": "vue-tsc -b && vite build --mode lib --config vite.config.ts",
+    "build:ui": "vue-tsc -b && vite build --config vite.config.ts",
+    "preview:ui": "vite preview --config vite.config.ts"
+  },
+  "peerDependencies": {
+    "@mdi/js": "^7.4.0",
+    "element-plus": "^2.13.0",
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@mdi/js": "^7.4.47",
+    "@types/node": "^25.3.3",
+    "@vitejs/plugin-vue": "^5.1.4",
+    "element-plus": "^2.13.1",
+    "eslint": "^10.4.0",
+    "eslint-plugin-unused-imports": "^4.4.1",
+    "typescript": "~5.6.2",
+    "typescript-eslint": "^8.59.4",
+    "vite": "^5.4.10",
+    "vite-plugin-css-injected-by-js": "^2.4.0",
+    "vite-plugin-dts": "^4.0.0",
+    "vue": "^3.5.12",
+    "vue-eslint-parser": "^10.4.0",
+    "vue-tsc": "^2.1.8"
+  },
+  "keywords": [
+    "excel",
+    "spreadsheet",
+    "vue",
+    "editor",
+    "docu-flow"
+  ],
+  "author": "wanghe1995",
+  "license": "MIT",
+  "dependencies": {
+    "exceljs": "^4.4.0"
+  }
+}

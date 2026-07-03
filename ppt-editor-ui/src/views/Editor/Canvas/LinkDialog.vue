@@ -1,0 +1,153 @@
+﻿<template>
+  <div class="link-dialog">
+    <div class="tabs">
+      <div 
+        class="tab" 
+        :class="{ 'active': type === tab.key }" 
+        v-for="tab in tabs" 
+        :key="tab.key"
+        @click="type = tab.key"
+      >{{tab.label}}</div>
+    </div>
+
+    <el-input 
+      class="input"
+      v-if="type === 'web'" 
+      v-model="address" 
+      placeholder="请输入网页链接地址"
+    />
+
+    <el-select 
+      class="input"
+      v-if="type === 'slide'"
+      v-model="slideId"
+    >
+      <el-option v-for="(slide, index) in slides" :key="slide.id" :value="slide.id" :label="`幻灯片 ${index + 1}`" />
+    </el-select>
+
+    <div class="preview" v-if="type === 'slide' && selectedSlide">
+      <div>预览：</div>
+      <ThumbnailSlide class="thumbnail" :slide="selectedSlide" :size="490" />
+    </div>
+
+    <div class="btns">
+      <el-button @click="close()" style="margin-right: 10px;">取消</el-button>
+      <el-button type="primary" @click="save()">确认</el-button>
+    </div>
+  </div>
+</template>
+
+<script lang="ts">
+import { computed, defineComponent, onMounted, ref } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useMainStore, useSlidesStore } from '@/store'
+import { PPTElementLink } from '@/types/slides'
+import useLink from '@/hooks/useLink'
+
+import ThumbnailSlide from '@/views/components/ThumbnailSlide/index.vue'
+
+type TypeKey = 'web' | 'slide'
+export interface TabItem {
+  key: TypeKey;
+  label: string;
+}
+
+export default defineComponent({
+  name: 'link-dialog',
+  emits: ['close'],
+  components: {
+    ThumbnailSlide,
+  },
+  setup(props, { emit }) {
+    const { handleElement } = storeToRefs(useMainStore())
+    const { slides } = storeToRefs(useSlidesStore())
+
+    const type = ref<TypeKey>('web')
+    const address = ref('')
+    const slideId = ref('')
+
+    slideId.value = slides.value[0].id
+
+    const selectedSlide = computed(() => {
+      if (!slideId.value) return null
+
+      return slides.value.find(item => item.id === slideId.value) || null
+    })
+
+    const tabs: TabItem[] = [
+      { key: 'web', label: '网页链接' },
+      { key: 'slide', label: '幻灯片页码' },
+    ]
+
+    const { setLink } = useLink()
+
+    onMounted(() => {
+      if (handleElement.value?.link) {
+        if (handleElement.value.link.type === 'web') address.value = handleElement.value.link.target
+        else if (handleElement.value.link.type === 'slide') slideId.value = handleElement.value.link.target
+
+        type.value = handleElement.value.link.type
+      }
+    })
+
+    const close = () => emit('close')
+
+    const save = () => {
+      const link: PPTElementLink = {
+        type: type.value,
+        target: type.value === 'web' ? address.value : slideId.value,
+      }
+      if (handleElement.value) {
+        const success = setLink(handleElement.value, link)
+        if (success) close()
+        else address.value = ''
+      }
+    }
+
+    return {
+      slides,
+      tabs,
+      type,
+      address,
+      slideId,
+      selectedSlide,
+      close,
+      save,
+    }
+  },
+})
+</script>
+
+<style  scoped>
+.tabs {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  border-bottom: 1px solid #e2e6ed;
+  margin-bottom: 20px;
+}
+.tab {
+  padding: 0 10px 8px;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+
+  &.active {
+    border-bottom: 2px solid #1a73e8;
+  }
+}
+.input {
+  width: 100%;
+  height: 32px;
+}
+.preview {
+  margin-top: 12px;
+}
+.thumbnail {
+  outline: 1px solid rgba($color: #1a73e8, $alpha: .15);
+  margin-top: 5px;
+}
+.btns {
+  margin-top: 20px;
+  text-align: right;
+}
+</style>

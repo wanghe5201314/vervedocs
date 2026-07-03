@@ -1,0 +1,47 @@
+// Variables
+$transitionDelay: 0.15s;
+$transitionDelayFast: 0.1s;
+$transitionDelaySlow: 0.3s;
+$boxShadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.06);
+
+// Mixins
+@mixin absolute-0() {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+@mixin flex-grid-layout() {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+}
+
+@mixin flex-grid-layout-children($count, $width) {
+  width: $width;
+  &:not(:nth-child(#{$count}n)) {
+    margin-right: calc((100% - #{$count} * #{$width}) / (#{$count} - 1));
+  }
+}
+
+@mixin overflow-overlay() {
+  overflow: auto;
+  overflow: overlay;
+}
+
+@mixin ellipsis-oneline() {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+@mixin ellipsis-multiline($lines: 2) {
+  word-wrap: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: $lines;
+  -webkit-box-orient: vertical;
+}

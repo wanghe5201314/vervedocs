@@ -1,0 +1,198 @@
+/* 行选择工具条 */
+.ce-table-tool__row {
+  position: absolute;
+  width: 14px;
+  border-radius: 2px;
+  overflow: visible;
+  background-color: transparent;
+}
+
+.ce-table-tool__row .ce-table-tool__row__item {
+  width: 100%;
+  position: relative;
+  cursor: pointer;
+  transition: all .2s;
+  background-color: transparent;
+}
+
+.ce-table-tool__row .ce-table-tool__row__item::after {
+  display: none;
+}
+
+.ce-table-tool__row .ce-table-tool__row__item:hover {
+  background-color: rgba(64, 158, 255, 0.1);
+}
+
+.ce-table-tool__row .ce-table-tool__row__item:last-child:after {
+  display: none;
+}
+
+/* 快速添加按钮 */
+.ce-table-tool__quick__add {
+  width: 20px;
+  height: 20px;
+  position: absolute;
+  border-radius: 3px;
+  background-color: #fff;
+  border: 1px solid #d0d0d0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.ce-table-tool__quick__add:hover {
+  border-color: #409eff;
+  background-color: #ecf5ff;
+}
+
+.ce-table-tool__quick__add::after {
+  content: '+';
+  color: #606266;
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 1;
+  position: static;
+  transform: none;
+}
+
+.ce-table-tool__quick__add:hover::after {
+  color: #409eff;
+}
+
+/* 表格选择按钮 */
+.ce-table-tool__select {
+  width: 20px;
+  height: 20px;
+  position: absolute;
+  border-radius: 3px;
+  cursor: pointer;
+  background-color: #fff;
+  border: 1px solid #d0d0d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.ce-table-tool__select:hover {
+  border-color: #409eff;
+  background-color: #ecf5ff;
+}
+
+.ce-table-tool__select::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid #606266;
+  border-radius: 1px;
+  position: static;
+  transform: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+.ce-table-tool__select::before {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: linear-gradient(to right, #606266 1px, transparent 1px) center/50% 100%,
+              linear-gradient(to bottom, #606266 1px, transparent 1px) center/100% 50%;
+}
+
+.ce-table-tool__select:hover::after {
+  border-color: #409eff;
+}
+
+.ce-table-tool__select:hover::before {
+  background: linear-gradient(to right, #409eff 1px, transparent 1px) center/50% 100%,
+              linear-gradient(to bottom, #409eff 1px, transparent 1px) center/100% 50%;
+}
+
+/* 列选择工具条 */
+.ce-table-tool__col {
+  position: absolute;
+  height: 14px;
+  border-radius: 2px;
+  overflow: visible;
+  background-color: transparent;
+  display: flex;
+}
+
+.ce-table-tool__col .ce-table-tool__col__item {
+  height: 100%;
+  position: relative;
+  cursor: pointer;
+  transition: all .2s;
+  background-color: transparent;
+}
+
+.ce-table-tool__col .ce-table-tool__col__item::after {
+  display: none;
+}
+
+.ce-table-tool__col .ce-table-tool__col__item:hover {
+  background-color: rgba(64, 158, 255, 0.1);
+}
+
+.ce-table-tool__col .ce-table-tool__col__item:first-child:after {
+  display: none;
+}
+
+.ce-table-tool__row .ce-table-tool__row__item.active,
+.ce-table-tool__col .ce-table-tool__col__item.active {
+  background-color: rgba(64, 158, 255, 0.15);
+}
+
+/* 列调整手柄 */
+.ce-table-tool__col .ce-table-tool__anchor {
+  right: -5px;
+  width: 10px;
+  height: 14px;
+  z-index: 9;
+  position: absolute;
+  cursor: col-resize;
+}
+
+/* 行调整手柄 */
+.ce-table-tool__row .ce-table-tool__anchor {
+  bottom: -5px;
+  left: 0;
+  width: 14px;
+  height: 10px;
+  z-index: 9;
+  position: absolute;
+  cursor: row-resize;
+}
+
+/* 拖拽辅助线 */
+.ce-table-anchor__line {
+  z-index: 9;
+  position: absolute;
+  border: 1px dashed #409eff;
+}
+
+/* 边框工具容器 */
+.ce-table-tool__border {
+  position: absolute;
+  z-index: 1;
+  background: transparent;
+  pointer-events: none;
+}
+
+.ce-table-tool__border__row {
+  position: absolute;
+  cursor: row-resize;
+  pointer-events: auto;
+}
+
+.ce-table-tool__border__col {
+  position: absolute;
+  cursor: col-resize;
+  pointer-events: auto;
+}

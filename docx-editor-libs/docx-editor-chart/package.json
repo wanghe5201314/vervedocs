@@ -1,0 +1,49 @@
+{
+  "name": "@wanghe1995/docx-editor-chart",
+  "version": "1.0.3",
+  "description": "DocxEditor 图表插件 - 基于 ECharts",
+  "author": "wanghe",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/docx-editor-chart.umd.cjs",
+  "module": "./dist/docx-editor-chart.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/docx-editor-chart.js",
+      "require": "./dist/docx-editor-chart.umd.cjs"
+    }
+  },
+  "keywords": [
+    "docx-editor-chart",
+    "editor",
+    "docx-editor"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "package.json"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "peerDependencies": {
+    "echarts": "^5.0.0 || ^6.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@wanghe1995/docx-editor-core": "file:../../docx-editor-core",
+    "echarts": "^5.6.0",
+    "eslint": "^10.4.0",
+    "eslint-plugin-unused-imports": "^4.4.1",
+    "typescript": "^5.0.0",
+    "typescript-eslint": "^8.59.4",
+    "vite": "^5.4.10"
+  }
+}

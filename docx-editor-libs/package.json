@@ -1,0 +1,19 @@
+{
+  "name": "docx-editor-libs",
+  "private": true,
+  "description": "DocxEditor 模块化子库集合 - 统一构建入口",
+  "scripts": {
+    "build:schema": "cd docx-editor-schema && npm run build",
+    "build:state": "cd docx-editor-state && npm run build",
+    "build:transform": "cd docx-editor-transform && npm run build",
+    "build:view": "cd docx-editor-view && npm run build",
+    "build:history": "cd docx-editor-history && npm run build",
+    "build:keymap": "cd docx-editor-keymap && npm run build",
+    "build:commands": "cd docx-editor-commands && npm run build",
+    "build:ai": "cd docx-editor-ai && npm run build",
+    "build:chart": "cd docx-editor-chart && npm run build",
+    "build:collaboration": "cd docx-editor-collaboration && npm run build",
+    "build:comment": "cd docx-editor-comment && npm run build",
+    "build": "npm run build:schema && npm run build:state && npm run build:transform && npm run build:view && npm run build:history && npm run build:keymap && npm run build:commands && npm run build:ai && npm run build:chart && npm run build:collaboration && npm run build:comment"
+  }
+}

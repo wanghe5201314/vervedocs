@@ -1,0 +1,131 @@
+.ce-zone-indicator>div {
+  padding: 3px 6px;
+  color: #000000;
+  font-size: 12px;
+  background: rgb(218 231 252);
+  position: absolute;
+  transform-origin: 0 0;
+}
+
+/* 页眉页脚工具栏 */
+.ce-zone-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 !important;
+  background: transparent !important;
+  height: 24px;
+  position: absolute;
+}
+
+.ce-zone-toolbar-label {
+  padding: 2px 8px;
+  font-size: 12px;
+  color: #0078d4;
+  background: rgb(218 231 252);
+  border-radius: 2px;
+  white-space: nowrap;
+}
+
+.ce-zone-toolbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: #0078d4;
+  background: rgb(218 231 252);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.ce-zone-toolbar-btn:hover {
+  background: rgb(198 216 248);
+}
+
+.ce-zone-toolbar-btn span {
+  margin: 0 2px;
+}
+
+.ce-zone-toolbar-btn svg {
+  flex-shrink: 0;
+}
+
+/* 插入页码下拉菜单 */
+.ce-zone-pagenumber-menu {
+  position: fixed;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 140px;
+  padding: 4px 0;
+}
+
+.ce-zone-pagenumber-menu-item {
+  padding: 8px 16px;
+  font-size: 13px;
+  color: #333;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.ce-zone-pagenumber-menu-item:hover {
+  background-color: #f5f5f5;
+}
+
+.ce-zone-indicator-border__top,
+.ce-zone-indicator-border__bottom,
+.ce-zone-indicator-border__left,
+.ce-zone-indicator-border__right {
+  display: block;
+  position: absolute;
+  z-index: 0;
+}
+
+.ce-zone-indicator-border__top {
+  border-top: 2px dashed rgb(238, 238, 238);
+}
+
+.ce-zone-indicator-border__bottom {
+  border-top: 2px dashed rgb(238, 238, 238);
+  width: 100%;
+}
+
+.ce-zone-indicator-border__left {
+  border-left: 2px dashed rgb(238, 238, 238);
+}
+
+.ce-zone-indicator-border__right {
+  border-right: 2px dashed rgb(238, 238, 238);
+}
+
+.ce-zone-tip {
+  display: none;
+  align-items: center;
+  height: 30px;
+  white-space: nowrap;
+  position: fixed;
+  opacity: .9;
+  background-color: #000000;
+  padding: 0 5px;
+  border-radius: 4px;
+  z-index: 9;
+  transition: all .3s;
+  outline: none;
+  user-select: none;
+  pointer-events: none;
+  transform: translate(10px, 10px);
+}
+
+.ce-zone-tip.show {
+  display: flex;
+}
+
+.ce-zone-tip span {
+  color: #ffffff;
+  font-size: 12px;
+}

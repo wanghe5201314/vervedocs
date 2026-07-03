@@ -1,0 +1,356 @@
+/**
+ * DocxEditor AI 插件样式
+ */
+
+/* ========== 悬浮工具栏 ========== */
+.docx-ai-toolbar {
+  position: fixed;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px;
+  background: #ffffff;
+  border: 1px solid #e2e6ed;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(4px);
+  transition: opacity 0.15s, visibility 0.15s, transform 0.15s;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 13px;
+}
+
+.docx-ai-toolbar-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.docx-ai-toolbar-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-right: 4px;
+  color: #6366f1;
+}
+
+.docx-ai-toolbar-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  color: #374151;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.docx-ai-toolbar-item:hover {
+  background-color: #f3f4f6;
+  color: #6366f1;
+}
+
+.docx-ai-toolbar-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.docx-ai-toolbar-item-label {
+  font-size: 13px;
+}
+
+.docx-ai-toolbar-arrow {
+  margin-left: 2px;
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+/* ========== 子菜单 ========== */
+.docx-ai-submenu {
+  position: absolute;
+  min-width: 100px;
+  padding: 6px;
+  background: #ffffff;
+  border: 1px solid #e2e6ed;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  z-index: 10000;
+}
+
+.docx-ai-submenu-title {
+  padding: 4px 8px;
+  font-size: 11px;
+  color: #9ca3af;
+  border-bottom: 1px solid #f3f4f6;
+  margin-bottom: 4px;
+}
+
+.docx-ai-submenu-item {
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #374151;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.docx-ai-submenu-item:hover {
+  background-color: #f3f4f6;
+  color: #6366f1;
+}
+
+/* ========== 结果面板 ========== */
+.docx-ai-panel {
+  position: fixed;
+  width: 400px;
+  max-width: calc(100% - 20px);
+  background: #ffffff;
+  border: 1px solid #e2e6ed;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.docx-ai-panel-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.docx-ai-panel-content {
+  padding: 16px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.docx-ai-panel-stream,
+.docx-ai-panel-result {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #374151;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.docx-ai-panel-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.docx-ai-panel-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e5e7eb;
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: docx-ai-spin 0.8s linear infinite;
+}
+
+@keyframes docx-ai-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 错误状态 */
+.docx-ai-panel-error {
+  text-align: center;
+  color: #dc2626;
+}
+
+.docx-ai-panel-error-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.docx-ai-panel-error-text {
+  font-size: 14px;
+}
+
+/* 输入框 */
+.docx-ai-panel-input-wrapper {
+  width: 100%;
+}
+
+.docx-ai-panel-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e2e6ed;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #374151;
+  resize: vertical;
+  box-sizing: border-box;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.docx-ai-panel-input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.docx-ai-panel-input::placeholder {
+  color: #9ca3af;
+}
+
+/* 操作按钮 */
+.docx-ai-panel-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid #f3f4f6;
+  background: #fafafa;
+  border-radius: 0 0 12px 12px;
+}
+
+.docx-ai-panel-btn {
+  padding: 8px 16px;
+  border: 1px solid #e2e6ed;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  background: #ffffff;
+  color: #374151;
+}
+
+.docx-ai-panel-btn:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.docx-ai-panel-btn-primary {
+  background: #6366f1;
+  border-color: #6366f1;
+  color: #ffffff;
+}
+
+.docx-ai-panel-btn-primary:hover {
+  background: #4f46e5;
+  border-color: #4f46e5;
+}
+
+/* ========== 深色模式支持 ========== */
+@media (prefers-color-scheme: dark) {
+  .docx-ai-toolbar {
+    background: #1f2937;
+    border-color: #374151;
+  }
+
+  .docx-ai-toolbar-item {
+    color: #e5e7eb;
+  }
+
+  .docx-ai-toolbar-item:hover {
+    background-color: #374151;
+    color: #818cf8;
+  }
+
+  .docx-ai-submenu {
+    background: #1f2937;
+    border-color: #374151;
+  }
+
+  .docx-ai-submenu-title {
+    color: #9ca3af;
+    border-color: #374151;
+  }
+
+  .docx-ai-submenu-item {
+    color: #e5e7eb;
+  }
+
+  .docx-ai-submenu-item:hover {
+    background-color: #374151;
+    color: #818cf8;
+  }
+
+  .docx-ai-panel {
+    background: #1f2937;
+    border-color: #374151;
+  }
+
+  .docx-ai-panel-stream,
+  .docx-ai-panel-result {
+    color: #e5e7eb;
+  }
+
+  .docx-ai-panel-loading {
+    color: #9ca3af;
+  }
+
+  .docx-ai-panel-input {
+    background: #111827;
+    border-color: #374151;
+    color: #e5e7eb;
+  }
+
+  .docx-ai-panel-input:focus {
+    border-color: #818cf8;
+    box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.2);
+  }
+
+  .docx-ai-panel-actions {
+    background: #111827;
+    border-color: #374151;
+  }
+
+  .docx-ai-panel-btn {
+    background: #374151;
+    border-color: #4b5563;
+    color: #e5e7eb;
+  }
+
+  .docx-ai-panel-btn:hover {
+    background: #4b5563;
+  }
+
+  .docx-ai-panel-btn-primary {
+    background: #6366f1;
+    border-color: #6366f1;
+    color: #ffffff;
+  }
+
+  .docx-ai-panel-btn-primary:hover {
+    background: #818cf8;
+    border-color: #818cf8;
+  }
+}
+
+/* ========== 响应式适配 ========== */
+@media (max-width: 480px) {
+  .docx-ai-toolbar {
+    flex-wrap: wrap;
+    max-width: calc(100vw - 20px);
+  }
+
+  .docx-ai-toolbar-item-label {
+    display: none;
+  }
+
+  .docx-ai-toolbar-item {
+    padding: 8px;
+  }
+
+  .docx-ai-panel {
+    width: calc(100vw - 20px);
+    left: 10px !important;
+  }
+}

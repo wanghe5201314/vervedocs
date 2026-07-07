@@ -40,7 +40,6 @@ export default defineConfig({
         'vue',
         'element-plus',
         '@mdi/js',
-        'pinia',
 
         '@icon-park/vue-next',
         'chartist',
@@ -66,7 +65,6 @@ export default defineConfig({
             vue: 'Vue',
             'element-plus': 'ElementPlus',
             '@mdi/js': 'MdiJs',
-            pinia: 'Pinia'
           },
           dir: 'dist'
       }

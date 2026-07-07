@@ -2766,72 +2766,7 @@ function emitChange() {
 }
 
 /* ===== 菜单栏 ===== */
-.menu-card {
-  border-radius: 0 !important;
-  border-left: none !important;
-  border-right: none !important;
-  border-top: none !important;
-  border-bottom: 1px solid #e2e6ed !important;
-  background: var(--tabs-bg-color, #f2f4f7) !important;
-  width: 100% !important;
-  margin: 0 !important;
-}
 
-/* ===== 菜单栏 ===== */
-.menu-card {
-  border-radius: 0 !important;
-  border-left: none !important;
-  border-right: none !important;
-  border-top: none !important;
-  border-bottom: 1px solid #185c37 !important;
-  background: #217346 !important;
-  width: 100% !important;
-  margin: 0 !important;
-}
-
-.menu-card :deep(.el-card__body) {
-  padding: 0 !important;
-  width: 100% !important;
-}
-
-.sheet-menu-bar {
-  border-bottom: none !important;
-  height: auto !important;
-  background: transparent !important;
-  width: 100% !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.sheet-menu-bar :deep(.el-menu--horizontal) {
-  border-bottom: none !important;
-  background: transparent !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.sheet-menu-bar :deep(.el-sub-menu__title) {
-  padding: 6px 12px !important;
-  height: auto !important;
-  line-height: 1.4 !important;
-  font-size: 13px !important;
-  color: #ffffff !important;
-  background: #217346 !important;
-  border-radius: 4px !important;
-  border-bottom: none !important;
-}
-
-.sheet-menu-bar :deep(.el-sub-menu__title:hover) {
-  background: #1e6e3a !important;
-}
-
-.sheet-menu-bar :deep(.el-sub-menu.is-opened > .el-sub-menu__title) {
-  background: #185c37 !important;
-}
-
-.sheet-menu-bar :deep(.el-sub-menu__icon-arrow) {
-  display: none !important;
-}
 
 .shortcut {
   margin-left: auto;
@@ -3613,6 +3548,57 @@ function emitChange() {
 .sheet-menu-popper .el-divider--horizontal {
   margin: 4px 12px !important;
   width: calc(100% - 24px) !important;
+}
+
+/* 菜单栏样式 - 全局作用域，防止宿主 Element Plus CSS 覆盖 */
+.sheet-editor .menu-card {
+  border-radius: 0 !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+  border-bottom: 1px solid #185c37 !important;
+  background: #217346 !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+.sheet-editor .menu-card .el-card__body {
+  padding: 0 !important;
+  width: 100% !important;
+}
+.sheet-editor .sheet-menu-bar {
+  border-bottom: none !important;
+  height: auto !important;
+  background: transparent !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+.sheet-editor .sheet-menu-bar .el-menu--horizontal {
+  border-bottom: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+.sheet-editor .sheet-menu-bar .el-sub-menu__title {
+  padding: 6px 12px !important;
+  height: auto !important;
+  line-height: 1.4 !important;
+  font-size: 13px !important;
+  color: #ffffff !important;
+  background: #217346 !important;
+  border-radius: 4px !important;
+  border-bottom: none !important;
+  display: flex !important;
+  align-items: center !important;
+}
+.sheet-editor .sheet-menu-bar .el-sub-menu__title:hover {
+  background: #1e6e3a !important;
+}
+.sheet-editor .sheet-menu-bar .el-sub-menu.is-opened > .el-sub-menu__title {
+  background: #185c37 !important;
+}
+.sheet-editor .sheet-menu-bar .el-sub-menu__icon-arrow {
+  display: none !important;
 }
 
 /* ===== 右键菜单（Teleport 到 body） ===== */

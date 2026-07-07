@@ -1,4 +1,5 @@
 import { createApp, defineComponent, h, reactive } from 'vue'
+import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
@@ -57,6 +58,7 @@ export class PptEditor {
     for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
       this.app.component(key, component)
     }
+    this.app.use(createPinia())
     this.app.use(ElementPlus, { locale: zhCn })
     this.app.mount(host)
   }

@@ -1,6 +1,6 @@
 {
   "name": "@vervedoc/ppt",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "VerveDoc PPT 编辑器UI组件",
   "type": "module",
   "main": "./dist/ppt-editor-ui.js",
@@ -20,7 +20,6 @@
     "dist"
   ],
   "scripts": {
-    "lib": "vite build --config vite.lib.config.ts",
     "dev": "vite",
     "build": "vue-tsc -b && vite build --config vite.lib.config.ts",
     "build:ui": "vue-tsc -b && vite build"

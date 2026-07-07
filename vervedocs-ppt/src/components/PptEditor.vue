@@ -420,49 +420,8 @@ watch(
   background: #f1f3f4;
 }
 
-.menu-card {
-  border-radius: 0 !important;
-  border-left: none !important;
-  border-right: none !important;
-  border-top: none !important;
-  border-bottom: 1px solid #e2e6ed !important;
-  background: var(--tabs-bg-color, #f2f4f7) !important;
-  flex-shrink: 0;
-}
 
-/* 菜单栏 - 参照 docx-editor-ui */
-.ppt-menu-bar {
-  border-bottom: none !important;
-  height: auto !important;
-  background: transparent !important;
-}
-.ppt-menu-bar :deep(.el-menu--horizontal) {
-  border-bottom: none !important;
-  background: transparent !important;
-}
-.ppt-menu-bar :deep(.el-sub-menu__title) {
-  padding: 6px 12px !important;
-  height: auto !important;
-  line-height: 1.4 !important;
-  font-size: 13px !important;
-  color: var(--tabs-text-color, #3c4043) !important;
-  border-radius: 4px !important;
-  border-bottom: none !important;
-}
-.ppt-menu-bar :deep(.el-sub-menu__title:hover) {
-  background: rgba(255, 255, 255, 0.2) !important;
-}
-.ppt-menu-bar :deep(.el-sub-menu.is-opened > .el-sub-menu__title) {
-  background: rgba(255, 255, 255, 0.3) !important;
-}
-.ppt-menu-bar :deep(.el-sub-menu__icon-arrow) {
-  display: none !important;
-}
-.ppt-menu-bar :deep(.el-menu-item),
-.ppt-menu-bar :deep(.el-sub-menu .el-sub-menu__title) {
-  height: auto !important;
-  line-height: 1.6 !important;
-}
+
 
 .menu-el-icon {
   margin-right: 8px;
@@ -662,5 +621,48 @@ watch(
   & svg {
     fill: #f56c6c !important;
   }
+}
+
+/* 菜单栏样式 - 全局作用域，防止宿主 Element Plus CSS 覆盖 */
+.ppt-editor .ppt-menu-bar {
+  border-bottom: none !important;
+  height: auto !important;
+  background: transparent !important;
+}
+.ppt-editor .ppt-menu-bar .el-menu--horizontal {
+  border-bottom: none !important;
+  background: transparent !important;
+}
+.ppt-editor .ppt-menu-bar .el-sub-menu__title {
+  padding: 6px 12px !important;
+  height: auto !important;
+  line-height: 1.4 !important;
+  font-size: 13px !important;
+  color: #ffffff !important;
+  border-radius: 4px !important;
+  border-bottom: none !important;
+}
+.ppt-editor .ppt-menu-bar .el-sub-menu__title:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+}
+.ppt-editor .ppt-menu-bar .el-sub-menu.is-opened > .el-sub-menu__title {
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+.ppt-editor .ppt-menu-bar .el-sub-menu__icon-arrow {
+  display: none !important;
+}
+.ppt-editor .ppt-menu-bar .el-menu-item,
+.ppt-editor .ppt-menu-bar .el-sub-menu .el-sub-menu__title {
+  height: auto !important;
+  line-height: 1.6 !important;
+}
+.ppt-editor .menu-card {
+  border-radius: 0 !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+  border-bottom: 1px solid #9e2b1a !important;
+  background: #b7472a !important;
+  flex-shrink: 0;
 }
 </style>

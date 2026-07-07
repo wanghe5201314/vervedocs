@@ -1,6 +1,0 @@
-# .npmignore 示例（和 .gitignore 语法一致）
-node_modules/
-
-.git/
-.env
-logs/

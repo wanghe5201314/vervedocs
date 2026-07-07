@@ -1,0 +1,53 @@
+{
+  "name": "@vervedoc/docx-editor-collaboration",
+  "version": "1.0.0",
+  "description": "DocxEditor 协同编辑库 - 基于 Yjs CRDT + Hocuspocus 实现实时协作",
+  "author": "wanghe",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/docx-editor-collaboration.umd.cjs",
+  "module": "./dist/docx-editor-collaboration.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/docx-editor-collaboration.js",
+      "require": "./dist/docx-editor-collaboration.umd.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "package.json"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "dev": "vite",
+    "clean": "node -e \"const fs = require('fs'); if(fs.existsSync('dist')) fs.rmSync('dist', {recursive: true})\"",
+    "build": "npm run clean && tsc && vite build",
+    "preview": "vite preview",
+    "type:check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hocuspocus/provider": "^2.15.0",
+    "eventemitter3": "^5.0.1",
+    "fast-json-patch": "^3.1.1",
+    "yjs": "^13.6.20"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^25.3.5",
+    "esbuild": "^0.25.5",
+    "eslint": "^10.4.0",
+    "eslint-plugin-unused-imports": "^4.4.1",
+    "typescript": "^5.0.0",
+    "typescript-eslint": "^8.59.4",
+    "vite": "^5.4.10",
+    "vite-plugin-dts": "^4.5.4"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

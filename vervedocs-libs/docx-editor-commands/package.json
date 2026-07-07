@@ -1,0 +1,60 @@
+{
+  "name": "@vervedoc/docx-editor-commands",
+  "version": "1.0.3",
+  "description": "DocxEditor 控件扩展插件 - 文档控件交互",
+  "author": "wanghe",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/docx-editor-commands.umd.cjs",
+  "module": "./dist/docx-editor-commands.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/docx-editor-commands.js",
+      "require": "./dist/docx-editor-commands.umd.cjs"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "docx-editor-commands",
+    "editor",
+    "docx-editor"
+  ],
+  "files": [
+    "dist",
+    "README.md",
+    "package.json"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "clean": "node -e \"const fs = require('fs'); if(fs.existsSync('dist')) fs.rmSync('dist', {recursive: true})\"",
+    "build": "npm run clean && tsc && vite build",
+    "preview": "vite preview",
+    "type:check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@vervedoc/docx-editor-schema": "^1.0.7",
+    "@vervedoc/docx-editor-state": "^1.0.2",
+    "@vervedoc/docx-editor-transform": "^1.0.7",
+    "@vervedoc/docx-editor-view": "^1.0.4",
+    "plyr": "^3.8.4",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/qrcode": "^1.5.6",
+    "eslint": "^10.4.0",
+    "eslint-plugin-unused-imports": "^4.4.1",
+    "typescript": "^5.0.0",
+    "typescript-eslint": "^8.59.4",
+    "vite": "^5.4.10",
+    "vite-plugin-css-injected-by-js": "^3.0.0",
+    "vite-plugin-dts": "^4.5.4"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

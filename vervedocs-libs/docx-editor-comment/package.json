@@ -1,6 +1,6 @@
 {
   "name": "@vervedoc/docx-editor-comment",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "DocxEditor 批注系统模块",
   "author": "wanghe",
   "license": "MIT",
@@ -31,9 +31,9 @@
     "type:check": "tsc --noEmit"
   },
   "dependencies": {
-    "@vervedoc/docx-editor-schema": "file:../docx-editor-schema",
-    "@vervedoc/docx-editor-state": "file:../docx-editor-state",
-    "@vervedoc/docx-editor-transform": "file:../docx-editor-transform"
+    "@vervedoc/docx-editor-schema": "^1.0.9",
+    "@vervedoc/docx-editor-state": "^1.0.3",
+    "@vervedoc/docx-editor-transform": "^1.0.8"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

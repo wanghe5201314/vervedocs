@@ -21,10 +21,10 @@
             <a-card style="min-width: 300px">
               <a-form :label-col="{ style: { width: '80px' } }" size="small">
                 <a-form-item label="背景颜色">
-                  <input type="color" :value="qrcodeStyle.lightColor" @change="(e: Event) => qrcodeStyle.lightColor = (e.target as HTMLInputElement).value" style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
+                  <input type="color" :value="qrcodeStyle.lightColor" @change.stop="(e: Event) => qrcodeStyle.lightColor = (e.target as HTMLInputElement).value" @click.stop style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
                 </a-form-item>
                 <a-form-item label="二维码颜色">
-                  <input type="color" :value="qrcodeStyle.darkColor" @change="(e: Event) => qrcodeStyle.darkColor = (e.target as HTMLInputElement).value" style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
+                  <input type="color" :value="qrcodeStyle.darkColor" @change.stop="(e: Event) => qrcodeStyle.darkColor = (e.target as HTMLInputElement).value" @click.stop style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
                 </a-form-item>
               </a-form>
             </a-card>

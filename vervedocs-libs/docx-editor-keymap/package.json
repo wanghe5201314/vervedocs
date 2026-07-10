@@ -1,6 +1,6 @@
 {
   "name": "@vervedoc/docx-editor-keymap",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "DocxEditor 快捷键插件 - 键盘快捷键映射",
   "author": "wanghe",
   "license": "MIT",
@@ -36,8 +36,8 @@
     "type:check": "tsc --noEmit"
   },
   "dependencies": {
-    "@vervedoc/docx-editor-schema": "file:../docx-editor-schema",
-    "@vervedoc/docx-editor-transform": "file:../docx-editor-transform"
+    "@vervedoc/docx-editor-schema": "^1.0.9",
+    "@vervedoc/docx-editor-transform": "^1.0.8"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

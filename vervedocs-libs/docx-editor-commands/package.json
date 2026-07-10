@@ -1,6 +1,6 @@
 {
   "name": "@vervedoc/docx-editor-commands",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "DocxEditor 控件扩展插件 - 文档控件交互",
   "author": "wanghe",
   "license": "MIT",
@@ -36,10 +36,10 @@
     "type:check": "tsc --noEmit"
   },
   "dependencies": {
-    "@vervedoc/docx-editor-schema": "file:../docx-editor-schema",
-    "@vervedoc/docx-editor-state": "file:../docx-editor-state",
-    "@vervedoc/docx-editor-transform": "file:../docx-editor-transform",
-    "@vervedoc/docx-editor-view": "file:../docx-editor-view",
+    "@vervedoc/docx-editor-schema": "^1.0.9",
+    "@vervedoc/docx-editor-state": "^1.0.3",
+    "@vervedoc/docx-editor-transform": "^1.0.8",
+    "@vervedoc/docx-editor-view": "^1.0.5",
     "plyr": "^3.8.4",
     "qrcode": "^1.5.4"
   },

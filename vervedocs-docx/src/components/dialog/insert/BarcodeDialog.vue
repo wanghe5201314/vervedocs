@@ -30,13 +30,13 @@
               <a-card style="min-width: 260px">
                 <a-form :label-col="{ style: { width: '80px' } }" size="small">
                   <a-form-item label="条形码颜色">
-                    <input type="color" :value="barcodeStyle.lineColor" @change="(e: Event) => barcodeStyle.lineColor = (e.target as HTMLInputElement).value" style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
+                    <input type="color" :value="barcodeStyle.lineColor" @change.stop="(e: Event) => barcodeStyle.lineColor = (e.target as HTMLInputElement).value" @click.stop style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
                   </a-form-item>
                   <a-form-item label="背景颜色">
-                    <input type="color" :value="barcodeStyle.background" @change="(e: Event) => barcodeStyle.background = (e.target as HTMLInputElement).value" style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
+                    <input type="color" :value="barcodeStyle.background" @change.stop="(e: Event) => barcodeStyle.background = (e.target as HTMLInputElement).value" @click.stop style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
                   </a-form-item>
                   <a-form-item label="文字颜色">
-                    <input type="color" :value="barcodeStyle.textColor" @change="(e: Event) => barcodeStyle.textColor = (e.target as HTMLInputElement).value" style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
+                    <input type="color" :value="barcodeStyle.textColor" @change.stop="(e: Event) => barcodeStyle.textColor = (e.target as HTMLInputElement).value" @click.stop style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
                   </a-form-item>
                   <a-form-item label="文字位置">
                     <a-select v-model:value="barcodeStyle.textPosition">

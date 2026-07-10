@@ -1,6 +1,6 @@
 {
   "name": "@vervedoc/docx-editor-state",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "DocxEditor 状态层 - 管理编辑器状态、事件总线、监听器",
   "author": "wanghe",
   "license": "MIT",
@@ -36,7 +36,7 @@
     "type:check": "tsc --noEmit"
   },
   "dependencies": {
-    "@vervedoc/docx-editor-schema": "^1.0.7",
+    "@vervedoc/docx-editor-schema": "^1.0.9",
     "eventemitter3": "^5.0.4"
   },
   "devDependencies": {

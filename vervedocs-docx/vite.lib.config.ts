@@ -17,6 +17,7 @@ const pkg = JSON.parse(
 
 const autoImportPlugins = [
   AutoImport({
+    imports: ['vue'],
     resolvers: [
       AntDesignVueResolver({
         importStyle: false,
@@ -89,6 +90,8 @@ export default defineConfig({
         globals: {
           vue: 'Vue',
           'ant-design-vue': 'antd',
+          'ant-design-vue/es': 'antd',
+          'ant-design-vue/es/locale/zh_CN': 'zhCN',
           '@ant-design/icons-vue': 'iconsVue',
           '@mdi/js': 'mdiJs',
           echarts: 'echarts',
@@ -110,6 +113,12 @@ export default defineConfig({
           '@vervedoc/docx-editor-collaboration': 'DocxEditorCollaboration',
           '@vervedoc/docx-editor-comment': 'DocxEditorComment',
         }
+      },
+      onwarn(warning, warn) {
+        if (warning.code === 'UNUSED_EXTERNAL_IMPORT' && warning.message.includes('resolveComponent')) {
+          return
+        }
+        warn(warning)
       }
     }
   }

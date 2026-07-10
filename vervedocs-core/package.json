@@ -37,7 +37,7 @@
     "eslint-plugin-unused-imports": "^4.4.1",
     "typescript": "^5.0.0",
     "typescript-eslint": "^8.59.4",
-    "vite": "^5.4.10",
+    "vite": "^6.4.3",
     "vite-plugin-css-injected-by-js": "^3.0.0",
     "vite-plugin-dts": "^4.5.4"
   },
@@ -45,14 +45,14 @@
     "node": ">=16.0.0"
   },
   "dependencies": {
-    "@vervedoc/docx-editor-commands": "^1.0.3",
-    "@vervedoc/docx-editor-comment": "^1.0.6",
-    "@vervedoc/docx-editor-history": "^1.0.7",
-    "@vervedoc/docx-editor-keymap": "^1.0.4",
-    "@vervedoc/docx-editor-schema": "^1.0.7",
-    "@vervedoc/docx-editor-state": "^1.0.2",
-    "@vervedoc/docx-editor-transform": "^1.0.7",
-    "@vervedoc/docx-editor-view": "1.0.4",
+    "@vervedoc/docx-editor-commands": "file:../vervedocs-libs/docx-editor-commands",
+    "@vervedoc/docx-editor-comment": "file:../vervedocs-libs/docx-editor-comment",
+    "@vervedoc/docx-editor-history": "file:../vervedocs-libs/docx-editor-history",
+    "@vervedoc/docx-editor-keymap": "file:../vervedocs-libs/docx-editor-keymap",
+    "@vervedoc/docx-editor-schema": "file:../vervedocs-libs/docx-editor-schema",
+    "@vervedoc/docx-editor-state": "file:../vervedocs-libs/docx-editor-state",
+    "@vervedoc/docx-editor-transform": "file:../vervedocs-libs/docx-editor-transform",
+    "@vervedoc/docx-editor-view": "file:../vervedocs-libs/docx-editor-view",
     "docx": "^9.1.0",
     "jszip": "^3.10.1",
     "vanilla-picker": "^2.12.3"

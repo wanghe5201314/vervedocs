@@ -6,7 +6,7 @@ import unusedImports from 'eslint-plugin-unused-imports'
 
 export default [
   {
-    ignores: ['node_modules', 'dist', 'site', 'index.html', 'src/assets/iconfont/*.js', 'scripts']
+    ignores: ['node_modules', 'dist', 'site', 'index.html', 'src/assets/iconfont/*.js', 'scripts', 'src/auto-imports.d.ts', 'src/components.d.ts']
   },
   js.configs.recommended,
   {
@@ -25,9 +25,41 @@ export default [
         RequestCredentials: 'readonly',
         TextEncoder: 'readonly',
         localStorage: 'readonly',
+        sessionStorage: 'readonly',
         console: 'readonly',
         debugger: 'readonly',
-        fetch: 'readonly'
+        fetch: 'readonly',
+        window: 'readonly',
+        document: 'readonly',
+        navigator: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        requestAnimationFrame: 'readonly',
+        cancelAnimationFrame: 'readonly',
+        performance: 'readonly',
+        URL: 'readonly',
+        Blob: 'readonly',
+        File: 'readonly',
+        FileReader: 'readonly',
+        Image: 'readonly',
+        ImageData: 'readonly',
+        Event: 'readonly',
+        EventTarget: 'readonly',
+        MouseEvent: 'readonly',
+        KeyboardEvent: 'readonly',
+        FocusEvent: 'readonly',
+        MutationObserver: 'readonly',
+        BroadcastChannel: 'readonly',
+        AbortController: 'readonly',
+        TextDecoder: 'readonly',
+        HTMLElement: 'readonly',
+        HTMLDivElement: 'readonly',
+        HTMLInputElement: 'readonly',
+        HTMLCanvasElement: 'readonly',
+        Location: 'readonly',
+        URLSearchParams: 'readonly'
       }
     },
     plugins: {
@@ -50,6 +82,7 @@ export default [
         argsIgnorePattern: '^_',
         varsIgnorePattern: '^_'
       }],
+      'no-unused-vars': 'off',
       'no-constant-condition': ['error', {
         checkLoops: false
       }],
@@ -58,12 +91,7 @@ export default [
         allowTemplateLiterals: true
       }],
       'unused-imports/no-unused-imports': 'error',
-      'unused-imports/no-unused-vars': ['warn', {
-        vars: 'all',
-        varsIgnorePattern: '^_',
-        args: 'after-used',
-        argsIgnorePattern: '^_'
-      }]
+      'unused-imports/no-unused-vars': 'off'
     }
   },
   {
@@ -83,9 +111,41 @@ export default [
         RequestCredentials: 'readonly',
         TextEncoder: 'readonly',
         localStorage: 'readonly',
+        sessionStorage: 'readonly',
         console: 'readonly',
         debugger: 'readonly',
-        fetch: 'readonly'
+        fetch: 'readonly',
+        window: 'readonly',
+        document: 'readonly',
+        navigator: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        requestAnimationFrame: 'readonly',
+        cancelAnimationFrame: 'readonly',
+        performance: 'readonly',
+        URL: 'readonly',
+        Blob: 'readonly',
+        File: 'readonly',
+        FileReader: 'readonly',
+        Image: 'readonly',
+        ImageData: 'readonly',
+        Event: 'readonly',
+        EventTarget: 'readonly',
+        MouseEvent: 'readonly',
+        KeyboardEvent: 'readonly',
+        FocusEvent: 'readonly',
+        MutationObserver: 'readonly',
+        BroadcastChannel: 'readonly',
+        AbortController: 'readonly',
+        TextDecoder: 'readonly',
+        HTMLElement: 'readonly',
+        HTMLDivElement: 'readonly',
+        HTMLInputElement: 'readonly',
+        HTMLCanvasElement: 'readonly',
+        Location: 'readonly',
+        URLSearchParams: 'readonly'
       }
     },
     plugins: {
@@ -108,6 +168,7 @@ export default [
         argsIgnorePattern: '^_',
         varsIgnorePattern: '^_'
       }],
+      'no-unused-vars': 'off',
       'no-constant-condition': ['error', {
         checkLoops: false
       }],
@@ -116,12 +177,7 @@ export default [
         allowTemplateLiterals: true
       }],
       'unused-imports/no-unused-imports': 'error',
-      'unused-imports/no-unused-vars': ['warn', {
-        vars: 'all',
-        varsIgnorePattern: '^_',
-        args: 'after-used',
-        argsIgnorePattern: '^_'
-      }]
+      'unused-imports/no-unused-vars': 'off'
     }
   }
 ]

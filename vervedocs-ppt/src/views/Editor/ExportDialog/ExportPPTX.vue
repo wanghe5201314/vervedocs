@@ -3,36 +3,36 @@
     <div class="configs">
       <div class="row">
         <div class="title">导出范围：</div>
-        <el-radio-group
+        <a-radio-group
           class="config-item"
-          v-model="rangeType"
+          v-model:value="rangeType"
         >
-          <el-radio-button style="width: 33.33%;" value="all">全部</el-radio-button>
-          <el-radio-button style="width: 33.33%;" value="current">当前页</el-radio-button>
-          <el-radio-button style="width: 33.33%;" value="custom">自定义</el-radio-button>
-        </el-radio-group>
+          <a-radio-button style="width: 33.33%;" value="all">全部</a-radio-button>
+          <a-radio-button style="width: 33.33%;" value="current">当前页</a-radio-button>
+          <a-radio-button style="width: 33.33%;" value="custom">自定义</a-radio-button>
+        </a-radio-group>
       </div>
       <div class="row" v-if="rangeType === 'custom'">
         <div class="title" :data-range="`（${range[0]} ~ ${range[1]}）`">自定义范围：</div>
-        <el-slider
+        <a-slider
           class="config-item"
           range
           :min="1"
           :max="slides.length"
           :step="1"
-          v-model="range"
+          v-model:value="range"
         />
       </div>
       <div class="row">
         <div class="title">覆盖默认母版：</div>
         <div class="config-item">
-          <el-switch v-model="masterOverwrite" />
+          <a-switch v-model:checked="masterOverwrite" />
         </div>
       </div>
     </div>
     <div class="btns">
-      <el-button class="btn export" type="primary" @click="exportPPTX(selectedSlides, masterOverwrite)">导出 PPTX</el-button>
-      <el-button class="btn close" @click="close()">关闭</el-button>
+      <a-button class="btn export" type="primary" @click="exportPPTX(selectedSlides, masterOverwrite)">导出 PPTX</a-button>
+      <a-button class="btn close" @click="close()">关闭</a-button>
     </div>
 
     <FullscreenSpin :loading="exporting" tip="正在导出..." />

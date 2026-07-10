@@ -38,7 +38,7 @@ export default defineConfig({
     rollupOptions: {
       external: [
         'vue',
-        'element-plus',
+        'ant-design-vue',
         '@mdi/js',
 
         '@icon-park/vue-next',
@@ -63,7 +63,7 @@ export default defineConfig({
       output: {
           globals: {
             vue: 'Vue',
-            'element-plus': 'ElementPlus',
+            'ant-design-vue': 'antd',
             '@mdi/js': 'MdiJs',
           },
           dir: 'dist'

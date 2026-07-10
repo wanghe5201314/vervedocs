@@ -78,16 +78,15 @@
 
     <Ruler :viewportStyles="viewportStyles" v-if="showRuler" />
 
-    <el-dialog
-      v-model="linkDialogVisible" 
-      :show-close="true"
-      :close-on-click-modal="true"
+    <a-modal
+      v-model:open="linkDialogVisible" 
+      :footer="null"
       width="540px"
       :destroy-on-close="true"
-      align-center
+      centered
     >
       <LinkDialog @close="linkDialogVisible = false" />
-    </el-dialog>
+    </a-modal>
   </div>
 </template>
 

@@ -2,7 +2,7 @@ import { storeToRefs } from 'pinia'
 import { useMainStore } from '@/store'
 import { copyText, readClipboard } from '@/utils/clipboard'
 import { encrypt } from '@/utils/crypto'
-import { ElMessage } from 'element-plus'
+import { message } from 'ant-design-vue'
 import usePasteTextClipboardData from '@/hooks/usePasteTextClipboardData'
 import useDeleteElement from './useDeleteElement'
 
@@ -37,7 +37,7 @@ export default () => {
   const pasteElement = () => {
     readClipboard().then(text => {
       pasteTextClipboardData(text)
-    }).catch(err => ElMessage.warning(err))
+    }).catch(err => message.warning(err))
   }
 
   // 将选中元素复制后立刻粘贴

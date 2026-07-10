@@ -3,54 +3,54 @@
     <div class="row">
       <div style="flex: 2;">启用阴影：</div>
       <div class="switch-wrapper" style="flex: 3;">
-        <el-switch :model-value="hasShadow" @change="(checked: boolean) => toggleShadow(checked)" />
+        <a-switch :checked="hasShadow" @change="(checked: boolean) => toggleShadow(checked)" />
       </div>
     </div>
     <template v-if="hasShadow && shadow">
       <div class="row">
         <div style="flex: 2;">水平阴影：</div>
-        <el-slider 
+        <a-slider 
           class="slider"
           :min="-10" 
           :max="10" 
           :step="1" 
-          :model-value="shadow.h" 
+          :value="shadow.h" 
           @change="(value: number) => updateShadow({ h: value })"
         />
       </div>
       <div class="row">
         <div style="flex: 2;">垂直阴影：</div>
-        <el-slider
+        <a-slider
           class="slider"
           :min="-10"
           :max="10"
           :step="1"
-          :model-value="shadow.v"
+          :value="shadow.v"
           @change="(value: number) => updateShadow({ v: value })"
         />
       </div>
       <div class="row">
         <div style="flex: 2;">模糊距离：</div>
-        <el-slider
+        <a-slider
           class="slider"
           :min="1"
           :max="20"
           :step="1"
-          :model-value="shadow.blur"
+          :value="shadow.blur"
           @change="(value: number) => updateShadow({ blur: value })"
         />
       </div>
       <div class="row">
         <div style="flex: 2;">阴影颜色：</div>
-        <el-popover trigger="click" :width="'auto'">
-          <ColorPicker
-            :modelValue="shadow.color"
-            @update:modelValue="(value: any) => updateShadow({ color: value })"
-          />
-          <template #reference>
-            <ColorButton :color="shadow.color" style="flex: 3;" />
+        <a-popover trigger="click" :width="'auto'">
+          <template #content>
+            <ColorPicker
+              :modelValue="shadow.color"
+              @update:modelValue="(value: any) => updateShadow({ color: value })"
+            />
           </template>
-        </el-popover>
+          <ColorButton :color="shadow.color" style="flex: 3;" />
+        </a-popover>
       </div>
     </template>
   </div>

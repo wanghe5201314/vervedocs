@@ -12,7 +12,7 @@ import { AST, toAST } from '@/utils/htmlParser'
 import { SvgPoints, toPoints } from '@/utils/svgPathParser'
 import { decrypt, encrypt } from '@/utils/crypto'
 import { svg2Base64 } from '@/utils/svg2Base64'
-import { ElMessage } from 'element-plus'
+import { message } from 'ant-design-vue'
 import useAddSlidesOrElements from '@/hooks/useAddSlidesOrElements'
 
 interface ExportImageConfig {
@@ -50,7 +50,7 @@ export default () => {
         saveAs(dataUrl, `pptist_slides.${format}`)
       }).catch(() => {
         exporting.value = false
-        ElMessage.error('导出图片失败')
+        message.error('导出图片失败')
       })
     }, 200)
   }
@@ -73,7 +73,7 @@ export default () => {
         else addSlidesFromData(slides)
       }
       catch {
-        ElMessage.error('无法正确读取 / 解析该文件')
+        message.error('无法正确读取 / 解析该文件')
       }
     })
     reader.readAsText(file)
@@ -759,7 +759,7 @@ export default () => {
     }
     pptx.writeFile({ fileName: `pptist.pptx` }).then(() => exporting.value = false).catch(() => {
       exporting.value = false
-      ElMessage.error('导出失败')
+      message.error('导出失败')
     })
   }
 

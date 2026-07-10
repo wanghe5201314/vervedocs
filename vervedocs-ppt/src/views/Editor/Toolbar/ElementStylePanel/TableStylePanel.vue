@@ -1,142 +1,139 @@
 <template>
   <div class="table-style-panel">
     <div class="input-group-compact row">
-      <el-select
+      <a-select
         style="flex: 3;"
-        :model-value="textAttrs.fontname"
+        :value="textAttrs.fontname"
         @change="(value: any) => updateTextAttrs({ fontname: value })"
       >
-        <template #prefix><IconFontSize /></template>
-        <el-option-group label="系统字体">
-          <el-option v-for="font in availableFonts" :key="font.value" :value="font.value" :label="font.label">
+        <a-select-opt-group label="系统字体">
+          <a-select-option v-for="font in availableFonts" :key="font.value" :value="font.value">
             <span :style="{ fontFamily: font.value }">{{font.label}}</span>
-          </el-option>
-        </el-option-group>
-        <el-option-group label="在线字体">
-          <el-option v-for="font in webFonts" :key="font.value" :value="font.value" :label="font.label">
+          </a-select-option>
+        </a-select-opt-group>
+        <a-select-opt-group label="在线字体">
+          <a-select-option v-for="font in webFonts" :key="font.value" :value="font.value">
             <span>{{font.label}}</span>
-          </el-option>
-        </el-option-group>
-      </el-select>
-      <el-select
+          </a-select-option>
+        </a-select-opt-group>
+      </a-select>
+      <a-select
         style="flex: 2;"
-        :model-value="textAttrs.fontsize"
+        :value="textAttrs.fontsize"
         @change="(value: any) => updateTextAttrs({ fontsize: value })"
       >
-        <template #prefix><IconAddText /></template>
-        <el-option v-for="fontsize in fontSizeOptions" :key="fontsize" :value="fontsize" :label="fontsize">
-        </el-option>
-      </el-select>
+        <a-select-option v-for="fontsize in fontSizeOptions" :key="fontsize" :value="fontsize">{{fontsize}}</a-select-option>
+      </a-select>
     </div>
 
-    <el-button-group class="row">
-      <el-popover trigger="click">
-        <ColorPicker
-          :modelValue="textAttrs.color"
-          @update:modelValue="(value: any) => updateTextAttrs({ color: value })"
-        />
-        <template #reference>
-          <el-tooltip :hide-after="0" :show-after="500" content="文字颜色">
-            <el-button class="text-color-btn" style="flex: 1;">
-              <IconText />
-              <div class="text-color-block" :style="{ backgroundColor: textAttrs.color }"></div>
-            </el-button>
-          </el-tooltip>
+    <a-button-group class="row">
+      <a-popover trigger="click">
+        <template #content>
+          <ColorPicker
+            :modelValue="textAttrs.color"
+            @update:modelValue="(value: any) => updateTextAttrs({ color: value })"
+          />
         </template>
-      </el-popover>
-      <el-popover trigger="click">
-        <ColorPicker
-          :modelValue="textAttrs.backcolor"
-          @update:modelValue="(value: any) => updateTextAttrs({ backcolor: value })"
-        />
-        <template #reference>
-          <el-tooltip :hide-after="0" :show-after="500" content="单元格填充">
-            <el-button class="text-color-btn" style="flex: 1;">
-              <IconFill />
-              <div class="text-color-block" :style="{ backgroundColor: textAttrs.backcolor }"></div>
-            </el-button>
-          </el-tooltip>
+        <a-tooltip title="文字颜色" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
+          <a-button class="text-color-btn" style="flex: 1;">
+            <IconText />
+            <div class="text-color-block" :style="{ backgroundColor: textAttrs.color }"></div>
+          </a-button>
+        </a-tooltip>
+      </a-popover>
+      <a-popover trigger="click">
+        <template #content>
+          <ColorPicker
+            :modelValue="textAttrs.backcolor"
+            @update:modelValue="(value: any) => updateTextAttrs({ backcolor: value })"
+          />
         </template>
-      </el-popover>
-    </el-button-group>
+        <a-tooltip title="单元格填充" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
+          <a-button class="text-color-btn" style="flex: 1;">
+            <IconFill />
+            <div class="text-color-block" :style="{ backgroundColor: textAttrs.backcolor }"></div>
+          </a-button>
+        </a-tooltip>
+      </a-popover>
+    </a-button-group>
 
     <div class="checkbox-button-group row">
-      <el-tooltip :hide-after="0" :show-after="500" content="加粗">
+      <a-tooltip title="加粗" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
         <CheckboxButton 
           style="flex: 1;"
           :checked="textAttrs.bold"
           @click="updateTextAttrs({ bold: !textAttrs.bold })"
         ><IconTextBold /></CheckboxButton>
-      </el-tooltip>
-      <el-tooltip :hide-after="0" :show-after="500" content="斜体">
+      </a-tooltip>
+      <a-tooltip title="斜体" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
         <CheckboxButton 
           style="flex: 1;"
           :checked="textAttrs.em"
           @click="updateTextAttrs({ em: !textAttrs.em })"
         ><IconTextItalic /></CheckboxButton>
-      </el-tooltip>
-      <el-tooltip :hide-after="0" :show-after="500" content="下划线">
+      </a-tooltip>
+      <a-tooltip title="下划线" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
         <CheckboxButton 
           style="flex: 1;"
           :checked="textAttrs.underline"
           @click="updateTextAttrs({ underline: !textAttrs.underline })"
         ><IconTextUnderline /></CheckboxButton>
-      </el-tooltip>
-      <el-tooltip :hide-after="0" :show-after="500" content="删除线">
+      </a-tooltip>
+      <a-tooltip title="删除线" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
         <CheckboxButton 
           style="flex: 1;"
           :checked="textAttrs.strikethrough"
           @click="updateTextAttrs({ strikethrough: !textAttrs.strikethrough })"
         ><IconStrikethrough /></CheckboxButton>
-      </el-tooltip>
+      </a-tooltip>
     </div>
 
-    <el-radio-group 
+    <a-radio-group 
       class="row" 
-      :model-value="textAttrs.align"
+      :value="textAttrs.align"
       @change="(value: any) => updateTextAttrs({ align: value })"
     >
-      <el-tooltip :hide-after="0" :show-after="500" content="左对齐">
-        <el-radio-button value="left" style="flex: 1;"><IconAlignTextLeft /></el-radio-button>
-      </el-tooltip>
-      <el-tooltip :hide-after="0" :show-after="500" content="居中">
-        <el-radio-button value="center" style="flex: 1;"><IconAlignTextCenter /></el-radio-button>
-      </el-tooltip>
-      <el-tooltip :hide-after="0" :show-after="500" content="右对齐">
-        <el-radio-button value="right" style="flex: 1;"><IconAlignTextRight /></el-radio-button>
-      </el-tooltip>
-    </el-radio-group>
+      <a-tooltip title="左对齐" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
+        <a-radio-button value="left" style="flex: 1;"><IconAlignTextLeft /></a-radio-button>
+      </a-tooltip>
+      <a-tooltip title="居中" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
+        <a-radio-button value="center" style="flex: 1;"><IconAlignTextCenter /></a-radio-button>
+      </a-tooltip>
+      <a-tooltip title="右对齐" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
+        <a-radio-button value="right" style="flex: 1;"><IconAlignTextRight /></a-radio-button>
+      </a-tooltip>
+    </a-radio-group>
 
-    <el-divider />
+    <a-divider />
 
     <ElementOutline :fixed="true" />
 
-    <el-divider />
+    <a-divider />
 
     <div class="row">
       <div style="flex: 2;">行数：</div>
       <div class="set-count" style="flex: 3;">
-        <el-button class="btn" :disabled="rowCount <= 1" @click="setTableRow(rowCount - 1)"><IconMinus /></el-button>
+        <a-button class="btn" :disabled="rowCount <= 1" @click="setTableRow(rowCount - 1)"><IconMinus /></a-button>
         <div class="count-text">{{rowCount}}</div>
-        <el-button class="btn" :disabled="rowCount >= 30" @click="setTableRow(rowCount + 1)"><IconPlus /></el-button>
+        <a-button class="btn" :disabled="rowCount >= 30" @click="setTableRow(rowCount + 1)"><IconPlus /></a-button>
       </div>
     </div>
     <div class="row">
       <div style="flex: 2;">列数：</div>
       <div class="set-count" style="flex: 3;">
-        <el-button class="btn" :disabled="colCount <= 1" @click="setTableCol(colCount - 1)"><IconMinus /></el-button>
+        <a-button class="btn" :disabled="colCount <= 1" @click="setTableCol(colCount - 1)"><IconMinus /></a-button>
         <div class="count-text">{{colCount}}</div>
-        <el-button class="btn" :disabled="colCount >= 30" @click="setTableCol(colCount + 1)"><IconPlus /></el-button>
+        <a-button class="btn" :disabled="colCount >= 30" @click="setTableCol(colCount + 1)"><IconPlus /></a-button>
       </div>
     </div>
 
-    <el-divider />
+    <a-divider />
 
     <div class="row theme-switch">
       <div style="flex: 2;">启用主题表格：</div>
       <div class="switch-wrapper" style="flex: 3;">
-        <el-switch 
-          :model-value="hasTheme" 
+        <a-switch 
+          :checked="hasTheme" 
           @change="(checked: any) => toggleTheme(checked)" 
         />
       </div>
@@ -144,40 +141,40 @@
 
     <template v-if="hasTheme">
       <div class="row">
-        <el-checkbox 
+        <a-checkbox 
           @change="(checked: any) => updateTheme({ rowHeader: checked })" 
-          :model-value="theme?.rowHeader" 
+          :checked="theme?.rowHeader" 
           style="flex: 1;"
-        >标题行</el-checkbox>
-        <el-checkbox 
+        >标题行</a-checkbox>
+        <a-checkbox 
           @change="(checked: any) => updateTheme({ rowFooter: checked })" 
-          :model-value="theme?.rowFooter" 
+          :checked="theme?.rowFooter" 
           style="flex: 1;"
-        >汇总行</el-checkbox>
+        >汇总行</a-checkbox>
       </div>
       <div class="row">
-        <el-checkbox 
+        <a-checkbox 
           @change="(checked: any) => updateTheme({ colHeader: checked })" 
-          :model-value="theme?.colHeader" 
+          :checked="theme?.colHeader" 
           style="flex: 1;"
-        >第一列</el-checkbox>
-        <el-checkbox 
+        >第一列</a-checkbox>
+        <a-checkbox 
           @change="(checked: any) => updateTheme({ colFooter: checked })" 
-          :model-value="theme?.colFooter" 
+          :checked="theme?.colFooter" 
           style="flex: 1;"
-        >最后一列</el-checkbox>
+        >最后一列</a-checkbox>
       </div>
       <div class="row">
         <div style="flex: 2;">主题颜色：</div>
-        <el-popover trigger="click">
-          <ColorPicker
-            :modelValue="theme?.color"
-            @update:modelValue="(value: any) => updateTheme({ color: value })"
-          />
-          <template #reference>
-            <ColorButton :color="theme?.color || ''" style="flex: 3;" />
+        <a-popover trigger="click">
+          <template #content>
+            <ColorPicker
+              :modelValue="theme?.color"
+              @update:modelValue="(value: any) => updateTheme({ color: value })"
+            />
           </template>
-        </el-popover>
+          <ColorButton :color="theme?.color || ''" style="flex: 3;" />
+        </a-popover>
       </div>
     </template>
   </div>

@@ -2,28 +2,28 @@
   <div class="search-sidebar" editor-component="search-sidebar">
     <div class="sidebar-header">
       <div class="sidebar-title">
-        <el-icon><Search /></el-icon>
+        <SearchOutlined />
         <span>搜索与替换</span>
       </div>
       <div class="sidebar-close" @click="close" title="关闭">
-        <el-icon><Close /></el-icon>
+        <CloseOutlined />
       </div>
     </div>
     <div class="sidebar-content">
       <div class="field">
         <div class="field-label">查找内容</div>
-        <el-input v-model="searchText" placeholder="请输入查找内容" @keyup.enter="searchNext" />
+        <a-input v-model:value="searchText" placeholder="请输入查找内容" @keyup.enter="searchNext" />
       </div>
       <div class="actions">
-        <el-button  type="primary" :disabled="!searchText" @click="searchNext" :icon="Search">查找下一个</el-button>
-        <el-button  :disabled="!searchText" @click="searchPrev" :icon="Search">查找上一个</el-button>
+        <a-button type="primary" :disabled="!searchText" @click="searchNext"><SearchOutlined />查找下一个</a-button>
+        <a-button :disabled="!searchText" @click="searchPrev"><SearchOutlined />查找上一个</a-button>
       </div>
       <div class="field">
         <div class="field-label">替换为</div>
-        <el-input v-model="replaceText" placeholder="请输入替换内容" @keyup.enter="replaceOnce" />
+        <a-input v-model:value="replaceText" placeholder="请输入替换内容" @keyup.enter="replaceOnce" />
       </div>
       <div class="actions">
-        <el-button  type="primary" :disabled="!replaceText" @click="replaceOnce" :icon="Switch">替换</el-button>
+        <a-button type="primary" :disabled="!replaceText" @click="replaceOnce"><SwapOutlined />替换</a-button>
       </div>
     </div>
   </div>
@@ -31,7 +31,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Close, Search, Switch } from '@element-plus/icons-vue'
+import { CloseOutlined, SearchOutlined, SwapOutlined } from '@ant-design/icons-vue'
 
 const emit = defineEmits(['command'])
 
@@ -108,8 +108,8 @@ const close = () => {
 }
 
 .sidebar-close:hover {
-  color: #409eff;
-  background-color: #ecf5ff;
+  color: #1890ff;
+  background-color: #e6f7ff;
 }
 
 .sidebar-content {
@@ -121,7 +121,7 @@ const close = () => {
 
 .field-label {
   font-size: 14px;
-  color: #606266;
+  color: #595959;
   margin-bottom: 6px;
 }
 

@@ -1,7 +1,7 @@
 import { useSlidesStore } from '@/store'
 import { PPTElement, PPTElementLink } from '@/types/slides'
 import useHistorySnapshot from '@/hooks/useHistorySnapshot'
-import { ElMessage } from 'element-plus'
+import { message } from 'ant-design-vue'
 
 export default () => {
   const slidesStore = useSlidesStore()
@@ -11,7 +11,7 @@ export default () => {
   const setLink = (handleElement: PPTElement, link: PPTElementLink) => {
     const linkRegExp = /^(https?):\/\/[\w\-]+(\.[\w\-]+)+([\w\-.,@?^=%&:\/~+#]*[\w\-@?^=%&\/~+#])?$/
     if (link.type === 'web' && !linkRegExp.test(link.target)) {
-      ElMessage.error('不是正确的网页链接地址')
+      message.error('不是正确的网页链接地址')
       return false
     }
     const props = { link }

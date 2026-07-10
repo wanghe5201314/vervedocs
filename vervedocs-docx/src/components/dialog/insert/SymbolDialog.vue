@@ -1,21 +1,19 @@
 <template>
-  <el-dialog v-model="visible" title="插入符号" width="450px" :close-on-click-modal="false" class="app-dialog">
+  <a-modal v-model:open="visible" title="插入符号" width="450px" :maskClosable="false" class="app-dialog">
     <div class="symbol-dialog-content">
-      <!-- 搜索框 -->
       <div class="search-box">
-        <el-input
-          v-model="searchText"
+        <a-input
+          v-model:value="searchText"
           placeholder="搜索符号..."
-          clearable
-          @input="handleSearch"
+          allowClear
+
         >
           <template #prefix>
-            <el-icon><Search /></el-icon>
+            <SearchOutlined />
           </template>
-        </el-input>
+        </a-input>
       </div>
 
-      <!-- 符号分类 -->
       <div class="symbol-categories">
         <div
           v-for="category in filteredCategories"
@@ -40,11 +38,10 @@
         </div>
       </div>
 
-      <!-- 最近使用 -->
       <div v-if="recentSymbols.length > 0" class="recent-symbols">
         <div class="category-header">
           <span class="category-name">最近使用</span>
-          <el-button link type="primary" size="small" @click="clearRecentSymbols">清空</el-button>
+          <a-button type="link" size="small" @click="clearRecentSymbols">清空</a-button>
         </div>
         <div class="symbol-grid">
           <button
@@ -61,17 +58,17 @@
     </div>
 
     <template #footer>
-      <el-button @click="visible = false">
-        <el-icon><Close /></el-icon>
+      <a-button @click="visible = false">
+        <CloseOutlined />
         取消
-      </el-button>
+      </a-button>
     </template>
-  </el-dialog>
+  </a-modal>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { Search, Close } from '@element-plus/icons-vue'
+import { SearchOutlined, CloseOutlined } from '@ant-design/icons-vue'
 import { symbolCategories } from '@/components/editor/toolbar/index'
 
 const props = defineProps<{
@@ -91,7 +88,6 @@ const visible = computed({
 const searchText = ref('')
 const recentSymbols = ref<string[]>([])
 
-// 过滤后的分类
 const filteredCategories = computed(() => {
   if (!searchText.value) {
     return symbolCategories
@@ -112,42 +108,30 @@ const filteredCategories = computed(() => {
     .filter(category => category.symbols.length > 0)
 })
 
-// 搜索处理
-const handleSearch = () => {
-  // 搜索逻辑已在 computed 中处理
-}
 
-// 插入符号
 const handleInsertSymbol = (symbol: string) => {
-  // 添加到最近使用
   const index = recentSymbols.value.indexOf(symbol)
   if (index > -1) {
     recentSymbols.value.splice(index, 1)
   }
   recentSymbols.value.unshift(symbol)
-  // 最多保留20个最近使用的符号
   if (recentSymbols.value.length > 20) {
     recentSymbols.value.pop()
   }
 
-  // 保存到 localStorage
   localStorage.setItem('recentSymbols', JSON.stringify(recentSymbols.value))
 
-  // 发送确认事件
   emit('confirm', symbol)
   visible.value = false
 }
 
-// 清空最近使用
 const clearRecentSymbols = () => {
   recentSymbols.value = []
   localStorage.removeItem('recentSymbols')
 }
 
-// 监听对话框打开，加载最近使用的符号
 watch(visible, (isVisible) => {
   if (isVisible) {
-    // 从 localStorage 加载最近使用的符号
     const saved = localStorage.getItem('recentSymbols')
     if (saved) {
       try {
@@ -175,11 +159,11 @@ watch(visible, (isVisible) => {
 .symbol-categories {
   max-height: 400px;
   overflow-y: auto;
-  padding-right: 8px;
+  padding: 20px;
 }
 
 .symbol-category {
-  margin-bottom: 16px;
+  margin: 13px;
 }
 
 .symbol-category:last-child {
@@ -245,7 +229,6 @@ watch(visible, (isVisible) => {
   border-top: 1px solid #e8eaed;
 }
 
-/* 滚动条样式 */
 .symbol-categories::-webkit-scrollbar {
   width: 8px;
 }

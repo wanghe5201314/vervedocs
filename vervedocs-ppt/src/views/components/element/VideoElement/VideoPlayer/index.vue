@@ -115,7 +115,7 @@
 <script lang="ts">
 import { computed, defineComponent, ref } from 'vue'
 import useMSE from './useMSE'
-import { ElMessage } from 'element-plus'
+import { message } from 'ant-design-vue'
 
 const secondToTime = (second = 0) => {
   if (second === 0 || isNaN(second)) return '00:00'
@@ -256,7 +256,7 @@ export default defineComponent({
       loaded.value = videoRef.value?.buffered.length ? videoRef.value.buffered.end(videoRef.value.buffered.length - 1) : 0
     }
 
-    const handleError = () => ElMessage.error('视频加载失败')
+    const handleError = () => message.error('视频加载失败')
 
     const thumbMove = (e: MouseEvent | TouchEvent) => {
       if (!videoRef.value || !playBarWrap.value) return

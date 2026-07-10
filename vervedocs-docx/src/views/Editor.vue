@@ -16,13 +16,11 @@
     <div class="body">
       <LeftDockBar :active-key="activeDock" @select="handleDockSelect" />
       <div class="body-main">
-        <el-splitter direction="horizontal">
-          <el-splitter-panel
+        <div class="split-panel">
+          <div
             v-if="activeDock"
-            :size="sidebarPanelSize"
-            :min-size="300"
-            :max-size="400"
-            @resize="handleSidebarResize"
+            class="split-left"
+            :style="{ width: sidebarPanelSize + 'px' }"
           >
             <SearchLayout v-if="activeDock === 'search'" @command="handleCommand" />
             <CatalogLayout
@@ -43,15 +41,20 @@
               @close="closeRevisionDock"
               @command="handleCommand"
             />
-          </el-splitter-panel>
-          <el-splitter-panel>
+          </div>
+          <div
+            v-if="activeDock"
+            class="split-resize-handle"
+            @mousedown="handleResizeStart"
+          ></div>
+          <div class="split-right">
             <div class="editor-area">
               <Editor ref="editorRef" @command="handleEditorCommand" @ready="handleReady" @saved="handleEditorSaved" />
 
 
             </div>
-          </el-splitter-panel>
-        </el-splitter>
+          </div>
+        </div>
         <Transition name="sidebar-slide-right">
           <AIResultPanel
             v-if="aiState.drawerVisible"
@@ -106,7 +109,7 @@
 
 <script setup lang="ts">
 import { computed, h, inject, onBeforeUnmount, reactive, ref, nextTick, watch } from 'vue'
-import { ElLoading, ElMessage, ElMessageBox, ElNotification } from 'element-plus'
+import { message, Modal, notification } from 'ant-design-vue'
 import type { DocumentMeta, DocumentStats } from '@/types/document'
 import type { InitialDocument } from '@/utils/resolve-app'
 import { emitExternalEvent, externalApi } from '@/composables/use-external-api'
@@ -249,11 +252,21 @@ let suppressSaveOnce = false
 let collabPlugin: CollaborationPlugin | null = null
 const collabOffFns: (() => void)[] = []
 let importModeResolver: ((value: string) => void) | null = null
-let loadingInstance: ReturnType<typeof ElLoading.service> | null = null
+const loadingOverlay = ref<HTMLElement | null>(null)
+
+const showLoading = (target: HTMLElement, text: string) => {
+  const el = document.createElement('div')
+  el.className = 'app-loading-overlay'
+  el.innerHTML = `<div class="app-loading-spin"><div class="ant-spin ant-spin-spinning"><span class="ant-spin-dot ant-spin-dot-spin"><i class="ant-spin-dot-item"></i><i class="ant-spin-dot-item"></i><i class="ant-spin-dot-item"></i><i class="ant-spin-dot-item"></i></span></div><span class="app-loading-text">${text}</span></div>`
+  el.style.cssText = 'position:absolute;inset:0;background:rgba(255,255,255,0.65);display:flex;align-items:center;justify-content:center;z-index:9999;'
+  target.style.position = 'relative'
+  target.appendChild(el)
+  loadingOverlay.value = el
+}
 
 const closeLoadingOverlay = () => {
-  loadingInstance?.close()
-  loadingInstance = null
+  loadingOverlay.value?.remove()
+  loadingOverlay.value = null
 }
 
 watch([busy, busyText], async ([active, text]) => {
@@ -264,11 +277,7 @@ watch([busy, busyText], async ([active, text]) => {
   await nextTick()
   if (!editorAppRef.value) return
   closeLoadingOverlay()
-  loadingInstance = ElLoading.service({
-    target: editorAppRef.value,
-    text,
-    background: 'rgba(255, 255, 255, 0.65)'
-  })
+  showLoading(editorAppRef.value, text)
 }, { immediate: true })
 
 const getEditorInstance = () => editorRef.value?.getEditorInstance?.() ?? null
@@ -415,8 +424,29 @@ const closeAIDock = () => {
   }
 }
 
-const handleSidebarResize = (size: number) => {
-  sidebarPanelSize.value = size
+
+const handleResizeStart = (e: MouseEvent) => {
+  e.preventDefault()
+  const startX = e.clientX
+  const startWidth = sidebarPanelSize.value
+
+  const onMouseMove = (moveEvent: MouseEvent) => {
+    const delta = moveEvent.clientX - startX
+    const newWidth = Math.min(400, Math.max(300, startWidth + delta))
+    sidebarPanelSize.value = newWidth
+  }
+
+  const onMouseUp = () => {
+    document.removeEventListener('mousemove', onMouseMove)
+    document.removeEventListener('mouseup', onMouseUp)
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+  }
+
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+  document.addEventListener('mousemove', onMouseMove)
+  document.addEventListener('mouseup', onMouseUp)
 }
 
 const handleAIAction = (action: string, payload?: any) => {
@@ -445,7 +475,7 @@ const handleAIAction = (action: string, payload?: any) => {
   if (action === 'quickAction') {
     const text = getText().trim()
     if (!text) {
-      ElMessage.warning('请先选中文本')
+      message.warning('请先选中文本')
       return
     }
     void executeAIRequest({ action: payload.action, text })
@@ -455,7 +485,7 @@ const handleAIAction = (action: string, payload?: any) => {
   if (action === 'translate') {
     const text = getText().trim()
     if (!text) {
-      ElMessage.warning('请先选中文本')
+      message.warning('请先选中文本')
       return
     }
     void executeAIRequest({ action: AIAction.TRANSLATE, text, targetLanguage: payload?.targetLanguage })
@@ -465,7 +495,7 @@ const handleAIAction = (action: string, payload?: any) => {
   if (action === 'custom') {
     const text = getText().trim()
     if (!text) {
-      ElMessage.warning('请先选中文本')
+      message.warning('请先选中文本')
       return
     }
     void executeAIRequest({ action: AIAction.CUSTOM, text, customPrompt: payload?.prompt })
@@ -475,7 +505,7 @@ const handleAIAction = (action: string, payload?: any) => {
   if (action === 'continue') {
     const text = getText().trim() || getFullText().trim()
     if (!text) {
-      ElMessage.warning('文档为空，无法续写')
+      message.warning('文档为空，无法续写')
       return
     }
     void executeAIRequest({ action: AIAction.CONTINUE, text: text.slice(-500) })
@@ -485,7 +515,7 @@ const handleAIAction = (action: string, payload?: any) => {
   if (action === 'layoutSuggestion' || action === 'docAnalysis' || action === 'docSummarize') {
     const text = getFullText().trim()
     if (!text) {
-      ElMessage.warning('文档为空')
+      message.warning('文档为空')
       return
     }
     const aiAction = action === 'docSummarize' ? AIAction.SUMMARIZE : AIAction.CUSTOM
@@ -524,7 +554,7 @@ const handleAIAction = (action: string, payload?: any) => {
   }
 
   if (action === 'imageAlt') {
-    ElMessage.info('图片描述生成功能即将推出')
+    message.info('图片描述生成功能即将推出')
     return
   }
 }
@@ -558,7 +588,7 @@ const openAccessPermission = () => {
 
 const openFeedback = () => {
   emitExternalEvent('statusChange', { command: 'feedback', args: [{ meta: { ...documentMeta } }] })
-  ElMessage.info('请在系统内提交反馈')
+  message.info('请在系统内提交反馈')
 }
 
 
@@ -573,27 +603,22 @@ const handleHyperlinkConfirm = (data: { text: string; url: string }) => {
 
 const refreshBookmarks = () => {
   const instance = getEditorInstance()
-  const main = instance?.command?.getValue?.()?.data?.main
-  if (!Array.isArray(main)) {
+  const bookmarks = instance?.command?.getBookmarks?.()
+  if (!Array.isArray(bookmarks)) {
     bookmarkList.value = []
     return
   }
-  const set = new Set<string>()
-  for (const el of main) {
-    const name = (el as any)?.extension?.bookmarkMarker?.name
-    if (typeof name === 'string' && name.trim()) set.add(name.trim())
-  }
-  bookmarkList.value = Array.from(set).sort((a, b) => a.localeCompare(b, 'zh-CN'))
+  bookmarkList.value = bookmarks.map((b: any) => ({ name: b.name })).sort((a: any, b: any) => a.name.localeCompare(b.name, 'zh-CN'))
 }
 
 const handleAddBookmark = (name: string) => {
   executeCommand('addBookmark', { name })
-  refreshBookmarks()
+  nextTick(() => refreshBookmarks())
 }
 
 const handleDeleteBookmark = (name: string) => {
   executeCommand('deleteBookmark', { name })
-  refreshBookmarks()
+  nextTick(() => refreshBookmarks())
 }
 
 const handleGotoBookmark = (name: string) => {
@@ -672,23 +697,29 @@ const handleTableBordersConfirm = (payload: { type: 'all' | 'outside' | 'none'; 
 }
 
 const renameDoc = async () => {
-  try {
-    const { value } = await ElMessageBox.prompt('请输入新名称', '重命名', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      inputValue: String(documentMeta.name || '').trim() || '新建文档',
-      inputPlaceholder: '新建文档'
-    })
-    const next = String(value || '').trim()
-    if (!next) return
-    documentMeta.name = next
-    emitMetaChange()
-    if (String(documentMeta.id || '').trim() !== 'local') {
-      await saveNow({ silent: false })
+  const renameValue = ref(String(documentMeta.name || '').trim() || '新建文档')
+  Modal.confirm({
+    title: '重命名',
+    content: () => h('div', {}, [
+      h('input', {
+        value: renameValue.value,
+        onInput: (e: Event) => { renameValue.value = (e.target as HTMLInputElement).value },
+        style: 'width:100%;padding:4px 8px;border:1px solid #d9d9d9;border-radius:4px;',
+        placeholder: '新建文档'
+      })
+    ]),
+    okText: '确定',
+    cancelText: '取消',
+    onOk: async () => {
+      const next = String(renameValue.value || '').trim()
+      if (!next) return
+      documentMeta.name = next
+      emitMetaChange()
+      if (String(documentMeta.id || '').trim() !== 'local') {
+        await saveNow({ silent: false })
+      }
     }
-  } catch {
-    return
-  }
+  })
 }
 
 const newDoc = async () => {
@@ -784,7 +815,7 @@ const handleReady = (...args: any[]) => {
       onComplete: (success: boolean) => {
         busyState.value = 'idle'
         if (!success) {
-          ElMessage.error('文档加载失败')
+          message.error('文档加载失败')
         }
         nextTick(() => initCollaboration())
       }
@@ -997,7 +1028,7 @@ const handleEditorCommand = (command: string, ...args: any[]) => {
     importFileSize.value = fileSize || ''
     importParseProgress.value = parseProgress
     importModeResolver = resolve
-    // 使用 ElNotification 在右下角显示通知
+    // 使用 notification 在右上角显示通知
     showImportNotification()
     return
   }
@@ -1007,8 +1038,8 @@ const handleEditorCommand = (command: string, ...args: any[]) => {
     return
   }
   if (command === 'importParseComplete') {
-    // 解析完成（响应式数据会自动更新通知内容）
     importParseProgress.value = undefined
+
     return
   }
   emitExternalEvent('statusChange', { command, args })
@@ -1034,11 +1065,12 @@ const showImportNotification = () => {
     onAppend: () => handleImportAction('append')
   })
 
-  importNotificationInstance = ElNotification({
-    customClass: 'import-notification',
-    position: 'top-right',
+  notification.open({
+    key: 'import-notification',
+    class: 'import-notification',
+    placement: 'topRight',
     duration: 0,
-    showClose: true,
+    closable: true,
     onClose: () => {
       if (importModeResolver) {
         const resolver = importModeResolver
@@ -1047,16 +1079,23 @@ const showImportNotification = () => {
       }
       importNotificationInstance = null
     },
-    message: content
+    message: null,
+    description: content,
+    style: {
+      width: '450px',
+      padding: '16px'
+    }
   })
+  importNotificationInstance = 'import-notification'
 }
 
 const closeImportNotification = () => {
   if (importNotificationInstance) {
-    importNotificationInstance.close()
+    notification.close('import-notification')
     importNotificationInstance = null
   }
 }
+
 
 const handleImportAction = (mode: 'overwrite' | 'append' | 'cancel') => {
   const resolver = importModeResolver
@@ -1133,16 +1172,17 @@ const handleCommand = (command: string, ...args: any[]) => {
     return
   }
   if (command === 'exportPdf') {
-    ElMessage.info('暂不支持导出 PDF')
+    message.info('暂不支持导出 PDF')
     return
   }
   if (command === 'exportHtml') {
-    ElMessage.info('暂不支持导出 HTML')
+    message.info('暂不支持导出 HTML')
     return
   }
   if (command === 'rulerVisible') {
     const visible = !!args[0]
-    executeCommand('updateOptions', { marginIndicatorDisabled: !visible })
+    const instance = getEditorInstance()
+    instance?.command?.executeUpdateOptions?.({ marginIndicatorDisabled: !visible })
     return
   }
   if (command === 'versionHistory') {
@@ -1150,7 +1190,7 @@ const handleCommand = (command: string, ...args: any[]) => {
     return
   }
   if (command === 'footnote') {
-    ElMessage.info('暂不支持脚注')
+    message.info('暂不支持脚注')
     return
   }
   if (command === 'comment') {
@@ -1159,11 +1199,11 @@ const handleCommand = (command: string, ...args: any[]) => {
     return
   }
   if (command === 'spellcheck') {
-    ElMessage.info('暂不支持拼写检查')
+    message.info('暂不支持拼写检查')
     return
   }
   if (command === 'compare') {
-    ElMessage.info('暂不支持比较文档')
+    message.info('暂不支持比较文档')
     return
   }
   if (command === 'toggleTrackChanges') {
@@ -1358,7 +1398,7 @@ const handleCommand = (command: string, ...args: any[]) => {
     return
   }
   if (command === 'separatorDialog') {
-    ElMessage.info('分割线颜色暂未接入')
+    message.info('分割线颜色暂未接入')
     return
   }
   if (command === 'columns') {
@@ -1437,13 +1477,40 @@ defineExpose({
   overflow: hidden;
 }
 
-.body-main :deep(.el-splitter) {
+.split-panel {
+  display: flex;
+  flex-direction: row;
   flex: 1;
   min-width: 0;
+  height: 100%;
 }
 
-.body-main :deep(.el-splitter-panel) {
+.split-left {
+  min-width: 300px;
+  max-width: 400px;
   overflow: hidden;
+  flex-shrink: 0;
+}
+
+.split-resize-handle {
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+  position: relative;
+  z-index: 10;
+}
+
+.split-resize-handle:hover,
+.split-resize-handle:active {
+  background: #4f87ff;
+}
+
+.split-right {
+  flex: 1;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .body-main :deep(.ai-result-sidebar) {
@@ -1480,48 +1547,9 @@ defineExpose({
   opacity: 0;
 }
 
-.import-mode-body {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.import-mode-card {
-  border: 1px solid #e4e7ed;
-  border-radius: 8px;
-  padding: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  cursor: pointer;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.import-mode-card:hover {
-  border-color: #95b8ff;
-}
-
-.import-mode-card.selected {
-  border-color: #4f87ff;
-  box-shadow: 0 0 0 2px rgba(79, 135, 255, 0.14);
-}
-
-.import-preview {
-  width: 100%;
-  height: 88px;
-  border-radius: 6px;
-  background: #f7f8fa;
-  border: 1px solid #e4e7ed;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
 </style>
 
 <style>
-/* 全局样式：导入通知弹窗 */
 .import-notification {
   width: 450px !important;
   padding: 16px !important;
@@ -1530,18 +1558,61 @@ defineExpose({
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
 }
 
-.import-notification .el-notification__content {
+.import-notification .ant-notification-notice-description {
   margin: 0 !important;
   padding: 0 !important;
 }
 
-.import-notification .el-notification__close {
+.import-notification .ant-notification-notice-close {
   top: 12px !important;
   right: 12px !important;
   color: #909399 !important;
 }
 
-.import-notification .el-notification__close:hover {
+.import-notification .ant-notification-notice-close:hover {
   color: #606266 !important;
+}
+
+.app-loading-overlay .app-loading-spin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-loading-overlay .ant-spin-dot {
+  font-size: 32px;
+}
+
+.app-loading-overlay .ant-spin-dot-item {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #4f87ff;
+  display: block;
+  position: absolute;
+  animation: antSpinDot 1.2s infinite ease-in-out;
+}
+
+.app-loading-overlay .ant-spin-dot-spin {
+  width: 32px;
+  height: 32px;
+  position: relative;
+  display: inline-block;
+}
+
+.app-loading-overlay .ant-spin-dot-item:nth-child(1) { top: 0; left: 50%; transform: translateX(-50%); animation-delay: 0s; }
+.app-loading-overlay .ant-spin-dot-item:nth-child(2) { top: 50%; right: 0; transform: translateY(-50%); animation-delay: 0.3s; }
+.app-loading-overlay .ant-spin-dot-item:nth-child(3) { bottom: 0; left: 50%; transform: translateX(-50%); animation-delay: 0.6s; }
+.app-loading-overlay .ant-spin-dot-item:nth-child(4) { top: 50%; left: 0; transform: translateY(-50%); animation-delay: 0.9s; }
+
+@keyframes antSpinDot {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+.app-loading-overlay .app-loading-text {
+  color: #333;
+  font-size: 14px;
 }
 </style>

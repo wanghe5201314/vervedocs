@@ -1,78 +1,78 @@
 <template>
   <div class="editor-header">
     <div class="left">
-      <el-dropdown trigger="click">
+      <a-dropdown :trigger="['click']">
         <div class="menu-item"><IconFolderClose /> <span class="text">文件</span></div>
-        <template #dropdown>
-          <el-dropdown-menu>
+        <template #overlay>
+          <a-menu>
             <FileInput accept=".pptist"  @change="importSpecificFile">
-              <el-dropdown-item>导入 pptist 文件</el-dropdown-item>
+              <a-menu-item>导入 pptist 文件</a-menu-item>
             </FileInput>
-            <el-dropdown-item @click="setDialogForExport('pptist')">导出 pptist 文件</el-dropdown-item>
-            <el-dropdown-item @click="setDialogForExport('pptx')">导出 PPTX</el-dropdown-item>
-            <el-dropdown-item @click="setDialogForExport('image')">导出图片</el-dropdown-item>
-            <el-dropdown-item @click="setDialogForExport('json')">导出 JSON</el-dropdown-item>
-            <el-dropdown-item @click="setDialogForExport('pdf')">打印 / 导出 PDF</el-dropdown-item>
-          </el-dropdown-menu>
+            <a-menu-item @click="setDialogForExport('pptist')">导出 pptist 文件</a-menu-item>
+            <a-menu-item @click="setDialogForExport('pptx')">导出 PPTX</a-menu-item>
+            <a-menu-item @click="setDialogForExport('image')">导出图片</a-menu-item>
+            <a-menu-item @click="setDialogForExport('json')">导出 JSON</a-menu-item>
+            <a-menu-item @click="setDialogForExport('pdf')">打印 / 导出 PDF</a-menu-item>
+          </a-menu>
         </template>
-      </el-dropdown>
-      <el-dropdown trigger="click">
+      </a-dropdown>
+      <a-dropdown :trigger="['click']">
         <div class="menu-item"><IconEdit /> <span class="text">编辑</span></div>
-        <template #dropdown>
-          <el-dropdown-menu>
-            <el-dropdown-item @click="undo()">撤销</el-dropdown-item>
-            <el-dropdown-item @click="redo()">重做</el-dropdown-item>
-            <el-dropdown-item @click="createSlide()">添加页面</el-dropdown-item>
-            <el-dropdown-item @click="deleteSlide()">删除页面</el-dropdown-item>
-            <el-dropdown-item @click="toggleGridLines()">{{ showGridLines ? '关闭网格线' : '打开网格线' }}</el-dropdown-item>
-            <el-dropdown-item @click="toggleRuler()">{{ showRuler ? '关闭标尺' : '打开标尺' }}</el-dropdown-item>
-            <el-dropdown-item @click="resetSlides()">重置幻灯片</el-dropdown-item>
-          </el-dropdown-menu>
+        <template #overlay>
+          <a-menu>
+            <a-menu-item @click="undo()">撤销</a-menu-item>
+            <a-menu-item @click="redo()">重做</a-menu-item>
+            <a-menu-item @click="createSlide()">添加页面</a-menu-item>
+            <a-menu-item @click="deleteSlide()">删除页面</a-menu-item>
+            <a-menu-item @click="toggleGridLines()">{{ showGridLines ? '关闭网格线' : '打开网格线' }}</a-menu-item>
+            <a-menu-item @click="toggleRuler()">{{ showRuler ? '关闭标尺' : '打开标尺' }}</a-menu-item>
+            <a-menu-item @click="resetSlides()">重置幻灯片</a-menu-item>
+          </a-menu>
         </template>
-      </el-dropdown>
-      <el-dropdown trigger="click">
+      </a-dropdown>
+      <a-dropdown :trigger="['click']">
         <div class="menu-item"><IconPpt /> <span class="text">演示</span></div>
-        <template #dropdown>
-          <el-dropdown-menu>
-            <el-dropdown-item @click="enterScreeningFromStart()">从头开始</el-dropdown-item>
-            <el-dropdown-item @click="enterScreening()">从当前页开始</el-dropdown-item>
-          </el-dropdown-menu>
+        <template #overlay>
+          <a-menu>
+            <a-menu-item @click="enterScreeningFromStart()">从头开始</a-menu-item>
+            <a-menu-item @click="enterScreening()">从当前页开始</a-menu-item>
+          </a-menu>
         </template>
-      </el-dropdown>
-      <el-dropdown trigger="click">
+      </a-dropdown>
+      <a-dropdown :trigger="['click']">
         <div class="menu-item"><IconHelpcenter /> <span class="text">帮助</span></div>
-        <template #dropdown>
-          <el-dropdown-menu>
-            <el-dropdown-item @click="goIssues()">意见反馈</el-dropdown-item>
-            <el-dropdown-item @click="hotkeyDrawerVisible = true">快捷键</el-dropdown-item>
-          </el-dropdown-menu>
+        <template #overlay>
+          <a-menu>
+            <a-menu-item @click="goIssues()">意见反馈</a-menu-item>
+            <a-menu-item @click="hotkeyDrawerVisible = true">快捷键</a-menu-item>
+          </a-menu>
         </template>
-      </el-dropdown>
+      </a-dropdown>
     </div>
 
     <div class="right">
-      <el-tooltip :hide-after="0" content="导出">
+      <a-tooltip title="导出">
         <div class="menu-item" @click="setDialogForExport('pptx')">
           <IconShare size="18" fill="#666" />
         </div>
-      </el-tooltip>
-      <el-tooltip :hide-after="0" content="幻灯片放映">
+      </a-tooltip>
+      <a-tooltip title="幻灯片放映">
         <div class="menu-item" @click="enterScreening()">
           <IconPpt size="19" fill="#666" style="margin-top: 1px;" />
         </div>
-      </el-tooltip>
+      </a-tooltip>
       <a href="https://github.com/pipipi-pikachu/PPTist" target="_blank">
         <div class="menu-item"><IconGithub size="18" fill="#666" /></div>
       </a>
     </div>
 
-    <el-drawer
-      size="320"
-      direction="rtl"
-      v-model="hotkeyDrawerVisible"
+    <a-drawer
+      :width="320"
+      placement="right"
+      v-model:open="hotkeyDrawerVisible"
     >
       <HotkeyDoc />
-    </el-drawer>
+    </a-drawer>
   </div>
 </template>
 

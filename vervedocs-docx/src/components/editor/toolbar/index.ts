@@ -237,7 +237,7 @@ export const separatorStyles = [
 // 公式分类
 export const formulaCategories = [
   {
-    name: '数学公式', icon: 'fx',
+    name: '数学公式', icon: 'functions',
     formulas: [
       { name: '二次公式', latex: 'x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}', preview: 'x = (-b ± √(b²-4ac)) / 2a' },
       { name: '勾股定理', latex: 'a^2+b^2=c^2', preview: 'a² + b² = c²' },
@@ -245,7 +245,7 @@ export const formulaCategories = [
     ]
   },
   {
-    name: '物理公式', icon: 'mc²',
+    name: '物理公式', icon: 'bolt',
     formulas: [
       { name: '质能方程', latex: 'E=mc^2', preview: 'E = mc²' },
       { name: '牛顿第二定律', latex: 'F=ma', preview: 'F = ma' },
@@ -253,7 +253,7 @@ export const formulaCategories = [
     ]
   },
   {
-    name: '化学公式', icon: 'H⁺',
+    name: '化学公式', icon: 'science',
     formulas: [
       { name: '理想气体方程', latex: 'PV=nRT', preview: 'PV = nRT' },
       { name: '水的电离', latex: 'H_2O\\rightleftharpoons H^++OH^-', preview: 'H₂O ⇌ H⁺ + OH⁻' }

@@ -1,8 +1,7 @@
 import { createApp, defineComponent, h, reactive } from 'vue'
-import ElementPlus from 'element-plus'
-import 'element-plus/dist/index.css'
-import zhCn from 'element-plus/es/locale/lang/zh-cn'
-import * as ElementPlusIconsVue from '@element-plus/icons-vue'
+import 'ant-design-vue/dist/reset.css'
+import zhCN from 'ant-design-vue/es/locale/zh_CN'
+import { ConfigProvider } from 'ant-design-vue'
 import '@/ui'
 import WordEditorComponent from '@/ui/WordEditor.vue'
 import type { CollaborationOptions, DocxEditorUiInitialDocument } from '@/ui'
@@ -55,10 +54,7 @@ export class WordEditor {
       onStatusChange: (payload: any) => this.options.onStatusChange?.(payload)
     }))
     this.app = createApp(root)
-    for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
-      this.app.component(key, component)
-    }
-    this.app.use(ElementPlus, { locale: zhCn })
+    this.app.use(ConfigProvider, { locale: zhCN })
     this.app.mount(host)
   }
 

@@ -1,20 +1,20 @@
 <template>
-  <el-dialog v-model="visible" title="自定义项目符号" width="650px" :close-on-click-modal="false" class="app-dialog custom-symbol-dialog" append-to-body destroy-on-close @open="handleOpen">
+  <a-modal v-model:open="visible" title="自定义项目符号" width="650px" :maskClosable="false" class="app-dialog custom-symbol-dialog" :destroyOnClose="true" @afterOpenChange="(open: boolean) => { if (open) handleOpen() }">
     <div class="custom-symbol-content">
       <div class="symbol-controls">
         <div class="control-item">
           <label class="control-label">字体(F)</label>
-          <el-select v-model="currentFont" size="default" style="width: 180px" filterable @change="handleFontChange">
-            <el-option v-for="f in allFontOptions" :key="f.value" :label="f.label" :value="f.value">
+          <a-select v-model:value="currentFont" :size="'small'" style="width: 180px" filterable @change="handleFontChange">
+            <a-select-option v-for="f in allFontOptions" :key="f.value" :label="f.label" :value="f.value">
               <span :style="{ fontFamily: f.value }">{{ f.label }}</span>
-            </el-option>
-          </el-select>
+            </a-select-option>
+          </a-select>
         </div>
         <div class="control-item">
           <label class="control-label">子集(U)</label>
-          <el-select v-model="currentSubset" size="default" style="width: 180px" @change="handleSubsetChange">
-            <el-option v-for="s in subsetOptions" :key="s.value" :label="s.label" :value="s.value" />
-          </el-select>
+          <a-select v-model:value="currentSubset" :size="'small'" style="width: 180px" @change="handleSubsetChange">
+            <a-select-option v-for="s in subsetOptions" :key="s.value" :label="s.label" :value="s.value" />
+          </a-select>
         </div>
       </div>
 
@@ -37,23 +37,23 @@
       <div class="symbol-controls" style="border-bottom: none; padding-bottom: 0;">
         <div class="control-item">
           <label class="control-label">字符代码(C)</label>
-          <el-input :model-value="selectedCharCode" size="default" style="width: 120px" readonly />
+          <a-input :value="selectedCharCode" :size="'small'" style="width: 120px" readonly />
         </div>
         <div class="control-item">
           <label class="control-label">来自(M)</label>
-          <el-select v-model="encodingType" size="default" style="width: 180px">
-            <el-option label="Unicode(十六进制)" value="unicode-hex" />
-            <el-option label="Unicode(十进制)" value="unicode-dec" />
-          </el-select>
+          <a-select v-model:value="encodingType" :size="'small'" style="width: 180px">
+            <a-select-option label="Unicode(十六进制)" value="unicode-hex" />
+            <a-select-option label="Unicode(十进制)" value="unicode-dec" />
+          </a-select>
         </div>
       </div>
     </div>
 
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
-      <el-button type="primary" :disabled="!selectedChar" @click="handleConfirm">确定</el-button>
+      <a-button @click="visible = false">取消</a-button>
+      <a-button type="primary" :disabled="!selectedChar" @click="handleConfirm">确定</a-button>
     </template>
-  </el-dialog>
+  </a-modal>
 </template>
 
 <script setup lang="ts">

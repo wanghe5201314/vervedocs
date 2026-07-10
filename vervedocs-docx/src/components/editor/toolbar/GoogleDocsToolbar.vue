@@ -6,6 +6,7 @@
       :selected-bg-color="selectedBgColor"
       :zoom-percent="zoomPercent"
       :current-character-scale="currentCharacterScale"
+      :current-paper-size-name="currentPaperSizeName"
       :document-stats="documentStats"
       :has-selection="hasSelection"
       :in-table="inTable"
@@ -100,6 +101,7 @@ const fontColor = ref('#000000')
 const highlightColor = ref('#ffff00')
 const zoomPercent = ref(100)
 const selectedBgColor = ref('#FFFFFF')
+const currentPaperSizeName = ref('A4')
 
 const isImporting = ref(false)
 
@@ -114,7 +116,7 @@ const showRuler = ref(false)
 const eyeCareMode = ref(false)
 const showLineBreak = ref(false)
 const isTrackChanges = ref(false)
-const revisionDisplayMode = ref<'all' | 'simple' | 'none' | 'original'>('all')
+const revisionDisplayMode = ref<'all' | 'comments' | 'revisions'>('all')
 let toolbarOverlayObserver: MutationObserver | null = null
 
 // 从store获取状态
@@ -152,11 +154,11 @@ const markToolbarOverlayNodes = () => {
   if (typeof document === 'undefined') return
   const overlaySelector = [
     '.gdocs-menu-popper',
-    '.el-dropdown__popper',
-    '.el-select__popper',
-    '.el-picker__popper',
-    '.el-popover.el-popper',
-    '.el-tooltip__popper'
+    '.ant-menu-submenu-popup',
+    '.ant-dropdown',
+    '.ant-select-dropdown',
+    '.ant-popover',
+    '.ant-tooltip'
   ].join(', ')
   document.querySelectorAll<HTMLElement>(overlaySelector).forEach(node => {
     node.setAttribute('editor-component', 'toolbar-popup')
@@ -306,7 +308,7 @@ const handleNumber = (s: string | null) => emit('command', 'list', s ? 'ol' : nu
 const handleInsertTable = (r: number, c: number) => emit('command', 'insertTable', { rows: r, cols: c })
 const handleRowFlex = (v: string) => emit('command', 'rowFlex', v)
 const handleMarginPreset = (p: any) => emit('command', 'setPaperMargin', p.margins)
-const handlePaperSize = (s: any) => emit('command', 'paperSize', s.width, s.height)
+const handlePaperSize = (s: any) => { currentPaperSizeName.value = s.name; emit('command', 'paperSize', s.width, s.height) }
 const handleBgColor = (c: string) => { selectedBgColor.value = c; emit('command', 'setPaperBackground', c) }
 const handleWatermarkPreset = (p: any) => emit('command', 'addWatermark', p.options)
 const handleInsertSymbol = (s: string) => emit('command', 'insertElement', { value: s })

@@ -1,55 +1,53 @@
 <template>
-  <el-dialog
-    v-model="visible"
+  <a-modal
+    v-model:open="visible"
     title="AI 设置"
     width="480px"
-    :close-on-click-modal="false"
-    @close="handleClose"
+    :maskClosable="false"
+    @cancel="handleClose"
   >
-    <el-form :model="form" label-width="100px" label-position="left">
-      <el-form-item label="API 端点">
-        <el-input
-          v-model="form.apiEndpoint"
+    <a-form :model="form" :label-col="{ style: { width: '100px' } }">
+      <a-form-item label="API 端点">
+        <a-input
+          v-model:value="form.apiEndpoint"
           placeholder="/api/ai"
         />
-      </el-form-item>
-      <el-form-item label="流式响应">
-        <el-switch v-model="form.streaming" />
+      </a-form-item>
+      <a-form-item label="流式响应">
+        <a-switch v-model:checked="form.streaming" />
         <span class="form-hint">启用后可实时查看 AI 生成内容</span>
-      </el-form-item>
-      <el-form-item label="超时时间">
-        <el-input-number
-          v-model="form.timeout"
+      </a-form-item>
+      <a-form-item label="超时时间">
+        <a-input-number
+          v-model:value="form.timeout"
           :min="5000"
           :max="300000"
           :step="5000"
           style="width: 160px"
         />
         <span class="form-hint">毫秒</span>
-      </el-form-item>
-      <el-form-item label="自定义请求头">
-        <el-input
-          v-model="form.customHeaders"
-          type="textarea"
+      </a-form-item>
+      <a-form-item label="自定义请求头">
+        <a-textarea
+          v-model:value="form.customHeaders"
           :rows="3"
           placeholder='{"Authorization": "Bearer xxx"}'
-          resize="none"
         />
         <span class="form-hint">JSON 格式的自定义 HTTP 请求头</span>
-      </el-form-item>
-    </el-form>
+      </a-form-item>
+    </a-form>
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="handleClose">取消</el-button>
-        <el-button type="primary" @click="handleSave">保存</el-button>
+        <a-button @click="handleClose">取消</a-button>
+        <a-button type="primary" @click="handleSave">保存</a-button>
       </div>
     </template>
-  </el-dialog>
+  </a-modal>
 </template>
 
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
-import { ElMessage } from 'element-plus'
+import { message } from 'ant-design-vue'
 import { updateAIServiceConfig } from '@/composables/use-ai'
 
 const visible = defineModel<boolean>({ default: false })
@@ -70,7 +68,6 @@ const form = reactive<FormState>({
 
 watch(visible, (val) => {
   if (val) {
-    // 每次打开时重置为当前配置
     form.apiEndpoint = import.meta.env.VITE_AI_API_ENDPOINT || '/api/ai'
     form.streaming = import.meta.env.VITE_AI_STREAMING !== 'false'
     form.timeout = Number(import.meta.env.VITE_AI_TIMEOUT) || 60000
@@ -83,7 +80,7 @@ const handleSave = () => {
     try {
       headers = JSON.parse(form.customHeaders)
     } catch {
-      ElMessage.error('自定义请求头格式错误，请输入合法的 JSON')
+      message.error('自定义请求头格式错误，请输入合法的 JSON')
       return
     }
   }
@@ -95,7 +92,7 @@ const handleSave = () => {
     headers
   })
 
-  ElMessage.success('AI 设置已保存')
+  message.success('AI 设置已保存')
   visible.value = false
 }
 

@@ -7,53 +7,53 @@
 
     <ElementFlip />
 
-    <el-button-group class="row">
-      <el-button style="flex: 5;" @click="clipImage()"><IconTailoring class="btn-icon" /> 裁剪图片</el-button>
-      <el-popover trigger="click" :visible="clipPanelVisible">
-        <div class="clip">
-          <div class="title">按形状：</div>
-          <div class="shape-clip">
-            <div 
-              class="shape-clip-item" 
-              v-for="(item, key) in shapeClipPathOptions" 
-              :key="key"
-              @click="presetImageClip(key)"
-            >
-              <div class="shape" :style="{ clipPath: item.style }"></div>
+    <a-button-group class="row">
+      <a-button style="flex: 5;" @click="clipImage()"><IconTailoring class="btn-icon" /> 裁剪图片</a-button>
+      <a-popover trigger="click" :open="clipPanelVisible">
+        <template #content>
+          <div class="clip">
+            <div class="title">按形状：</div>
+            <div class="shape-clip">
+              <div 
+                class="shape-clip-item" 
+                v-for="(item, key) in shapeClipPathOptions" 
+                :key="key"
+                @click="presetImageClip(key)"
+              >
+                <div class="shape" :style="{ clipPath: item.style }"></div>
+              </div>
             </div>
+
+            <template v-for="type in ratioClipOptions" :key="type.label">
+              <div class="title" v-if="type.label">按{{type.label}}：</div>
+              <a-button-group class="row">
+                <a-button 
+                  style="flex: 1;"
+                  v-for="item in type.children"
+                  :key="item.key"
+                  @click="presetImageClip('rect', item.ratio)"
+                >{{item.key}}</a-button>
+              </a-button-group>
+            </template>
           </div>
-
-          <template v-for="type in ratioClipOptions" :key="type.label">
-            <div class="title" v-if="type.label">按{{type.label}}：</div>
-            <el-button-group class="row">
-              <el-button 
-                style="flex: 1;"
-                v-for="item in type.children"
-                :key="item.key"
-                @click="presetImageClip('rect', item.ratio)"
-              >{{item.key}}</el-button>
-            </el-button-group>
-          </template>
-        </div>
-        <template #reference>
-          <el-button class="no-padding" style="flex: 1;"><IconDown /></el-button>
         </template>
-      </el-popover>
-    </el-button-group>
+        <a-button class="no-padding" style="flex: 1;"><IconDown /></a-button>
+      </a-popover>
+    </a-button-group>
 
-    <el-divider />
+    <a-divider />
     <ElementFilter />
-    <el-divider />
+    <a-divider />
     <ElementOutline />
-    <el-divider />
+    <a-divider />
     <ElementShadow />
-    <el-divider />
+    <a-divider />
     
     <FileInput @change="(files: any) => replaceImage(files)">
-      <el-button class="full-width-btn"><IconTransform class="btn-icon" /> 替换图片</el-button>
+      <a-button class="full-width-btn"><IconTransform class="btn-icon" /> 替换图片</a-button>
     </FileInput>
-    <el-button class="full-width-btn" @click="resetImage()"><IconUndo class="btn-icon" /> 重置样式</el-button>
-    <el-button class="full-width-btn" @click="setBackgroundImage()"><IconTheme class="btn-icon" /> 设为背景</el-button>
+    <a-button class="full-width-btn" @click="resetImage()"><IconUndo class="btn-icon" /> 重置样式</a-button>
+    <a-button class="full-width-btn" @click="setBackgroundImage()"><IconTheme class="btn-icon" /> 设为背景</a-button>
   </div>
 </template>
 
@@ -371,7 +371,7 @@ export default defineComponent({
   }
 }
 
-:deep(.el-divider) {
+:deep(.ant-divider) {
   margin: 16px 0;
 }
 </style>

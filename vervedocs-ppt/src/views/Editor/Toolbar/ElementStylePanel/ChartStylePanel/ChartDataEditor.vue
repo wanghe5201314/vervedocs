@@ -44,11 +44,11 @@
 
     <div class="btns">
       <div class="left">
-        <el-button class="btn" @click="clear()">清空</el-button>
+        <a-button class="btn" @click="clear()">清空</a-button>
       </div>
       <div class="right">
-        <el-button class="btn" @click="closeEditor()">取消</el-button>
-        <el-button type="primary" class="btn" @click="getTableData()" style="margin-left: 10px;">确认</el-button>
+        <a-button class="btn" @click="closeEditor()">取消</a-button>
+        <a-button type="primary" class="btn" @click="getTableData()" style="margin-left: 10px;">确认</a-button>
       </div>
     </div>
   </div>

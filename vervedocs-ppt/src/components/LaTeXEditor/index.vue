@@ -3,7 +3,7 @@
     <div class="container">
       <div class="left">
         <div class="input-area">
-          <el-input type="textarea" v-model="latex" placeholder="输入 LaTeX 公式" ref="textAreaRef" />
+          <a-input type="textarea" v-model:value="latex" placeholder="输入 LaTeX 公式" ref="textAreaRef" />
         </div>
         <div class="preview">
           <div class="placeholder" v-if="!latex">公式预览</div>
@@ -59,8 +59,8 @@
       </div>
     </div>
     <div class="footer">
-      <el-button class="btn" @click="close()">取消</el-button>
-      <el-button class="btn" type="primary" @click="update()">确定</el-button>
+      <a-button class="btn" @click="close()">取消</a-button>
+      <a-button class="btn" type="primary" @click="update()">确定</a-button>
     </div>
   </div>
 </template>

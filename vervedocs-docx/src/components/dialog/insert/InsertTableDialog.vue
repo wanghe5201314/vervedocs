@@ -1,13 +1,12 @@
 <template>
-  <el-dialog v-model="visible" width="600px" :show-close="false" class="insert-table-dialog app-dialog">
-    <template #header>
+  <a-modal v-model:open="visible" width="600px" :closable="false" class="insert-table-dialog app-dialog">
+    <template #title>
       <div class="custom-dialog-header">
-        <el-icon class="title-icon"><Grid /></el-icon>
+        <AppstoreOutlined class="title-icon" />
         <span>插入表格</span>
       </div>
     </template>
     <div class="insert-table-body">
-      <!-- 表格尺寸设置 -->
       <div class="setting-section">
         <div class="group-title">
           <span>表格尺寸</span>
@@ -16,111 +15,107 @@
         <div class="table-size-container">
           <div class="size-item">
             <div class="size-label">列数(C):</div>
-            <el-input-number v-model="insertTableForm.cols" :min="1" :max="50" controls-position="right" style="width: 150px;" />
+            <a-input-number v-model:value="insertTableForm.cols" :min="1" :max="50" style="width: 150px;" />
           </div>
           <div class="size-item">
             <div class="size-label">行数(R):</div>
-            <el-input-number v-model="insertTableForm.rows" :min="1" :max="100" controls-position="right" style="width: 150px;" />
+            <a-input-number v-model:value="insertTableForm.rows" :min="1" :max="100" style="width: 150px;" />
           </div>
         </div>
       </div>
-      
-      <el-divider style="margin: 20px 0;" />
-      
-      <!-- 边框设置 -->
+
+      <a-divider style="margin: 20px 0;" />
+
       <div class="setting-section">
         <div class="group-title">
           <span>边框设置</span>
           <div class="line"></div>
         </div>
         <div class="border-setting-content">
-          <!-- 左侧选项列表 -->
           <div class="left-panel">
-            <div 
-              class="option-item" 
+            <div
+              class="option-item"
               :class="{ active: selectedOption === 'none' }"
               @click="selectedOption = 'none'"
             >
-              <el-icon class="option-icon"><Document /></el-icon>
+              <FileOutlined class="option-icon" />
               <span>无(N)</span>
             </div>
-            <div 
-              class="option-item" 
+            <div
+              class="option-item"
               :class="{ active: selectedOption === 'box' }"
               @click="selectedOption = 'box'"
             >
-              <el-icon class="option-icon"><Postcard /></el-icon>
+              <BorderOutlined class="option-icon" />
               <span>方框(X)</span>
             </div>
-            <div 
-              class="option-item" 
+            <div
+              class="option-item"
               :class="{ active: selectedOption === 'all' }"
               @click="selectedOption = 'all'"
             >
-              <el-icon class="option-icon"><Grid /></el-icon>
+              <AppstoreOutlined class="option-icon" />
               <span>全部(A)</span>
             </div>
-            <div 
-              class="option-item" 
+            <div
+              class="option-item"
               :class="{ active: selectedOption === 'grid' }"
               @click="selectedOption = 'grid'"
             >
-              <el-icon class="option-icon"><Grid /></el-icon>
+              <AppstoreOutlined class="option-icon" />
               <span>网格(D)</span>
             </div>
-            <div 
-              class="option-item" 
+            <div
+              class="option-item"
               :class="{ active: selectedOption === 'custom' }"
               @click="selectedOption = 'custom'"
             >
-              <el-icon class="option-icon"><EditPen /></el-icon>
+              <EditOutlined class="option-icon" />
               <span>自定义(U)</span>
             </div>
           </div>
-          
-          <!-- 右侧设置区域 -->
+
           <div class="right-panel">
-            <!-- 线型设置 -->
             <div class="setting-group">
               <div class="setting-label">线型(V):</div>
               <div class="line-type-list">
-                <div 
-                  class="line-type-item" 
+                <div
+                  class="line-type-item"
                   :class="{ active: selectedLineType === 'solid' }"
                   @click="selectedLineType = 'solid'"
                 >
                   <div class="line-preview solid"></div>
                 </div>
-                <div 
-                  class="line-type-item" 
+                <div
+                  class="line-type-item"
                   :class="{ active: selectedLineType === 'dashed' }"
                   @click="selectedLineType = 'dashed'"
                 >
                   <div class="line-preview dashed"></div>
                 </div>
-                <div 
-                  class="line-type-item" 
+                <div
+                  class="line-type-item"
                   :class="{ active: selectedLineType === 'dotted' }"
                   @click="selectedLineType = 'dotted'"
                 >
                   <div class="line-preview dotted"></div>
                 </div>
-                <div 
-                  class="line-type-item" 
+                <div
+                  class="line-type-item"
                   :class="{ active: selectedLineType === 'double' }"
                   @click="selectedLineType = 'double'"
                 >
                   <div class="line-preview double"></div>
                 </div>
-                <div 
-                  class="line-type-item" 
+                <div
+                  class="line-type-item"
                   :class="{ active: selectedLineType === 'dash-dot' }"
                   @click="selectedLineType = 'dash-dot'"
                 >
                   <div class="line-preview dash-dot"></div>
                 </div>
-                <div 
-                  class="line-type-item" 
+                <div
+                  class="line-type-item"
                   :class="{ active: selectedLineType === 'dash-dot-dot' }"
                   @click="selectedLineType = 'dash-dot-dot'"
                 >
@@ -128,27 +123,26 @@
                 </div>
               </div>
             </div>
-            
-            <!-- 颜色设置 -->
+
             <div class="setting-group">
               <div class="setting-label">颜色(C):</div>
               <div class="color-selector">
-                <el-color-picker 
-                  v-model="selectedColor" 
-                  show-alpha
-                  class="color-picker"
+                <input
+                  type="color"
+                  :value="selectedColor"
+                  @change="(e: Event) => selectedColor = (e.target as HTMLInputElement).value"
+                  style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;"
                 />
               </div>
             </div>
-            
-            <!-- 宽度设置 -->
+
             <div class="setting-group">
               <div class="setting-label">宽度(W):</div>
               <div class="width-selector">
-                <el-slider 
-                  v-model="lineWidth" 
-                  :min="0.1" 
-                  :max="5" 
+                <a-slider
+                  v-model:value="lineWidth"
+                  :min="0.1"
+                  :max="5"
                   :step="0.1"
                   class="width-slider"
                 />
@@ -161,22 +155,22 @@
     </div>
     <template #footer>
       <div class="dialog-footer">
-        <el-button type="primary" @click="confirmInsertTable">
-          <el-icon><Check /></el-icon>
+        <a-button type="primary" @click="confirmInsertTable">
+          <CheckOutlined />
           确定
-        </el-button>
-        <el-button @click="visible = false">
-          <el-icon><Close /></el-icon>
+        </a-button>
+        <a-button @click="visible = false">
+          <CloseOutlined />
           取消
-        </el-button>
+        </a-button>
       </div>
     </template>
-  </el-dialog>
+  </a-modal>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Grid, Check, Close, Document, Postcard, EditPen } from '@element-plus/icons-vue'
+import { AppstoreOutlined, CheckOutlined, CloseOutlined, FileOutlined, BorderOutlined, EditOutlined } from '@ant-design/icons-vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -192,13 +186,11 @@ const visible = computed({
   set: (val) => emit('update:modelValue', val)
 })
 
-// 表格尺寸设置
 const insertTableForm = ref({
   rows: 2,
   cols: 5
 })
 
-// 边框设置
 const selectedOption = ref('none')
 const selectedLineType = ref('solid')
 const selectedColor = ref('#000000')
@@ -219,10 +211,6 @@ const confirmInsertTable = () => {
 </script>
 
 <style scoped>
-:deep(.insert-table-dialog) {
-  border-radius: 8px;
-}
-
 .custom-dialog-header {
   display: flex;
   align-items: center;
@@ -232,7 +220,7 @@ const confirmInsertTable = () => {
 }
 
 .title-icon {
-  background-color: #409eff;
+  background-color: #1890ff;
   color: #fff;
   padding: 4px;
   border-radius: 4px;
@@ -242,12 +230,10 @@ const confirmInsertTable = () => {
   padding: 10px 0;
 }
 
-/* 设置区域 */
 .setting-section {
   margin-bottom: 20px;
 }
 
-/* 分组标题 */
 .group-title {
   display: flex;
   align-items: center;
@@ -267,7 +253,6 @@ const confirmInsertTable = () => {
   background-color: #dcdfe6;
 }
 
-/* 表格尺寸设置 */
 .table-size-container {
   display: flex;
   gap: 40px;
@@ -287,27 +272,12 @@ const confirmInsertTable = () => {
   width: 60px;
 }
 
-:deep(.el-input-number.is-controls-right .el-input-number__decrease),
-:deep(.el-input-number.is-controls-right .el-input-number__increase) {
-  background: transparent;
-  border-left: none;
-}
-
-:deep(.el-input-number .el-input__wrapper) {
-  box-shadow: none !important;
-  border-bottom: 1px solid #409eff;
-  border-radius: 0;
-  padding-left: 0;
-}
-
-/* 边框设置内容 */
 .border-setting-content {
   display: flex;
   gap: 20px;
   padding: 10px 0;
 }
 
-/* 左侧面板 */
 .left-panel {
   width: 120px;
   border-right: 1px solid #dcdfe6;
@@ -328,12 +298,12 @@ const confirmInsertTable = () => {
 }
 
 .option-item:hover {
-  background-color: #ecf5ff;
-  color: #409eff;
+  background-color: #e6f7ff;
+  color: #1890ff;
 }
 
 .option-item.active {
-  background-color: #409eff;
+  background-color: #1890ff;
   color: #fff;
 }
 
@@ -341,7 +311,6 @@ const confirmInsertTable = () => {
   font-size: 16px;
 }
 
-/* 右侧面板 */
 .right-panel {
   flex: 1;
   padding-left: 10px;
@@ -358,7 +327,6 @@ const confirmInsertTable = () => {
   display: block;
 }
 
-/* 线型选择 */
 .line-type-list {
   background-color: #f5f7fa;
   border: 1px solid #dcdfe6;
@@ -377,11 +345,11 @@ const confirmInsertTable = () => {
 }
 
 .line-type-item:hover {
-  background-color: #ecf5ff;
+  background-color: #e6f7ff;
 }
 
 .line-type-item.active {
-  background-color: #409eff;
+  background-color: #1890ff;
   color: #fff;
 }
 
@@ -423,17 +391,11 @@ const confirmInsertTable = () => {
   height: 10px;
 }
 
-/* 颜色选择器 */
 .color-selector {
   display: flex;
   align-items: center;
 }
 
-.color-picker {
-  width: 100%;
-}
-
-/* 宽度选择器 */
 .width-selector {
   display: flex;
   align-items: center;
@@ -451,7 +413,6 @@ const confirmInsertTable = () => {
   color: #606266;
 }
 
-/* 底部按钮 */
 .dialog-footer {
   display: flex;
   justify-content: flex-end;

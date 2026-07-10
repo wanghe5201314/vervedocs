@@ -10,7 +10,7 @@
         </div>
       </FileInput>
     </div>
-    <div class="row"><el-button style="flex: 1;" @click="updateVideo({ poster: '' })">重置封面</el-button></div>
+    <div class="row"><a-button style="flex: 1;" @click="updateVideo({ poster: '' })">重置封面</a-button></div>
   </div>
 </template>
 

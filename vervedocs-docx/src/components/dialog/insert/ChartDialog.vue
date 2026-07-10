@@ -1,13 +1,12 @@
 <template>
-  <el-dialog
-    v-model="visible"
+  <a-modal
+    v-model:open="visible"
     title="插入图表"
     width="1000px"
     class="app-dialog chart-insert-dialog"
-    destroy-on-close
-    @close="handleClose"
+    :destroyOnClose="true"
+    @cancel="handleClose"
   >
-    <!-- 自定义选项卡 -->
     <div class="custom-tabs">
       <div class="tab-header">
         <div
@@ -28,10 +27,9 @@
       <div class="tab-content">
         <div v-show="activeTab === 'settings'" class="tab-pane">
           <div class="chart-dialog-layout">
-          <!-- 左侧图表类型 -->
           <div class="chart-type-tree">
             <div class="tree-title">选择图表类型</div>
-            <el-scrollbar>
+            <div style="overflow-y:auto;height:380px">
               <div class="tree-list">
                 <div
                   v-for="category in chartCategories"
@@ -41,21 +39,17 @@
                   <div
                     class="category-header"
                     :class="{ active: selectedCategory === category.name }"
-                    @click="selectCategory(category.name)"
+                    @click="selectCategory(category.name as ChartType)"
                   >
-                    <el-icon :size="16">
-                      <component :is="category.icon" />
-                    </el-icon>
+                    <component :is="category.icon" />
                     <span>{{ category.label }}</span>
                   </div>
                 </div>
               </div>
-            </el-scrollbar>
+            </div>
           </div>
 
-          <!-- 右侧预览和配置 -->
           <div class="chart-preview-config-container">
-            <!-- 预览折叠面板 -->
             <div class="collapse-panel">
               <div
                 class="collapse-panel-header"
@@ -63,9 +57,7 @@
                 @click="togglePreviewPanel"
               >
                 <div class="collapse-panel-title">
-                  <el-icon :size="16" class="collapse-icon">
-                    <component :is="showPreviewPanel ? 'ArrowDown' : 'ArrowRight'" />
-                  </el-icon>
+                  <component :is="showPreviewPanel ? 'ArrowDownOutlined' : 'RightOutlined'" />
                   <span>图表预览</span>
                 </div>
                 <a
@@ -79,32 +71,29 @@
                   预览图：Apache ECharts
                 </a>
               </div>
-              <el-collapse-transition>
-                <div v-show="showPreviewPanel" class="collapse-panel-content">
-                  <el-scrollbar>
-                    <div class="preview-container">
-                      <button
-                        v-for="preview in currentPreviews"
-                        :key="preview.id"
-                        class="preview-item"
-                        :class="{ selected: selectedPreview === preview.id }"
-                        @click="selectedPreview = preview.id"
-                        type="button"
-                      >
-                        <el-image :src="getPreviewImage(preview)" fit="contain" class="preview-thumb-image" loading="lazy">
-                          <template #error>
-                            <div class="preview-fallback">{{ preview.name }}</div>
-                          </template>
-                        </el-image>
-                        <div class="preview-name">{{ preview.name }}</div>
-                      </button>
-                    </div>
-                  </el-scrollbar>
+              <div v-show="showPreviewPanel" class="collapse-panel-content">
+                <div style="overflow-y:auto;max-height:300px">
+                  <div class="preview-container">
+                    <button
+                      v-for="preview in currentPreviews"
+                      :key="preview.id"
+                      class="preview-item"
+                      :class="{ selected: selectedPreview === preview.id }"
+                      @click="selectedPreview = preview.id"
+                      type="button"
+                    >
+                      <a-image :src="getPreviewImage(preview)" style="width:100%;height:132px" :fallback="''">
+                        <template #previewPlaceholder>
+                          <div class="preview-fallback">{{ preview.name }}</div>
+                        </template>
+                      </a-image>
+                      <div class="preview-name">{{ preview.name }}</div>
+                    </button>
+                  </div>
                 </div>
-              </el-collapse-transition>
+              </div>
             </div>
 
-            <!-- 配置折叠面板 -->
             <div class="collapse-panel">
               <div
                 class="collapse-panel-header"
@@ -112,77 +101,68 @@
                 @click="toggleConfigPanel"
               >
                 <div class="collapse-panel-title">
-                  <el-icon :size="16" class="collapse-icon">
-                    <component :is="showConfigPanel ? 'ArrowDown' : 'ArrowRight'" />
-                  </el-icon>
+                  <component :is="showConfigPanel ? 'ArrowDownOutlined' : 'RightOutlined'" />
                   <span>图表配置</span>
                 </div>
               </div>
-              <el-collapse-transition>
-                <div v-show="showConfigPanel" class="collapse-panel-content">
-                  <el-scrollbar>
-                    <el-form :model="chartConfig" label-width="100px" class="config-form-compact">
-                      <!-- 标题配置 -->
-                      <el-form-item label="显示标题">
-                        <el-switch v-model="chartConfig.showTitle" />
-                      </el-form-item>
-                      <el-form-item v-if="chartConfig.showTitle" label="标题名称">
-                        <el-input v-model="chartConfig.title" placeholder="请输入图表标题" />
-                      </el-form-item>
-                      <el-form-item v-if="chartConfig.showTitle" label="标题位置">
-                        <el-radio-group v-model="chartConfig.titlePosition">
-                          <el-radio-button value="left">左</el-radio-button>
-                          <el-radio-button value="center">中</el-radio-button>
-                          <el-radio-button value="right">右</el-radio-button>
-                        </el-radio-group>
-                      </el-form-item>
-                      <el-divider class="config-divider" />
+              <div v-show="showConfigPanel" class="collapse-panel-content">
+                <div style="overflow-y:auto;max-height:300px">
+                  <a-form :model="chartConfig" :label-col="{ style: { width: '100px' } }" class="config-form-compact">
+                    <a-form-item label="显示标题">
+                      <a-switch v-model:checked="chartConfig.showTitle" />
+                    </a-form-item>
+                    <a-form-item v-if="chartConfig.showTitle" label="标题名称">
+                      <a-input v-model:value="chartConfig.title" placeholder="请输入图表标题" />
+                    </a-form-item>
+                    <a-form-item v-if="chartConfig.showTitle" label="标题位置">
+                      <a-radio-group v-model:value="chartConfig.titlePosition">
+                        <a-radio-button value="left">左</a-radio-button>
+                        <a-radio-button value="center">中</a-radio-button>
+                        <a-radio-button value="right">右</a-radio-button>
+                      </a-radio-group>
+                    </a-form-item>
+                    <a-divider class="config-divider" />
 
-                      <!-- 图例配置 -->
-                      <el-form-item label="显示图例">
-                        <el-switch v-model="chartConfig.showLegend" />
-                      </el-form-item>
-                      <el-form-item v-if="chartConfig.showLegend" label="图例位置">
-                        <el-select v-model="chartConfig.legendPosition">
-                          <el-option label="上" value="top" />
-                          <el-option label="下" value="bottom" />
-                          <el-option label="左" value="left" />
-                          <el-option label="右" value="right" />
-                        </el-select>
-                      </el-form-item>
-                      <el-divider class="config-divider" />
+                    <a-form-item label="显示图例">
+                      <a-switch v-model:checked="chartConfig.showLegend" />
+                    </a-form-item>
+                    <a-form-item v-if="chartConfig.showLegend" label="图例位置">
+                      <a-select v-model:value="chartConfig.legendPosition">
+                        <a-select-option label="上" value="top" />
+                        <a-select-option label="下" value="bottom" />
+                        <a-select-option label="左" value="left" />
+                        <a-select-option label="右" value="right" />
+                      </a-select>
+                    </a-form-item>
+                    <a-divider class="config-divider" />
 
-                      <!-- 坐标轴配置 -->
-                      <el-form-item label="X轴标题">
-                        <el-input v-model="chartConfig.xAxisLabel" placeholder="请输入X轴标题" />
-                      </el-form-item>
-                      <el-form-item label="Y轴标题">
-                        <el-input v-model="chartConfig.yAxisLabel" placeholder="请输入Y轴标题" />
-                      </el-form-item>
-                      <el-form-item label="显示网格线">
-                        <el-switch v-model="chartConfig.showYAxisSplitLine" />
-                      </el-form-item>
-                      <el-divider class="config-divider" />
+                    <a-form-item label="X轴标题">
+                      <a-input v-model:value="chartConfig.xAxisLabel" placeholder="请输入X轴标题" />
+                    </a-form-item>
+                    <a-form-item label="Y轴标题">
+                      <a-input v-model:value="chartConfig.yAxisLabel" placeholder="请输入Y轴标题" />
+                    </a-form-item>
+                    <a-form-item label="显示网格线">
+                      <a-switch v-model:checked="chartConfig.showYAxisSplitLine" />
+                    </a-form-item>
+                    <a-divider class="config-divider" />
 
-                      <!-- 数据标签配置 -->
-                      <el-form-item label="显示数据标签">
-                        <el-switch v-model="chartConfig.showDataLabel" />
-                      </el-form-item>
-                      <el-divider class="config-divider" />
+                    <a-form-item label="显示数据标签">
+                      <a-switch v-model:checked="chartConfig.showDataLabel" />
+                    </a-form-item>
+                    <a-divider class="config-divider" />
 
-                      <!-- 颜色配置 -->
-                      <el-form-item label="配色方案">
-                        <el-select v-model="chartConfig.colorScheme">
-                          <el-option label="默认" value="default" />
-                          <el-option label="暖色调" value="warm" />
-                          <el-option label="冷色调" value="cool" />
-                          <el-option label="自然色" value="nature" />
-                        </el-select>
-                      </el-form-item>
-                    </el-form>
-                  </el-scrollbar>
+                    <a-form-item label="配色方案">
+                      <a-select v-model:value="chartConfig.colorScheme">
+                        <a-select-option label="默认" value="default" />
+                        <a-select-option label="暖色调" value="warm" />
+                        <a-select-option label="冷色调" value="cool" />
+                        <a-select-option label="自然色" value="nature" />
+                      </a-select>
+                    </a-form-item>
+                  </a-form>
                 </div>
-              </el-collapse-transition>
+              </div>
             </div>
           </div>
         </div>
@@ -199,21 +179,21 @@
     </div>
 
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
-      <el-button
+      <a-button @click="visible = false">取消</a-button>
+      <a-button
         type="primary"
         :disabled="!selectedPreview"
         @click="handleConfirm"
       >
         确定
-      </el-button>
+      </a-button>
     </template>
-  </el-dialog>
+  </a-modal>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
-import { Histogram, TrendCharts, PieChart, DataAnalysis } from '@element-plus/icons-vue'
+import { BarChartOutlined, LineChartOutlined, PieChartOutlined, DotChartOutlined } from '@ant-design/icons-vue'
 import type { ChartType, ITableData, IChartConfig } from '@/types/chart'
 import Spreadsheet from 'x-data-spreadsheet'
 import 'x-data-spreadsheet/dist/xspreadsheet.css'
@@ -236,39 +216,34 @@ const activeTab = ref<'settings' | 'data'>('settings')
 const selectedCategory = ref<ChartType>('bar')
 const selectedPreview = ref('bar-basic-1')
 const spreadsheetRef = ref<HTMLElement | null>(null)
-const showPreviewPanel = ref(true) // 默认展开预览
-const showConfigPanel = ref(false) // 默认关闭配置
+const showPreviewPanel = ref(true)
+const showConfigPanel = ref(false)
 let spreadsheetInstance: any = null
 
-// 折叠面板互斥逻辑
 const togglePreviewPanel = () => {
   showPreviewPanel.value = !showPreviewPanel.value
   if (showPreviewPanel.value) {
-    showConfigPanel.value = false // 展开预览时关闭配置
+    showConfigPanel.value = false
   }
 }
 
 const toggleConfigPanel = () => {
   showConfigPanel.value = !showConfigPanel.value
   if (showConfigPanel.value) {
-    showPreviewPanel.value = false // 展开配置时关闭预览
+    showPreviewPanel.value = false
   }
 }
 
-// 图表配置
 const chartConfig = ref<IChartConfig>({
-  // 标题配置
   title: '',
   titlePosition: 'center',
   titleFontSize: 16,
   showTitle: true,
 
-  // 图例配置
   showLegend: true,
   legendPosition: 'bottom',
   legendOrient: 'horizontal',
 
-  // 坐标轴配置
   xAxisLabel: '',
   yAxisLabel: '',
   showXAxisLine: true,
@@ -277,46 +252,38 @@ const chartConfig = ref<IChartConfig>({
   showYAxisSplitLine: true,
   xAxisLabelRotate: 0,
 
-  // 数据标签配置
   showDataLabel: false,
   dataLabelPosition: 'top',
 
-  // 颜色配置
   colorScheme: 'default',
 
-  // 其他配置
   showTooltip: true,
   animation: true
 })
 
-// 配色方案映射
 const colorSchemeMap: Record<string, string[]> = {
-  default: ['#409eff', '#67c23a', '#e6a23c', '#f56c6c', '#909399'],
+  default: ['#1890ff', '#67c23a', '#e6a23c', '#f56c6c', '#909399'],
   warm: ['#f56c6c', '#e6a23c', '#fac858', '#fda08b', '#ff9b7b'],
-  cool: ['#409eff', '#66b1ff', '#79bbff', '#909399', '#c0c4cc'],
+  cool: ['#1890ff', '#66b1ff', '#79bbff', '#909399', '#c0c4cc'],
   nature: ['#67c23a', '#85ce61', '#a0da39', '#b3e19d', '#d9ec34']
 }
 
-// 初始化电子表格
 const initSpreadsheet = () => {
   if (!spreadsheetRef.value) return
 
-  // 销毁旧实例并清除DOM
   if (spreadsheetInstance) {
     spreadsheetInstance = null
   }
-  // 清除spreadsheet容器内的所有子元素，防止重复渲染
   while (spreadsheetRef.value.firstChild) {
     spreadsheetRef.value.removeChild(spreadsheetRef.value.firstChild)
   }
 
-  // 创建新实例
   spreadsheetInstance = new Spreadsheet(spreadsheetRef.value, {
     mode: 'edit',
     showToolbar: false,
     showGrid: true,
     showContextmenu: true,
-    showBottomBar: false, // 隐藏底部sheet栏
+    showBottomBar: false,
     view: {
       height: () => spreadsheetRef.value?.clientHeight || 500,
       width: () => spreadsheetRef.value?.clientWidth || 800,
@@ -340,7 +307,7 @@ const initSpreadsheet = () => {
       underline: false,
       color: '#0a0a0a',
       font: {
-        name: 'normal',
+        name: 'normal' as any,
         size: 12,
         bold: false,
         italic: false,
@@ -348,10 +315,6 @@ const initSpreadsheet = () => {
     },
   })
 
-  // 设置初始数据
-  // 第一行：A1为空，B1=系列1, C1=系列2, D1=系列3
-  // 第一列：A2=类别1, A3=类别2, A4=类别3, A5=类别4
-  // 数据区域：B2-D5为数值
   const initialData = {
     name: 'sheet1',
     rows: {
@@ -370,10 +333,8 @@ const initSpreadsheet = () => {
   spreadsheetInstance.loadData(initialData)
 }
 
-// 监听对话框打开时初始化表格
 watch(visible, (isVisible) => {
   if (isVisible) {
-    // 对话框打开时，如果当前是数据选项卡，初始化表格
     if (activeTab.value === 'data') {
       nextTick(() => {
         initSpreadsheet()
@@ -382,7 +343,6 @@ watch(visible, (isVisible) => {
   }
 })
 
-// 监听数据选项卡显示时初始化表格
 watch(activeTab, (tab) => {
   if (tab === 'data') {
     nextTick(() => {
@@ -391,10 +351,6 @@ watch(activeTab, (tab) => {
   }
 })
 
-// 获取表格数据
-// 数据格式说明：
-// headers: ['', '系列1', '系列2', '系列3'] - 第一行，第一个为空，后续为系列名称(Y轴)
-// rows: [['类别1', '4.3', '2.4', '2'], ...] - 每行第一列为类别(X轴)，后续为数值(Y轴数据)
 const getTableData = (): ITableData => {
   if (!spreadsheetInstance) {
     return {
@@ -408,11 +364,9 @@ const getTableData = (): ITableData => {
     }
   }
 
-  // 转换数据格式
-  const headers: string[] = [''] // 第一个为空，对应第一列的类别标题
+  const headers: string[] = ['']
   const rows: string[][] = []
 
-  // 获取第一行作为表头（从第2列开始，即col index 1）
   for (let col = 1; col <= 26; col++) {
     const cell = spreadsheetInstance.cell(0, col)
     if (cell && cell.text) {
@@ -422,21 +376,18 @@ const getTableData = (): ITableData => {
     }
   }
 
-  // 获取数据行（从第2行开始，即row index 1）
   for (let row = 1; row <= 100; row++) {
     const rowData: string[] = []
     let hasData = false
 
-    // 获取第一列作为类别名称（X轴）
     const categoryCell = spreadsheetInstance.cell(row, 0)
     if (categoryCell && categoryCell.text) {
       rowData.push(categoryCell.text)
       hasData = true
     } else {
-      break // 没有类别名称则停止
+      break
     }
 
-    // 获取数据列（Y轴数据）
     for (let col = 1; col < headers.length; col++) {
       const cell = spreadsheetInstance.cell(row, col)
       if (cell && cell.text) {
@@ -461,7 +412,7 @@ const echartsThumbIdMap: Record<string, string> = {
   'bar-horizontal-1': 'bar-y-category',
   'bar-negative-1': 'bar-negative',
   'bar-waterfall-1': 'bar-waterfall',
-  'bar-3d-1': 'bar-simple', // 使用带阴影的柱状图
+  'bar-3d-1': 'bar-simple',
   'bar-gradient-1': 'bar-gradient',
   'bar-polar-1': 'bar-polar',
   'line-basic-1': 'line-simple',
@@ -476,9 +427,9 @@ const echartsThumbIdMap: Record<string, string> = {
   'pie-doughnut-1': 'pie-doughnut',
   'pie-rose-1': 'pie-roseType',
   'pie-nested-1': 'pie-nest',
-  'pie-nightingale-1': 'pie-roseType', // 南丁格尔玫瑰图
+  'pie-nightingale-1': 'pie-roseType',
   'pie-label-1': 'pie-label',
-  'pie-custom-1': 'pie-simple', // 自定义配色
+  'pie-custom-1': 'pie-simple',
   'scatter-basic-1': 'scatter-simple',
   'scatter-bubble-1': 'bubble-gradient',
   'scatter-cluster-1': 'scatter-clustering-process',
@@ -493,37 +444,36 @@ const localThumbs = import.meta.glob('../../../assets/echarts/thumb/*.png', {
   import: 'default'
 }) as Record<string, string>
 
-// 图表分类配置
 const chartCategories = [
   {
     name: 'bar',
     label: '柱形图',
-    icon: Histogram
+    icon: BarChartOutlined
   },
   {
     name: 'line',
     label: '折线图',
-    icon: TrendCharts
+    icon: LineChartOutlined
   },
   {
     name: 'pie',
     label: '饼图',
-    icon: PieChart
+    icon: PieChartOutlined
   },
   {
     name: 'scatter',
     label: '散点图',
-    icon: DataAnalysis
+    icon: DotChartOutlined
   },
   {
     name: 'radar',
     label: '雷达图',
-    icon: DataAnalysis
+    icon: DotChartOutlined
   },
   {
     name: 'mixed',
     label: '混合图表',
-    icon: TrendCharts
+    icon: LineChartOutlined
   }
 ]
 
@@ -590,7 +540,6 @@ const selectCategory = (name: ChartType) => {
   selectedCategory.value = name
   const previews = previewData[name] || []
   selectedPreview.value = previews[0]?.id || ''
-  // 切换图表类型时，默认展开预览折叠面板
   showPreviewPanel.value = true
   showConfigPanel.value = false
 }
@@ -600,13 +549,11 @@ const handleConfirm = () => {
   const chosen = currentPreviews.value.find(p => p.id === selectedPreview.value)
   if (!chosen) return
 
-  // 应用配色方案
   const finalConfig = { ...chartConfig.value }
   if (finalConfig.colorScheme && colorSchemeMap[finalConfig.colorScheme]) {
     finalConfig.colors = colorSchemeMap[finalConfig.colorScheme]
   }
 
-  // 如果不显示标题，清空标题文本
   if (!finalConfig.showTitle) {
     finalConfig.title = ''
   }
@@ -626,13 +573,11 @@ const handleClose = () => {
 </script>
 
 <style scoped>
-/* 固定dialog高度，防止切换选项卡时抖动 */
-.chart-insert-dialog :deep(.el-dialog__body) {
+.chart-insert-dialog :deep(.ant-modal-body) {
   height: 450px;
   overflow: hidden;
 }
 
-/* 自定义选项卡样式 - 紧密相连的选项卡 */
 .custom-tabs {
   margin-bottom: 20px;
 }
@@ -683,7 +628,6 @@ const handleClose = () => {
   height: 100%;
 }
 
-/* 左侧树形列表 */
 .chart-type-tree {
   width: 200px;
   border-right: 1px solid #e4e7ed;
@@ -722,7 +666,7 @@ const handleClose = () => {
 }
 
 .category-header.active {
-  background: #ecf5ff;
+  background: #e6f7ff;
 }
 
 .category-header span {
@@ -731,16 +675,7 @@ const handleClose = () => {
   color: #303133;
 }
 
-/* 右侧预览网格 */
-.chart-preview-grid {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-height: 0;
-}
 
-/* 右侧预览和配置容器 */
 .chart-preview-config-container {
   flex: 1;
   display: flex;
@@ -749,7 +684,6 @@ const handleClose = () => {
   min-height: 0;
 }
 
-/* 折叠面板样式 */
 .collapse-panel {
   border: 1px solid #e4e7ed;
   border-radius: 4px;
@@ -770,7 +704,7 @@ const handleClose = () => {
 }
 
 .collapse-panel-header:hover {
-  background: #ecf5ff;
+  background: #e6f7ff;
 }
 
 .collapse-panel-header.active {
@@ -786,9 +720,6 @@ const handleClose = () => {
   color: #303133;
 }
 
-.collapse-icon {
-  transition: transform 0.2s;
-}
 
 .collapse-panel-content {
   max-height: 340px;
@@ -796,7 +727,6 @@ const handleClose = () => {
   overflow-x: hidden;
 }
 
-/* 折叠面板内部滚动条样式 */
 .collapse-panel-content::-webkit-scrollbar {
   width: 6px;
 }
@@ -814,7 +744,6 @@ const handleClose = () => {
   background-color: transparent;
 }
 
-/* 预览容器样式调整 */
 .preview-container {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -826,52 +755,14 @@ const handleClose = () => {
   padding: 12px;
 }
 
-.config-form-compact :deep(.el-form-item) {
-  margin-bottom: 12px;
-}
-
-.config-form-compact :deep(.el-form-item__label) {
-  font-size: 13px;
-  padding-right: 8px;
-  text-align: center;
-  justify-content: center;
-}
-
-.config-form-compact :deep(.el-input__inner) {
-  font-size: 13px;
-}
-
-.config-form-compact :deep(.el-select) {
-  width: 100%;
-}
-
 .config-divider {
   margin: 8px 0;
 }
 
-.config-divider :deep(.el-divider__text) {
-  font-size: 12px;
-  color: #909399;
-}
-
-.preview-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #e4e7ed;
-}
-
-.preview-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #303133;
-}
 
 .preview-credit {
   font-size: 12px;
-  color: #409eff;
+  color: #1890ff;
   text-decoration: none;
   width: fit-content;
 }
@@ -895,19 +786,14 @@ const handleClose = () => {
 }
 
 .preview-item:hover {
-  border-color: #409eff;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.2);
+  border-color: #1890ff;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2);
 }
 
 .preview-item.selected {
-  border-color: #409eff;
-  background: #ecf5ff;
-  box-shadow: 0 2px 12px rgba(64, 158, 255, 0.3);
-}
-
-.preview-thumb-image {
-  width: 100%;
-  height: 132px;
+  border-color: #1890ff;
+  background: #e6f7ff;
+  box-shadow: 0 2px 12px rgba(24, 144, 255, 0.3);
 }
 
 .preview-fallback {
@@ -935,7 +821,6 @@ const handleClose = () => {
   -webkit-box-orient: vertical;
 }
 
-/* 数据选项卡样式 */
 .data-tab-content {
   padding: 0;
   height: 100%;
@@ -957,12 +842,10 @@ const handleClose = () => {
   overflow: hidden;
 }
 
-/* 隐藏x-data-spreadsheet的底部sheet栏 */
 .spreadsheet :deep(.x-spreadsheet-bottombar) {
   display: none !important;
 }
 
-/* 确保spreadsheet内部元素撑满高度 */
 .spreadsheet :deep(.x-spreadsheet) {
   height: 100% !important;
 }

@@ -23,29 +23,29 @@
     <div class="configs">
       <div class="row">
         <div class="title">导出范围：</div>
-        <el-radio-group
+        <a-radio-group
           class="config-item"
-          v-model="rangeType"
+          v-model:value="rangeType"
         >
-          <el-radio-button style="width: 50%;" value="all">全部幻灯片</el-radio-button>
-          <el-radio-button style="width: 50%;" value="current">当前幻灯片</el-radio-button>
-        </el-radio-group>
+          <a-radio-button style="width: 50%;" value="all">全部幻灯片</a-radio-button>
+          <a-radio-button style="width: 50%;" value="current">当前幻灯片</a-radio-button>
+        </a-radio-group>
       </div>
       <div class="row">
         <div class="title">每页数量：</div>
-        <el-select 
+        <a-select
           class="config-item"
-          v-model="count"
+          v-model:value="count"
         >
-          <el-option :value="1" label="1" />
-          <el-option :value="2" label="2" />
-          <el-option :value="3" label="3" />
-        </el-select>
+          <a-select-option :value="1">1</a-select-option>
+          <a-select-option :value="2">2</a-select-option>
+          <a-select-option :value="3">3</a-select-option>
+        </a-select>
       </div>
       <div class="row">
         <div class="title">边缘留白：</div>
         <div class="config-item">
-          <el-switch v-model="padding" />
+          <a-switch v-model:checked="padding" />
         </div>
       </div>
       <div class="tip">
@@ -54,8 +54,8 @@
     </div>
 
     <div class="btns">
-      <el-button class="btn export" type="primary" @click="expPDF()">打印 / 导出 PDF</el-button>
-      <el-button class="btn close" @click="close()">关闭</el-button>
+      <a-button class="btn export" type="primary" @click="expPDF()">打印 / 导出 PDF</a-button>
+      <a-button class="btn close" @click="close()">关闭</a-button>
     </div>
   </div>
 </template>

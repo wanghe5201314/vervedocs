@@ -1,4 +1,4 @@
-@import 'element-plus/dist/index.css';
+@import 'ant-design-vue/dist/reset.css';
 @import '../style.css';
 @import '../assets/fonts/material-icons/material-icons.css';
 @import 'prismjs/themes/prism.css';

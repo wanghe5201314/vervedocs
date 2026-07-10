@@ -1,8 +1,8 @@
 ﻿<template>
   <div class="mobile" ref="mobileRef">
-    <el-alert
+    <a-alert
       class="tip"
-      title="注意"
+      message="注意"
       description="移动设备下仅支持预览，请在PC上进行编辑"
       type="warning"
       closable

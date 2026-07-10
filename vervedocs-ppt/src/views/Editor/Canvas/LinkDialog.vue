@@ -10,20 +10,20 @@
       >{{tab.label}}</div>
     </div>
 
-    <el-input 
+    <a-input 
       class="input"
       v-if="type === 'web'" 
-      v-model="address" 
+      v-model:value="address" 
       placeholder="请输入网页链接地址"
     />
 
-    <el-select 
+    <a-select 
       class="input"
       v-if="type === 'slide'"
-      v-model="slideId"
+      v-model:value="slideId"
     >
-      <el-option v-for="(slide, index) in slides" :key="slide.id" :value="slide.id" :label="`幻灯片 ${index + 1}`" />
-    </el-select>
+      <a-select-option v-for="(slide, index) in slides" :key="slide.id" :value="slide.id" :label="`幻灯片 ${index + 1}`" />
+    </a-select>
 
     <div class="preview" v-if="type === 'slide' && selectedSlide">
       <div>预览：</div>
@@ -31,8 +31,8 @@
     </div>
 
     <div class="btns">
-      <el-button @click="close()" style="margin-right: 10px;">取消</el-button>
-      <el-button type="primary" @click="save()">确认</el-button>
+      <a-button @click="close()" style="margin-right: 10px;">取消</a-button>
+      <a-button type="primary" @click="save()">确认</a-button>
     </div>
   </div>
 </template>

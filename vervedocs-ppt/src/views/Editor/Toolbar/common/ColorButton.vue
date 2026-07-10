@@ -1,10 +1,10 @@
 <template>
-  <el-button class="color-btn">
+  <a-button class="color-btn">
     <div class="color-block">
       <div class="content" :style="{ backgroundColor: color }"></div>
     </div>
     <IconPlatte class="color-btn-icon" />
-  </el-button>
+  </a-button>
 </template>
 
 <script lang="ts">

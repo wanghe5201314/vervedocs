@@ -103,58 +103,10 @@ function applyCssVars(theme: ThemeData, kind: 'preset' | 'custom') {
   root.style.setProperty('--tabs-bg-color', bg)
   root.style.setProperty('--tabs-text-color', theme.tabTextColor)
 
-  const parseColorToRgb = (input: string): { r: number; g: number; b: number } | null => {
-    const s = (input || '').trim()
-    if (!s) return null
-    const hex = s.startsWith('#') ? s.slice(1) : ''
-    if (hex) {
-      const h = hex.length === 3 ? hex.split('').map(c => c + c).join('') : hex
-      const h6 = h.length >= 6 ? h.slice(0, 6) : ''
-      if (h6.length === 6) {
-        const r = parseInt(h6.slice(0, 2), 16)
-        const g = parseInt(h6.slice(2, 4), 16)
-        const b = parseInt(h6.slice(4, 6), 16)
-        if ([r, g, b].every(n => Number.isFinite(n))) return { r, g, b }
-      }
-    }
-    const m = s.match(/^rgba?\(\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)(?:\s*,\s*([0-9.]+))?\s*\)$/i)
-    if (m) {
-      const r = Math.max(0, Math.min(255, Math.round(Number(m[1]))))
-      const g = Math.max(0, Math.min(255, Math.round(Number(m[2]))))
-      const b = Math.max(0, Math.min(255, Math.round(Number(m[3]))))
-      return { r, g, b }
-    }
-    return null
-  }
 
-  const mix = (a: { r: number; g: number; b: number }, b: { r: number; g: number; b: number }, amount: number) => {
-    const t = Math.max(0, Math.min(1, amount))
-    return {
-      r: Math.round(a.r + (b.r - a.r) * t),
-      g: Math.round(a.g + (b.g - a.g) * t),
-      b: Math.round(a.b + (b.b - a.b) * t)
-    }
-  }
-
-  const toRgbString = (c: { r: number; g: number; b: number }) => `rgb(${c.r}, ${c.g}, ${c.b})`
-
-  const isDefaultLike = kind === 'preset' && theme.tabBgColor.toLowerCase() === '#f2f4f7'
-  const primaryBase = isDefaultLike ? '#409eff' : theme.tabBgColor
-  const primaryRgb = parseColorToRgb(primaryBase) || { r: 64, g: 158, b: 255 }
-
-  const white = { r: 255, g: 255, b: 255 }
-  const black = { r: 0, g: 0, b: 0 }
-
-  root.style.setProperty('--el-color-primary', toRgbString(primaryRgb))
-  root.style.setProperty('--el-color-primary-light-3', toRgbString(mix(primaryRgb, white, 0.3)))
-  root.style.setProperty('--el-color-primary-light-5', toRgbString(mix(primaryRgb, white, 0.5)))
-  root.style.setProperty('--el-color-primary-light-7', toRgbString(mix(primaryRgb, white, 0.7)))
-  root.style.setProperty('--el-color-primary-light-8', toRgbString(mix(primaryRgb, white, 0.8)))
-  root.style.setProperty('--el-color-primary-dark-2', toRgbString(mix(primaryRgb, black, 0.2)))
-
-  if (kind === 'preset' && theme.tabBgColor.toLowerCase() === '#f2f4f7') {
-    root.style.setProperty('--tabs-text-active-color', '#409eff')
-    root.style.setProperty('--tabs-text-hover-color', '#409eff')
+if (kind === 'preset' && theme.tabBgColor.toLowerCase() === '#f2f4f7') {
+    root.style.setProperty('--tabs-text-active-color', '#1890ff')
+    root.style.setProperty('--tabs-text-hover-color', '#1890ff')
   } else {
     root.style.setProperty('--tabs-text-active-color', theme.tabTextColor)
     root.style.setProperty('--tabs-text-hover-color', theme.tabTextColor)

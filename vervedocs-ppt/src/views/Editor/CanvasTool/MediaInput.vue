@@ -11,18 +11,18 @@
     </div>
 
     <template v-if="type === 'video'">
-      <el-input v-model="videoSrc" placeholder="请输入视频地址，e.g. https://xxx.mp4"></el-input>
+      <a-input v-model:value="videoSrc" placeholder="请输入视频地址，e.g. https://xxx.mp4"></a-input>
       <div class="btns">
-        <el-button @click="close()" style="margin-right: 10px;">取消</el-button>
-        <el-button type="primary" @click="insertVideo()">确认</el-button>
+        <a-button @click="close()" style="margin-right: 10px;">取消</a-button>
+        <a-button type="primary" @click="insertVideo()">确认</a-button>
       </div>
     </template>
 
     <template v-if="type === 'audio'">
-      <el-input v-model="audioSrc" placeholder="请输入音频地址，e.g. https://xxx.mp3"></el-input>
+      <a-input v-model:value="audioSrc" placeholder="请输入音频地址，e.g. https://xxx.mp3"></a-input>
       <div class="btns">
-        <el-button @click="close()" style="margin-right: 10px;">取消</el-button>
-        <el-button type="primary" @click="insertAudio()">确认</el-button>
+        <a-button @click="close()" style="margin-right: 10px;">取消</a-button>
+        <a-button type="primary" @click="insertAudio()">确认</a-button>
       </div>
     </template>
   </div>
@@ -30,7 +30,7 @@
 
 <script lang="ts">
 import { defineComponent, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { message } from 'ant-design-vue'
 
 type TypeKey = 'video' | 'audio'
 export interface TabItem {
@@ -53,12 +53,12 @@ export default defineComponent({
     ]
 
     const insertVideo = () => {
-      if (!videoSrc.value) return ElMessage.error('请先输入正确的视频地址')
+      if (!videoSrc.value) return message.error('请先输入正确的视频地址')
       emit('insertVideo', videoSrc.value)
     }
 
     const insertAudio = () => {
-      if (!audioSrc.value) return ElMessage.error('请先输入正确的音频地址')
+      if (!audioSrc.value) return message.error('请先输入正确的音频地址')
       emit('insertAudio', audioSrc.value)
     }
 

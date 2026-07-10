@@ -1,153 +1,153 @@
 <template>
   <div class="chart-style-panel">
-    <el-button class="full-width-btn" @click="chartDataEditorVisible = true">
+    <a-button class="full-width-btn" @click="chartDataEditorVisible = true">
       <IconEdit class="btn-icon" /> 编辑图表数据
-    </el-button>
+    </a-button>
 
-    <el-divider />
+    <a-divider />
 
     <template v-if="(handleElement as any)?.chartType === 'line'">
       <div class="row">
-        <el-checkbox 
+        <a-checkbox 
           @change="(checked: any) => updateOptions({ showArea: checked })"
-          :model-value="showArea" 
+          :checked="showArea" 
           style="flex: 1;"
-        >面积图样式</el-checkbox>
-        <el-checkbox 
+        >面积图样式</a-checkbox>
+        <a-checkbox 
           @change="(checked: any) => updateOptions({ showLine: !checked })"
-          :model-value="!showLine" 
+          :checked="!showLine" 
           style="flex: 1;"
-        >散点图样式</el-checkbox>
+        >散点图样式</a-checkbox>
       </div>
       <div class="row">
-        <el-checkbox 
+        <a-checkbox 
           @change="(checked: any) => updateOptions({ lineSmooth: checked })" 
-          :model-value="lineSmooth"
-        >使用平滑曲线</el-checkbox>
+          :checked="lineSmooth"
+        >使用平滑曲线</a-checkbox>
       </div>
     </template>
     <div class="row" v-if="(handleElement as any)?.chartType === 'bar'">
-      <el-checkbox 
+      <a-checkbox 
         @change="(checked: any) => updateOptions({ horizontalBars: checked })" 
-        :model-value="horizontalBars"
-      >条形图样式</el-checkbox>
-      <el-checkbox 
+        :checked="horizontalBars"
+      >条形图样式</a-checkbox>
+      <a-checkbox 
         @change="(checked: any) => updateOptions({ stackBars: checked })" 
-        :model-value="stackBars"
-      >堆叠样式</el-checkbox>
+        :checked="stackBars"
+      >堆叠样式</a-checkbox>
     </div>
     <div class="row" v-if="(handleElement as any)?.chartType === 'pie'">
-      <el-checkbox 
+      <a-checkbox 
         @change="(checked: any) => updateOptions({ donut: checked })" 
-        :model-value="donut"
-      >环形图样式</el-checkbox>
+        :checked="donut"
+      >环形图样式</a-checkbox>
     </div>
 
-    <el-divider />
+    <a-divider />
 
     <div class="row">
       <div style="flex: 2;">图例：</div>
-      <el-select style="flex: 3;" :model-value="legend" @change="(value: any) => updateLegend(value)">
-        <el-option value="" label="不显示"></el-option>
-        <el-option value="top" label="显示在上方"></el-option>
-        <el-option value="bottom" label="显示在下方"></el-option>
-      </el-select>
+      <a-select style="flex: 3;" :value="legend" @change="(value: any) => updateLegend(value)">
+        <a-select-option value="">不显示</a-select-option>
+        <a-select-option value="top">显示在上方</a-select-option>
+        <a-select-option value="bottom">显示在下方</a-select-option>
+      </a-select>
     </div>
 
-    <el-divider />
+    <a-divider />
 
     <div class="row">
       <div style="flex: 2;">背景填充：</div>
-      <el-popover trigger="click">
-        <ColorPicker
-          :modelValue="fill"
-          @update:modelValue="(value: any) => updateFill(value)"
-        />
-        <template #reference>
-          <ColorButton :color="fill || ''" style="flex: 3;" />
+      <a-popover trigger="click">
+        <template #content>
+          <ColorPicker
+            :modelValue="fill"
+            @update:modelValue="(value: any) => updateFill(value)"
+          />
         </template>
-      </el-popover>
+        <ColorButton :color="fill || ''" style="flex: 3;" />
+      </a-popover>
     </div>
     <div class="row">
       <div style="flex: 2;">网格颜色：</div>
-      <el-popover trigger="click">
-        <ColorPicker
-          :modelValue="gridColor"
-          @update:modelValue="(value: any) => updateGridColor(value)"
-        />
-        <template #reference>
-          <ColorButton :color="gridColor" style="flex: 3;" />
+      <a-popover trigger="click">
+        <template #content>
+          <ColorPicker
+            :modelValue="gridColor"
+            @update:modelValue="(value: any) => updateGridColor(value)"
+          />
         </template>
-      </el-popover>
+        <ColorButton :color="gridColor" style="flex: 3;" />
+      </a-popover>
     </div>
 
-    <el-divider />
+    <a-divider />
 
     <div class="row" v-for="(color, index) in themeColor" :key="index">
       <div style="flex: 2;">{{index === 0 ? '主题配色：' : ''}}</div>
-      <el-popover trigger="click">
-        <ColorPicker
-          :modelValue="color"
-          @update:modelValue="(value: any) => updateTheme(value, index)"
-        />
-        <template #reference>
-          <div class="color-btn-wrap" style="flex: 3;">
-            <ColorButton :color="color" style="width: 100%;" />
-            <el-tooltip :hide-after="0" :show-after="500" content="删除">
-              <div class="delete-color-btn" @click.stop="deleteThemeColor(index)" v-if="index !== 0"><IconCloseSmall /></div>
-            </el-tooltip>
-          </div>
+      <a-popover trigger="click">
+        <template #content>
+          <ColorPicker
+            :modelValue="color"
+            @update:modelValue="(value: any) => updateTheme(value, index)"
+          />
         </template>
-      </el-popover>
-    </div>
-    <el-button-group class="row">
-      <el-popover trigger="click" :visible="presetThemesVisible">
-        <div class="preset-themes">
-          <div class="preset-theme" v-for="(item, index) in presetChartThemes" :key="index">
-            <div 
-              class="preset-theme-color" 
-              :class="{ 'select': presetThemeColorHoverIndex[0] === index && itemIndex <= presetThemeColorHoverIndex[1] }"
-              v-for="(color, itemIndex) in item" 
-              :key="color" 
-              :style="{ backgroundColor: color }" 
-              @click="applyPresetTheme(item, itemIndex)"
-              @mouseenter="presetThemeColorHoverIndex = [index, itemIndex]"
-              @mouseleave="presetThemeColorHoverIndex = [-1, -1]"
-            ></div>
-          </div>
+        <div class="color-btn-wrap" style="flex: 3;">
+          <ColorButton :color="color" style="width: 100%;" />
+          <a-tooltip title="删除" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
+            <div class="delete-color-btn" @click.stop="deleteThemeColor(index)" v-if="index !== 0"><IconCloseSmall /></div>
+          </a-tooltip>
         </div>
-        <template #reference>
-          <el-button class="no-padding" style="flex: 2;">推荐主题</el-button>
+      </a-popover>
+    </div>
+    <a-button-group class="row">
+      <a-popover trigger="click" :open="presetThemesVisible">
+        <template #content>
+          <div class="preset-themes">
+            <div class="preset-theme" v-for="(item, index) in presetChartThemes" :key="index">
+              <div 
+                class="preset-theme-color" 
+                :class="{ 'select': presetThemeColorHoverIndex[0] === index && itemIndex <= presetThemeColorHoverIndex[1] }"
+                v-for="(color, itemIndex) in item" 
+                :key="color" 
+                :style="{ backgroundColor: color }" 
+                @click="applyPresetTheme(item, itemIndex)"
+                @mouseenter="presetThemeColorHoverIndex = [index, itemIndex]"
+                @mouseleave="presetThemeColorHoverIndex = [-1, -1]"
+              ></div>
+            </div>
+          </div>
         </template>
-      </el-popover>
-      <el-button 
+        <a-button class="no-padding" style="flex: 2;">推荐主题</a-button>
+      </a-popover>
+      <a-button 
         class="no-padding" 
         :disabled="themeColor.length >= 10" 
         style="flex: 3;" 
         @click="addThemeColor()"
       >
         <IconPlus class="btn-icon" /> 添加主题色
-      </el-button>
-    </el-button-group>
+      </a-button>
+    </a-button-group>
 
-    <el-divider />
+    <a-divider />
 
     <ElementOutline />
 
-    <el-dialog
-      v-model="chartDataEditorVisible" 
-      :show-close="false"
-      :close-on-click-modal="true"
-      width="648px"
-      :destroy-on-close="true"
-      align-center
+    <a-modal
+      v-model:open="chartDataEditorVisible" 
+      :closable="false"
+      :maskClosable="true"
+      width="648"
+      :destroyOnClose="true"
+      centered
     >
       <ChartDataEditor 
         :data="(handleElement as any)?.data"
         @close="chartDataEditorVisible = false"
         @save="value => updateData(value)"
       />
-    </el-dialog>
+    </a-modal>
   </div>
 </template>
 

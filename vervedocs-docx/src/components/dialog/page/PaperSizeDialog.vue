@@ -1,41 +1,39 @@
 <template>
-  <el-dialog v-model="visible" title="自定义大小" width="480px" :close-on-click-modal="false" class="app-dialog">
+  <a-modal v-model:open="visible" title="自定义大小" width="480px" :maskClosable="false" class="app-dialog">
     <div class="paper-size-body">
       <div class="ps-form-item">
-        <el-select v-model="selectedPaperPreset" style="width: 100%;" @change="handlePaperPresetChange">
-          <el-option
+        <a-select v-model:value="selectedPaperPreset" style="width: 100%;" @change="handlePaperPresetChange">
+          <a-select-option
             v-for="preset in paperSizePresets"
             :key="preset.name"
             :value="preset.name"
             :label="preset.name"
           />
-        </el-select>
+        </a-select>
       </div>
       <div class="ps-size-row">
         <div class="ps-size-item">
           <span class="ps-label">宽度(W):</span>
-          <el-input-number
-            v-model="customPaperSizeForm.width"
+          <a-input-number
+            v-model:value="customPaperSizeForm.width"
             :min="1"
             :max="100"
             :step="0.1"
             :precision="1"
-            controls-position="right"
-            size="small"
+            :size="'small'"
             style="width: 100px;"
           />
           <span class="ps-unit">厘米</span>
         </div>
         <div class="ps-size-item">
           <span class="ps-label">高度(E):</span>
-          <el-input-number
-            v-model="customPaperSizeForm.height"
+          <a-input-number
+            v-model:value="customPaperSizeForm.height"
             :min="1"
             :max="100"
             :step="0.1"
             :precision="1"
-            controls-position="right"
-            size="small"
+            :size="'small'"
             style="width: 100px;"
           />
           <span class="ps-unit">厘米</span>
@@ -43,21 +41,21 @@
       </div>
     </div>
     <template #footer>
-      <el-button type="primary" @click="confirmCustomPaperSize">
-        <el-icon><Check /></el-icon>
+      <a-button type="primary" @click="confirmCustomPaperSize">
+        <CheckOutlined />
         确定
-      </el-button>
-      <el-button @click="visible = false">
-        <el-icon><Close /></el-icon>
+      </a-button>
+      <a-button @click="visible = false">
+        <CloseOutlined />
         取消
-      </el-button>
+      </a-button>
     </template>
-  </el-dialog>
+  </a-modal>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Check, Close } from '@element-plus/icons-vue'
+import { CheckOutlined, CloseOutlined } from '@ant-design/icons-vue'
 
 interface PaperSizeData {
   widthPx: number
@@ -78,8 +76,7 @@ const visible = computed({
   set: (val) => emit('update:modelValue', val)
 })
 
-// 厘米转像素：1cm = 37.8px，基于96DPI
-const CM_TO_PX = 37.795275591 // 96 / 2.54
+const CM_TO_PX = 37.795275591
 
 const paperSizePresets = [
   { name: 'A4', width: 21, height: 29.7 },
@@ -95,12 +92,13 @@ const paperSizePresets = [
 
 const selectedPaperPreset = ref('A4')
 const customPaperSizeForm = ref({
-  width: 21,   // 默认A4宽度（厘米）
-  height: 29.7 // 默认A4高度（厘米）
+  width: 21,
+  height: 29.7
 })
 
-const handlePaperPresetChange = (presetName: string) => {
-  const preset = paperSizePresets.find(p => p.name === presetName)
+const handlePaperPresetChange = (presetName: any) => {
+  const name = String(presetName)
+  const preset = paperSizePresets.find(p => p.name === name)
   if (preset) {
     customPaperSizeForm.value.width = preset.width
     customPaperSizeForm.value.height = preset.height
@@ -108,7 +106,6 @@ const handlePaperPresetChange = (presetName: string) => {
 }
 
 const confirmCustomPaperSize = () => {
-  // 将厘米转换为像素
   const widthPx = Math.round(customPaperSizeForm.value.width * CM_TO_PX)
   const heightPx = Math.round(customPaperSizeForm.value.height * CM_TO_PX)
   emit('confirm', { widthPx, heightPx })

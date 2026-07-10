@@ -1,53 +1,35 @@
 <template>
-  <el-dialog v-model="visible" title="二维码生成" width="630px" :close-on-click-modal="false" class="app-dialog">
-    <el-form :model="qrcodeForm" label-width="80px">
-      <el-form-item label="输入">
-        <el-input
-          type="textarea"
-          v-model="qrcodeForm.content"
+  <a-modal v-model:open="visible" title="二维码生成" width="630px" :maskClosable="false" class="app-dialog">
+    <a-form :model="qrcodeForm" :label-col="{ style: { width: '80px' } }">
+      <a-form-item label="输入">
+        <a-textarea
+          v-model:value="qrcodeForm.content"
           :rows="3"
           placeholder="请输入二维码内容"
-          maxlength="200"
+          :maxlength="200"
           show-word-limit
         />
-      </el-form-item>
-    </el-form>
+      </a-form-item>
+    </a-form>
     <div class="qrcode-preview">
       <div class="advanced-btn-wrapper">
-        <el-dropdown
-          trigger="click"
-          placement="bottom-end"
-          :teleported="true"
-          popper-class="qrcode-style-dropdown"
-          :popper-options="{
-            modifiers: [
-              {
-                name: 'offset',
-                options: {
-                  offset: [200, 8]
-                }
-              }
-            ]
-          }"
-        >
-          <el-button type="primary" link>
-            高级设置 <el-icon class="el-icon--right"><ArrowDown /></el-icon>
-          </el-button>
-          <template #dropdown>
-            <el-dropdown-menu class="qrcode-style-dropdown">
-              <el-card style="min-width: 300px">
-                <el-form label-width="80px" size="small">
-                  <el-form-item label="背景颜色">
-                    <el-color-picker v-model="qrcodeStyle.lightColor" />
-                  </el-form-item>
-                  <el-form-item label="二维码颜色">
-                    <el-color-picker v-model="qrcodeStyle.darkColor" />
-                  </el-form-item>
-                </el-form>
-              </el-card>
-            </el-dropdown-menu>
+        <a-dropdown :trigger="['click']">
+          <a-button type="link">
+            高级设置 <ArrowDownOutlined />
+          </a-button>
+          <template #overlay>
+            <a-card style="min-width: 300px">
+              <a-form :label-col="{ style: { width: '80px' } }" size="small">
+                <a-form-item label="背景颜色">
+                  <input type="color" :value="qrcodeStyle.lightColor" @change="(e: Event) => qrcodeStyle.lightColor = (e.target as HTMLInputElement).value" style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
+                </a-form-item>
+                <a-form-item label="二维码颜色">
+                  <input type="color" :value="qrcodeStyle.darkColor" @change="(e: Event) => qrcodeStyle.darkColor = (e.target as HTMLInputElement).value" style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
+                </a-form-item>
+              </a-form>
+            </a-card>
           </template>
-        </el-dropdown>
+        </a-dropdown>
       </div>
       <div class="preview-container">
         <div v-if="previewLoading" class="qrcode-placeholder">生成中...</div>
@@ -59,21 +41,21 @@
       </div>
     </div>
     <template #footer>
-      <el-button type="primary" :disabled="!canConfirm" @click="confirmQrcode">
-        <el-icon><Check /></el-icon>
+      <a-button type="primary" :disabled="!canConfirm" @click="confirmQrcode">
+        <CheckOutlined />
         确定
-      </el-button>
-      <el-button @click="visible = false">
-        <el-icon><Close /></el-icon>
+      </a-button>
+      <a-button @click="visible = false">
+        <CloseOutlined />
         取消
-      </el-button>
+      </a-button>
     </template>
-  </el-dialog>
+  </a-modal>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { Check, Close, ArrowDown } from '@element-plus/icons-vue'
+import { CheckOutlined, CloseOutlined, ArrowDownOutlined } from '@ant-design/icons-vue'
 import QRCode from 'qrcode'
 import { debounce } from '@/utils'
 
@@ -198,7 +180,7 @@ const confirmQrcode = () => {
 
 .qrcode-image {
   image-rendering: pixelated;
-  border: 1px solid #ebeef5;
+  border: 1px solid #f0f0f0;
   background: #fff;
   border-radius: 6px;
 }
@@ -209,35 +191,5 @@ const confirmQrcode = () => {
 
 .qrcode-empty {
   color: #909399;
-}
-
-/* 下拉菜单样式 */
-.qrcode-style-dropdown {
-  z-index: 9999 !important;
-  padding: 0 !important;
-}
-
-/* 颜色选择器样式 - 长条样式 */
-:deep(.el-color-picker) {
-  width: 100%;
-}
-
-:deep(.el-color-picker__trigger) {
-  width: 100%;
-  height: 28px;
-  border-radius: 4px;
-  padding: 2px;
-}
-
-:deep(.el-color-picker__color) {
-  width: 100%;
-  height: 100%;
-  border-radius: 2px;
-}
-
-:deep(.el-color-picker__color-inner) {
-  width: 100%;
-  height: 100%;
-  border-radius: 2px;
 }
 </style>

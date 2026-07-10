@@ -7,7 +7,7 @@ import { copyText, readClipboard } from '@/utils/clipboard'
 import { encrypt } from '@/utils/crypto'
 import { createElementIdMap } from '@/utils/element'
 import { KEYS } from '@/configs/hotkey'
-import { ElMessage } from 'element-plus'
+import { message } from 'ant-design-vue'
 import usePasteTextClipboardData from '@/hooks/usePasteTextClipboardData'
 import useHistorySnapshot from '@/hooks/useHistorySnapshot'
 import useAddSlidesOrElements from '@/hooks//useAddSlidesOrElements'
@@ -72,7 +72,7 @@ export default () => {
   const pasteSlide = () => {
     readClipboard().then(text => {
       pasteTextClipboardData(text, { onlySlide: true })
-    }).catch(err => ElMessage.warning(err))
+    }).catch(err => message.warning(err))
   }
 
   // 创建一页空白页并添加到下一页

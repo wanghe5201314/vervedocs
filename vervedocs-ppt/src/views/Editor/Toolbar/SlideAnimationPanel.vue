@@ -12,7 +12,7 @@
         <div class="animation-text">{{item.label}}</div>
       </div>
     </div>
-    <el-button style="width: 100%;" @click="applyAllSlide()">应用到全选</el-button>
+    <a-button style="width: 100%;" @click="applyAllSlide()">应用到全选</a-button>
   </div>
 </template>
 

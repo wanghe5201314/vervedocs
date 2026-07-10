@@ -37,22 +37,22 @@
     >
       <div class="content">
         <div class="tool-btn page-number" @click="slideThumbnailModelVisible = true">幻灯片 {{slideIndex + 1}} / {{slides.length}}</div>
-        <el-tooltip :hide-after="0" :show-after="300" content="画笔工具">
+        <a-tooltip :mouseEnterDelay="0.3" title="画笔工具">
           <IconWrite class="tool-btn" @click="writingBoardToolVisible = true" />
-        </el-tooltip>
-        <el-tooltip :hide-after="0" :show-after="300" content="激光笔">
+        </a-tooltip>
+        <a-tooltip :mouseEnterDelay="0.3" title="激光笔">
           <IconMagic class="tool-btn" :class="{ 'active': laserPen }" @click="laserPen = !laserPen" />
-        </el-tooltip>
-        <el-tooltip :hide-after="0" :show-after="300" content="演讲者视图">
+        </a-tooltip>
+        <a-tooltip :mouseEnterDelay="0.3" title="演讲者视图">
           <IconListView class="tool-btn" @click="changeViewMode('presenter')" />
-        </el-tooltip>
-        <el-tooltip :hide-after="0" :show-after="300" :content="fullscreenState ? '退出全屏' : '进入全屏'">
+        </a-tooltip>
+        <a-tooltip :mouseEnterDelay="0.3" :title="fullscreenState ? '退出全屏' : '进入全屏'">
           <IconOffScreenOne class="tool-btn" v-if="fullscreenState" @click="manualExitFullscreen()" />
           <IconFullScreenOne class="tool-btn" v-else @click="enterFullscreen()" />
-        </el-tooltip>
-        <el-tooltip :hide-after="0" :show-after="300" content="结束放映">
+        </a-tooltip>
+        <a-tooltip :mouseEnterDelay="0.3" title="结束放映">
           <IconPower class="tool-btn" @click="exitScreening()" />
-        </el-tooltip>
+        </a-tooltip>
       </div>
     </div>
   </div>

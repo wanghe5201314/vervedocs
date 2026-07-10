@@ -1,14 +1,14 @@
 <template>
-  <el-dialog v-model="visible" title="版本历史" width="640px" :close-on-click-modal="false" class="app-dialog">
+  <a-modal v-model:open="visible" title="版本历史" width="640px" :maskClosable="false" class="app-dialog">
     <div class="version-wrap">
       <div class="version-header">
-        <el-button type="primary" size="small" @click="handleCreateVersion" :loading="creating">
+        <a-button type="primary" size="small" @click="handleCreateVersion" :loading="creating">
           创建版本快照
-        </el-button>
+        </a-button>
       </div>
 
       <div v-if="loading" class="version-loading">
-        <el-icon class="is-loading" :size="24"><Loading /></el-icon>
+        <LoadingOutlined :size="24" />
         <span>加载版本历史...</span>
       </div>
 
@@ -49,19 +49,19 @@
             </div>
           </div>
           <div class="version-actions">
-            <el-button size="small" text @click="handlePreview(version)">预览</el-button>
-            <el-button size="small" text type="primary" @click="handleRestore(version)">恢复</el-button>
+            <a-button size="small" type="link" @click="handlePreview(version)">预览</a-button>
+            <a-button size="small" type="link" @click="handleRestore(version)">恢复</a-button>
           </div>
         </div>
       </div>
     </div>
-  </el-dialog>
+  </a-modal>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Loading } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { LoadingOutlined } from '@ant-design/icons-vue'
+import { message, Modal } from 'ant-design-vue'
 import type { IVersion } from '@/types/comment'
 import {
   fetchDocumentVersions,
@@ -116,11 +116,11 @@ const handleCreateVersion = async () => {
   creating.value = true
   try {
     await createDocumentVersion(props.docId)
-    ElMessage.success('版本快照已创建')
+    message.success('版本快照已创建')
     await loadVersions()
   } catch (e) {
     const msg = e instanceof Error ? e.message : '创建版本失败'
-    ElMessage.error(msg)
+    message.error(msg)
   } finally {
     creating.value = false
   }
@@ -140,7 +140,7 @@ const handleNameSave = async (version: IVersion) => {
     version.name = name
   } catch (e) {
     const msg = e instanceof Error ? e.message : '重命名失败'
-    ElMessage.error(msg)
+    message.error(msg)
   }
 }
 
@@ -151,19 +151,20 @@ const handlePreview = (version: IVersion) => {
 const handleRestore = async (version: IVersion) => {
   if (!props.docId) return
   try {
-    await ElMessageBox.confirm(
-      `确定要恢复到"${version.name || '版本 ' + version.versionNumber}"吗？当前内容将自动保存为新版本。`,
-      '恢复版本',
-      { confirmButtonText: '确定恢复', cancelButtonText: '取消', type: 'warning' }
-    )
+    await Modal.confirm({
+      content: `确定要恢复到"${version.name || '版本 ' + version.versionNumber}"吗？当前内容将自动保存为新版本。`,
+      title: '恢复版本',
+      okText: '确定恢复',
+      cancelText: '取消'
+    })
     const content = await restoreDocumentVersion(props.docId, version.versionNumber)
-    ElMessage.success('版本已恢复')
+    message.success('版本已恢复')
     emit('restore', content)
     await loadVersions()
   } catch (e) {
     if (e === 'cancel' || (e as any)?.toString?.()?.includes('cancel')) return
     const msg = e instanceof Error ? e.message : '恢复失败'
-    ElMessage.error(msg)
+    message.error(msg)
   }
 }
 
@@ -245,7 +246,7 @@ const formatTime = (dateStr: string) => {
 }
 
 .dot-manual {
-  background: #409eff;
+  background: #1890ff;
 }
 
 .dot-auto {
@@ -273,11 +274,11 @@ const formatTime = (dateStr: string) => {
 }
 
 .name-text:hover {
-  color: #409eff;
+  color: #1890ff;
 }
 
 .name-input {
-  border: 1px solid #409eff;
+  border: 1px solid #1890ff;
   border-radius: 3px;
   padding: 2px 6px;
   font-size: 13px;

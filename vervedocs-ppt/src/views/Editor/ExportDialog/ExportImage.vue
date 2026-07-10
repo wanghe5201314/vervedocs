@@ -14,61 +14,61 @@
     <div class="configs">
       <div class="row">
         <div class="title">导出格式：</div>
-        <el-radio-group
+        <a-radio-group
           class="config-item"
-          v-model="format"
+          v-model:value="format"
         >
-          <el-radio-button style="width: 50%;" value="jpeg">JPEG</el-radio-button>
-          <el-radio-button style="width: 50%;" value="png">PNG</el-radio-button>
-        </el-radio-group>
+          <a-radio-button style="width: 50%;" value="jpeg">JPEG</a-radio-button>
+          <a-radio-button style="width: 50%;" value="png">PNG</a-radio-button>
+        </a-radio-group>
       </div>
       <div class="row">
         <div class="title">导出范围：</div>
-        <el-radio-group
+        <a-radio-group
           class="config-item"
-          v-model="rangeType"
+          v-model:value="rangeType"
         >
-          <el-radio-button style="width: 33.33%;" value="all">全部</el-radio-button>
-          <el-radio-button style="width: 33.33%;" value="current">当前页</el-radio-button>
-          <el-radio-button style="width: 33.33%;" value="custom">自定义</el-radio-button>
-        </el-radio-group>
+          <a-radio-button style="width: 33.33%;" value="all">全部</a-radio-button>
+          <a-radio-button style="width: 33.33%;" value="current">当前页</a-radio-button>
+          <a-radio-button style="width: 33.33%;" value="custom">自定义</a-radio-button>
+        </a-radio-group>
       </div>
       <div class="row" v-if="rangeType === 'custom'">
         <div class="title" :data-range="`（${range[0]} ~ ${range[1]}）`">自定义范围：</div>
-        <el-slider
+        <a-slider
           class="config-item"
           range
           :min="1"
           :max="slides.length"
           :step="1"
-          v-model="range"
+          v-model:value="range"
         />
       </div>
 
       <div class="row">
         <div class="title">图片质量：</div>
-        <el-slider
+        <a-slider
           class="config-item"
           :min="0"
           :max="1"
           :step="0.1"
-          v-model="quality"
+          v-model:value="quality"
         />
       </div>
 
       <div class="row">
         <div class="title">忽略在线字体：</div>
         <div class="config-item">
-          <el-tooltip :hide-after="0" :show-after="500" content="导出时默认忽略在线字体，若您在幻灯片中使用了在线字体，且希望导出后保留相关样式，可选择关闭【忽略在线字体】选项，但要注意这将会增加导出时间">
-            <el-switch v-model="ignoreWebfont" />
-          </el-tooltip>
+          <a-tooltip title="导出时默认忽略在线字体，若您在幻灯片中使用了在线字体，且希望导出后保留相关样式，可选择关闭【忽略在线字体】选项，但要注意这将会增加导出时间">
+            <a-switch v-model:checked="ignoreWebfont" />
+          </a-tooltip>
         </div>
       </div>
     </div>
 
     <div class="btns">
-      <el-button class="btn export" type="primary" @click="expImage()">导出图片</el-button>
-      <el-button class="btn close" @click="close()">关闭</el-button>
+      <a-button class="btn export" type="primary" @click="expImage()">导出图片</a-button>
+      <a-button class="btn close" @click="close()">关闭</a-button>
     </div>
 
     <FullscreenSpin :loading="exporting" tip="正在导出..." />

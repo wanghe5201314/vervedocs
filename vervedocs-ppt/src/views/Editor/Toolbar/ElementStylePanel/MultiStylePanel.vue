@@ -2,140 +2,137 @@
   <div class="multi-style-panel">
     <div class="row">
       <div style="flex: 2;">填充颜色：</div>
-      <el-popover trigger="click">
-        <ColorPicker
-          :modelValue="fill"
-          @update:modelValue="(value: any) => updateFill(value)"
-        />
-        <template #reference>
-          <ColorButton :color="fill" style="flex: 3;" />
+      <a-popover trigger="click">
+        <template #content>
+          <ColorPicker
+            :modelValue="fill"
+            @update:modelValue="(value: any) => updateFill(value)"
+          />
         </template>
-      </el-popover>
+        <ColorButton :color="fill" style="flex: 3;" />
+      </a-popover>
     </div>
 
-    <el-divider />
+    <a-divider />
 
     <div class="row">
       <div style="flex: 2;">边框样式：</div>
-      <el-select 
+      <a-select 
         style="flex: 3;" 
-        :model-value="outline.style"
+        :value="outline.style"
         @change="(value: any) => updateOutline({ style: value })"
       >
-        <el-option value="solid" label="实线边框" />
-        <el-option value="dashed" label="虚线边框" />
-      </el-select>
+        <a-select-option value="solid">实线边框</a-select-option>
+        <a-select-option value="dashed">虚线边框</a-select-option>
+      </a-select>
     </div>
     <div class="row">
       <div style="flex: 2;">边框颜色：</div>
-      <el-popover trigger="click">
-        <ColorPicker
-          :modelValue="outline.color"
-          @update:modelValue="(value: any) => updateOutline({ color: value })"
-        />
-        <template #reference>
-          <ColorButton :color="outline?.color || ''" style="flex: 3;" />
+      <a-popover trigger="click">
+        <template #content>
+          <ColorPicker
+            :modelValue="outline.color"
+            @update:modelValue="(value: any) => updateOutline({ color: value })"
+          />
         </template>
-      </el-popover>
+        <ColorButton :color="outline?.color || ''" style="flex: 3;" />
+      </a-popover>
     </div>
     <div class="row">
       <div style="flex: 2;">边框粗细：</div>
-      <el-input-number 
-        :model-value="outline.width"
+      <a-input-number 
+        :value="outline.width"
         @change="(value: any) => updateOutline({ width: value })" 
         style="flex: 3;"
-        controls-position="right"
       />
     </div>
 
-    <el-divider />
+    <a-divider />
 
     <div class="input-group-compact row">
-      <el-select
+      <a-select
         style="flex: 3;"
-        :model-value="richTextAttrs.fontname"
+        :value="richTextAttrs.fontname"
         @change="(value: any) => updateFontStyle('fontname', value)"
       >
-        <template #prefix><IconFontSize /></template>
-        <el-option-group label="系统字体">
-          <el-option v-for="font in availableFonts" :key="font.value" :value="font.value" :label="font.label">
+        <a-select-opt-group label="系统字体">
+          <a-select-option v-for="font in availableFonts" :key="font.value" :value="font.value">
             <span :style="{ fontFamily: font.value }">{{font.label}}</span>
-          </el-option>
-        </el-option-group>
-        <el-option-group label="在线字体">
-          <el-option v-for="font in webFonts" :key="font.value" :value="font.value" :label="font.label">
+          </a-select-option>
+        </a-select-opt-group>
+        <a-select-opt-group label="在线字体">
+          <a-select-option v-for="font in webFonts" :key="font.value" :value="font.value">
             <span>{{font.label}}</span>
-          </el-option>
-        </el-option-group>
-      </el-select>
-      <el-select
+          </a-select-option>
+        </a-select-opt-group>
+      </a-select>
+      <a-select
         style="flex: 2;"
-        :model-value="richTextAttrs.fontsize"
+        :value="richTextAttrs.fontsize"
         @change="(value: any) => updateFontStyle('fontsize', value)"
       >
-        <template #prefix><IconAddText /></template>
-        <el-option v-for="fontsize in fontSizeOptions" :key="fontsize" :value="fontsize" :label="fontsize" />
-      </el-select>
+        <a-select-option v-for="fontsize in fontSizeOptions" :key="fontsize" :value="fontsize">{{fontsize}}</a-select-option>
+      </a-select>
     </div>
-    <el-button-group class="row">
-      <el-popover trigger="click">
-        <ColorPicker
-          :modelValue="richTextAttrs.color"
-          @update:modelValue="(value: any) => updateFontStyle('color', value)"
-        />
-        <template #reference>
-          <el-tooltip :hide-after="0" :show-after="500" content="文字颜色">
-            <el-button class="text-color-btn" style="flex: 3;">
-              <IconText />
-              <div class="text-color-block" :style="{ backgroundColor: richTextAttrs.color }"></div>
-            </el-button>
-          </el-tooltip>
+    <a-button-group class="row">
+      <a-popover trigger="click">
+        <template #content>
+          <ColorPicker
+            :modelValue="richTextAttrs.color"
+            @update:modelValue="(value: any) => updateFontStyle('color', value)"
+          />
         </template>
-      </el-popover>
-      <el-popover trigger="click">
-        <ColorPicker
-          :modelValue="richTextAttrs.backcolor"
-          @update:modelValue="(value: any) => updateFontStyle('backcolor', value)"
-        />
-        <template #reference>
-          <el-tooltip :hide-after="0" :show-after="500" content="文字高亮">
-            <el-button class="text-color-btn" style="flex: 3;">
-              <IconHighLight />
-              <div class="text-color-block" :style="{ backgroundColor: richTextAttrs.backcolor }"></div>
-            </el-button>
-          </el-tooltip>
+        <a-tooltip title="文字颜色" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
+          <a-button class="text-color-btn" style="flex: 3;">
+            <IconText />
+            <div class="text-color-block" :style="{ backgroundColor: richTextAttrs.color }"></div>
+          </a-button>
+        </a-tooltip>
+      </a-popover>
+      <a-popover trigger="click">
+        <template #content>
+          <ColorPicker
+            :modelValue="richTextAttrs.backcolor"
+            @update:modelValue="(value: any) => updateFontStyle('backcolor', value)"
+          />
         </template>
-      </el-popover>
-      <el-tooltip :hide-after="0" :show-after="500" content="增大字号">
-        <el-button 
+        <a-tooltip title="文字高亮" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
+          <a-button class="text-color-btn" style="flex: 3;">
+            <IconHighLight />
+            <div class="text-color-block" :style="{ backgroundColor: richTextAttrs.backcolor }"></div>
+          </a-button>
+        </a-tooltip>
+      </a-popover>
+      <a-tooltip title="增大字号" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
+        <a-button 
           class="font-size-btn"
           style="flex: 2;"
           @click="updateFontStyle('fontsize-add', '2')"
-        ><IconFontSize />+</el-button>
-      </el-tooltip>
-      <el-tooltip :hide-after="0" :show-after="500" content="减小字号">
-        <el-button 
+        ><IconFontSize />+</a-button>
+      </a-tooltip>
+      <a-tooltip title="减小字号" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
+        <a-button 
           class="font-size-btn"
           style="flex: 2;"
           @click="updateFontStyle('fontsize-reduce', '2')"
-        ><IconFontSize />-</el-button>
-      </el-tooltip>
-    </el-button-group>
-    <el-radio-group 
+        ><IconFontSize />-</a-button>
+      </a-tooltip>
+    </a-button-group>
+    <a-radio-group 
       class="row" 
-      :model-value="richTextAttrs.align"
+      :value="richTextAttrs.align"
       @change="(value: any) => updateFontStyle('align', value)"
     >
-      <el-tooltip :hide-after="0" :show-after="500" content="左对齐">
-        <el-radio-button value="left" style="flex: 1;"><IconAlignTextLeft /></el-radio-button>
-      </el-tooltip>
-      <el-tooltip :hide-after="0" :show-after="500" content="居中">
-        <el-radio-button value="center" style="flex: 1;"><IconAlignTextCenter /></el-radio-button>
-      </el-tooltip>
-      <el-tooltip :hide-after="0" :show-after="500" content="右对齐">
-        <el-radio-button value="right" style="flex: 1;"><IconAlignTextRight /></el-radio-button>
-      </el-tooltip>
-    </el-radio-group>
+      <a-tooltip title="左对齐" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
+        <a-radio-button value="left" style="flex: 1;"><IconAlignTextLeft /></a-radio-button>
+      </a-tooltip>
+      <a-tooltip title="居中" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
+        <a-radio-button value="center" style="flex: 1;"><IconAlignTextCenter /></a-radio-button>
+      </a-tooltip>
+      <a-tooltip title="右对齐" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
+        <a-radio-button value="right" style="flex: 1;"><IconAlignTextRight /></a-radio-button>
+      </a-tooltip>
+    </a-radio-group>
   </div>
 </template>
 

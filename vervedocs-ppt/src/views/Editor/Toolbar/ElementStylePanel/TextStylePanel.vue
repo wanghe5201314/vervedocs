@@ -10,259 +10,253 @@
       >{{item.label}}</div>
     </div>
 
-    <el-divider />
+    <a-divider />
     
     <div class="row input-group-compact">
-      <el-select
+      <a-select
         style="flex: 3;"
-        :model-value="richTextAttrs.fontname"
+        :value="richTextAttrs.fontname"
         @change="(value: string) => emitRichTextCommand('fontname', value)"
       >
-        <template #prefix><IconFontSize /></template>
-        <el-option-group label="系统字体">
-          <el-option v-for="font in availableFonts" :key="font.value" :value="font.value" :label="font.label">
+        <a-select-opt-group label="系统字体">
+          <a-select-option v-for="font in availableFonts" :key="font.value" :value="font.value">
             <span :style="{ fontFamily: font.value }">{{font.label}}</span>
-          </el-option>
-        </el-option-group>
-        <el-option-group label="在线字体">
-          <el-option v-for="font in webFonts" :key="font.value" :value="font.value" :label="font.label">
+          </a-select-option>
+        </a-select-opt-group>
+        <a-select-opt-group label="在线字体">
+          <a-select-option v-for="font in webFonts" :key="font.value" :value="font.value">
             <span>{{font.label}}</span>
-          </el-option>
-        </el-option-group>
-      </el-select>
-      <el-select
+          </a-select-option>
+        </a-select-opt-group>
+      </a-select>
+      <a-select
         style="flex: 2;"
-        :model-value="richTextAttrs.fontsize"
+        :value="richTextAttrs.fontsize"
         @change="(value: string) => emitRichTextCommand('fontsize', value)"
       >
-        <template #prefix><IconAddText /></template>
-        <el-option v-for="fontsize in fontSizeOptions" :key="fontsize" :value="fontsize" :label="fontsize" />
-      </el-select>
+        <a-select-option v-for="fontsize in fontSizeOptions" :key="fontsize" :value="fontsize">{{fontsize}}</a-select-option>
+      </a-select>
     </div>
 
-    <el-button-group class="row">
-      <el-popover trigger="click" :width="'auto'">
-        <ColorPicker
-          :modelValue="richTextAttrs.color"
-          @update:modelValue="(value: any) => emitRichTextCommand('color', value)"
-        />
-        <template #reference>
-          <el-tooltip content="文字颜色" :show-after="500" :hide-after="0">
-            <el-button class="text-color-btn" style="flex: 3;">
-              <IconText />
-              <div class="text-color-block" :style="{ backgroundColor: richTextAttrs.color }"></div>
-            </el-button>
-          </el-tooltip>
+    <a-button-group class="row">
+      <a-popover trigger="click">
+        <template #content>
+          <ColorPicker
+            :modelValue="richTextAttrs.color"
+            @update:modelValue="(value: any) => emitRichTextCommand('color', value)"
+          />
         </template>
-      </el-popover>
-      <el-popover trigger="click" :width="'auto'">
-        <ColorPicker
-          :modelValue="richTextAttrs.backcolor"
-          @update:modelValue="(value: any) => emitRichTextCommand('backcolor', value)"
-        />
-        <template #reference>
-          <el-tooltip content="文字高亮" :show-after="500" :hide-after="0">
-            <el-button class="text-color-btn" style="flex: 3;">
-              <IconHighLight />
-              <div class="text-color-block" :style="{ backgroundColor: richTextAttrs.backcolor }"></div>
-            </el-button>
-          </el-tooltip>
+        <a-tooltip title="文字颜色" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
+          <a-button class="text-color-btn" style="flex: 3;">
+            <IconText />
+            <div class="text-color-block" :style="{ backgroundColor: richTextAttrs.color }"></div>
+          </a-button>
+        </a-tooltip>
+      </a-popover>
+      <a-popover trigger="click">
+        <template #content>
+          <ColorPicker
+            :modelValue="richTextAttrs.backcolor"
+            @update:modelValue="(value: any) => emitRichTextCommand('backcolor', value)"
+          />
         </template>
-      </el-popover>
-      <el-tooltip content="增大字号" :show-after="500" :hide-after="0">
-        <el-button 
+        <a-tooltip title="文字高亮" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
+          <a-button class="text-color-btn" style="flex: 3;">
+            <IconHighLight />
+            <div class="text-color-block" :style="{ backgroundColor: richTextAttrs.backcolor }"></div>
+          </a-button>
+        </a-tooltip>
+      </a-popover>
+      <a-tooltip title="增大字号" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
+        <a-button 
           class="font-size-btn"
           style="flex: 2;"
           @click="emitRichTextCommand('fontsize-add')"
-        ><IconFontSize />+</el-button>
-      </el-tooltip>
-      <el-tooltip content="减小字号" :show-after="500" :hide-after="0">
-        <el-button 
+        ><IconFontSize />+</a-button>
+      </a-tooltip>
+      <a-tooltip title="减小字号" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
+        <a-button 
           class="font-size-btn"
           style="flex: 2;"
           @click="emitRichTextCommand('fontsize-reduce')"
-        ><IconFontSize />-</el-button>
-      </el-tooltip>
-    </el-button-group>
+        ><IconFontSize />-</a-button>
+      </a-tooltip>
+    </a-button-group>
 
     <CheckboxButtonGroup class="row">
-      <el-tooltip content="加粗" :show-after="500" :hide-after="0">
+      <a-tooltip title="加粗" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
         <CheckboxButton 
           style="flex: 1;"
           :checked="richTextAttrs.bold"
           @click="emitRichTextCommand('bold')"
         ><IconTextBold /></CheckboxButton>
-      </el-tooltip>
-      <el-tooltip content="斜体" :show-after="500" :hide-after="0">
+      </a-tooltip>
+      <a-tooltip title="斜体" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
         <CheckboxButton 
           style="flex: 1;"
           :checked="richTextAttrs.em"
           @click="emitRichTextCommand('em')"
         ><IconTextItalic /></CheckboxButton>
-      </el-tooltip>
-      <el-tooltip content="下划线" :show-after="500" :hide-after="0">
+      </a-tooltip>
+      <a-tooltip title="下划线" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
         <CheckboxButton 
           style="flex: 1;"
           :checked="richTextAttrs.underline"
           @click="emitRichTextCommand('underline')"
         ><IconTextUnderline /></CheckboxButton>
-      </el-tooltip>
-      <el-tooltip content="删除线" :show-after="500" :hide-after="0">
+      </a-tooltip>
+      <a-tooltip title="删除线" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
         <CheckboxButton 
           style="flex: 1;"
           :checked="richTextAttrs.strikethrough"
           @click="emitRichTextCommand('strikethrough')"
         ><IconStrikethrough /></CheckboxButton>
-      </el-tooltip>
-      <el-tooltip content="清除格式" :show-after="500" :hide-after="0">
+      </a-tooltip>
+      <a-tooltip title="清除格式" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
         <CheckboxButton
           style="flex: 1;"
           @click="emitRichTextCommand('clear')"
         ><IconFormat /></CheckboxButton>
-      </el-tooltip>
+      </a-tooltip>
     </CheckboxButtonGroup>
 
     <CheckboxButtonGroup class="row">
-      <el-tooltip content="上标" :show-after="500" :hide-after="0">
+      <a-tooltip title="上标" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
         <CheckboxButton
           style="flex: 1;"
           :checked="richTextAttrs.superscript"
           @click="emitRichTextCommand('superscript')"
         ><IconUpOne /></CheckboxButton>
-      </el-tooltip>
-      <el-tooltip content="下标" :show-after="500" :hide-after="0">
+      </a-tooltip>
+      <a-tooltip title="下标" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
         <CheckboxButton
           style="flex: 1;"
           :checked="richTextAttrs.subscript"
           @click="emitRichTextCommand('subscript')"
         ><IconDownOne /></CheckboxButton>
-      </el-tooltip>
-      <el-tooltip content="行内代码" :show-after="500" :hide-after="0">
+      </a-tooltip>
+      <a-tooltip title="行内代码" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
         <CheckboxButton
           style="flex: 1;"
           :checked="richTextAttrs.code"
           @click="emitRichTextCommand('code')"
         ><IconCode /></CheckboxButton>
-      </el-tooltip>
-      <el-tooltip content="引用" :show-after="500" :hide-after="0">
+      </a-tooltip>
+      <a-tooltip title="引用" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
         <CheckboxButton
           style="flex: 1;"
           :checked="richTextAttrs.blockquote"
           @click="emitRichTextCommand('blockquote')"
         ><IconQuote /></CheckboxButton>
-      </el-tooltip>
-      <el-tooltip content="超链接" :show-after="500" :hide-after="0">
-        <el-popover placement="bottom-end" trigger="click" :visible="linkPopoverVisible" :width="'auto'">
-          <div class="link-popover">
-            <el-input v-model="link" placeholder="请输入超链接" />
-            <div class="btns">
-              <el-button size="small" :disabled="!richTextAttrs.link" @click="updateLink()" style="margin-right: 5px;">移除</el-button>
-              <el-button size="small" type="primary" @click="updateLink(link)">确认</el-button>
+      </a-tooltip>
+      <a-tooltip title="超链接" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
+        <a-popover placement="bottom-end" trigger="click" :open="linkPopoverVisible">
+          <template #content>
+            <div class="link-popover">
+              <a-input v-model:value="link" placeholder="请输入超链接" />
+              <div class="btns">
+                <a-button size="small" :disabled="!richTextAttrs.link" @click="updateLink()" style="margin-right: 5px;">移除</a-button>
+                <a-button size="small" type="primary" @click="updateLink(link)">确认</a-button>
+              </div>
             </div>
-          </div>
-          <template #reference>
-            <CheckboxButton
-              style="flex: 1;"
-              :checked="!!richTextAttrs.link"
-              @click="openLinkPopover()"
-            ><IconLinkOne /></CheckboxButton>
           </template>
-        </el-popover>
-      </el-tooltip>
+          <CheckboxButton
+            style="flex: 1;"
+            :checked="!!richTextAttrs.link"
+            @click="openLinkPopover()"
+          ><IconLinkOne /></CheckboxButton>
+        </a-popover>
+      </a-tooltip>
     </CheckboxButtonGroup>
 
-    <el-divider />
+    <a-divider />
 
-    <el-radio-group 
+    <a-radio-group 
       class="row" 
-      :model-value="richTextAttrs.align"
+      :value="richTextAttrs.align"
       @change="(value: string) => emitRichTextCommand('align', value)"
     >
-      <el-tooltip content="左对齐" :show-after="500" :hide-after="0">
-        <el-radio-button value="left" style="flex: 1;"><IconAlignTextLeft /></el-radio-button>
-      </el-tooltip>
-      <el-tooltip content="居中" :show-after="500" :hide-after="0">
-        <el-radio-button value="center" style="flex: 1;"><IconAlignTextCenter /></el-radio-button>
-      </el-tooltip>
-      <el-tooltip content="右对齐" :show-after="500" :hide-after="0">
-        <el-radio-button value="right" style="flex: 1;"><IconAlignTextRight /></el-radio-button>
-      </el-tooltip>
-    </el-radio-group>
+      <a-tooltip title="左对齐" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
+        <a-radio-button value="left" style="flex: 1;"><IconAlignTextLeft /></a-radio-button>
+      </a-tooltip>
+      <a-tooltip title="居中" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
+        <a-radio-button value="center" style="flex: 1;"><IconAlignTextCenter /></a-radio-button>
+      </a-tooltip>
+      <a-tooltip title="右对齐" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
+        <a-radio-button value="right" style="flex: 1;"><IconAlignTextRight /></a-radio-button>
+      </a-tooltip>
+    </a-radio-group>
 
     <CheckboxButtonGroup class="row">
-      <el-tooltip content="项目符号" :show-after="500" :hide-after="0">
+      <a-tooltip title="项目符号" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
         <CheckboxButton 
           style="flex: 1;" 
           :checked="richTextAttrs.bulletList"
           @click="emitRichTextCommand('bulletList')"
         ><IconList /></CheckboxButton>
-      </el-tooltip>
-      <el-tooltip content="编号" :show-after="500" :hide-after="0">
+      </a-tooltip>
+      <a-tooltip title="编号" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
         <CheckboxButton 
           style="flex: 1;" 
           :checked="richTextAttrs.orderedList"
           @click="emitRichTextCommand('orderedList')"
         ><IconOrderedList /></CheckboxButton>
-      </el-tooltip>
+      </a-tooltip>
     </CheckboxButtonGroup>
 
-    <el-button-group class="row">
-      <el-tooltip content="减小缩进" :show-after="500" :hide-after="0">
-        <el-button style="flex: 1;" @click="emitRichTextCommand('indent', '-1')"><IconIndentLeft /></el-button>
-      </el-tooltip>
-      <el-tooltip content="增大缩进" :show-after="500" :hide-after="0">
-        <el-button style="flex: 1;" @click="emitRichTextCommand('indent', '+1')"><IconIndentRight /></el-button>
-      </el-tooltip>
-    </el-button-group>
+    <a-button-group class="row">
+      <a-tooltip title="减小缩进" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
+        <a-button style="flex: 1;" @click="emitRichTextCommand('indent', '-1')"><IconIndentLeft /></a-button>
+      </a-tooltip>
+      <a-tooltip title="增大缩进" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
+        <a-button style="flex: 1;" @click="emitRichTextCommand('indent', '+1')"><IconIndentRight /></a-button>
+      </a-tooltip>
+    </a-button-group>
 
-    <el-divider />
+    <a-divider />
 
     <div class="row">
       <div style="flex: 2;">行间距：</div>
-      <el-select style="flex: 3;" :model-value="lineHeight" @change="(value: number) => updateLineHeight(value)">
-        <template #prefix><IconRowHeight /></template>
-        <el-option v-for="item in lineHeightOptions" :key="item" :value="item" :label="`${item}倍`" />
-      </el-select>
+      <a-select style="flex: 3;" :value="lineHeight" @change="(value: number) => updateLineHeight(value)">
+        <a-select-option v-for="item in lineHeightOptions" :key="item" :value="item">{{item}}倍</a-select-option>
+      </a-select>
     </div>
     <div class="row">
       <div style="flex: 2;">段间距：</div>
-      <el-select style="flex: 3;" :model-value="paragraphSpace" @change="(value: number) => updateParagraphSpace(value)">
-        <template #prefix><IconVerticalSpacingBetweenItems /></template>
-        <el-option v-for="item in paragraphSpaceOptions" :key="item" :value="item" :label="`${item}px`" />
-      </el-select>
+      <a-select style="flex: 3;" :value="paragraphSpace" @change="(value: number) => updateParagraphSpace(value)">
+        <a-select-option v-for="item in paragraphSpaceOptions" :key="item" :value="item">{{item}}px</a-select-option>
+      </a-select>
     </div>
     <div class="row">
       <div style="flex: 2;">字间距：</div>
-      <el-select style="flex: 3;" :model-value="wordSpace" @change="(value: number) => updateWordSpace(value)">
-        <template #prefix><IconFullwidth /></template>
-        <el-option v-for="item in wordSpaceOptions" :key="item" :value="item" :label="`${item}px`" />
-      </el-select>
+      <a-select style="flex: 3;" :value="wordSpace" @change="(value: number) => updateWordSpace(value)">
+        <a-select-option v-for="item in wordSpaceOptions" :key="item" :value="item">{{item}}px</a-select-option>
+      </a-select>
     </div>
     <div class="row">
       <div style="flex: 2;">首行缩进：</div>
-      <el-select style="flex: 3;" :model-value="textIndent" @change="(value: number) => updateTextIndent(value)">
-        <template #prefix><IconIndentRight /></template>
-        <el-option v-for="item in textIndentOptions" :key="item" :value="item" :label="`${item}px`" />
-      </el-select>
+      <a-select style="flex: 3;" :value="textIndent" @change="(value: number) => updateTextIndent(value)">
+        <a-select-option v-for="item in textIndentOptions" :key="item" :value="item">{{item}}px</a-select-option>
+      </a-select>
     </div>
     <div class="row">
       <div style="flex: 2;">文本框填充：</div>
-      <el-popover trigger="click" :width="'auto'">
-        <ColorPicker
-          :modelValue="fill"
-          @update:modelValue="(value: any) => updateFill(value)"
-        />
-        <template #reference>
-          <ColorButton :color="fill || ''" style="flex: 3;" />
+      <a-popover trigger="click">
+        <template #content>
+          <ColorPicker
+            :modelValue="fill"
+            @update:modelValue="(value: any) => updateFill(value)"
+          />
         </template>
-      </el-popover>
+        <ColorButton :color="fill || ''" style="flex: 3;" />
+      </a-popover>
     </div>
 
-    <el-divider />
+    <a-divider />
     <ElementOutline />
-    <el-divider />
+    <a-divider />
     <ElementShadow />
-    <el-divider />
+    <a-divider />
     <ElementOpacity />
   </div>
 </template>
@@ -275,7 +269,7 @@ import { PPTTextElement } from '@/types/slides'
 import emitter, { EmitterEvents, RichTextAction } from '@/utils/emitter'
 import { WEB_FONTS } from '@/configs/font'
 import useHistorySnapshot from '@/hooks/useHistorySnapshot'
-import { ElMessage } from 'element-plus'
+import { message } from 'ant-design-vue'
 
 import ElementOpacity from '../common/ElementOpacity.vue'
 import ElementOutline from '../common/ElementOutline.vue'
@@ -440,7 +434,7 @@ export default defineComponent({
     const updateLink = (link?: string) => {
       if (link) {
         const linkRegExp = /^(https?):\/\/[\w\-]+(\.[\w\-]+)+([\w\-.,@?^=%&:\/~+#]*[\w\-@?^=%&\/~+#])?$/
-        if (!linkRegExp.test(link)) return ElMessage.error('不是正确的网页链接地址')
+        if (!linkRegExp.test(link)) return message.error('不是正确的网页链接地址')
       }
       emitRichTextCommand('link', link)
       linkPopoverVisible.value = false
@@ -563,36 +557,33 @@ export default defineComponent({
   }
 }
 
-:deep(.el-divider) {
+:deep(.ant-divider) {
   margin: 16px 0;
 }
 
-:deep(.el-button-group) {
+:deep(.ant-btn-group) {
   display: flex;
   width: 100%;
 
-  .el-button {
+  .ant-btn {
     flex: 1;
     height: 36px;
     padding: 0;
   }
 }
 
-:deep(.el-radio-group) {
+:deep(.ant-radio-group) {
   display: flex;
   width: 100%;
 
-  .el-radio-button {
+  .ant-radio-button-wrapper {
     flex: 1;
-
-    .el-radio-button__inner {
-      width: 100%;
-      height: 36px;
-      padding: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+    width: 100%;
+    height: 36px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 </style>

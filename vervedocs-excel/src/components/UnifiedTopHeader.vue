@@ -11,14 +11,12 @@
           <span class="doc-name" :title="title">{{ title }}</span>
           <div class="cloud-tip">
             <template v-if="isViewMode">
-              <el-icon class="cloud-icon" style="color:#909399"><View /></el-icon>
+              <EyeOutlined class="cloud-icon" style="color:#909399" />
               <span class="cloud-text">{{ translate('common.readOnlyMode') }}</span>
             </template>
             <template v-else>
-              <el-icon class="cloud-icon">
-                <CircleCheck v-if="lastSaveTime" />
-                <Cloudy v-else />
-              </el-icon>
+              <CheckCircleOutlined v-if="lastSaveTime" class="cloud-icon" style="color:#52c41a" />
+              <CloudOutlined v-else class="cloud-icon" />
               <span class="cloud-text">{{ lastSaveTime ? translate('common.recentSaved', { time: lastSaveTime }) : translate('common.autoSaved') }}</span>
             </template>
           </div>
@@ -26,20 +24,20 @@
       </div>
     </div>
     <div class="right">
-      <el-avatar-group v-if="onlineUsers.length > 0" :max="5" :style="{ display: 'flex', alignItems: 'center' }">
-        <el-tooltip v-for="user in onlineUsers" :key="user.userId" :content="user.userName || user.userId" placement="bottom">
-          <el-avatar :size="30" :style="{ backgroundColor: user.color }">
+      <a-avatar-group v-if="onlineUsers.length > 0" :maxCount="5" :style="{ display: 'flex', alignItems: 'center' }">
+        <a-tooltip v-for="user in onlineUsers" :key="user.userId" :title="user.userName || user.userId" placement="bottom">
+          <a-avatar :size="30" :style="{ backgroundColor: user.color }">
             {{ getAvatarText(user.userName || user.userId) }}
-          </el-avatar>
-        </el-tooltip>
-      </el-avatar-group>
+          </a-avatar>
+        </a-tooltip>
+      </a-avatar-group>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { CircleCheck, Cloudy, View } from '@element-plus/icons-vue'
+import { EyeOutlined, CheckCircleOutlined, CloudOutlined } from '@ant-design/icons-vue'
 
 interface CollabUser {
   userId: string

@@ -9,110 +9,110 @@
         :last-save-time="headerLastSaveTime"
         :t="t"
       />
-      <el-card class="menu-card" :body-style="{ margin: '0 7px',height: '32.8px'}" shadow="never">
-      <el-menu mode="horizontal" class="sheet-menu-bar" :ellipsis="false">
-        <el-sub-menu index="file" popper-class="sheet-menu-popper">
+      <div class="menu-card">
+      <a-menu mode="horizontal" class="sheet-menu-bar" :selectable="false">
+        <a-sub-menu key="file" popupClassName="sheet-menu-popper">
           <template #title>文件</template>
-          <el-menu-item index="newWorkbook" :disabled="readOnly" @click="handleCreateNewWorkbook()"><SheetIcon name="plus" />新建表格</el-menu-item>
-          <el-menu-item index="save" @click="emitChange()"><SheetIcon name="content-save-outline" />保存<span class="shortcut">Ctrl+S</span></el-menu-item>
-          <el-divider />
-          <el-menu-item index="importExcel" :disabled="readOnly" @click="triggerImportExcel()">
-            <SheetIcon name="file-excel-box" />导入表格&nbsp;&nbsp;<el-tag type="danger" size="small">BETA</el-tag><span class="shortcut">Ctrl+O</span></el-menu-item>
-          <el-menu-item index="exportExcel" @click="handleExportExcel()"><SheetIcon name="file-excel-box" />导出 Excel</el-menu-item>
-          <el-divider />
-          <el-menu-item index="print" @click="handlePrint()"><SheetIcon name="printer-outline" />打印<span class="shortcut">Ctrl+P</span></el-menu-item>
-        </el-sub-menu>
+          <a-menu-item key="newWorkbook" :disabled="readOnly" @click="handleCreateNewWorkbook()"><SheetIcon name="plus" />新建表格</a-menu-item>
+          <a-menu-item key="save" @click="emitChange()"><SheetIcon name="content-save-outline" />保存<span class="shortcut">Ctrl+S</span></a-menu-item>
+          <a-menu-divider />
+          <a-menu-item key="importExcel" :disabled="readOnly" @click="triggerImportExcel()">
+            <SheetIcon name="file-excel-box" />导入表格&nbsp;&nbsp;<a-tag color="red">BETA</a-tag><span class="shortcut">Ctrl+O</span></a-menu-item>
+          <a-menu-item key="exportExcel" @click="handleExportExcel()"><SheetIcon name="file-excel-box" />导出 Excel</a-menu-item>
+          <a-menu-divider />
+          <a-menu-item key="print" @click="handlePrint()"><SheetIcon name="printer-outline" />打印<span class="shortcut">Ctrl+P</span></a-menu-item>
+        </a-sub-menu>
 
-        <el-sub-menu index="edit" popper-class="sheet-menu-popper">
+        <a-sub-menu key="edit" popupClassName="sheet-menu-popper">
           <template #title>编辑</template>
-          <el-menu-item index="undo" @click="handleUndo()"><SheetIcon name="undo" />撤销<span class="shortcut">Ctrl+Z</span></el-menu-item>
-          <el-menu-item index="redo" @click="handleRedo()"><SheetIcon name="redo" />重做<span class="shortcut">Ctrl+Y</span></el-menu-item>
-          <el-divider />
-          <el-menu-item index="cut" @click="handleCut()"><SheetIcon name="content-cut" />剪切<span class="shortcut">Ctrl+X</span></el-menu-item>
-          <el-menu-item index="copy" @click="handleCopy()"><SheetIcon name="content-copy" />复制<span class="shortcut">Ctrl+C</span></el-menu-item>
-          <el-menu-item index="paste" @click="handlePaste()"><SheetIcon name="content-paste" />粘贴<span class="shortcut">Ctrl+V</span></el-menu-item>
-          <el-divider />
-          <el-menu-item index="selectAll" @click="selectAll()"><SheetIcon name="select-all" />全选<span class="shortcut">Ctrl+A</span></el-menu-item>
-          <el-menu-item index="deleteContent" @click="deleteSelectedContent()"><SheetIcon name="delete-outline" />删除内容<span class="shortcut">Delete</span></el-menu-item>
-        </el-sub-menu>
+          <a-menu-item key="undo" @click="handleUndo()"><SheetIcon name="undo" />撤销<span class="shortcut">Ctrl+Z</span></a-menu-item>
+          <a-menu-item key="redo" @click="handleRedo()"><SheetIcon name="redo" />重做<span class="shortcut">Ctrl+Y</span></a-menu-item>
+          <a-menu-divider />
+          <a-menu-item key="cut" @click="handleCut()"><SheetIcon name="content-cut" />剪切<span class="shortcut">Ctrl+X</span></a-menu-item>
+          <a-menu-item key="copy" @click="handleCopy()"><SheetIcon name="content-copy" />复制<span class="shortcut">Ctrl+C</span></a-menu-item>
+          <a-menu-item key="paste" @click="handlePaste()"><SheetIcon name="content-paste" />粘贴<span class="shortcut">Ctrl+V</span></a-menu-item>
+          <a-menu-divider />
+          <a-menu-item key="selectAll" @click="selectAll()"><SheetIcon name="select-all" />全选<span class="shortcut">Ctrl+A</span></a-menu-item>
+          <a-menu-item key="deleteContent" @click="deleteSelectedContent()"><SheetIcon name="delete-outline" />删除内容<span class="shortcut">Delete</span></a-menu-item>
+        </a-sub-menu>
 
-        <el-sub-menu index="view" popper-class="sheet-menu-popper">
+        <a-sub-menu key="view" popupClassName="sheet-menu-popper">
           <template #title>视图</template>
-          <el-menu-item index="showGridlines" @click="toggleGridlines()">
+          <a-menu-item key="showGridlines" @click="toggleGridlines()">
             <SheetIcon :name="showGridlines ? 'checkbox-marked-outline' : 'checkbox-blank-outline'" />
             {{ showGridlines ? '显示网格线' : '隐藏网格线' }}
-          </el-menu-item>
-          <el-menu-item index="showFormulaBar" @click="showFormulaBar = !showFormulaBar">
+          </a-menu-item>
+          <a-menu-item key="showFormulaBar" @click="showFormulaBar = !showFormulaBar">
             <SheetIcon :name="showFormulaBar ? 'checkbox-marked-outline' : 'checkbox-blank-outline'" />
             {{ showFormulaBar ? '显示编辑栏' : '隐藏编辑栏' }}
-          </el-menu-item>
-          <el-divider />
-          <el-menu-item index="freezeRow" @click="toggleFreezeRow()">
+          </a-menu-item>
+          <a-menu-divider />
+          <a-menu-item key="freezeRow" @click="toggleFreezeRow()">
             <SheetIcon name="snowflake" />
             {{ frozenRows > 0 ? '取消冻结行' : '冻结第一行' }}
-          </el-menu-item>
-          <el-menu-item index="freezeCol" @click="toggleFreezeCol()">
+          </a-menu-item>
+          <a-menu-item key="freezeCol" @click="toggleFreezeCol()">
             <SheetIcon name="snowflake" />
             {{ frozenCols > 0 ? '取消冻结列' : '冻结第一列' }}
-          </el-menu-item>
-        </el-sub-menu>
+          </a-menu-item>
+        </a-sub-menu>
 
-        <el-sub-menu index="insert" popper-class="sheet-menu-popper">
+        <a-sub-menu key="insert" popupClassName="sheet-menu-popper">
           <template #title>插入</template>
-          <el-menu-item index="insertRowAbove" @click="insertRow('above')"><SheetIcon name="table-row-plus-before" />在上方插入行</el-menu-item>
-          <el-menu-item index="insertRowBelow" @click="insertRow('below')"><SheetIcon name="table-row-plus-after" />在下方插入行</el-menu-item>
-          <el-divider />
-          <el-menu-item index="insertColLeft" @click="insertCol('left')"><SheetIcon name="table-column-plus-before" />在左侧插入列</el-menu-item>
-          <el-menu-item index="insertColRight" @click="insertCol('right')"><SheetIcon name="table-column-plus-after" />在右侧插入列</el-menu-item>
-        </el-sub-menu>
+          <a-menu-item key="insertRowAbove" @click="insertRow('above')"><SheetIcon name="table-row-plus-before" />在上方插入行</a-menu-item>
+          <a-menu-item key="insertRowBelow" @click="insertRow('below')"><SheetIcon name="table-row-plus-after" />在下方插入行</a-menu-item>
+          <a-menu-divider />
+          <a-menu-item key="insertColLeft" @click="insertCol('left')"><SheetIcon name="table-column-plus-before" />在左侧插入列</a-menu-item>
+          <a-menu-item key="insertColRight" @click="insertCol('right')"><SheetIcon name="table-column-plus-after" />在右侧插入列</a-menu-item>
+        </a-sub-menu>
 
-        <el-sub-menu index="format" popper-class="sheet-menu-popper">
+        <a-sub-menu key="format" popupClassName="sheet-menu-popper">
           <template #title>格式</template>
-          <el-sub-menu index="textFormat" popper-class="sheet-menu-popper">
+          <a-sub-menu key="textFormat" popupClassName="sheet-menu-popper">
             <template #title><SheetIcon name="format-text" />文本</template>
-            <el-menu-item index="fBold" @click="toggleStyle('bold')"><SheetIcon name="format-bold" />粗体<span class="shortcut">Ctrl+B</span></el-menu-item>
-            <el-menu-item index="fItalic" @click="toggleStyle('italic')"><SheetIcon name="format-italic" />斜体<span class="shortcut">Ctrl+I</span></el-menu-item>
-            <el-menu-item index="fUnderline" @click="toggleStyle('underline')"><SheetIcon name="format-underline" />下划线<span class="shortcut">Ctrl+U</span></el-menu-item>
-            <el-menu-item index="fStrikethrough" @click="toggleStyle('strikethrough')"><SheetIcon name="format-strikethrough" />删除线</el-menu-item>
-          </el-sub-menu>
-          <el-sub-menu index="alignFormat" popper-class="sheet-menu-popper">
+            <a-menu-item key="fBold" @click="toggleStyle('bold')"><SheetIcon name="format-bold" />粗体<span class="shortcut">Ctrl+B</span></a-menu-item>
+            <a-menu-item key="fItalic" @click="toggleStyle('italic')"><SheetIcon name="format-italic" />斜体<span class="shortcut">Ctrl+I</span></a-menu-item>
+            <a-menu-item key="fUnderline" @click="toggleStyle('underline')"><SheetIcon name="format-underline" />下划线<span class="shortcut">Ctrl+U</span></a-menu-item>
+            <a-menu-item key="fStrikethrough" @click="toggleStyle('strikethrough')"><SheetIcon name="format-strikethrough" />删除线</a-menu-item>
+          </a-sub-menu>
+          <a-sub-menu key="alignFormat" popupClassName="sheet-menu-popper">
             <template #title><SheetIcon name="format-align-left" />对齐方式</template>
-            <el-menu-item index="aLeft" @click="setAlign('left')"><SheetIcon name="format-align-left" />左对齐</el-menu-item>
-            <el-menu-item index="aCenter" @click="setAlign('center')"><SheetIcon name="format-align-center" />居中对齐</el-menu-item>
-            <el-menu-item index="aRight" @click="setAlign('right')"><SheetIcon name="format-align-right" />右对齐</el-menu-item>
-            <el-divider />
-            <el-menu-item index="vaTop" @click="setVerticalAlign('top')"><SheetIcon name="format-vertical-align-top" />顶部对齐</el-menu-item>
-            <el-menu-item index="vaMiddle" @click="setVerticalAlign('middle')"><SheetIcon name="format-vertical-align-center" />垂直居中</el-menu-item>
-            <el-menu-item index="vaBottom" @click="setVerticalAlign('bottom')"><SheetIcon name="format-vertical-align-bottom" />底部对齐</el-menu-item>
-          </el-sub-menu>
-          <el-sub-menu index="wrapFormat" popper-class="sheet-menu-popper">
+            <a-menu-item key="aLeft" @click="setAlign('left')"><SheetIcon name="format-align-left" />左对齐</a-menu-item>
+            <a-menu-item key="aCenter" @click="setAlign('center')"><SheetIcon name="format-align-center" />居中对齐</a-menu-item>
+            <a-menu-item key="aRight" @click="setAlign('right')"><SheetIcon name="format-align-right" />右对齐</a-menu-item>
+            <a-menu-divider />
+            <a-menu-item key="vaTop" @click="setVerticalAlign('top')"><SheetIcon name="format-vertical-align-top" />顶部对齐</a-menu-item>
+            <a-menu-item key="vaMiddle" @click="setVerticalAlign('middle')"><SheetIcon name="format-vertical-align-center" />垂直居中</a-menu-item>
+            <a-menu-item key="vaBottom" @click="setVerticalAlign('bottom')"><SheetIcon name="format-vertical-align-bottom" />底部对齐</a-menu-item>
+          </a-sub-menu>
+          <a-sub-menu key="wrapFormat" popupClassName="sheet-menu-popper">
             <template #title><SheetIcon name="text-wrap" />文本换行</template>
-            <el-menu-item index="wrapClip" @click="setWrap('clip')">裁剪</el-menu-item>
-            <el-menu-item index="wrapOverflow" @click="setWrap('overflow')">溢出</el-menu-item>
-            <el-menu-item index="wrapWrap" @click="setWrap('wrap')">自动换行</el-menu-item>
-          </el-sub-menu>
-          <el-divider />
-          <el-menu-item index="mergeCells" @click="handleMergeCells()"><SheetIcon name="table-merge-cells" />合并单元格</el-menu-item>
-          <el-menu-item index="unmergeCells" @click="handleUnmergeCells()"><SheetIcon name="table-split-cell" />取消合并</el-menu-item>
-          <el-divider />
-          <el-menu-item index="clearFormat" @click="clearSelectedFormat()"><SheetIcon name="format-clear" />清除格式</el-menu-item>
-        </el-sub-menu>
+            <a-menu-item key="wrapClip" @click="setWrap('clip')">裁剪</a-menu-item>
+            <a-menu-item key="wrapOverflow" @click="setWrap('overflow')">溢出</a-menu-item>
+            <a-menu-item key="wrapWrap" @click="setWrap('wrap')">自动换行</a-menu-item>
+          </a-sub-menu>
+          <a-menu-divider />
+          <a-menu-item key="mergeCells" @click="handleMergeCells()"><SheetIcon name="table-merge-cells" />合并单元格</a-menu-item>
+          <a-menu-item key="unmergeCells" @click="handleUnmergeCells()"><SheetIcon name="table-split-cell" />取消合并</a-menu-item>
+          <a-menu-divider />
+          <a-menu-item key="clearFormat" @click="clearSelectedFormat()"><SheetIcon name="format-clear" />清除格式</a-menu-item>
+        </a-sub-menu>
 
-        <el-sub-menu index="data" popper-class="sheet-menu-popper">
+        <a-sub-menu key="data" popupClassName="sheet-menu-popper">
           <template #title>数据</template>
-          <el-menu-item index="sortAsc" @click="sortColumn('asc')"><SheetIcon name="sort-ascending" />按列升序排序</el-menu-item>
-          <el-menu-item index="sortDesc" @click="sortColumn('desc')"><SheetIcon name="sort-descending" />按列降序排序</el-menu-item>
-        </el-sub-menu>
+          <a-menu-item key="sortAsc" @click="sortColumn('asc')"><SheetIcon name="sort-ascending" />按列升序排序</a-menu-item>
+          <a-menu-item key="sortDesc" @click="sortColumn('desc')"><SheetIcon name="sort-descending" />按列降序排序</a-menu-item>
+        </a-sub-menu>
 
-        <el-sub-menu index="help" popper-class="sheet-menu-popper">
+        <a-sub-menu key="help" popupClassName="sheet-menu-popper">
           <template #title>帮助</template>
-          <el-menu-item index="shortcuts" @click="showShortcutsDialog = true">
+          <a-menu-item key="shortcuts" @click="showShortcutsDialog = true">
             <SheetIcon name="keyboard-outline" />键盘快捷键
-          </el-menu-item>
+          </a-menu-item>
 
-        </el-sub-menu>
-      </el-menu>
-    </el-card>
+        </a-sub-menu>
+      </a-menu>
+    </div>
 
     <!-- 工具栏 -->
     <div class="toolbar">
@@ -142,27 +142,27 @@
         <SheetIcon name="decimal-increase" />
       </button>
       <!-- 数字格式下拉 -->
-      <el-select v-model="toolbarState.numberFormat" size="small" class="toolbar-select" style="width: 80px" :disabled="readOnly" @change="updateCellStyle()">
-        <el-option label="自动" value="auto" />
-        <el-option label="纯文本" value="text" />
-        <el-option label="数字" value="number" />
-        <el-option label="百分比" value="percent" />
-        <el-option label="货币" value="currency" />
-        <el-option label="日期" value="date" />
-      </el-select>
+      <a-select v-model:value="toolbarState.numberFormat" size="small" class="toolbar-select" style="width: 80px" :disabled="readOnly" @change="updateCellStyle()">
+        <a-select-option label="自动" value="auto" />
+        <a-select-option label="纯文本" value="text" />
+        <a-select-option label="数字" value="number" />
+        <a-select-option label="百分比" value="percent" />
+        <a-select-option label="货币" value="currency" />
+        <a-select-option label="日期" value="date" />
+      </a-select>
       <span class="toolbar-divider" />
 
       <!-- 字体 -->
-      <el-select v-model="toolbarState.fontFamily" size="small" class="toolbar-select" style="width: 130px" :disabled="readOnly" @change="updateCellStyle()">
-        <el-option v-for="font in fontOptions" :key="font.value" :label="font.label" :value="font.value">
+      <a-select v-model:value="toolbarState.fontFamily" size="small" class="toolbar-select" style="width: 130px" :disabled="readOnly" @change="updateCellStyle()">
+        <a-select-option v-for="font in fontOptions" :key="font.value" :label="font.label" :value="font.value">
           <span :style="{ fontFamily: font.value }">{{ font.label }}</span>
-        </el-option>
-      </el-select>
+        </a-select-option>
+      </a-select>
 
       <!-- 字号 -->
-      <el-select v-model="toolbarState.fontSize" size="small" class="toolbar-size" style="width: 80px" :disabled="readOnly" @change="updateCellStyle()">
-        <el-option v-for="s in sizeOptions" :key="s.value + '-' + s.label" :label="s.label" :value="s.value" />
-      </el-select>
+      <a-select v-model:value="toolbarState.fontSize" size="small" class="toolbar-size" style="width: 80px" :disabled="readOnly" @change="updateCellStyle()">
+        <a-select-option v-for="s in sizeOptions" :key="s.value + '-' + s.label" :label="s.label" :value="s.value" />
+      </a-select>
       <button class="tb" :disabled="readOnly" @click="changeFontSize(1)" title="增大字号">
         <SheetIcon name="plus" />
       </button>
@@ -187,73 +187,79 @@
       <span class="toolbar-divider" />
 
       <!-- 字体颜色 -->
-      <el-popover placement="bottom" :width="260" trigger="click">
-        <template #reference>
+      <a-popover placement="bottom" :width="260" trigger="click">
+        <template #content>
+          <div class="color-panel">
+            <div class="color-grid">
+              <button v-for="c in colorPalette" :key="'fc-'+c" class="color-cell" :style="{ backgroundColor: c }" @click="setFontColor(c)"></button>
+            </div>
+          </div>
+        </template>
+        <template #default>
           <button class="tb color-btn" :disabled="readOnly" title="字体颜色">
             <SheetIcon name="format-text" />
             <span class="color-bar" :style="{ backgroundColor: toolbarState.fontColor || '#000000' }"></span>
           </button>
         </template>
-        <div class="color-panel">
-          <div class="color-grid">
-            <button v-for="c in colorPalette" :key="'fc-'+c" class="color-cell" :style="{ backgroundColor: c }" @click="setFontColor(c)"></button>
-          </div>
-        </div>
-      </el-popover>
+      </a-popover>
 
       <!-- 填充色 -->
-      <el-popover placement="bottom" :width="260" trigger="click">
-        <template #reference>
+      <a-popover placement="bottom" :width="260" trigger="click">
+        <template #content>
+          <div class="color-panel">
+            <div class="color-grid">
+              <button class="color-cell color-none" @click="setBgColor('')" title="无填充">
+                <svg viewBox="0 0 16 16" width="14" height="14"><line x1="2" y1="14" x2="14" y2="2" stroke="#f00" stroke-width="1.5"/></svg>
+              </button>
+              <button v-for="c in colorPalette" :key="'bg-'+c" class="color-cell" :style="{ backgroundColor: c }" @click="setBgColor(c)"></button>
+            </div>
+          </div>
+        </template>
+        <template #default>
           <button class="tb color-btn" :disabled="readOnly" title="填充颜色">
             <SheetIcon name="format-color-fill" />
             <span class="color-bar" :style="{ backgroundColor: toolbarState.bgColor || '#ffffff' }"></span>
           </button>
         </template>
-        <div class="color-panel">
-          <div class="color-grid">
-            <button class="color-cell color-none" @click="setBgColor('')" title="无填充">
-              <svg viewBox="0 0 16 16" width="14" height="14"><line x1="2" y1="14" x2="14" y2="2" stroke="#f00" stroke-width="1.5"/></svg>
-            </button>
-            <button v-for="c in colorPalette" :key="'bg-'+c" class="color-cell" :style="{ backgroundColor: c }" @click="setBgColor(c)"></button>
-          </div>
-        </div>
-      </el-popover>
+      </a-popover>
       <span class="toolbar-divider" />
 
       <!-- 边框 -->
-      <el-popover placement="bottom" :width="200" trigger="click">
-        <template #reference>
+      <a-popover placement="bottom" :width="200" trigger="click">
+        <template #content>
+          <div class="border-panel">
+            <div class="border-grid">
+              <button class="border-btn" @click="setBorders('all')" title="所有边框">
+                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3,3V21H21V3H3M19,19H13V13H19V19M19,11H13V5H19V11M11,19H5V13H11V19M11,11H5V5H11V11Z"/></svg>
+              </button>
+              <button class="border-btn" @click="setBorders('outer')" title="外侧边框">
+                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3,3V21H21V3H3M19,5V19H5V5H19Z"/></svg>
+              </button>
+              <button class="border-btn" @click="setBorders('none')" title="无边框">
+                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3,3V5H5V3H3M7,3V5H9V3H7M11,3V5H13V3H11M15,3V5H17V3H15M19,3V5H21V3H19M3,7V9H5V7H3M19,7V9H21V7H19M3,11V13H5V11H3M19,11V13H21V11H19M3,15V17H5V15H3M19,15V17H21V15H19M3,19V21H5V19H3M7,19V21H9V19H7M11,19V21H13V19H11M15,19V21H17V19H15M19,19V21H21V19H19Z"/></svg>
+              </button>
+              <button class="border-btn" @click="setBorders('bottom')" title="下边框">
+                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3,19V21H21V19H3Z"/></svg>
+              </button>
+              <button class="border-btn" @click="setBorders('top')" title="上边框">
+                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3,3V5H21V3H3Z"/></svg>
+              </button>
+              <button class="border-btn" @click="setBorders('left')" title="左边框">
+                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3,3V21H5V3H3Z"/></svg>
+              </button>
+              <button class="border-btn" @click="setBorders('right')" title="右边框">
+                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19,3V21H21V3H19Z"/></svg>
+              </button>
+            </div>
+          </div>
+        </template>
+        <template #default>
           <button class="tb" :disabled="readOnly" title="边框">
             <SheetIcon name="grid" />
             <SheetIcon name="chevron-down" size="12" />
           </button>
         </template>
-        <div class="border-panel">
-          <div class="border-grid">
-            <button class="border-btn" @click="setBorders('all')" title="所有边框">
-              <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3,3V21H21V3H3M19,19H13V13H19V19M19,11H13V5H19V11M11,19H5V13H11V19M11,11H5V5H11V11Z"/></svg>
-            </button>
-            <button class="border-btn" @click="setBorders('outer')" title="外侧边框">
-              <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3,3V21H21V3H3M19,5V19H5V5H19Z"/></svg>
-            </button>
-            <button class="border-btn" @click="setBorders('none')" title="无边框">
-              <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3,3V5H5V3H3M7,3V5H9V3H7M11,3V5H13V3H11M15,3V5H17V3H15M19,3V5H21V3H19M3,7V9H5V7H3M19,7V9H21V7H19M3,11V13H5V11H3M19,11V13H21V11H19M3,15V17H5V15H3M19,15V17H21V15H19M3,19V21H5V19H3M7,19V21H9V19H7M11,19V21H13V19H11M15,19V21H17V19H15M19,19V21H21V19H19Z"/></svg>
-            </button>
-            <button class="border-btn" @click="setBorders('bottom')" title="下边框">
-              <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3,19V21H21V19H3Z"/></svg>
-            </button>
-            <button class="border-btn" @click="setBorders('top')" title="上边框">
-              <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3,3V5H21V3H3Z"/></svg>
-            </button>
-            <button class="border-btn" @click="setBorders('left')" title="左边框">
-              <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3,3V21H5V3H3Z"/></svg>
-            </button>
-            <button class="border-btn" @click="setBorders('right')" title="右边框">
-              <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19,3V21H21V3H19Z"/></svg>
-            </button>
-          </div>
-        </div>
-      </el-popover>
+      </a-popover>
 
       <!-- 合并单元格 -->
       <button class="tb" :disabled="readOnly" @click="handleMergeCells()" title="合并单元格">
@@ -262,25 +268,27 @@
       <span class="toolbar-divider" />
 
       <!-- 对齐方式 -->
-      <el-popover placement="bottom" :width="140" trigger="click">
-        <template #reference>
+      <a-popover placement="bottom" :width="140" trigger="click">
+        <template #content>
+          <div class="align-panel">
+            <div class="align-group-label">水平对齐</div>
+            <button class="align-btn" :class="{ active: toolbarState.align === 'left' }" @click="setAlign('left')"><SheetIcon name="format-align-left" /><span>左对齐</span></button>
+            <button class="align-btn" :class="{ active: toolbarState.align === 'center' }" @click="setAlign('center')"><SheetIcon name="format-align-center" /><span>居中</span></button>
+            <button class="align-btn" :class="{ active: toolbarState.align === 'right' }" @click="setAlign('right')"><SheetIcon name="format-align-right" /><span>右对齐</span></button>
+            <div class="align-group-divider"></div>
+            <div class="align-group-label">垂直对齐</div>
+            <button class="align-btn" :class="{ active: toolbarState.verticalAlign === 'top' }" @click="setVerticalAlign('top')"><SheetIcon name="format-vertical-align-top" /><span>顶部</span></button>
+            <button class="align-btn" :class="{ active: toolbarState.verticalAlign === 'middle' }" @click="setVerticalAlign('middle')"><SheetIcon name="format-vertical-align-center" /><span>居中</span></button>
+            <button class="align-btn" :class="{ active: toolbarState.verticalAlign === 'bottom' }" @click="setVerticalAlign('bottom')"><SheetIcon name="format-vertical-align-bottom" /><span>底部</span></button>
+          </div>
+        </template>
+        <template #default>
           <button class="tb" :disabled="readOnly" title="对齐方式">
             <SheetIcon :name="'format-align-' + (toolbarState.align || 'left')" />
             <SheetIcon name="chevron-down" size="12" />
           </button>
         </template>
-        <div class="align-panel">
-          <div class="align-group-label">水平对齐</div>
-          <button class="align-btn" :class="{ active: toolbarState.align === 'left' }" @click="setAlign('left')"><SheetIcon name="format-align-left" /><span>左对齐</span></button>
-          <button class="align-btn" :class="{ active: toolbarState.align === 'center' }" @click="setAlign('center')"><SheetIcon name="format-align-center" /><span>居中</span></button>
-          <button class="align-btn" :class="{ active: toolbarState.align === 'right' }" @click="setAlign('right')"><SheetIcon name="format-align-right" /><span>右对齐</span></button>
-          <div class="align-group-divider"></div>
-          <div class="align-group-label">垂直对齐</div>
-          <button class="align-btn" :class="{ active: toolbarState.verticalAlign === 'top' }" @click="setVerticalAlign('top')"><SheetIcon name="format-vertical-align-top" /><span>顶部</span></button>
-          <button class="align-btn" :class="{ active: toolbarState.verticalAlign === 'middle' }" @click="setVerticalAlign('middle')"><SheetIcon name="format-vertical-align-center" /><span>居中</span></button>
-          <button class="align-btn" :class="{ active: toolbarState.verticalAlign === 'bottom' }" @click="setVerticalAlign('bottom')"><SheetIcon name="format-vertical-align-bottom" /><span>底部</span></button>
-        </div>
-      </el-popover>
+      </a-popover>
 
       <!-- 文本换行 -->
       <button class="tb" :disabled="readOnly" :class="{ active: toolbarState.wrap === 'wrap' }" @click="toggleWrap()" title="自动换行">
@@ -288,20 +296,22 @@
       </button>
 
       <!-- 文字旋转 -->
-      <el-popover placement="bottom" :width="140" trigger="click">
-        <template #reference>
+      <a-popover placement="bottom" :width="140" trigger="click">
+        <template #content>
+          <div class="align-panel">
+            <button class="align-btn" :class="{ active: toolbarState.rotation === 0 }" @click="setRotation(0)"><SheetIcon name="format-text-rotation-none" /><span>无旋转</span></button>
+            <button class="align-btn" :class="{ active: toolbarState.rotation === 45 }" @click="setRotation(45)"><SheetIcon name="format-text-rotation-up" /><span>向上倾斜</span></button>
+            <button class="align-btn" :class="{ active: toolbarState.rotation === -45 }" @click="setRotation(-45)"><SheetIcon name="format-text-rotation-down" /><span>向下倾斜</span></button>
+            <button class="align-btn" :class="{ active: toolbarState.rotation === 90 }" @click="setRotation(90)"><SheetIcon name="format-text-rotation-vertical" /><span>竖排文字</span></button>
+          </div>
+        </template>
+        <template #default>
           <button class="tb" :disabled="readOnly" title="文字旋转">
             <SheetIcon name="format-text-rotation-none" />
             <SheetIcon name="chevron-down" size="12" />
           </button>
         </template>
-        <div class="align-panel">
-          <button class="align-btn" :class="{ active: toolbarState.rotation === 0 }" @click="setRotation(0)"><SheetIcon name="format-text-rotation-none" /><span>无旋转</span></button>
-          <button class="align-btn" :class="{ active: toolbarState.rotation === 45 }" @click="setRotation(45)"><SheetIcon name="format-text-rotation-up" /><span>向上倾斜</span></button>
-          <button class="align-btn" :class="{ active: toolbarState.rotation === -45 }" @click="setRotation(-45)"><SheetIcon name="format-text-rotation-down" /><span>向下倾斜</span></button>
-          <button class="align-btn" :class="{ active: toolbarState.rotation === 90 }" @click="setRotation(90)"><SheetIcon name="format-text-rotation-vertical" /><span>竖排文字</span></button>
-        </div>
-      </el-popover>
+      </a-popover>
       <span class="toolbar-divider" />
 
       <!-- 冻结 -->
@@ -309,33 +319,35 @@
         <SheetIcon name="snowflake" />
       </button>
       <!-- 筛选排序 -->
-      <el-popover placement="bottom" :width="280" trigger="click" v-model:visible="filterPopoverVisible" @show="prepareFilterPanel">
-        <template #reference>
+      <a-popover placement="bottom" :width="280" trigger="click" v-model:open="filterPopoverVisible" @afterOpenChange="(v: boolean) => v && prepareFilterPanel()">
+        <template #content>
+          <div class="filter-panel">
+            <div class="filter-title">筛选列 {{ columnLabel(filterColumn ?? selected.col) }}</div>
+            <input v-model="filterKeyword" class="filter-input" placeholder="包含关键词" />
+            <div class="filter-actions-inline">
+              <button class="tb-sm" @click="toggleAllFilterValues(true)">全选</button>
+              <button class="tb-sm" @click="toggleAllFilterValues(false)">全不选</button>
+            </div>
+            <div class="filter-values">
+              <label v-for="value in filterValueOptions" :key="`fv-${value}`" class="filter-value-item">
+                <input type="checkbox" :checked="isFilterValueSelected(value)" @change="onFilterValueChange(value, $event)" />
+                <span>{{ value === FILTER_EMPTY_TOKEN ? '(空白)' : value }}</span>
+              </label>
+            </div>
+            <div class="filter-actions-inline">
+              <button class="tb-sm" @click="sortColumn('asc')">升序</button>
+              <button class="tb-sm" @click="sortColumn('desc')">降序</button>
+              <button class="tb-sm replace-btn" @click="applyFilterAndClose()">应用</button>
+              <button class="tb-sm" @click="clearFilter()">清除</button>
+            </div>
+          </div>
+        </template>
+        <template #default>
           <button class="tb" :disabled="readOnly" :class="{ active: filterActive }" title="筛选">
             <SheetIcon name="filter-outline" />
           </button>
         </template>
-        <div class="filter-panel">
-          <div class="filter-title">筛选列 {{ columnLabel(filterColumn ?? selected.col) }}</div>
-          <input v-model="filterKeyword" class="filter-input" placeholder="包含关键词" />
-          <div class="filter-actions-inline">
-            <button class="tb-sm" @click="toggleAllFilterValues(true)">全选</button>
-            <button class="tb-sm" @click="toggleAllFilterValues(false)">全不选</button>
-          </div>
-          <div class="filter-values">
-            <label v-for="value in filterValueOptions" :key="`fv-${value}`" class="filter-value-item">
-              <input type="checkbox" :checked="isFilterValueSelected(value)" @change="onFilterValueChange(value, $event)" />
-              <span>{{ value === FILTER_EMPTY_TOKEN ? '(空白)' : value }}</span>
-            </label>
-          </div>
-          <div class="filter-actions-inline">
-            <button class="tb-sm" @click="sortColumn('asc')">升序</button>
-            <button class="tb-sm" @click="sortColumn('desc')">降序</button>
-            <button class="tb-sm replace-btn" @click="applyFilterAndClose()">应用</button>
-            <button class="tb-sm" @click="clearFilter()">清除</button>
-          </div>
-        </div>
-      </el-popover>
+      </a-popover>
       <span class="toolbar-divider" />
 
       <!-- 超链接 -->
@@ -353,21 +365,23 @@
       <span class="toolbar-divider" />
 
       <!-- 快速函数 -->
-      <el-popover placement="bottom" :width="150" trigger="click">
-        <template #reference>
+      <a-popover placement="bottom" :width="150" trigger="click">
+        <template #content>
+          <div class="align-panel">
+            <button class="align-btn" @click="insertFunction('SUM')"><span>SUM 求和</span></button>
+            <button class="align-btn" @click="insertFunction('AVERAGE')"><span>AVERAGE 平均值</span></button>
+            <button class="align-btn" @click="insertFunction('COUNT')"><span>COUNT 计数</span></button>
+            <button class="align-btn" @click="insertFunction('MAX')"><span>MAX 最大值</span></button>
+            <button class="align-btn" @click="insertFunction('MIN')"><span>MIN 最小值</span></button>
+          </div>
+        </template>
+        <template #default>
           <button class="tb" :disabled="readOnly" title="函数">
             <SheetIcon name="sigma" />
             <SheetIcon name="chevron-down" size="12" />
           </button>
         </template>
-        <div class="align-panel">
-          <button class="align-btn" @click="insertFunction('SUM')"><span>SUM 求和</span></button>
-          <button class="align-btn" @click="insertFunction('AVERAGE')"><span>AVERAGE 平均值</span></button>
-          <button class="align-btn" @click="insertFunction('COUNT')"><span>COUNT 计数</span></button>
-          <button class="align-btn" @click="insertFunction('MAX')"><span>MAX 最大值</span></button>
-          <button class="align-btn" @click="insertFunction('MIN')"><span>MIN 最小值</span></button>
-        </div>
-      </el-popover>
+      </a-popover>
       <span class="toolbar-divider" />
 
       <!-- 清除格式 -->
@@ -558,21 +572,21 @@
         <button class="view-btn" :class="{ active: isEyeCareMode }" type="button" title="护眼模式" @click="toggleEyeCareMode()">
           <SheetIcon name="eye-outline" size="15" />
         </button>
-        <el-dropdown trigger="click" @command="onZoomDropdownCommand">
+        <a-dropdown :trigger="['click']">
           <button class="view-btn zoom-label" type="button">
             {{ zoomPercent }}%
             <SheetIcon name="chevron-down" size="14" />
           </button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item v-for="level in zoomLevels" :key="level" :command="level">{{ level }}%</el-dropdown-item>
-            </el-dropdown-menu>
+          <template #overlay>
+            <a-menu @click="(info: any) => onZoomDropdownCommand(info.key)">
+              <a-menu-item v-for="level in zoomLevels" :key="level">{{ level }}%</a-menu-item>
+            </a-menu>
           </template>
-        </el-dropdown>
+        </a-dropdown>
         <button class="view-btn" type="button" @click="changeZoom(-10)">
           <SheetIcon name="minus" size="16" />
         </button>
-        <el-slider class="zoom-slider" size="small" :min="50" :max="200" :step="10" :show-tooltip="false" :model-value="zoomPercent" @input="onZoomSliderInput" />
+        <a-slider class="zoom-slider" :min="50" :max="200" :step="10" :tooltip-open="false" :value="zoomPercent" @change="onZoomSliderInput" />
         <button class="view-btn" type="button" @click="changeZoom(10)">
           <SheetIcon name="plus" size="16" />
         </button>
@@ -583,7 +597,7 @@
     </div>
 
     <!-- 快捷键对话框 -->
-    <el-dialog v-model="showShortcutsDialog" title="键盘快捷键" width="480px" append-to-body>
+    <a-modal v-model:open="showShortcutsDialog" title="键盘快捷键" width="480px" :footer="null">
       <div class="shortcuts-list">
         <div class="shortcut-group">
           <div class="shortcut-row"><span>撤销</span><kbd>Ctrl+Z</kbd></div>
@@ -605,7 +619,7 @@
           <div class="shortcut-row"><span>行首/行尾</span><kbd>Home / End</kbd></div>
         </div>
       </div>
-    </el-dialog>
+    </a-modal>
 
     <input
       ref="importExcelInputRef"
@@ -618,8 +632,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { computed, h, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { message, Modal } from 'ant-design-vue'
 import SheetIcon from './SheetIcon.vue'
 import UnifiedTopHeader from './UnifiedTopHeader.vue'
 import type { Align, VerticalAlign, WrapMode, ICellStyle, ICellMeta, IUiSheet, IWorkbook, UndoEntry } from '../types'
@@ -1962,10 +1976,21 @@ async function renameSheet(idx: number) {
   const sheet = workbook.sheets[idx]
   if (!sheet) return
   try {
-    const { value } = await ElMessageBox.prompt(t('dialog.renameSheetInputPlaceholder'), t('dialog.renameSheetTitle'), {
-      inputValue: sheet.name,
-      confirmButtonText: t('common.confirm'),
-      cancelButtonText: t('common.cancel')
+    const { value } = await new Promise<{ value: string }>((resolve, reject) => {
+      let inputValue = sheet.name
+      Modal.confirm({
+        title: t('dialog.renameSheetTitle'),
+        content: () => h('input', {
+          value: inputValue,
+          onInput: (e: Event) => { inputValue = (e.target as HTMLInputElement).value },
+          style: { width: '100%', padding: '4px 8px', border: '1px solid #d9d9d9', borderRadius: '4px', marginTop: '8px' },
+          placeholder: t('dialog.renameSheetInputPlaceholder')
+        }),
+        okText: t('common.confirm'),
+        cancelText: t('common.cancel'),
+        onOk: () => resolve({ value: inputValue }),
+        onCancel: () => reject(new Error('cancel'))
+      })
     })
     const name = String(value || '').trim()
     if (!name) return
@@ -2151,10 +2176,16 @@ async function ctxDeleteSheet() {
   if (props.readOnly || workbook.sheets.length <= 1) return
   const name = workbook.sheets[idx]?.name || ''
   try {
-    await ElMessageBox.confirm(t('dialog.deleteSheetContent', { name }), t('dialog.deleteSheetTitle'), {
-      type: 'warning',
-      confirmButtonText: t('dialog.deleteButton'),
-      cancelButtonText: t('common.cancel')
+    await new Promise<void>((resolve, reject) => {
+      Modal.confirm({
+        title: t('dialog.deleteSheetTitle'),
+        content: t('dialog.deleteSheetContent', { name }),
+        okText: t('dialog.deleteButton'),
+        okType: 'danger',
+        cancelText: t('common.cancel'),
+        onOk: () => resolve(),
+        onCancel: () => reject(new Error('cancel'))
+      })
     })
   } catch {
     return
@@ -2211,7 +2242,7 @@ onMounted(async () => {
       syncToolbarAndFormula()
       emitChange()
     } catch (e) {
-      ElMessage.error(e instanceof Error ? e.message : t('message.importFailed'))
+      message.error(e instanceof Error ? e.message : t('message.importFailed'))
     }
   }
 })
@@ -2322,10 +2353,10 @@ async function handleImportExcelChange(e: Event) {
     redoStack.value = []
     syncToolbarAndFormula()
     emitChange()
-    ElMessage.success(t('message.importSuccess', { name: file.name }))
+    message.success(t('message.importSuccess', { name: file.name }))
   } catch (error) {
-    const message = error instanceof Error ? error.message : t('message.importFailed')
-    ElMessage.error(message)
+    const msg = error instanceof Error ? error.message : t('message.importFailed')
+    message.error(msg)
   } finally {
     if (input) input.value = ''
   }
@@ -2347,10 +2378,10 @@ async function handleExportExcel() {
     link.href = URL.createObjectURL(blob)
     link.click()
     URL.revokeObjectURL(link.href)
-    ElMessage.success(t('message.exportSuccess'))
+    message.success(t('message.exportSuccess'))
   } catch (error) {
-    const message = error instanceof Error ? error.message : t('message.exportFailed')
-    ElMessage.error(message)
+    const msg = error instanceof Error ? error.message : t('message.exportFailed')
+    message.error(msg)
   }
 }
 
@@ -2396,10 +2427,10 @@ async function handleCreateNewWorkbook() {
     console.log('[SheetEditor] 新建表格-Excel文件流(ArrayBuffer):', buffer)
     emit('new-document', { dbPayload, excelPayload })
     emitChange()
-    ElMessage.success(t('message.createSuccess'))
+    message.success(t('message.createSuccess'))
   } catch (error) {
-    const message = error instanceof Error ? error.message : t('message.createFailed')
-    ElMessage.error(message)
+    const msg = error instanceof Error ? error.message : t('message.createFailed')
+    message.error(msg)
   }
 }
 
@@ -2531,7 +2562,7 @@ function applyFilterAndClose() {
   filterPopoverVisible.value = false
   const col = filterColumn.value
   if (col === null) return
-  ElMessage.success(`已应用列 ${columnLabel(col)} 筛选`)
+  message.success(`已应用列 ${columnLabel(col)} 筛选`)
 }
 
 function clearFilter() {
@@ -2582,12 +2613,22 @@ async function insertHyperlink() {
   const defaultUrl = currentHyperlink || (currentValue.startsWith('http') ? currentValue : 'https://')
   let url = ''
   try {
-    const res = await ElMessageBox.prompt('请输入链接地址', '插入链接', {
-      inputValue: defaultUrl,
-      confirmButtonText: '确定',
-      cancelButtonText: '取消'
+    url = await new Promise<string>((resolve, reject) => {
+      let inputValue = defaultUrl
+      Modal.confirm({
+        title: '插入链接',
+        content: () => h('input', {
+          value: inputValue,
+          onInput: (e: Event) => { inputValue = (e.target as HTMLInputElement).value },
+          style: { width: '100%', padding: '4px 8px', border: '1px solid #d9d9d9', borderRadius: '4px', marginTop: '8px' },
+          placeholder: '请输入链接地址'
+        }),
+        okText: '确定',
+        cancelText: '取消',
+        onOk: () => resolve(inputValue),
+        onCancel: () => reject(new Error('cancel'))
+      })
     })
-    url = String(res.value || '')
   } catch {
     return
   }
@@ -2620,13 +2661,22 @@ async function insertComment() {
   const currentComment = activeSheet.value.cellMeta?.[key]?.comment || ''
   let comment = ''
   try {
-    const res = await ElMessageBox.prompt('请输入批注内容', '批注', {
-      inputValue: currentComment,
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      inputType: 'textarea'
+    comment = await new Promise<string>((resolve, reject) => {
+      let inputValue = currentComment
+      Modal.confirm({
+        title: '批注',
+        content: () => h('textarea', {
+          value: inputValue,
+          onInput: (e: Event) => { inputValue = (e.target as HTMLTextAreaElement).value },
+          style: { width: '100%', padding: '4px 8px', border: '1px solid #d9d9d9', borderRadius: '4px', marginTop: '8px', minHeight: '60px' },
+          placeholder: '请输入批注内容'
+        }),
+        okText: '确定',
+        cancelText: '取消',
+        onOk: () => resolve(inputValue),
+        onCancel: () => reject(new Error('cancel'))
+      })
     })
-    comment = String(res.value || '')
   } catch {
     return
   }
@@ -3299,7 +3349,7 @@ function emitChange() {
   width: 120px;
 }
 
-.zoom-slider :deep(.el-slider__runway) {
+.zoom-slider :deep(.ant-slider-track) {
   margin: 0;
 }
 
@@ -3430,20 +3480,16 @@ function emitChange() {
   justify-content: flex-end;
 }
 
-/* ===== Element Plus 覆盖 ===== */
-:deep(.el-select .el-input__wrapper) {
-  box-shadow: none;
-  border: 1px solid #dadce0;
-  border-radius: 4px;
-  height: 26px;
+/* ===== Ant Design Vue 覆盖 ===== */
+:deep(.ant-select .ant-select-selector) {
+  border: 1px solid #dadce0 !important;
+  border-radius: 4px !important;
+  height: 26px !important;
+  min-height: 26px !important;
 }
 
-:deep(.el-select .el-input__wrapper:hover) {
-  border-color: #1a73e8;
-}
-
-:deep(.el-divider--horizontal) {
-  margin: 4px 0;
+:deep(.ant-select .ant-select-selector:hover) {
+  border-color: #1a73e8 !important;
 }
 
 /* 右键菜单锚点 - 已废弃，使用 Teleport 方案 */
@@ -3490,67 +3536,60 @@ function emitChange() {
   min-width: 220px !important;
 }
 
-.sheet-menu-popper .el-menu {
-  border-right: none !important;
+.sheet-menu-popper .ant-menu {
+  border-inline-end: none !important;
 }
 
-.sheet-menu-popper .el-menu--popup {
-  width: 100% !important;
-}
-
-.sheet-menu-popper .el-menu-item {
+.sheet-menu-popper .ant-menu-item {
   height: 32px !important;
   line-height: 32px !important;
   font-size: 13px !important;
   color: #3c4043 !important;
   padding: 0 16px !important;
+  margin: 0 !important;
   display: flex !important;
   align-items: center !important;
 }
 
-.sheet-menu-popper .el-menu-item:hover {
+.sheet-menu-popper .ant-menu-item:hover {
   background: #f1f3f4 !important;
 }
 
-.sheet-menu-popper .el-menu-item .mdi-icon {
+.sheet-menu-popper .ant-menu-item .mdi-icon {
   margin-right: 12px;
   color: #5f6368;
   flex-shrink: 0;
 }
 
-.sheet-menu-popper .el-menu-item .shortcut {
+.sheet-menu-popper .ant-menu-item .shortcut {
   margin-left: auto;
   padding-left: 24px;
   color: #9aa0a6;
   font-size: 12px;
 }
 
-.sheet-menu-popper .el-sub-menu__title {
+.sheet-menu-popper .ant-menu-submenu-title {
   height: 32px !important;
   line-height: 32px !important;
   font-size: 13px !important;
   color: #3c4043 !important;
   padding: 0 16px !important;
+  margin: 0 !important;
   display: flex !important;
   align-items: center !important;
 }
 
-.sheet-menu-popper .el-sub-menu__title:hover {
+.sheet-menu-popper .ant-menu-submenu-title:hover {
   background: #f1f3f4 !important;
 }
 
-.sheet-menu-popper .el-sub-menu__title .mdi-icon {
+.sheet-menu-popper .ant-menu-submenu-title .mdi-icon {
   margin-right: 12px;
   color: #5f6368;
   flex-shrink: 0;
 }
 
-.sheet-menu-popper .el-divider--horizontal {
-  margin: 4px 12px !important;
-  width: calc(100% - 24px) !important;
-}
-
-/* 菜单栏样式 - 全局作用域，防止宿主 Element Plus CSS 覆盖 */
+/* 菜单栏样式 - 全局作用域 */
 .sheet-editor .menu-card {
   border-radius: 0 !important;
   border-left: none !important;
@@ -3560,10 +3599,7 @@ function emitChange() {
   background: #217346 !important;
   width: 100% !important;
   margin: 0 !important;
-}
-.sheet-editor .menu-card .el-card__body {
   padding: 0 !important;
-  width: 100% !important;
 }
 .sheet-editor .sheet-menu-bar {
   border-bottom: none !important;
@@ -3572,14 +3608,20 @@ function emitChange() {
   width: 100% !important;
   padding: 0 !important;
   margin: 0 !important;
+  line-height: 1.4 !important;
 }
-.sheet-editor .sheet-menu-bar .el-menu--horizontal {
+.sheet-editor .sheet-menu-bar .ant-menu {
   border-bottom: none !important;
   background: transparent !important;
   padding: 0 !important;
   margin: 0 !important;
+  line-height: 1.4 !important;
 }
-.sheet-editor .sheet-menu-bar .el-sub-menu__title {
+.sheet-editor .ant-menu-horizontal > .ant-menu-item,
+.sheet-editor .ant-menu-horizontal > .ant-menu-submenu {
+  padding-inline: 0 !important;
+}
+.sheet-editor .sheet-menu-bar .ant-menu-submenu-title {
   padding: 6px 12px !important;
   height: auto !important;
   line-height: 1.4 !important;
@@ -3591,13 +3633,13 @@ function emitChange() {
   display: flex !important;
   align-items: center !important;
 }
-.sheet-editor .sheet-menu-bar .el-sub-menu__title:hover {
+.sheet-editor .sheet-menu-bar .ant-menu-submenu-title:hover {
   background: #1e6e3a !important;
 }
-.sheet-editor .sheet-menu-bar .el-sub-menu.is-opened > .el-sub-menu__title {
+.sheet-editor .sheet-menu-bar .ant-menu-submenu-open > .ant-menu-submenu-title {
   background: #185c37 !important;
 }
-.sheet-editor .sheet-menu-bar .el-sub-menu__icon-arrow {
+.sheet-editor .sheet-menu-bar .ant-menu-submenu-arrow {
   display: none !important;
 }
 

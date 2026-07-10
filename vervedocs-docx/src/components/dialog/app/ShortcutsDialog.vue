@@ -1,5 +1,5 @@
 <template>
-  <el-dialog v-model="visible" title="键盘快捷键" width="600px" :close-on-click-modal="false" class="shortcuts-dialog">
+  <a-modal v-model:open="visible" title="键盘快捷键" width="600px" :maskClosable="false" class="shortcuts-dialog">
     <div class="shortcuts-content">
       <div class="shortcut-group">
         <h3>文件操作</h3>
@@ -94,9 +94,9 @@
       </div>
     </div>
     <template #footer>
-      <el-button type="primary" @click="visible = false">关闭</el-button>
+      <a-button type="primary" @click="visible = false">关闭</a-button>
     </template>
-  </el-dialog>
+  </a-modal>
 </template>
 
 <script setup lang="ts">
@@ -164,31 +164,4 @@ const visible = computed({
   margin: 0 2px;
 }
 
-.shortcut-row span:last-child {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-</style>
-
-<style>
-.shortcuts-dialog .el-dialog__header {
-  padding: 16px 20px;
-  border-bottom: 1px solid #e8eaed;
-}
-
-.shortcuts-dialog .el-dialog__title {
-  font-size: 16px;
-  font-weight: 500;
-  color: #202124;
-}
-
-.shortcuts-dialog .el-dialog__body {
-  padding: 20px;
-}
-
-.shortcuts-dialog .el-dialog__footer {
-  padding: 12px 20px;
-  border-top: 1px solid #e8eaed;
-}
 </style>

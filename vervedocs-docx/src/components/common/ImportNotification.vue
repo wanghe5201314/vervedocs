@@ -15,8 +15,8 @@
     <div class="import-notification-file">
       <div class="import-notification-file-icon">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="#409eff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M14 2V8H20" stroke="#409eff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="#1890ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M14 2V8H20" stroke="#1890ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
       <div class="import-notification-file-info">
@@ -32,12 +32,14 @@
 
     <!-- 操作按钮 -->
     <div class="import-notification-actions">
-      <el-tooltip content="当前文档内容不再修改，会将导入的内容作为新文档保存" placement="top" effect="light" :popper-style="{ zIndex: 99999 }">
-        <el-button type="primary" :disabled="isParsing" @click="handleOverwrite"><MdiIcon name="file-import-outline" /> 新建文档</el-button>
-      </el-tooltip>
-      <el-tooltip content="当前文档内容被替换，根据这个文档的内容全新保存" placement="top" effect="light" :popper-style="{ zIndex: 99999 }">
-        <el-button :disabled="isParsing" @click="handleAppend"><MdiIcon name="content-copy" /> 替换到这个文档</el-button>
-      </el-tooltip>
+      <a-tooltip placement="top" :overlay-style="{ zIndex: 99999 }">
+        <template #title>当前文档内容不再修改，会将导入的内容作为新文档保存</template>
+        <a-button type="primary" :disabled="isParsing" @click="handleOverwrite"><MdiIcon name="file-import-outline" /> 新建文档</a-button>
+      </a-tooltip>
+      <a-tooltip placement="top" :overlay-style="{ zIndex: 99999 }">
+        <template #title>当前文档内容被替换，根据这个文档的内容全新保存</template>
+        <a-button :disabled="isParsing" @click="handleAppend"><MdiIcon name="content-copy" /> 替换到这个文档</a-button>
+      </a-tooltip>
     </div>
   </div>
 </template>

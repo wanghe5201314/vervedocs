@@ -2,63 +2,62 @@
   <div class="line-style-panel">
     <div class="row">
       <div style="flex: 2;">线条样式：</div>
-      <el-select 
+      <a-select 
         style="flex: 3;" 
-        :model-value="(handleElement as any)?.style" 
+        :value="(handleElement as any)?.style" 
         @change="(value: any) => updateLine({ style: value })"
       >
-        <el-option value="solid" label="实线" />
-        <el-option value="dashed" label="虚线" />
-      </el-select>
+        <a-select-option value="solid">实线</a-select-option>
+        <a-select-option value="dashed">虚线</a-select-option>
+      </a-select>
     </div>
     <div class="row">
       <div style="flex: 2;">线条颜色：</div>
-      <el-popover trigger="click">
-        <ColorPicker
-          :modelValue="(handleElement as any)?.color"
-          @update:modelValue="(value: any) => updateLine({ color: value })"
-        />
-        <template #reference>
-          <ColorButton :color="(handleElement as any)?.color || ''" style="flex: 3;" />
+      <a-popover trigger="click">
+        <template #content>
+          <ColorPicker
+            :modelValue="(handleElement as any)?.color"
+            @update:modelValue="(value: any) => updateLine({ color: value })"
+          />
         </template>
-      </el-popover>
+        <ColorButton :color="(handleElement as any)?.color || ''" style="flex: 3;" />
+      </a-popover>
     </div>
     <div class="row">
       <div style="flex: 2;">线条宽度：</div>
-      <el-input-number 
-        :model-value="(handleElement as any)?.width" 
+      <a-input-number 
+        :value="(handleElement as any)?.width" 
         @change="(value: any) => updateLine({ width: value })" 
         style="flex: 3;"
-        controls-position="right"
       />
     </div>
     
     <div class="row">
       <div style="flex: 2;">起点样式：</div>
-      <el-select 
+      <a-select 
         style="flex: 3;" 
-        :model-value="(handleElement as any)?.points?.[0]" 
+        :value="(handleElement as any)?.points?.[0]" 
         @change="(value: any) => updateLine({ points: [value, (handleElement as any)?.points?.[1]] })"
       >
-        <el-option value="" label="无" />
-        <el-option value="arrow" label="箭头" />
-        <el-option value="dot" label="圆点" />
-      </el-select>
+        <a-select-option value="">无</a-select-option>
+        <a-select-option value="arrow">箭头</a-select-option>
+        <a-select-option value="dot">圆点</a-select-option>
+      </a-select>
     </div>
     <div class="row">
       <div style="flex: 2;">终点样式：</div>
-      <el-select 
+      <a-select 
         style="flex: 3;" 
-        :model-value="(handleElement as any)?.points?.[1]" 
+        :value="(handleElement as any)?.points?.[1]" 
         @change="(value: any) => updateLine({ points: [(handleElement as any)?.points?.[0], value] })"
       >
-        <el-option value="" label="无" />
-        <el-option value="arrow" label="箭头" />
-        <el-option value="dot" label="圆点" />
-      </el-select>
+        <a-select-option value="">无</a-select-option>
+        <a-select-option value="arrow">箭头</a-select-option>
+        <a-select-option value="dot">圆点</a-select-option>
+      </a-select>
     </div>
 
-    <el-divider />
+    <a-divider />
     <ElementShadow />
   </div>
 </template>

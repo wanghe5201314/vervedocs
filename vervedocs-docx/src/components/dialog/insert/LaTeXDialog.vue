@@ -1,12 +1,10 @@
 <template>
-  <el-dialog v-model="visible" title="插入LaTeX公式" width="800px" :close-on-click-modal="false" class="app-dialog">
-    <!-- 输入和预览并排 -->
+  <a-modal v-model:open="visible" title="插入LaTeX公式" width="800px" :maskClosable="false" class="app-dialog">
     <div class="input-preview-row">
       <div class="input-section">
         <div class="section-label">LaTeX 公式</div>
-        <el-input
-          type="textarea"
-          v-model="latexForm.content"
+        <a-textarea
+          v-model:value="latexForm.content"
           :rows="4"
           placeholder="输入LaTeX公式，如：\frac{-b\pm\sqrt{b^2-4ac}}{2a}"
           @input="handlePreview"
@@ -22,109 +20,107 @@
       </div>
     </div>
 
-    <!-- 公式分类 Tab -->
     <div class="latex-examples">
-      <el-tabs v-model="activeTab" class="formula-tabs">
-        <!-- 结构类 -->
-        <el-tab-pane label="分数" name="fraction">
+      <a-tabs v-model:activeKey="activeTab" class="formula-tabs" type="card">
+        <a-tab-pane tab="分数" key="fraction">
           <div class="examples-grid">
             <div class="example-item" v-for="ex in fractionFormulas" :key="ex.latex" @click="fillExample(ex.latex)">
               <img v-if="ex.preview" :src="ex.preview" class="example-preview" />
               <span class="example-name">{{ ex.name }}</span>
             </div>
           </div>
-        </el-tab-pane>
-        <el-tab-pane label="上下标" name="script">
+        </a-tab-pane>
+        <a-tab-pane tab="上下标" key="script">
           <div class="examples-grid">
             <div class="example-item" v-for="ex in scriptFormulas" :key="ex.latex" @click="fillExample(ex.latex)">
               <img v-if="ex.preview" :src="ex.preview" class="example-preview" />
               <span class="example-name">{{ ex.name }}</span>
             </div>
           </div>
-        </el-tab-pane>
-        <el-tab-pane label="根式" name="radical">
+        </a-tab-pane>
+        <a-tab-pane tab="根式" key="radical">
           <div class="examples-grid">
             <div class="example-item" v-for="ex in radicalFormulas" :key="ex.latex" @click="fillExample(ex.latex)">
               <img v-if="ex.preview" :src="ex.preview" class="example-preview" />
               <span class="example-name">{{ ex.name }}</span>
             </div>
           </div>
-        </el-tab-pane>
-        <el-tab-pane label="积分" name="integral">
+        </a-tab-pane>
+        <a-tab-pane tab="积分" key="integral">
           <div class="examples-grid">
             <div class="example-item" v-for="ex in integralFormulas" :key="ex.latex" @click="fillExample(ex.latex)">
               <img v-if="ex.preview" :src="ex.preview" class="example-preview" />
               <span class="example-name">{{ ex.name }}</span>
             </div>
           </div>
-        </el-tab-pane>
-        <el-tab-pane label="大型运算符" name="largeop">
+        </a-tab-pane>
+        <a-tab-pane tab="大型运算符" key="largeop">
           <div class="examples-grid">
             <div class="example-item" v-for="ex in largeopFormulas" :key="ex.latex" @click="fillExample(ex.latex)">
               <img v-if="ex.preview" :src="ex.preview" class="example-preview" />
               <span class="example-name">{{ ex.name }}</span>
             </div>
           </div>
-        </el-tab-pane>
-        <el-tab-pane label="括号" name="bracket">
+        </a-tab-pane>
+        <a-tab-pane tab="括号" key="bracket">
           <div class="examples-grid">
             <div class="example-item" v-for="ex in bracketFormulas" :key="ex.latex" @click="fillExample(ex.latex)">
               <img v-if="ex.preview" :src="ex.preview" class="example-preview" />
               <span class="example-name">{{ ex.name }}</span>
             </div>
           </div>
-        </el-tab-pane>
-        <el-tab-pane label="函数" name="function">
+        </a-tab-pane>
+        <a-tab-pane tab="函数" key="function">
           <div class="examples-grid">
             <div class="example-item" v-for="ex in functionFormulas" :key="ex.latex" @click="fillExample(ex.latex)">
               <img v-if="ex.preview" :src="ex.preview" class="example-preview" />
               <span class="example-name">{{ ex.name }}</span>
             </div>
           </div>
-        </el-tab-pane>
-        <el-tab-pane label="极限对数" name="limit">
+        </a-tab-pane>
+        <a-tab-pane tab="极限对数" key="limit">
           <div class="examples-grid">
             <div class="example-item" v-for="ex in limitFormulas" :key="ex.latex" @click="fillExample(ex.latex)">
               <img v-if="ex.preview" :src="ex.preview" class="example-preview" />
               <span class="example-name">{{ ex.name }}</span>
             </div>
           </div>
-        </el-tab-pane>
-        <el-tab-pane label="矩阵" name="matrix">
+        </a-tab-pane>
+        <a-tab-pane tab="矩阵" key="matrix">
           <div class="examples-grid">
             <div class="example-item" v-for="ex in matrixFormulas" :key="ex.latex" @click="fillExample(ex.latex)">
               <img v-if="ex.preview" :src="ex.preview" class="example-preview" />
               <span class="example-name">{{ ex.name }}</span>
             </div>
           </div>
-        </el-tab-pane>
-        <el-tab-pane label="希腊字母" name="greek">
+        </a-tab-pane>
+        <a-tab-pane tab="希腊字母" key="greek">
           <div class="examples-grid greek-grid">
             <div class="example-item small" v-for="ex in greekFormulas" :key="ex.latex" @click="fillExample(ex.latex)">
               <img v-if="ex.preview" :src="ex.preview" class="example-preview small" />
               <span class="example-name">{{ ex.name }}</span>
             </div>
           </div>
-        </el-tab-pane>
-      </el-tabs>
+        </a-tab-pane>
+      </a-tabs>
     </div>
     <template #footer>
-      <el-button type="primary" @click="confirmLatex" :disabled="!latexForm.content.trim()">
-        <el-icon><Check /></el-icon>
+      <a-button type="primary" @click="confirmLatex" :disabled="!latexForm.content.trim()">
+        <CheckOutlined />
         确定
-      </el-button>
-      <el-button @click="visible = false">
-        <el-icon><Close /></el-icon>
+      </a-button>
+      <a-button @click="visible = false">
+        <CloseOutlined />
         取消
-      </el-button>
+      </a-button>
     </template>
-  </el-dialog>
+  </a-modal>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { LaTexParticle } from '@vervedoc/core'
-import { Check, Close } from '@element-plus/icons-vue'
+import { CheckOutlined, CloseOutlined } from '@ant-design/icons-vue'
 
 interface FormulaExample {
   name: string
@@ -152,7 +148,6 @@ const previewSvg = ref('')
 const previewError = ref('')
 const activeTab = ref('fraction')
 
-// 生成公式预览
 const generateFormulaPreview = (latex: string): string => {
   try {
     const svg = LaTexParticle.convertLaTextToSVG(latex)
@@ -162,7 +157,6 @@ const generateFormulaPreview = (latex: string): string => {
   }
 }
 
-// 分数公式
 const fractionFormulas = ref<FormulaExample[]>([
   { name: '简单分数', latex: '\\frac{a}{b}' },
   { name: '带系数分数', latex: '\\frac{x+1}{x-1}' },
@@ -174,7 +168,6 @@ const fractionFormulas = ref<FormulaExample[]>([
   { name: '斜分数', latex: 'a/b' }
 ])
 
-// 上下标公式
 const scriptFormulas = ref<FormulaExample[]>([
   { name: '上标', latex: 'x^2' },
   { name: '下标', latex: 'x_i' },
@@ -186,7 +179,6 @@ const scriptFormulas = ref<FormulaExample[]>([
   { name: '求和下标', latex: '\\sum_{i=1}^{n}' }
 ])
 
-// 根式公式
 const radicalFormulas = ref<FormulaExample[]>([
   { name: '平方根', latex: '\\sqrt{x}' },
   { name: '带系数根', latex: '\\sqrt{a^2+b^2}' },
@@ -198,7 +190,6 @@ const radicalFormulas = ref<FormulaExample[]>([
   { name: '根式分数', latex: '\\frac{1}{\\sqrt{2}}' }
 ])
 
-// 积分公式
 const integralFormulas = ref<FormulaExample[]>([
   { name: '不定积分', latex: '\\int f(x)dx' },
   { name: '定积分', latex: '\\int_{a}^{b}f(x)dx' },
@@ -210,7 +201,6 @@ const integralFormulas = ref<FormulaExample[]>([
   { name: '分部积分', latex: '\\int u dv=uv-\\int v du' }
 ])
 
-// 大型运算符
 const largeopFormulas = ref<FormulaExample[]>([
   { name: '求和', latex: '\\sum_{i=1}^{n}a_i' },
   { name: '连乘', latex: '\\prod_{i=1}^{n}a_i' },
@@ -222,7 +212,6 @@ const largeopFormulas = ref<FormulaExample[]>([
   { name: '余积', latex: '\\coprod_{i=1}^{n}' }
 ])
 
-// 括号公式
 const bracketFormulas = ref<FormulaExample[]>([
   { name: '小括号', latex: '(a+b)' },
   { name: '中括号', latex: '[a+b]' },
@@ -234,7 +223,6 @@ const bracketFormulas = ref<FormulaExample[]>([
   { name: '向上取整', latex: '\\lceil x \\rceil' }
 ])
 
-// 函数公式
 const functionFormulas = ref<FormulaExample[]>([
   { name: '正弦', latex: '\\sin\\theta' },
   { name: '余弦', latex: '\\cos\\theta' },
@@ -250,7 +238,6 @@ const functionFormulas = ref<FormulaExample[]>([
   { name: '模运算', latex: 'a \\mod b' }
 ])
 
-// 极限和对数
 const limitFormulas = ref<FormulaExample[]>([
   { name: '极限', latex: '\\lim_{x\\to\\infty}' },
   { name: '趋近于0', latex: '\\lim_{x\\to 0}' },
@@ -262,7 +249,6 @@ const limitFormulas = ref<FormulaExample[]>([
   { name: '导数极限', latex: '\\lim_{h\\to 0}\\frac{f(x+h)-f(x)}{h}' }
 ])
 
-// 矩阵公式
 const matrixFormulas = ref<FormulaExample[]>([
   { name: '2×2矩阵', latex: '\\begin{pmatrix}a&b\\\\c&d\\end{pmatrix}' },
   { name: '方括号矩阵', latex: '\\begin{bmatrix}a&b\\\\c&d\\end{bmatrix}' },
@@ -274,7 +260,6 @@ const matrixFormulas = ref<FormulaExample[]>([
   { name: '行向量', latex: '\\begin{pmatrix}x&y&z\\end{pmatrix}' }
 ])
 
-// 希腊字母
 const greekFormulas = ref<FormulaExample[]>([
   { name: 'α', latex: '\\alpha' },
   { name: 'β', latex: '\\beta' },
@@ -310,7 +295,6 @@ const greekFormulas = ref<FormulaExample[]>([
   { name: 'Ω', latex: '\\Omega' }
 ])
 
-// 初始化预览
 const initPreviews = () => {
   const allFormulas = [
     fractionFormulas, scriptFormulas, radicalFormulas, integralFormulas,
@@ -324,7 +308,6 @@ const initPreviews = () => {
   })
 }
 
-// 监听对话框打开
 watch(() => props.modelValue, (val) => {
   if (val) {
     latexForm.value.content = props.initialLatex || ''
@@ -341,7 +324,6 @@ onMounted(() => {
   initPreviews()
 })
 
-// 防抖预览
 let previewTimer: ReturnType<typeof setTimeout> | null = null
 const handlePreview = () => {
   if (previewTimer) clearTimeout(previewTimer)
@@ -434,19 +416,8 @@ const confirmLatex = () => {
 }
 
 .latex-examples {
-  border-top: 1px solid #ebeef5;
+  border-top: 1px solid #f0f0f0;
   padding-top: 12px;
-}
-
-.formula-tabs :deep(.el-tabs__header) {
-  margin-bottom: 8px;
-}
-
-.formula-tabs :deep(.el-tabs__item) {
-  font-size: 13px;
-  padding: 0 14px;
-  height: 32px;
-  line-height: 32px;
 }
 
 .examples-grid {
@@ -482,8 +453,8 @@ const confirmLatex = () => {
 }
 
 .example-item:hover {
-  background: #ecf5ff;
-  border-color: #409eff;
+  background: #e6f7ff;
+  border-color: #1890ff;
 }
 
 .example-preview {

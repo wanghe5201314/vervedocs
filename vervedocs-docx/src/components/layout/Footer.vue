@@ -2,74 +2,75 @@
   <div class="footer" editor-component="footer">
     <div class="footer-left">
 
-      <el-tooltip content="显示/隐藏目录" placement="top" effect="light">
+      <a-tooltip placement="top">
+        <template #title><span style="font-size: 11px">显示/隐藏目录</span></template>
         <div class="footer-item">
-          <el-checkbox v-model="catalogVisible" @change="handleToggleCatalog" size="small">显示导航窗格</el-checkbox>
+          <a-checkbox v-model:checked="catalogVisible" @change="handleToggleCatalog">显示导航窗格</a-checkbox>
         </div>
-      </el-tooltip>
-      <el-tooltip content="连页模式下，编辑器将不会显示分页" placement="top" effect="light">
+      </a-tooltip>
+      <a-tooltip placement="top">
+        <template #title><span style="font-size: 11px">连页模式下，编辑器将不会显示分页</span></template>
         <div class="footer-item">
-          <el-checkbox v-model="isContinuityMode" @change="handlePageModeChange" size="small">连页模式</el-checkbox>
+          <a-checkbox v-model:checked="isContinuityMode" @change="handlePageModeChange">连页模式</a-checkbox>
         </div>
-      </el-tooltip>
+      </a-tooltip>
       <div class="footer-divider"></div>
-  
+
       <!-- 纸张方向 -->
-      <el-tooltip content="切换纸张方向" placement="top" effect="light">
+      <a-tooltip placement="top">
+        <template #title><span style="font-size: 11px">切换纸张方向</span></template>
         <div class="footer-item" @click="handleTogglePaperDirection">
           <MdiIcon name="page-layout-header-footer" />
           {{ selectedPaperDirectionName }}
         </div>
-      </el-tooltip>
-  
+      </a-tooltip>
+
       <!-- 纸张大小 -->
       <div class="footer-item">
-        <el-dropdown trigger="click" @command="handlePaperSizeSelect">
-          <span class="el-dropdown-link">
+        <a-dropdown :trigger="['click']">
+          <span class="dropdown-link">
              <MdiIcon name="crop-portrait" />
             {{ selectedPaperName }}
           </span>
-          <template #dropdown>
-            <el-dropdown-menu class="paper-size-dropdown">
-              <el-dropdown-item
+          <template #overlay>
+            <a-menu class="paper-size-dropdown" @click="({ key }: any) => handlePaperSizeSelect(key as string)">
+              <a-menu-item
                 v-for="size in paperSizeList"
                 :key="size.size"
-                :command="size.size"
                 :disabled="selectedPaperSize === size.size"
               >
                 {{ size.name }}
-              </el-dropdown-item>
-            </el-dropdown-menu>
+              </a-menu-item>
+            </a-menu>
           </template>
-        </el-dropdown>
+        </a-dropdown>
       </div>
     </div>
-  
+
     <!-- 编辑模式（居中） -->
     <div class="editor-mode footer-item" :class="{ disabled: isModeLocked }" :title="currentModeTitle">
-      <el-dropdown trigger="click" @command="handleModeSelect" :disabled="isModeLocked">
-        <span class="el-dropdown-link">
+      <a-dropdown :trigger="['click']" :disabled="isModeLocked">
+        <span class="dropdown-link">
           <MdiIcon :name="currentModeIcon" />
           {{ currentMode }}
         </span>
-        <template #dropdown>
-          <el-dropdown-menu>
-            <el-dropdown-item
+        <template #overlay>
+          <a-menu @click="({ key }: any) => handleModeSelect(key as string)">
+            <a-menu-item
               v-for="mode in modeList"
               :key="mode.value"
-              :command="mode.value"
               :disabled="currentModeValue === mode.value"
             >
               <div class="mode-item-content" :title="mode.title">
                 <MdiIcon :name="mode.icon" class="mode-icon" />
                 <span>{{ mode.label }}</span>
               </div>
-            </el-dropdown-item>
-          </el-dropdown-menu>
+            </a-menu-item>
+          </a-menu>
         </template>
-      </el-dropdown>
+      </a-dropdown>
     </div>
-  
+
     <div class="footer-right">
       <div class="footer-info">
         <span>页面：<span class="page-no">{{ currentPage }}</span>/<span class="page-size">{{ totalPages }}</span></span>
@@ -79,23 +80,27 @@
       </div>
       <div class="footer-divider"></div>
       <div class="scale-controls">
-        <el-tooltip content="缩小 (Ctrl+-)" placement="top" effect="light">
-          <div class="page-scale-minus" @click="handleScaleMinus"><i></i></div>
-        </el-tooltip>
-        <el-tooltip content="显示比例 (点击可复原 Ctrl+0)" placement="top" effect="light">
+        <a-tooltip placement="top">
+          <template #title>缩小 (Ctrl+-)</template>
+          <div class="page-scale-minus" @click="handleScaleMinus"><i class="icon-zoom-out"></i></div>
+        </a-tooltip>
+        <a-tooltip placement="top">
+          <template #title>显示比例 (点击可复原 Ctrl+0)</template>
           <span class="page-scale-percentage" @click="handleScaleRecovery">
             {{ scalePercentage }}%
           </span>
-        </el-tooltip>
-        <el-tooltip content="放大 (Ctrl+=)" placement="top" effect="light">
-          <div class="page-scale-add" @click="handleScaleAdd"><i></i></div>
-        </el-tooltip>
+        </a-tooltip>
+        <a-tooltip placement="top">
+          <template #title>放大 (Ctrl+=)</template>
+          <div class="page-scale-add" @click="handleScaleAdd"><i class="icon-zoom-in"></i></div>
+        </a-tooltip>
       </div>
-      <el-tooltip content="全屏显示" placement="top" effect="light">
+      <a-tooltip placement="top">
+        <template #title>全屏显示</template>
         <div class="footer-item" @click="handleToggleFullscreen">
           <i class="icon-fullscreen-small"></i>
         </div>
-      </el-tooltip>
+      </a-tooltip>
     </div>
   </div>
 </template>
@@ -103,7 +108,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 
-import { ElMessageBox } from 'element-plus'
+import { Modal } from 'ant-design-vue'
 import type { DocumentMeta } from '@/types/document'
 import MdiIcon from '@/components/common/MdiIcon.vue'
 
@@ -232,31 +237,32 @@ const isModeLocked = computed(() => {
 const handleModeSelect = async (modeValue: string) => {
 
   if (isModeLocked.value) return
-  
+
   // 如果当前是修订模式，切换到其他模式时需要确认
   if (currentModeValue.value === 'revision' && modeValue !== 'revision') {
     const targetMode = modeList.find(m => m.value === modeValue)
     try {
-      await ElMessageBox.confirm(
-        `当前是修订模式，是否切换为${targetMode?.label}？`,
-        '提示',
-        {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning'
-        }
-      )
+      await new Promise<void>((resolve, reject) => {
+        Modal.confirm({
+          title: '提示',
+          content: `当前是修订模式，是否切换为${targetMode?.label}？`,
+          okText: '确定',
+          cancelText: '取消',
+          onOk: () => resolve(),
+          onCancel: () => reject()
+        })
+      })
     } catch {
       return
     }
   }
-  
+
   const newMode = modeList.find(m => m.value === modeValue)
   if (!newMode) return
-  
+
   currentModeValue.value = modeValue
   currentMode.value = newMode.label
-  
+
   if (modeValue === 'revision') {
     isTrackChanges.value = true
     emit('command', 'toggleTrackChanges', true)
@@ -315,6 +321,14 @@ defineExpose({
   position: relative;
 }
 
+.footer :deep(.ant-checkbox-wrapper) {
+  font-size: 12px;
+}
+
+.footer :deep(.ant-checkbox) {
+  transform: scale(0.85);
+}
+
 .footer-left, .footer-right {
   display: flex;
   align-items: center;
@@ -339,7 +353,7 @@ defineExpose({
   white-space: nowrap;
 }
 
-.footer-item.editor-mode .el-dropdown-link {
+.footer-item.editor-mode .dropdown-link {
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -355,7 +369,7 @@ defineExpose({
   pointer-events: none;
 }
 
-.el-dropdown-link {
+.dropdown-link {
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -399,7 +413,7 @@ defineExpose({
 }
 
 .footer-switch:checked {
-  background-color: #409eff;
+  background-color: #1890ff;
 }
 
 .footer-switch::before {
@@ -422,6 +436,12 @@ defineExpose({
   display: flex;
   align-items: center;
   gap: 8px;
+  font-size: 12px;
+}
+
+.page-scale-percentage {
+  font-size: 12px;
+  cursor: pointer;
 }
 
 .page-scale-minus, .page-scale-add {
@@ -437,6 +457,8 @@ defineExpose({
 .icon-margin-small::before { content: "↔️"; }
 .icon-paper-small::before { content: "📄"; }
 .icon-fullscreen-small::before { content: "⛶"; }
+.icon-zoom-out::before { content: "−"; }
+.icon-zoom-in::before { content: "+"; }
 
 .options {
   position: absolute;
@@ -466,7 +488,7 @@ defineExpose({
 }
 
 .options li.active {
-  color: #409eff;
+  color: #1890ff;
   font-weight: bold;
 }
 

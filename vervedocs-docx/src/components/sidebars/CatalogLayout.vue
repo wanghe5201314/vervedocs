@@ -2,43 +2,41 @@
   <div class="catalog" editor-component="catalog">
     <div class="catalog-header">
       <div class="catalog-title">
-        <el-icon v-if="activeTab === 'catalog'"><Fold /></el-icon>
-        <el-icon v-else><Files /></el-icon>
+        <MenuFoldOutlined v-if="activeTab === 'catalog'" />
+        <FolderOutlined v-else />
         <span>{{ activeTab === 'catalog' ? '目录' : '章节' }}</span>
       </div>
       <div class="catalog-close" @click="toggleVisibility" title="关闭">
-        <el-icon><Close /></el-icon>
+        <CloseOutlined />
       </div>
     </div>
 
     <div class="catalog-content">
       <div v-if="activeTab === 'catalog'" class="tab-pane">
-        <el-empty v-if="treeData.length === 0" description="暂无目录数据" :image-size="100" />
-        <el-tree
+        <a-empty v-if="treeData.length === 0" description="暂无目录数据" />
+        <a-tree
           ref="treeRef"
           v-else
-          :data="treeData"
-          :props="treeProps"
+          :tree-data="treeData"
+          :field-names="{ children: 'children', title: 'label', key: 'id' }"
           :default-expand-all="true"
-          :expand-on-click-node="false"
-          :expanded-keys="expandedKeys"
-          node-key="id"
+          v-model:expandedKeys="expandedKeys"
           class="catalog-tree"
-          @node-click="handleNodeClick"
+          @select="handleNodeSelect"
         >
-          <template #default="{ node, data }">
+          <template #title="{ dataRef }">
             <div class="tree-node-content">
-              <span :class="`tree-node-level-${data.level}`">{{ node.label }}</span>
+              <span :class="`tree-node-level-${dataRef.level}`">{{ dataRef.label }}</span>
             </div>
           </template>
-        </el-tree>
+        </a-tree>
       </div>
       <div v-else class="tab-pane">
         <div class="section-container">
           <div class="section-header">
-            <el-icon class="arrow-icon"><CaretBottom /></el-icon>
+            <CaretDownOutlined class="arrow-icon" />
             <span class="section-title">第 1 节：未命名</span>
-            <el-icon class="more-icon"><MoreFilled /></el-icon>
+            <MoreOutlined class="more-icon" />
           </div>
           <div class="page-list">
             <div v-for="(image, index) in pageThumbnails" :key="index" class="page-item" @click="handlePageClick(index)">
@@ -56,7 +54,7 @@
 
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
-import { Fold, Files, Close, CaretBottom, MoreFilled } from '@element-plus/icons-vue'
+import { MenuFoldOutlined, FolderOutlined, CloseOutlined, CaretDownOutlined, MoreOutlined } from '@ant-design/icons-vue'
 
 type TitleLevel = 'first' | 'second' | 'third' | 'fourth' | 'fifth' | 'sixth'
 
@@ -74,45 +72,33 @@ interface TreeNode {
   children?: TreeNode[]
 }
 
-// 事件触发
 const emit = defineEmits(['command'])
 
 const activeTab = ref('catalog')
 const pageThumbnails = ref<string[]>([])
 
-// 树形数据配置
-const treeProps = {
-  children: 'children',
-  label: 'label'
-}
+const treeData = ref<any[]>([])
 
-// 树形目录数据
-const treeData = ref<TreeNode[]>([])
-
-// el-tree 组件引用
 const treeRef = ref()
 
-// 展开的节点 keys
 const expandedKeys = ref<string[]>([])
 
-// 监听选项卡切换，切换到章节时刷新缩略图
 watch(activeTab, (newTab) => {
   if (newTab === 'section') {
-    // 请求刷新缩略图
     emit('command', 'refreshThumbnails')
   }
 })
-// 处理树节点点击
-const handleNodeClick = (data: TreeNode) => {
-  emit('command', 'locationCatalog', data.id)
+
+const handleNodeSelect = (selectedKeys: any[]) => {
+  if (selectedKeys.length > 0) {
+    emit('command', 'locationCatalog', String(selectedKeys[0]))
+  }
 }
 
-// 处理页面点击
 const handlePageClick = (index: number) => {
   emit('command', 'pageJump', index)
 }
 
-// 切换目录可见性
 const toggleVisibility = () => {
   emit('command', 'toggleCatalog')
 }
@@ -121,10 +107,8 @@ const switchToCatalogTab = () => {
   activeTab.value = 'catalog'
 }
 
-// 切换到章节选项卡
 const switchToSectionTab = () => {
   activeTab.value = 'section'
-  // 直接触发刷新，因为watch可能在已经是section时不触发
   emit('command', 'refreshThumbnails')
 }
 
@@ -147,7 +131,6 @@ const normalizeLevel = (level?: TitleLevel | number) => {
   return 1
 }
 
-// 目录数据本身已经是树结构，这里只做清洗与映射，避免再次重建层级导致错位
 const buildTree = (catalogItems: CatalogItem[]): TreeNode[] => {
   if (!Array.isArray(catalogItems) || catalogItems.length === 0) return []
   return catalogItems.flatMap(item => {
@@ -163,13 +146,10 @@ const buildTree = (catalogItems: CatalogItem[]): TreeNode[] => {
   })
 }
 
-// 更新目录数据
 defineExpose({
   updateCatalog: (newCatalog: CatalogItem[] | null | undefined) => {
     treeData.value = buildTree(newCatalog || [])
-    // 确保所有节点都展开
     nextTick(() => {
-      // 收集所有节点的 key
       const getAllNodeIds = (nodes: TreeNode[]): string[] => {
         let ids: string[] = []
         nodes.forEach(node => {
@@ -238,13 +218,13 @@ defineExpose({
 
 .catalog-close:hover {
   background-color: #f5f7fa;
-  color: #f56c6c;
+  color: #ff4d4f;
 }
 
 .catalog-content {
   flex: 1;
   overflow-y: auto;
-  padding: 12px;
+  padding: 8px 4px;
 }
 
 .catalog-list {
@@ -264,56 +244,64 @@ defineExpose({
 
 .catalog-item:hover {
   background-color: #f0f2f5;
-  color: #409eff;
+  color: #1890ff;
 }
 
-/* 树形目录样式 */
 .catalog-tree {
-  :deep(.el-tree-node__content) {
-    height: 32px;
-  }
+  background: transparent !important;
+}
+.catalog-tree :deep(.ant-tree-treenode) {
+  background: transparent !important;
+}
+.catalog-tree :deep(.ant-tree-node-content-wrapper) {
+  height: 32px;
+  background: transparent !important;
+}
+.catalog-tree :deep(.ant-tree-node-content-wrapper:hover) {
+  background: #f0f2f5 !important;
+}
+.catalog-tree :deep(.ant-tree-node-content-wrapper.ant-tree-node-selected) {
+  background: #e6f7ff !important;
+}
 
-  :deep(.el-tree-node__label) {
-    width: 100%;
-    display: inline-block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  background-color: #f2f4f7;
+.catalog-tree :deep(.ant-tree-title) {
+  width: 100%;
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tree-node-content {
   width: 100%;
   display: flex;
   align-items: center;
-  min-width: 0; /* 允许内容收缩 */
-  overflow-x: auto; /* 启用横向滚动 */
-  overflow-y: hidden; /* 隐藏纵向滚动 */
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
   padding-bottom: 4px;
 }
 
-/* 自定义横向滚动条样式 */
 .tree-node-content::-webkit-scrollbar {
-  height: 6px; /* 滚动条高度 */
+  height: 6px;
 }
 
 .tree-node-content::-webkit-scrollbar-track {
-  background: #f1f1f1; /* 滚动条轨道颜色 */
+  background: #f1f1f1;
 }
 
 .tree-node-content::-webkit-scrollbar-thumb {
-  background: #c1c1c1; /* 滚动条滑块颜色 */
+  background: #c1c1c1;
   border-radius: 3px;
 }
 
 .tree-node-content::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8; /* 滚动条滑块悬停颜色 */
+  background: #a8a8a8;
 }
 
 .tree-node-content span {
   white-space: nowrap;
-  flex-shrink: 0; /* 防止文本被压缩 */
+  flex-shrink: 0;
 }
 
 .tree-node-level-1 {
@@ -358,7 +346,6 @@ defineExpose({
   white-space: nowrap;
 }
 
-/* 章节缩略图样式 */
 .section-container {
   display: flex;
   flex-direction: column;
@@ -372,7 +359,7 @@ defineExpose({
 }
 
 .arrow-icon {
-  color: #409eff;
+  color: #1890ff;
   margin-right: 4px;
 }
 
@@ -380,7 +367,7 @@ defineExpose({
   flex: 1;
   font-size: 14px;
   font-weight: bold;
-  color: #409eff;
+  color: #1890ff;
 }
 
 .more-icon {
@@ -407,7 +394,7 @@ defineExpose({
 .page-thumbnail {
   width: 180px;
   background-color: #fff;
-  border: 1px solid #dcdfe6;
+  border: 1px solid #d9d9d9;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   padding: 4px;
   transition: transform 0.2s;
@@ -415,7 +402,7 @@ defineExpose({
 
 .page-item:hover .page-thumbnail {
   transform: translateY(-2px);
-  border-color: #409eff;
+  border-color: #1890ff;
 }
 
 .page-thumbnail img {
@@ -427,6 +414,6 @@ defineExpose({
 .page-number {
   margin-top: 8px;
   font-size: 12px;
-  color: #606266;
+  color: #595959;
 }
 </style>

@@ -188,7 +188,8 @@ export const BLOCK_ELEMENT_TYPE: ElementType[] = [
   ElementType.BLOCK,
   ElementType.PAGE_BREAK,
   ElementType.SEPARATOR,
-  ElementType.TABLE
+  ElementType.TABLE,
+  ElementType.SHAPE
 ]
 
 export const INLINE_NODE_NAME: string[] = ['HR', 'TABLE', 'UL', 'OL']

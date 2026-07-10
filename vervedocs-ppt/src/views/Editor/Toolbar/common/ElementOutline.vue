@@ -3,8 +3,8 @@
     <div class="row" v-if="!fixed">
       <div style="flex: 2;">启用边框：</div>
       <div class="switch-wrapper" style="flex: 3;">
-        <el-switch 
-          :model-value="hasOutline" 
+        <a-switch 
+          :checked="hasOutline" 
           @change="(checked: boolean) => toggleOutline(checked)" 
         />
       </div>
@@ -12,34 +12,33 @@
     <template v-if="hasOutline">
       <div class="row">
         <div style="flex: 2;">边框样式：</div>
-        <el-select 
+        <a-select 
           style="flex: 3;" 
-          :model-value="outline?.style" 
+          :value="outline?.style" 
           @change="(value: any) => updateOutline({ style: value as 'dashed' | 'solid' })"
         >
-          <el-option value="solid" label="实线边框" />
-          <el-option value="dashed" label="虚线边框" />
-        </el-select>
+          <a-select-option value="solid">实线边框</a-select-option>
+          <a-select-option value="dashed">虚线边框</a-select-option>
+        </a-select>
       </div>
       <div class="row">
         <div style="flex: 2;">边框颜色：</div>
-        <el-popover trigger="click" :width="'auto'">
-          <ColorPicker
-            :modelValue="outline?.color"
-            @update:modelValue="(value: any) => updateOutline({ color: value })"
-          />
-          <template #reference>
-            <ColorButton :color="outline?.color || ''" style="flex: 3;" />
+        <a-popover trigger="click" :width="'auto'">
+          <template #content>
+            <ColorPicker
+              :modelValue="outline?.color"
+              @update:modelValue="(value: any) => updateOutline({ color: value })"
+            />
           </template>
-        </el-popover>
+          <ColorButton :color="outline?.color || ''" style="flex: 3;" />
+        </a-popover>
       </div>
       <div class="row">
         <div style="flex: 2;">边框粗细：</div>
-        <el-input-number 
-          :model-value="outline?.width" 
+        <a-input-number 
+          :value="outline?.width" 
           @change="(value: number) => updateOutline({ width: value })" 
           style="flex: 3;"
-          controls-position="right"
         />
       </div>
     </template>

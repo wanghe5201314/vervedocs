@@ -1,4 +1,4 @@
-import { generateShapeSvg, svgToDataUrl } from './shape/ShapeGenerator'
+import { generateShapeSvg, svgToDataUrl, getShapeDefinition } from './shape/ShapeGenerator'
 
 type Command = any
 
@@ -20,13 +20,31 @@ export class GadgetComponent {
 
   public insertShape(type: string): void {
     if (!this._command) return
-    const shapeDef = generateShapeSvg(String(type || '').trim())
-    const dataUrl = svgToDataUrl(shapeDef.svg)
-    this._command.executeImage({
-      value: dataUrl,
-      width: 260,
-      height: Math.round(260 * shapeDef.height / shapeDef.width)
-    })
+    
+    const shapeDef = getShapeDefinition(type)
+    if (shapeDef) {
+      this._command.executeInsertElementList([{
+        type: 'shape',
+        value: '',
+        shapeType: type,
+        viewBox: shapeDef.viewBox,
+        path: shapeDef.path,
+        pathFormula: shapeDef.pathFormula,
+        width: shapeDef.viewBox[0],
+        height: shapeDef.viewBox[1],
+        fillColor: 'none',
+        strokeColor: '#000',
+        strokeWidth: 2
+      }])
+    } else {
+      const generatedDef = generateShapeSvg(String(type || '').trim())
+      const dataUrl = svgToDataUrl(generatedDef.svg)
+      this._command.executeImage({
+        value: dataUrl,
+        width: 260,
+        height: Math.round(260 * generatedDef.height / generatedDef.width)
+      })
+    }
   }
 
   public async qrcode(content: string): Promise<void> {

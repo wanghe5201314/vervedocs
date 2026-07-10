@@ -28,7 +28,7 @@ export interface IChartDataSource {
 }
 
 export interface IChartConfig {
-  // 标题配置
+  showTitle?: boolean
   title?: string
   titlePosition?: 'left' | 'center' | 'right'
   titleFontSize?: number

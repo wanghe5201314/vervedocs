@@ -1,34 +1,31 @@
 <template>
-  <el-dialog
-    :model-value="modelValue"
+  <a-modal
+    :open="modelValue"
     :title="title"
     width="420px"
-    append-to-body
-    :modal="modal"
-    :close-on-click-modal="closable"
-    :close-on-press-escape="closable"
-    :show-close="closable"
-    @close="handleClose"
+    :mask="modal"
+    :maskClosable="closable"
+    :keyboard="closable"
+    :closable="closable"
+    @cancel="handleClose"
   >
-    <el-form label-width="90px" @submit.prevent>
-      <el-form-item label="密码">
-        <el-input
-          v-model="password"
-          type="password"
-          show-password
+    <a-form :label-col="{ style: { width: '90px' } }" @submit.prevent>
+      <a-form-item label="密码">
+        <a-input-password
+          v-model:value="password"
           :placeholder="placeholder"
           @keyup.enter="handleConfirm"
         />
-      </el-form-item>
-    </el-form>
+      </a-form-item>
+    </a-form>
 
     <template #footer>
       <div class="dialog-footer">
-        <el-button v-if="closable" @click="handleClose">取消</el-button>
-        <el-button type="primary" :disabled="!password" @click="handleConfirm">确定</el-button>
+        <a-button v-if="closable" @click="handleClose">取消</a-button>
+        <a-button type="primary" :disabled="!password" @click="handleConfirm">确定</a-button>
       </div>
     </template>
-  </el-dialog>
+  </a-modal>
 </template>
 
 <script setup lang="ts">

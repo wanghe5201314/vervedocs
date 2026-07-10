@@ -1,16 +1,16 @@
 <template>
-  <el-dialog v-model="visible" title="页码" width="360px" :close-on-click-modal="false" class="app-dialog">
+  <a-modal v-model:open="visible" title="页码" width="360px" :maskClosable="false" class="app-dialog">
     <div class="page-number-body">
       <div class="pn-form-item">
         <span class="pn-label">样式:</span>
-        <el-select v-model="pageNumberForm.label" style="flex: 1;">
-          <el-option
+        <a-select v-model:value="pageNumberForm.label" style="flex: 1;">
+          <a-select-option
             v-for="style in PAGE_NUMBER_STYLES"
             :key="style.label"
             :value="style.label"
             :label="style.label"
           />
-        </el-select>
+        </a-select>
       </div>
       <div class="pn-form-item">
         <span class="pn-label">位置:</span>
@@ -61,22 +61,22 @@
       </div>
     </div>
     <template #footer>
-      <el-button type="primary" @click="confirmPageNumber">
-        <el-icon><Check /></el-icon>
+      <a-button type="primary" @click="confirmPageNumber">
+        <CheckOutlined />
         确定
-      </el-button>
-      <el-button @click="visible = false">
-        <el-icon><Close /></el-icon>
+      </a-button>
+      <a-button @click="visible = false">
+        <CloseOutlined />
         取消
-      </el-button>
+      </a-button>
     </template>
-  </el-dialog>
+  </a-modal>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { PAGE_NUMBER_STYLES } from '@vervedoc/core'
-import { Check, Close } from '@element-plus/icons-vue'
+import { CheckOutlined, CloseOutlined } from '@ant-design/icons-vue'
 
 interface PageNumberData {
   format: string
@@ -101,14 +101,14 @@ const visible = computed({
 
 const pageNumberForm = ref({
   label: PAGE_NUMBER_STYLES[0].label,
-  position: 'center' // left, center, right
+  position: 'center'
 })
 
 const confirmPageNumber = () => {
   const rowFlexMap: Record<string, string> = {
-    'left': 'LEFT',
-    'center': 'CENTER',
-    'right': 'RIGHT'
+    'left': 'left',
+    'center': 'center',
+    'right': 'right'
   }
   const selectedStyle = PAGE_NUMBER_STYLES.find(s => s.label === pageNumberForm.value.label)
   if (selectedStyle) {
@@ -161,7 +161,7 @@ const confirmPageNumber = () => {
 }
 
 .pn-position-item.active span {
-  color: #409eff;
+  color: #1890ff;
 }
 
 .pn-preview-page {
@@ -182,8 +182,8 @@ const confirmPageNumber = () => {
 }
 
 .pn-position-item.active .pn-preview-page {
-  border-color: #409eff;
-  background: #ecf5ff;
+  border-color: #1890ff;
+  background: #e6f7ff;
 }
 
 .pn-preview-line {

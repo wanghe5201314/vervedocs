@@ -1,86 +1,96 @@
 <template>
   <div class="canvas-tool">
     <div class="left-handler">
-      <el-tooltip :content="translate('canvasTool.undo')" :show-after="500" :hide-after="0">
+      <a-tooltip :title="translate('canvasTool.undo')" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
         <IconBack class="handler-item" :class="{ 'disable': !canUndo }" @click="undo()" />
-      </el-tooltip>
-      <el-tooltip :content="translate('canvasTool.redo')" :show-after="500" :hide-after="0">
+      </a-tooltip>
+      <a-tooltip :title="translate('canvasTool.redo')" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
         <IconNext class="handler-item" :class="{ 'disable': !canRedo }" @click="redo()" />
-      </el-tooltip>
+      </a-tooltip>
     </div>
 
     <div class="add-element-handler">
-      <el-tooltip :content="translate('canvasTool.insertText')" :show-after="500" :hide-after="0">
+      <a-tooltip :title="translate('canvasTool.insertText')" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
         <IconFontSize class="handler-item" :class="{ 'active': creatingElement?.type === 'text' }" @click="drawText()" />
-      </el-tooltip>
+      </a-tooltip>
       <FileInput @change="(files: any) => insertImageElement(files)">
-        <el-tooltip :content="translate('canvasTool.insertImage')" :show-after="500" :hide-after="0">
+        <a-tooltip :title="translate('canvasTool.insertImage')" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
           <IconPicture class="handler-item" />
-        </el-tooltip>
+        </a-tooltip>
       </FileInput>
-      <el-popover trigger="click" :width="'auto'" placement="bottom-end" popper-class="canvas-tool-popper">
-        <ShapePool @select="shape => drawShape(shape)" />
-        <template #reference>
+      <a-popover trigger="click" :width="'auto'" placement="bottom-end" overlay-class-name="canvas-tool-popper">
+        <template #content>
+          <ShapePool @select="shape => drawShape(shape)" />
+        </template>
+        <template #default>
           <button class="handler-btn" type="button" :title="translate('canvasTool.insertShape')">
             <IconGraphicDesign class="handler-item" :class="{ 'active': creatingElement?.type === 'shape' }" />
           </button>
         </template>
-      </el-popover>
-      <el-popover trigger="click" :width="'auto'" placement="bottom-end" popper-class="canvas-tool-popper">
-        <LinePool @select="line => drawLine(line)" />
-        <template #reference>
+      </a-popover>
+      <a-popover trigger="click" :width="'auto'" placement="bottom-end" overlay-class-name="canvas-tool-popper">
+        <template #content>
+          <LinePool @select="line => drawLine(line)" />
+        </template>
+        <template #default>
           <button class="handler-btn" type="button" :title="translate('canvasTool.insertLine')">
             <IconConnection class="handler-item" :class="{ 'active': creatingElement?.type === 'line' }" />
           </button>
         </template>
-      </el-popover>
-      <el-popover trigger="click" :width="'auto'" placement="bottom-end" popper-class="canvas-tool-popper">
-        <ChartPool @select="chart => { createChartElement(chart) }" />
-        <template #reference>
+      </a-popover>
+      <a-popover trigger="click" :width="'auto'" placement="bottom-end" overlay-class-name="canvas-tool-popper">
+        <template #content>
+          <ChartPool @select="chart => { createChartElement(chart) }" />
+        </template>
+        <template #default>
           <button class="handler-btn" type="button" :title="translate('canvasTool.insertChart')">
             <IconChartProportion class="handler-item" />
           </button>
         </template>
-      </el-popover>
-      <el-popover trigger="click" :width="'auto'" placement="bottom-end" popper-class="canvas-tool-popper">
-        <TableGenerator
-          :t="translate"
-          @insert="({ row, col }) => { createTableElement(row, col) }"
-        />
-        <template #reference>
+      </a-popover>
+      <a-popover trigger="click" :width="'auto'" placement="bottom-end" overlay-class-name="canvas-tool-popper">
+        <template #content>
+          <TableGenerator
+            :t="translate"
+            @insert="({ row, col }) => { createTableElement(row, col) }"
+          />
+        </template>
+        <template #default>
           <button class="handler-btn" type="button" :title="translate('canvasTool.insertTable')">
             <IconInsertTable class="handler-item" />
           </button>
         </template>
-      </el-popover>
-      <el-tooltip :content="translate('canvasTool.insertFormula')" :show-after="500" :hide-after="0">
+      </a-popover>
+      <a-tooltip :title="translate('canvasTool.insertFormula')" :mouseEnterDelay="0.5" :mouseLeaveDelay="0">
         <IconFormula class="handler-item" @click="latexEditorVisible = true" />
-      </el-tooltip>
-      <el-popover trigger="click" :width="'auto'" placement="bottom-end" popper-class="canvas-tool-popper">
-        <MediaInput 
-          @insertVideo="src => { createVideoElement(src) }"
-          @insertAudio="src => { createAudioElement(src) }"
-        />
-        <template #reference>
+      </a-tooltip>
+      <a-popover trigger="click" :width="'auto'" placement="bottom-end" overlay-class-name="canvas-tool-popper">
+        <template #content>
+          <MediaInput 
+            @insertVideo="src => { createVideoElement(src) }"
+            @insertAudio="src => { createAudioElement(src) }"
+          />
+        </template>
+        <template #default>
           <button class="handler-btn" type="button" :title="translate('canvasTool.insertMedia')">
             <IconVideoTwo class="handler-item" />
           </button>
         </template>
-      </el-popover>
+      </a-popover>
     </div>
 
-    <el-dialog
-      v-model="latexEditorVisible"
+    <a-modal
+      v-model:open="latexEditorVisible"
       :width="880"
       :title="translate('canvasTool.insertFormulaTitle')"
-      destroy-on-close
-      :close-on-click-modal="false"
+      destroyOnClose
+      :maskClosable="false"
     >
       <LaTeXEditor 
         @close="latexEditorVisible = false"
         @update="data => { createLatexElement(data); latexEditorVisible = false }"
       />
-    </el-dialog>
+    </a-modal>
   </div>
 </template>
 
@@ -281,13 +291,13 @@ export default defineComponent({
 .canvas-tool-popper {
   padding: 8px;
 
-  &.el-popover {
+  &.ant-popover {
     border: 1px solid #dfe1e5;
     box-shadow: 0 4px 14px rgba(60, 64, 67, 0.16);
     border-radius: 8px;
   }
 
-  .el-popover__content {
+  .ant-popover-inner-content {
     max-width: 600px;
   }
 }

@@ -15,21 +15,21 @@
     </div>
 
     <div class="tools" :style="position">
-      <el-tooltip :hide-after="0" :show-after="300" content="画笔">
+      <a-tooltip :mouseEnterDelay="0.3" title="画笔">
         <div class="btn" :class="{ 'active': writingBoardModel === 'pen' }" @click="changeModel('pen')"><IconWrite class="icon" /></div>
-      </el-tooltip>
-      <el-tooltip :hide-after="0" :show-after="300" content="荧光笔">
+      </a-tooltip>
+      <a-tooltip :mouseEnterDelay="0.3" title="荧光笔">
         <div class="btn" :class="{ 'active': writingBoardModel === 'mark' }" @click="changeModel('mark')"><IconHighLight class="icon" /></div>
-      </el-tooltip>
-      <el-tooltip :hide-after="0" :show-after="300" content="橡皮擦">
+      </a-tooltip>
+      <a-tooltip :mouseEnterDelay="0.3" title="橡皮擦">
         <div class="btn" :class="{ 'active': writingBoardModel === 'eraser' }" @click="changeModel('eraser')"><IconErase class="icon" /></div>
-      </el-tooltip>
-      <el-tooltip :hide-after="0" :show-after="300" content="清除墨迹">
+      </a-tooltip>
+      <a-tooltip :mouseEnterDelay="0.3" title="清除墨迹">
         <div class="btn" @click="clearCanvas()"><IconClear class="icon" /></div>
-      </el-tooltip>
-      <el-tooltip :hide-after="0" :show-after="300" content="黑板">
+      </a-tooltip>
+      <a-tooltip :mouseEnterDelay="0.3" title="黑板">
         <div class="btn" :class="{ 'active': blackboard }" @click="blackboard = !blackboard"><IconFill class="icon" /></div>
-      </el-tooltip>
+      </a-tooltip>
       <div class="colors">
         <div 
           class="color" 
@@ -40,9 +40,9 @@
           @click="changeColor(color)"
         ></div>
       </div>
-      <el-tooltip :hide-after="0" :show-after="300" content="关闭画笔">
+      <a-tooltip :mouseEnterDelay="0.3" title="关闭画笔">
         <div class="btn" @click="closeWritingBoard()"><IconClose class="icon" /></div>
-      </el-tooltip>
+      </a-tooltip>
     </div>
   </div>
 </template>

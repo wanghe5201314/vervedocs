@@ -4,7 +4,7 @@
     <a class="link" v-else>幻灯片页面：{{link.target}}</a>
     <div class="btns">
       <div class="btn" @click="openLinkDialog()">更换</div>
-      <el-divider direction="vertical" />
+      <a-divider type="vertical" />
       <div class="btn" @click="removeLink(elementInfo)">移除</div>
     </div>
   </div>

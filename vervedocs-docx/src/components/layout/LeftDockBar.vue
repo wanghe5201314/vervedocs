@@ -1,7 +1,8 @@
 <template>
   <div class="left-dock" editor-component="left-dock">
     <div class="dock-group">
-      <el-tooltip content="搜索" placement="right" :show-after="300" effect="light">
+      <a-tooltip placement="right" :mouseEnterDelay="0.3">
+        <template #title>搜索</template>
         <button
           class="dock-btn"
           type="button"
@@ -9,11 +10,12 @@
           aria-label="搜索"
           @click="emit('select', 'search')"
         >
-          <el-icon :size="18"><Search /></el-icon>
+          <MdiIcon name="magnify" :size="18" />
         </button>
-      </el-tooltip>
+      </a-tooltip>
 
-      <el-tooltip content="目录" placement="right" :show-after="300" effect="light">
+      <a-tooltip placement="right" :mouseEnterDelay="0.3">
+        <template #title>目录</template>
         <button
           class="dock-btn"
           type="button"
@@ -21,11 +23,12 @@
           aria-label="目录"
           @click="emit('select', 'catalog')"
         >
-          <el-icon :size="18"><Fold /></el-icon>
+          <MdiIcon name="table-of-contents" :size="18" />
         </button>
-      </el-tooltip>
+      </a-tooltip>
 
-      <el-tooltip content="章节" placement="right" :show-after="300" effect="light">
+      <a-tooltip placement="right" :mouseEnterDelay="0.3">
+        <template #title>章节</template>
         <button
           class="dock-btn"
           type="button"
@@ -33,11 +36,12 @@
           aria-label="章节"
           @click="emit('select', 'section')"
         >
-          <el-icon :size="18"><Files /></el-icon>
+          <MdiIcon name="format-section" :size="18" />
         </button>
-      </el-tooltip>
+      </a-tooltip>
 
-      <el-tooltip content="AI 助手" placement="right" :show-after="300" effect="light">
+      <a-tooltip placement="right" :mouseEnterDelay="0.3">
+        <template #title>AI 助手</template>
         <button
           class="dock-btn"
           type="button"
@@ -45,11 +49,12 @@
           aria-label="AI 助手"
           @click="emit('select', 'ai')"
         >
-          <el-icon :size="18"><MagicStick /></el-icon>
+          <MdiIcon name="robot-outline" :size="18" />
         </button>
-      </el-tooltip>
+      </a-tooltip>
 
-      <el-tooltip content="修订" placement="right" :show-after="300" effect="light">
+      <a-tooltip placement="right" :mouseEnterDelay="0.3">
+        <template #title>修订</template>
         <button
           class="dock-btn"
           type="button"
@@ -59,14 +64,13 @@
         >
           <MdiIcon name="pencil-plus" :size="18" />
         </button>
-      </el-tooltip>
+      </a-tooltip>
 
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Fold, Files, Search, MagicStick } from '@element-plus/icons-vue'
 import MdiIcon from '@/components/common/MdiIcon.vue'
 
 type DockKey = 'search' | 'catalog' | 'section' | 'ai' | 'revision' | ''
@@ -109,7 +113,7 @@ const emit = defineEmits<{
   height: 36px;
   border-radius: 2px;
   border: 1px solid transparent;
-  background-color: #f2f4f7;
+  background-color: transparent;
   color: #606266;
   display: flex;
   align-items: center;
@@ -121,10 +125,10 @@ const emit = defineEmits<{
 }
 
 .dock-btn:hover {
-  color: #409eff;
+  color: #1890ff;
 }
 
 .dock-btn.active {
-  color: #409eff;
+  color: #1890ff;
 }
 </style>

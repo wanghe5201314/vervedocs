@@ -25,7 +25,7 @@
     </div>
 
     <div class="revision-list">
-      <el-empty v-if="revisions.length === 0" description="暂无修订记录" :image-size="80" />
+      <a-empty v-if="revisions.length === 0" description="暂无修订记录" />
       <div
         v-for="rev in revisions"
         :key="rev.id"
@@ -83,7 +83,7 @@ const emit = defineEmits<{
   (e: 'command', cmd: string, ...args: any[]): void
 }>()
 
-const AUTHOR_COLORS = ['#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#909399', '#00BCD4', '#9C27B0']
+const AUTHOR_COLORS = ['#1890FF', '#52C41A', '#FAAD14', '#FF4D4F', '#8C8C8C', '#13C2C2', '#722ED1']
 
 const getAuthorColor = (name: string): string => {
   let hash = 0
@@ -141,7 +141,7 @@ const formatTime = (dateStr: string): string => {
 
 .revision-title .material-icons {
   font-size: 18px;
-  color: #409eff;
+  color: #1890ff;
 }
 
 .revision-header-right {
@@ -152,7 +152,7 @@ const formatTime = (dateStr: string): string => {
 
 .revision-close {
   cursor: pointer;
-  color: #909399;
+  color: #8c8c8c;
   display: flex;
   align-items: center;
   padding: 4px;
@@ -161,7 +161,7 @@ const formatTime = (dateStr: string): string => {
 }
 
 .revision-close:hover {
-  color: #606266;
+  color: #595959;
   background: #e4e7ed;
 }
 
@@ -180,11 +180,11 @@ const formatTime = (dateStr: string): string => {
   align-items: center;
   gap: 4px;
   padding: 4px 10px;
-  border: 1px solid #dcdfe6;
+  border: 1px solid #d9d9d9;
   background: #fff;
   border-radius: 0;
   cursor: pointer;
-  color: #606266;
+  color: #595959;
   font-size: 12px;
   transition: all 0.15s;
   white-space: nowrap;
@@ -194,27 +194,27 @@ const formatTime = (dateStr: string): string => {
 .rev-btn:hover {
   background: #f0f2f5;
   color: #303133;
-  border-color: #c0c4cc;
+  border-color: #bfbfbf;
 }
 
 .rev-btn.accept {
-  color: #67c23a;
-  border-color: #b3e19d;
+  color: #52c41a;
+  border-color: #b7eb8f;
 }
 
 .rev-btn.accept:hover {
-  background: #f0f9eb;
-  border-color: #67c23a;
+  background: #f6ffed;
+  border-color: #52c41a;
 }
 
 .rev-btn.reject {
-  color: #f56c6c;
-  border-color: #fab6b6;
+  color: #ff4d4f;
+  border-color: #ffa39e;
 }
 
 .rev-btn.reject:hover {
-  background: #fef0f0;
-  border-color: #f56c6c;
+  background: #fff2f0;
+  border-color: #ff4d4f;
 }
 
 .rev-btn .material-icons {
@@ -235,7 +235,7 @@ const formatTime = (dateStr: string): string => {
   transition: background 0.15s;
   position: relative;
   background: #fff;
-  border-bottom: 1px solid #ebeef5;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .revision-item:hover {
@@ -243,14 +243,14 @@ const formatTime = (dateStr: string): string => {
 }
 
 .revision-item.active {
-  background: #ecf5ff;
+  background: #e6f7ff;
 }
 
 .rev-item-left-bar {
   width: 3px;
   flex-shrink: 0;
 
-  background: #f56c6c;
+  background: #ff4d4f;
 }
 
 .rev-item-body {
@@ -284,7 +284,7 @@ const formatTime = (dateStr: string): string => {
 
 .rev-time {
   font-size: 11px;
-  color: #c0c4cc;
+  color: #bfbfbf;
   white-space: nowrap;
 }
 
@@ -304,13 +304,13 @@ const formatTime = (dateStr: string): string => {
   flex-shrink: 0;
   line-height: 18px;
 
-  color: #f56c6c;
-  background: #fef0f0;
+  color: #ff4d4f;
+  background: #fff2f0;
 }
 
 .rev-content-text {
   font-size: 13px;
-  color: #606266;
+  color: #595959;
   line-height: 1.4;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -338,7 +338,7 @@ const formatTime = (dateStr: string): string => {
   justify-content: center;
   width: 22px;
   height: 22px;
-  border: 1px solid #dcdfe6;
+  border: 1px solid #d9d9d9;
   background: #fff;
   border-radius: 0;
   cursor: pointer;
@@ -350,26 +350,26 @@ const formatTime = (dateStr: string): string => {
 }
 
 .rev-action-btn.accept {
-  color: #67c23a;
+  color: #52c41a;
 }
 
 .rev-action-btn.accept:hover {
-  border-color: #67c23a;
-  background: #f0f9eb;
+  border-color: #52c41a;
+  background: #f6ffed;
 }
 
 .rev-action-btn.reject {
-  color: #f56c6c;
+  color: #ff4d4f;
 }
 
 .rev-action-btn.reject:hover {
-  border-color: #f56c6c;
-  background: #fef0f0;
+  border-color: #ff4d4f;
+  background: #fff2f0;
 }
 
 
 .rev-count {
   font-size: 12px;
-  color: #909399;
+  color: #8c8c8c;
 }
 </style>

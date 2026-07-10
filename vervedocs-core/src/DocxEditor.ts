@@ -13,12 +13,13 @@ import { EventBus } from '@vervedoc/docx-editor-state'
 import { Override } from '@vervedoc/docx-editor-view'
 import { HistoryComponent } from '@vervedoc/docx-editor-history'
 import { KeymapComponent, Shortcut } from '@vervedoc/docx-editor-keymap'
-import { BlockParticle, ControlComponent, GadgetComponent } from '@vervedoc/docx-editor-commands'
+import { BlockParticle, ControlComponent, GadgetComponent, LaTexParticle, DateParticle } from '@vervedoc/docx-editor-commands'
 import { CommentComponent, RevisionComponent } from '@vervedoc/docx-editor-comment'
 import { WorkerComponent } from './worker/WorkerComponent'
 import { ExportComponent } from './export/ExportComponent'
 import { TableContextMenuComponent } from './table-contextmenu/TableContextMenuComponent'
 import { printImageBase64 } from './utils/print'
+import { I18n } from './i18n/I18n'
 
 export default class DocxEditor {
   public command: Command
@@ -56,7 +57,8 @@ export default class DocxEditor {
     pageComponentData.forEach(elementList => {
       formatElementList(elementList, {
         editorOptions,
-        isForceCompensation: true
+        isForceCompensation: true,
+        laTexToSVG: LaTexParticle.convertLaTextToSVG
       })
     })
     this.listener = new Listener()
@@ -76,7 +78,35 @@ export default class DocxEditor {
     )
     // Replace the view-layer stub with the real block particle renderer
     // so audio/video/chart block elements can mount their DOM overlays.
+    const i18n = new I18n(editorOptions.locale)
+    ;(draw as any).i18n = i18n
+
     draw.setBlockParticle(new BlockParticle(draw as any) as any)
+    draw.setLaTexParticle(new LaTexParticle(draw as any) as any)
+    draw.setDateParticle(new DateParticle(draw as any) as any)
+
+    const laTexToSVG = LaTexParticle.convertLaTextToSVG
+    const patchFormatElementListArgs = (elements: IElement[]) => {
+      for (const el of elements) {
+        if (el.type === 'latex' && el.value && !el.laTexSVG) {
+          const result = laTexToSVG(el.value)
+          el.laTexSVG = result.svg
+          el.width = el.width || result.width
+          el.height = el.height || result.height
+          el.id = el.id || `latex_${Date.now()}_${Math.random().toString(36).slice(2)}`
+        }
+      }
+    }
+    const origInsertElementList = draw.insertElementList.bind(draw)
+    ;(draw as any).insertElementList = (elements: IElement[], options?: any) => {
+      patchFormatElementListArgs(elements)
+      return origInsertElementList(elements, options)
+    }
+    const origAppendElementList = draw.appendElementList.bind(draw)
+    ;(draw as any).appendElementList = (elements: IElement[], options?: any) => {
+      patchFormatElementListArgs(elements)
+      return origAppendElementList(elements, options)
+    }
     new HistoryComponent().install(draw)
     new ControlComponent().install(draw)
     const workerComponent = new WorkerComponent().install(draw)
@@ -87,7 +117,41 @@ export default class DocxEditor {
     })
     this.command = new Command(commandAdapt)
 
+    const bookmarkAdapter = (commandAdapt as any)._bookmark
+    if (bookmarkAdapter) {
+      bookmarkAdapter.addBookmark = (e: { name: string }) => {
+        if (bookmarkAdapter.isDisabled?.() || bookmarkAdapter.draw?.getControl?.().getActiveControl?.()) return
+        const n = e?.name?.trim()
+        if (!n || !/^[\w\u4e00-\u9fff]+$/.test(n) || bookmarkAdapter.getBookmarks().some((b: any) => b.name === n)) return
+        const { startIndex: u, endIndex: l } = bookmarkAdapter.range.getRange()
+        if (u < 0 || l < 0) return
+        const a = bookmarkAdapter.draw.getElementList()
+        const c = '\u200B'
+        const D = u === l, h = u + 1, d = l + 1
+
+        if (!D) {
+          const endEl: any = { value: c, extension: { bookmarkMarker: { name: n, position: 'end' } } }
+          const startEl: any = { value: c, extension: { bookmarkMarker: { name: n, position: 'start' } } }
+          bookmarkAdapter.draw.spliceElementList(a, Math.min(d, a.length), 0, [endEl])
+          bookmarkAdapter.draw.spliceElementList(a, Math.min(h, a.length), 0, [startEl])
+          const F = Math.min(d + 1, a.length - 1)
+          bookmarkAdapter.range.setRange(F, F)
+          bookmarkAdapter.draw.render({ curIndex: F })
+          return
+        }
+        const startEl: any = { value: c, extension: { bookmarkMarker: { name: n, position: 'start' } } }
+        const f = Math.min(h, a.length)
+        bookmarkAdapter.draw.spliceElementList(a, f, 0, [startEl])
+        const m = Math.min(f, a.length - 1)
+        bookmarkAdapter.range.setRange(m, m)
+        bookmarkAdapter.draw.render({ curIndex: m })
+      }
+    }
+
     ;(draw as any).__structureAdapter = commandAdapt._structure
+
+    const _bookmarkAdapter = (commandAdapt as any)._bookmark
+    ;(this.command as any).getBookmarks = () => _bookmarkAdapter?.getBookmarks?.() || []
 
     new GadgetComponent().install(draw, this.command)
     new ExportComponent().install(draw, this.command)

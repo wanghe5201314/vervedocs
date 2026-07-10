@@ -1,56 +1,54 @@
 <template>
-  <el-dialog v-model="visible" title="水印设置" width="700px" :close-on-click-modal="false" class="app-dialog">
+  <a-modal v-model:open="visible" title="水印设置" width="700px" :maskClosable="false" class="app-dialog">
     <div class="watermark-body">
       <div class="wm-left">
-        <el-form :model="watermarkForm" label-width="80px">
-          <el-form-item label="内 容(T)">
+        <a-form :model="watermarkForm" :label-col="{ style: { width: '80px' } }">
+          <a-form-item label="内 容(T)">
             <div style="display: flex; gap: 8px;">
-              <el-input v-model="watermarkForm.data" style="flex: 1;" />
-              <el-select v-model="watermarkForm.data" style="width: 120px;">
-                <el-option value="保密" label="保密" />
-                <el-option value="严禁复制" label="严禁复制" />
-                <el-option value="原件" label="原件" />
-                <el-option value="样本" label="样本" />
-                <el-option value="绝密" label="绝密" />
-                <el-option value="紧急" label="紧急" />
-              </el-select>
+              <a-input v-model:value="watermarkForm.data" style="flex: 1;" />
+              <a-select v-model:value="watermarkForm.data" style="width: 120px;">
+                <a-select-option value="保密" label="保密" />
+                <a-select-option value="严禁复制" label="严禁复制" />
+                <a-select-option value="原件" label="原件" />
+                <a-select-option value="样本" label="样本" />
+                <a-select-option value="绝密" label="绝密" />
+                <a-select-option value="紧急" label="紧急" />
+              </a-select>
             </div>
-          </el-form-item>
-          <el-form-item label="字 体(F)">
-            <el-select v-model="watermarkForm.font" style="width: 100%;">
-              <el-option value="Microsoft YaHei" label="微软雅黑" />
-              <el-option value="SimSun" label="宋体" />
-              <el-option value="Arial" label="Arial" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="字 号(S)">
-            <el-select v-model="watermarkForm.size" style="width: 100%;">
-              <el-option :value="120" label="自动" />
-              <el-option :value="60" label="60" />
-              <el-option :value="80" label="80" />
-              <el-option :value="100" label="100" />
-              <el-option :value="150" label="150" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="颜 色(C)">
-            <el-color-picker v-model="watermarkForm.color" style="width: 100%;" show-alpha />
-          </el-form-item>
-          <el-form-item label="透明度(O)">
-            <el-slider v-model="watermarkForm.opacity" :min="0" :max="1" :step="0.1" :format-tooltip="(val: number) => Math.round(val * 100) + '%'" />
-          </el-form-item>
-          <el-form-item label="重复">
-            <el-select v-model="watermarkForm.repeat" style="width: 100%;">
-              <el-option :value="true" label="重复" />
-              <el-option :value="false" label="不重复" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="水平间隔">
-            <el-input-number v-model="watermarkForm.gapX" :min="0" :max="1000" style="width: 100%;" />
-          </el-form-item>
-          <el-form-item label="垂直间隔">
-            <el-input-number v-model="watermarkForm.gapY" :min="0" :max="1000" style="width: 100%;" />
-          </el-form-item>
-        </el-form>
+          </a-form-item>
+          <a-form-item label="字 体(F)">
+            <a-select v-model:value="watermarkForm.font" style="width: 100%;">
+              <a-select-option value="Microsoft YaHei" label="微软雅黑" />
+              <a-select-option value="SimSun" label="宋体" />
+              <a-select-option value="Arial" label="Arial" />
+            </a-select>
+          </a-form-item>
+          <a-form-item label="字 号(S)">
+            <a-select v-model:value="watermarkForm.size" style="width: 100%;">
+              <a-select-option :value="120" label="自动" />
+              <a-select-option :value="60" label="60" />
+              <a-select-option :value="80" label="80" />
+              <a-select-option :value="100" label="100" />
+              <a-select-option :value="150" label="150" />
+            </a-select>
+          </a-form-item>
+          <a-form-item label="颜 色(C)">
+            <input type="color" :value="watermarkForm.color" @change="(e: Event) => watermarkForm.color = (e.target as HTMLInputElement).value" style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
+          </a-form-item>
+          <a-form-item label="透明度(O)">
+            <a-slider v-model:value="watermarkForm.opacity" :min="0" :max="1" :step="0.1" />
+          </a-form-item>
+          <a-form-item label="重复">
+            <a-switch v-model:checked="watermarkForm.repeat" />
+            <span style="margin-left: 8px; color: #999; font-size: 12px;">{{ watermarkForm.repeat ? '重复' : '不重复' }}</span>
+          </a-form-item>
+          <a-form-item label="水平间隔">
+            <a-input-number v-model:value="watermarkForm.gapX" :min="0" :max="1000" style="width: 100%;" />
+          </a-form-item>
+          <a-form-item label="垂直间隔">
+            <a-input-number v-model:value="watermarkForm.gapY" :min="0" :max="1000" style="width: 100%;" />
+          </a-form-item>
+        </a-form>
       </div>
       <div class="wm-right">
         <div class="wm-preview-box">
@@ -67,21 +65,21 @@
       </div>
     </div>
     <template #footer>
-      <el-button type="primary" @click="confirmWatermark">
-        <el-icon><Check /></el-icon>
+      <a-button type="primary" @click="confirmWatermark">
+        <CheckOutlined />
         确定
-      </el-button>
-      <el-button @click="visible = false">
-        <el-icon><Close /></el-icon>
+      </a-button>
+      <a-button @click="visible = false">
+        <CloseOutlined />
         取消
-      </el-button>
+      </a-button>
     </template>
-  </el-dialog>
+  </a-modal>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Check, Close } from '@element-plus/icons-vue'
+import { CheckOutlined, CloseOutlined } from '@ant-design/icons-vue'
 
 interface WatermarkData {
   data: string

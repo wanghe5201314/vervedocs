@@ -181,6 +181,16 @@ export interface IRevisionElement {
   revisionDate?: string
 }
 
+export interface IShapeElement {
+  shapeType?: string
+  viewBox?: [number, number]
+  path?: string
+  pathFormula?: string
+  fillColor?: string
+  strokeColor?: string
+  strokeWidth?: number
+}
+
 export type IElement = IElementBasic &
   IElementStyle &
   IElementGroup &
@@ -200,7 +210,8 @@ export type IElement = IElementBasic &
   IAreaElement &
   IFootnoteElement &
   IColumnElement &
-  IRevisionElement
+  IRevisionElement &
+  IShapeElement
 
 export interface IElementMetrics {
   width: number

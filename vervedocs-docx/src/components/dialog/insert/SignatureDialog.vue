@@ -1,15 +1,15 @@
 <template>
-  <el-dialog v-model="visible" title="插入签名" width="580px" :close-on-click-modal="false" class="app-dialog" @open="initSignatureCanvas">
+  <a-modal v-model:open="visible" title="插入签名" width="580px" :maskClosable="false" class="app-dialog" @afterOpenChange="(open: boolean) => { if (open) initSignatureCanvas() }">
     <div class="signature-content">
       <div class="signature-operation">
-        <el-button text @click="signatureUndo" :disabled="signatureUndoStack.length <= 1">
-          <el-icon><RefreshLeft /></el-icon>
+        <a-button type="link" @click="signatureUndo" :disabled="signatureUndoStack.length <= 1">
+          <UndoOutlined />
           <span>撤销</span>
-        </el-button>
-        <el-button text @click="signatureClear">
-          <el-icon><Delete /></el-icon>
+        </a-button>
+        <a-button type="link" @click="signatureClear">
+          <DeleteOutlined />
           <span>清空</span>
-        </el-button>
+        </a-button>
       </div>
       <div class="signature-canvas-wrapper">
         <canvas
@@ -25,21 +25,21 @@
       <span style="color: red;font-size: 12px">说明：签名仅用于本系统，不具备法律效力.</span>
     </div>
     <template #footer>
-      <el-button type="primary" @click="confirmSignature">
-        <el-icon><Check /></el-icon>
+      <a-button type="primary" @click="confirmSignature">
+        <CheckOutlined />
         确定
-      </el-button>
-      <el-button @click="visible = false">
-        <el-icon><Close /></el-icon>
+      </a-button>
+      <a-button @click="visible = false">
+        <CloseOutlined />
         取消
-      </el-button>
+      </a-button>
     </template>
-  </el-dialog>
+  </a-modal>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, nextTick } from 'vue'
-import { RefreshLeft, Delete, Check, Close } from '@element-plus/icons-vue'
+import { UndoOutlined, DeleteOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons-vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -66,7 +66,7 @@ const signaturePreTimeStamp = ref(0)
 const initSignatureCanvas = () => {
   nextTick(() => {
     if (signatureCanvasRef.value) {
-      const ctx = signatureCanvasRef.value.getContext('2d')
+      const ctx = signatureCanvasRef.value.getContext('2d', { willReadFrequently: true })
       if (ctx) {
         ctx.clearRect(0, 0, 780, 360)
         ctx.lineCap = 'round'
@@ -103,7 +103,6 @@ const signatureDraw = (e: MouseEvent) => {
   const x = (e.clientX - rect.left) * 2
   const y = (e.clientY - rect.top) * 2
 
-  // 计算速度调整线宽
   const curTimestamp = performance.now()
   const dx = x - signatureLastX.value
   const dy = y - signatureLastY.value
@@ -183,7 +182,7 @@ const confirmSignature = () => {
   gap: 16px;
 }
 
-.signature-operation .el-button {
+.signature-operation :deep(.ant-btn) {
   display: flex;
   align-items: center;
   gap: 4px;

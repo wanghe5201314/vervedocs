@@ -1,8 +1,8 @@
 import { createApp, h, ref } from 'vue'
 import { createPinia } from 'pinia'
-import ElementPlus from 'element-plus'
-import 'element-plus/dist/index.css'
-import zhCn from 'element-plus/es/locale/lang/zh-cn'
+import Antd from 'ant-design-vue'
+import 'ant-design-vue/dist/reset.css'
+import zhCN from 'ant-design-vue/es/locale/zh_CN'
 import PptEditor from './components/PptEditor.vue'
 import './dev.css'
 import './assets/iconfont/iconfont.css'
@@ -27,5 +27,5 @@ const App = {
 
 const app = createApp(App)
 app.use(createPinia())
-app.use(ElementPlus, { locale: zhCn })
+app.use(Antd)
 app.mount('#app')

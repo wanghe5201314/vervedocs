@@ -2,22 +2,22 @@
   <div class="ai-sidebar" editor-component="ai-sidebar">
     <div class="sidebar-header">
       <div class="sidebar-title">
-        <el-icon><MagicStick /></el-icon>
+        <ThunderboltOutlined />
         <span>AI 助手</span>
       </div>
       <div class="sidebar-close" @click="close" title="关闭">
-        <el-icon><Close /></el-icon>
+        <CloseOutlined />
       </div>
     </div>
 
-    <el-tabs v-model="activeTab" class="ai-tabs" @tab-change="handleTabChange">
+    <a-tabs v-model:activeKey="activeTab" class="ai-tabs" @change="handleTabChange">
       <!-- AI 写作 -->
-      <el-tab-pane label="AI 写作" name="writing">
+      <a-tab-pane tab="AI 写作" key="writing">
         <div class="tab-content">
           <div class="action-group">
             <div class="group-label">快捷操作</div>
             <div class="action-grid">
-              <el-button
+              <a-button
                 v-for="action in quickActions"
                 :key="action.value"
                 size="small"
@@ -26,51 +26,50 @@
               >
                 <MdiIcon :name="action.icon" />
                 {{ action.label }}
-              </el-button>
+              </a-button>
             </div>
           </div>
 
-          <el-divider />
+          <a-divider />
 
           <div class="action-group">
             <div class="group-label">翻译</div>
             <div class="translate-row">
-              <el-select
-                v-model="targetLanguage"
+              <a-select
+                v-model:value="targetLanguage"
                 size="small"
                 placeholder="目标语言"
                 style="width: 120px"
               >
-                <el-option
+                <a-select-option
                   v-for="lang in languages"
                   :key="lang.value"
-                  :label="lang.label"
                   :value="lang.value"
-                />
-              </el-select>
-              <el-button
+                >
+                  {{ lang.label }}
+                </a-select-option>
+              </a-select>
+              <a-button
                 size="small"
                 type="primary"
                 :disabled="!hasSelection || aiState.operation.loading"
                 @click="handleTranslate"
               >
                 翻译
-              </el-button>
+              </a-button>
             </div>
           </div>
 
-          <el-divider />
+          <a-divider />
 
           <div class="action-group">
             <div class="group-label">自定义指令</div>
-            <el-input
-              v-model="customPrompt"
-              type="textarea"
+            <a-textarea
+              v-model:value="customPrompt"
               :rows="3"
               placeholder="输入自定义 AI 指令，例如：将文本改写为新闻稿风格"
-              resize="none"
             />
-            <el-button
+            <a-button
               size="small"
               type="primary"
               style="margin-top: 8px"
@@ -78,34 +77,34 @@
               @click="handleCustomAction"
             >
               执行
-            </el-button>
+            </a-button>
           </div>
 
-          <el-divider />
+          <a-divider />
 
           <!-- AI 续写 -->
           <div class="action-group">
             <div class="group-label">AI 续写</div>
-            <el-button
+            <a-button
               size="small"
-              type="success"
+              type="primary"
               :disabled="aiState.operation.loading"
               @click="handleContinueWriting"
             >
               <MdiIcon name="pen-plus" />
               从光标处续写
-            </el-button>
+            </a-button>
           </div>
         </div>
-      </el-tab-pane>
+      </a-tab-pane>
 
       <!-- 排版建议 -->
-      <el-tab-pane label="排版建议" name="layout">
+      <a-tab-pane tab="排版建议" key="layout">
         <div class="tab-content">
           <div class="action-group">
             <div class="group-label">智能排版</div>
             <p class="hint-text">分析当前文档内容，提供排版优化建议。</p>
-            <el-button
+            <a-button
               size="small"
               type="primary"
               :disabled="aiState.operation.loading"
@@ -113,18 +112,18 @@
             >
               <MdiIcon name="auto-fix" />
               获取排版建议
-            </el-button>
+            </a-button>
           </div>
         </div>
-      </el-tab-pane>
+      </a-tab-pane>
 
       <!-- 全文分析 -->
-      <el-tab-pane label="全文分析" name="analysis">
+      <a-tab-pane tab="全文分析" key="analysis">
         <div class="tab-content">
           <div class="action-group">
             <div class="group-label">文档分析</div>
             <p class="hint-text">对全文进行综合分析，包括内容质量、结构建议等。</p>
-            <el-button
+            <a-button
               size="small"
               type="primary"
               :disabled="aiState.operation.loading"
@@ -132,32 +131,32 @@
             >
               <MdiIcon name="file-search-outline" />
               开始分析
-            </el-button>
+            </a-button>
           </div>
 
-          <el-divider />
+          <a-divider />
 
           <div class="action-group">
             <div class="group-label">全文总结</div>
-            <el-button
+            <a-button
               size="small"
               :disabled="aiState.operation.loading"
               @click="handleDocSummarize"
             >
               <MdiIcon name="text-box-check-outline" />
               生成摘要
-            </el-button>
+            </a-button>
           </div>
         </div>
-      </el-tab-pane>
+      </a-tab-pane>
 
       <!-- 多媒体辅助 -->
-      <el-tab-pane label="多媒体" name="media">
+      <a-tab-pane tab="多媒体" key="media">
         <div class="tab-content">
           <div class="action-group">
             <div class="group-label">图片描述生成</div>
             <p class="hint-text">为文档中选中的图片生成 alt 描述文字。</p>
-            <el-button
+            <a-button
               size="small"
               type="primary"
               :disabled="aiState.operation.loading"
@@ -165,17 +164,17 @@
             >
               <MdiIcon name="image-text" />
               生成图片描述
-            </el-button>
+            </a-button>
           </div>
         </div>
-      </el-tab-pane>
-    </el-tabs>
+      </a-tab-pane>
+    </a-tabs>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Close, MagicStick } from '@element-plus/icons-vue'
+import { CloseOutlined, ThunderboltOutlined } from '@ant-design/icons-vue'
 import MdiIcon from '@/components/common/MdiIcon.vue'
 import { AIAction, TranslateLanguage } from '@vervedoc/docx-editor-ai'
 import { aiStateStore } from '@/stores/ai-state'
@@ -217,8 +216,8 @@ const languages = [
   { label: '俄文', value: TranslateLanguage.RUSSIAN }
 ]
 
-const handleTabChange = (tab: string) => {
-  aiStateStore.setActiveTab(tab as AITab)
+const handleTabChange = (tab: string | number) => {
+  aiStateStore.setActiveTab(String(tab) as AITab)
 }
 
 const handleQuickAction = (action: AIAction) => {
@@ -301,8 +300,8 @@ const close = () => {
 }
 
 .sidebar-close:hover {
-  color: #409eff;
-  background-color: #ecf5ff;
+  color: #1890ff;
+  background-color: #e6f7ff;
 }
 
 .ai-tabs {
@@ -313,18 +312,18 @@ const close = () => {
   overflow: hidden;
 }
 
-.ai-tabs :deep(.el-tabs__header) {
+.ai-tabs :deep(.ant-tabs-nav) {
   margin: 0;
   padding: 0 10px;
 }
 
-.ai-tabs :deep(.el-tabs__content) {
+.ai-tabs :deep(.ant-tabs-content) {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
 }
 
-.ai-tabs :deep(.el-tab-pane) {
+.ai-tabs :deep(.ant-tabs-tabpane) {
   height: 100%;
 }
 
@@ -356,7 +355,7 @@ const close = () => {
   gap: 6px;
 }
 
-.action-grid .el-button {
+.action-grid :deep(.ant-btn) {
   margin: 0;
 }
 
@@ -366,7 +365,7 @@ const close = () => {
   align-items: center;
 }
 
-:deep(.el-divider) {
+:deep(.ant-divider) {
   margin: 10px 0;
 }
 </style>

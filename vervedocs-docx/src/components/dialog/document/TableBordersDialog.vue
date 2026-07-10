@@ -1,37 +1,37 @@
 <template>
-  <el-dialog v-model="visible" title="表格边框" width="520px" :close-on-click-modal="false" class="app-dialog" destroy-on-close>
-    <el-card shadow="never" class="dialog-card">
-      <template #header>边框设置</template>
+  <a-modal v-model:open="visible" title="表格边框" width="520px" :maskClosable="false" class="app-dialog" :destroyOnClose="true">
+    <a-card :bordered="true" class="dialog-card">
+      <template #title>边框设置</template>
       <div class="dialog-grid-2">
         <div class="dialog-field">
           <div class="dialog-label">边框类型</div>
-          <el-select v-model="form.type" style="width: 100%">
-            <el-option value="all" label="全部" />
-            <el-option value="outside" label="外边框" />
-            <el-option value="none" label="无边框" />
-          </el-select>
+          <a-select v-model:value="form.type" style="width: 100%">
+            <a-select-option value="all" label="全部" />
+            <a-select-option value="outside" label="外边框" />
+            <a-select-option value="none" label="无边框" />
+          </a-select>
         </div>
         <div class="dialog-field">
           <div class="dialog-label">颜色</div>
-          <el-color-picker v-model="form.color" show-alpha />
+          <input type="color" :value="form.color" @change="(e: Event) => form.color = (e.target as HTMLInputElement).value" style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
         </div>
       </div>
       <div class="dialog-grid-2" style="margin-top: 12px">
         <div class="dialog-field">
           <div class="dialog-label">内部线宽</div>
-          <el-input-number v-model="form.width" :min="0" :max="20" :step="0.5" style="width: 100%" />
+          <a-input-number v-model:value="form.width" :min="0" :max="20" :step="0.5" style="width: 100%" />
         </div>
         <div class="dialog-field">
           <div class="dialog-label">外框线宽</div>
-          <el-input-number v-model="form.externalWidth" :min="0" :max="20" :step="0.5" style="width: 100%" />
+          <a-input-number v-model:value="form.externalWidth" :min="0" :max="20" :step="0.5" style="width: 100%" />
         </div>
       </div>
-    </el-card>
+    </a-card>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
-      <el-button type="primary" @click="handleConfirm">确定</el-button>
+      <a-button @click="visible = false">取消</a-button>
+      <a-button type="primary" @click="handleConfirm">确定</a-button>
     </template>
-  </el-dialog>
+  </a-modal>
 </template>
 
 <script setup lang="ts">

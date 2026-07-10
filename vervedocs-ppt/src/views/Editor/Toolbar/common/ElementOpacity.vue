@@ -2,12 +2,12 @@
   <div class="element-opacity">
     <div class="row">
       <div style="flex: 2;">不透明度：</div>
-      <el-slider
+      <a-slider
         class="slider"
         :min="0"
         :max="1"
         :step="0.1"
-        :model-value="opacity"
+        :value="opacity"
         @change="(value: number) => updateOpacity(value)" 
       />
     </div>

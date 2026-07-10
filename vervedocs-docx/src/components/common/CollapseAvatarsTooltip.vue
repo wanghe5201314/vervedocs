@@ -127,7 +127,7 @@ const getAvatarText = (name: string) => {
   padding: 0 12px 6px;
   font-size: 12px;
   color: #909399;
-  border-bottom: 1px solid #ebeef5;
+  border-bottom: 1px solid #f0f0f0;
   margin-bottom: 4px;
 }
 

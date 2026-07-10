@@ -84,7 +84,7 @@ import Hue from './Hue.vue'
 import Saturation from './Saturation.vue'
 import EditableInput from './EditableInput.vue'
 
-import { ElMessage } from 'element-plus'
+import { message } from 'ant-design-vue'
 
 const RECENT_COLORS = 'RECENT_COLORS'
 
@@ -276,7 +276,7 @@ export default defineComponent({
         canvasRef.addEventListener('mouseleave', handleMouseleave)
         window.addEventListener('mousedown', handleMousedown)
       }).catch(() => {
-        ElMessage.error('取色吸管初始化失败')
+        message.error('取色吸管初始化失败')
         document.body.removeChild(maskRef)
       })
     }

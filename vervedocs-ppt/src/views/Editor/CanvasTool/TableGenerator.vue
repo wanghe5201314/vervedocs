@@ -27,25 +27,25 @@
     <div class="custom" v-else>
       <div class="row">
         <div class="label" style="flex: 1;">{{ translate('tableGenerator.row') }}</div>
-        <el-input-number
+        <a-input-number
           :min="1"
           :max="20"
-          v-model="customRow"
+          v-model:value="customRow"
           style="flex: 3;"
         />
       </div>
       <div class="row">
         <div class="label" style="flex: 1;">{{ translate('tableGenerator.col') }}</div>
-        <el-input-number
+        <a-input-number
           :min="1"
           :max="20"
-          v-model="customCol"
+          v-model:value="customCol"
           style="flex: 3;"
         />
       </div>
       <div class="btns">
-        <el-button class="btn" @click="close()">{{ translate('tableGenerator.cancel') }}</el-button>
-        <el-button class="btn" type="primary" @click="insertCustomTable()">{{ translate('tableGenerator.confirm') }}</el-button>
+        <a-button class="btn" @click="close()">{{ translate('tableGenerator.cancel') }}</a-button>
+        <a-button class="btn" type="primary" @click="insertCustomTable()">{{ translate('tableGenerator.confirm') }}</a-button>
       </div>
     </div>
   </div>
@@ -54,7 +54,7 @@
 <script lang="ts">
 import { defineComponent, ref } from 'vue'
 
-import { ElMessage } from 'element-plus'
+import { message } from 'ant-design-vue'
 
 export default defineComponent({
   name: 'table-generator',
@@ -90,8 +90,8 @@ export default defineComponent({
     }
 
     const insertCustomTable = () => {
-      if (customRow.value < 1 || customRow.value > 20) return ElMessage.warning(translate('tableGenerator.rangeWarning'))
-      if (customCol.value < 1 || customCol.value > 20) return ElMessage.warning(translate('tableGenerator.rangeWarning'))
+      if (customRow.value < 1 || customRow.value > 20) return message.warning(translate('tableGenerator.rangeWarning'))
+      if (customCol.value < 1 || customCol.value > 20) return message.warning(translate('tableGenerator.rangeWarning'))
       emit('insert', { row: customRow.value, col: customCol.value })
       isCustom.value = false
     }

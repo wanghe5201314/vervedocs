@@ -2,7 +2,7 @@ import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
-import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
 import * as path from 'path'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -17,11 +17,19 @@ export default defineConfig(({ mode }) => {
 
   const autoImportPlugins = [
     AutoImport({
-      resolvers: [ElementPlusResolver()],
+      resolvers: [
+        AntDesignVueResolver({
+          importStyle: 'css-in-js',
+        }),
+      ],
       dts: 'src/auto-imports.d.ts',
     }),
     Components({
-      resolvers: [ElementPlusResolver()],
+      resolvers: [
+        AntDesignVueResolver({
+          importStyle: 'css-in-js',
+        }),
+      ],
       dts: 'src/components.d.ts',
     }),
   ]

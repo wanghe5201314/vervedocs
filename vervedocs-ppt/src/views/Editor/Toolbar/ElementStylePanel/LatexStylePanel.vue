@@ -1,47 +1,46 @@
 <template>
   <div class="latex-style-panel">
-    <div class="row"><el-button style="flex: 1;" @click="latexEditorVisible = true">编辑 LaTeX</el-button></div>
+    <div class="row"><a-button style="flex: 1;" @click="latexEditorVisible = true">编辑 LaTeX</a-button></div>
 
-    <el-divider />
+    <a-divider />
 
     <div class="row">
       <div style="flex: 2;">颜色：</div>
-      <el-popover trigger="click">
-        <ColorPicker
-          :modelValue="(handleElement as any)?.color"
-          @update:modelValue="(value: any) => updateLatex({ color: value })"
-        />
-        <template #reference>
-          <ColorButton :color="(handleElement as any)?.color || ''" style="flex: 3;" />
+      <a-popover trigger="click">
+        <template #content>
+          <ColorPicker
+            :modelValue="(handleElement as any)?.color"
+            @update:modelValue="(value: any) => updateLatex({ color: value })"
+          />
         </template>
-      </el-popover>
+        <ColorButton :color="(handleElement as any)?.color || ''" style="flex: 3;" />
+      </a-popover>
     </div>
     <div class="row">
       <div style="flex: 2;">粗细：</div>
-      <el-input-number 
+      <a-input-number 
         :min="1"
         :max="3"
-        :model-value="(handleElement as any)?.strokeWidth" 
+        :value="(handleElement as any)?.strokeWidth" 
         @change="(value: any) => updateLatex({ strokeWidth: value })" 
         style="flex: 3;"
-        controls-position="right"
       />
     </div>
 
-    <el-dialog
-      v-model="latexEditorVisible" 
-      :show-close="true"
-      :close-on-click-modal="true"
+    <a-modal
+      v-model:open="latexEditorVisible" 
+      :closable="true"
+      :maskClosable="true"
       width="880px"
-      :destroy-on-close="true"
-      align-center
+      :destroyOnClose="true"
+      centered
     >
       <LaTeXEditor 
         :value="(handleElement as any)?.latex"
         @close="latexEditorVisible = false"
         @update="data => { updateLatexData(data); latexEditorVisible = false }"
       />
-    </el-dialog>
+    </a-modal>
   </div>
 </template>
 

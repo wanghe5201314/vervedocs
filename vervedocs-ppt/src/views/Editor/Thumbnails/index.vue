@@ -7,12 +7,12 @@
   >
     <div class="add-slide">
       <div class="btn" @click="createSlide()"><IconPlus class="icon" />添加幻灯片</div>
-      <el-popover trigger="click" placement="bottom-start" :visible="presetLayoutPopoverVisible" :width="'auto'">
+      <a-popover trigger="click" placement="bottom-start" v-model:open="presetLayoutPopoverVisible" :width="'auto'">
+        <template #content>
           <LayoutPool @select="slide => { createSlideByTemplate(slide); presetLayoutPopoverVisible = false }" />
-        <template #reference>
-          <div class="select-btn" @click="presetLayoutPopoverVisible = !presetLayoutPopoverVisible"><IconDown /></div>
         </template>
-      </el-popover>
+        <div class="select-btn" @click="presetLayoutPopoverVisible = !presetLayoutPopoverVisible"><IconDown /></div>
+      </a-popover>
     </div>
 
     <Draggable 

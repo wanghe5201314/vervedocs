@@ -4,7 +4,7 @@ import dts from 'vite-plugin-dts'
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
-import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
 import * as path from 'path'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -17,11 +17,19 @@ const pkg = JSON.parse(
 
 const autoImportPlugins = [
   AutoImport({
-    resolvers: [ElementPlusResolver()],
+    resolvers: [
+      AntDesignVueResolver({
+        importStyle: false,
+      }),
+    ],
     dts: false,
   }),
   Components({
-    resolvers: [ElementPlusResolver()],
+    resolvers: [
+      AntDesignVueResolver({
+        importStyle: false,
+      }),
+    ],
     dts: false,
   }),
 ]
@@ -62,9 +70,9 @@ export default defineConfig({
     rollupOptions: {
       external: [
         'vue',
-        'element-plus',
-        /^element-plus\//,
-        '@element-plus/icons-vue',
+        'ant-design-vue',
+        /^ant-design-vue\//,
+        '@ant-design/icons-vue',
         '@mdi/js',
         'echarts',
         /^echarts\//,
@@ -80,9 +88,8 @@ export default defineConfig({
       output: {
         globals: {
           vue: 'Vue',
-          'element-plus': 'ElementPlus',
-          'element-plus/es': 'ElementPlus',
-          '@element-plus/icons-vue': 'ElementPlusIconsVue',
+          'ant-design-vue': 'antd',
+          '@ant-design/icons-vue': 'iconsVue',
           '@mdi/js': 'mdiJs',
           echarts: 'echarts',
           docx: 'docx',
@@ -102,7 +109,6 @@ export default defineConfig({
           '@vervedoc/docx-editor-chart': 'DocxEditorChart',
           '@vervedoc/docx-editor-collaboration': 'DocxEditorCollaboration',
           '@vervedoc/docx-editor-comment': 'DocxEditorComment',
-          'element-plus/es/locale/lang/zh-cn': 'ElementPlusLocaleZhCn',
         }
       }
     }

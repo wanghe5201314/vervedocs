@@ -1,13 +1,15 @@
 ﻿<template>
   <div class="element-animation-panel">
     <div class="element-animation" v-if="handleElement">
-      <el-popover 
+      <a-popover 
         trigger="click" 
-        :visible="animationPoolVisible" 
-        :width="'auto'"
-        @show="handlePopoverVisibleChange(true)"
-        @hide="handlePopoverVisibleChange(false)"
+        v-model:open="animationPoolVisible" 
+        @openChange="(visible: boolean) => handlePopoverVisibleChange(visible)"
       >
+        <a-button class="element-animation-btn" @click="handleAnimationId = ''">
+          <IconEffects style="margin-right: 5px;" /> 添加动画
+        </a-button>
+        <template #content>
           <div class="tabs">
             <div 
               :class="['tab', tab.key, { 'active': activeTab === tab.key }]"
@@ -42,17 +44,13 @@
               <div class="mask" v-if="!popoverMaskHide"></div>
             </div>
           </template>
-        <template #reference>
-          <el-button class="element-animation-btn" @click="handleAnimationId = ''">
-            <IconEffects style="margin-right: 5px;" /> 添加动画
-          </el-button>
         </template>
-      </el-popover>
+      </a-popover>
     </div>
 
     <div class="tip" v-else><IconClick style="margin-right: 5px;" /> 选中画布中的元素添加动画</div>
     
-    <el-divider />
+    <a-divider />
 
     <Draggable 
       class="animation-sequence"
@@ -70,44 +68,43 @@
             <div class="index">{{element.index}}</div>
             <div class="text">【{{element.elType}}】{{element.animationEffect}}</div>
             <div class="handler">
-              <el-tooltip :hide-after="0" :show-after="500" content="预览">
+              <a-tooltip title="预览">
                 <IconPlayOne class="handler-btn" @click="runAnimation(element.elId, element.effect, element.duration)" />
-              </el-tooltip>
-              <el-tooltip :hide-after="0" :show-after="500" content="删除">
+              </a-tooltip>
+              <a-tooltip title="删除">
                 <IconCloseSmall class="handler-btn" @click="deleteAnimation(element.id)" />
-              </el-tooltip>
+              </a-tooltip>
             </div>
           </div>
 
           <div class="configs" v-if="handleElementAnimation[0]?.elId === element.elId">
-            <el-divider style="margin: 16px 0;" />
+            <a-divider style="margin: 16px 0;" />
 
             <div class="config-item">
               <div style="flex: 3;">持续时长：</div>
-              <el-input-number 
+              <a-input-number 
                 :min="500"
                 :max="3000"
                 :step="500"
-                :model-value="element.duration" 
+                :value="element.duration" 
                 @change="(value: any) => updateElementAnimationDuration(element.id, value)" 
                 style="flex: 5;"
-                controls-position="right"
               />
             </div>
             <div class="config-item">
               <div style="flex: 3;">触发方式：</div>
-              <el-select
-                :model-value="element.trigger"
+              <a-select
+                :value="element.trigger"
                 @change="(value: any) => updateElementAnimationTrigger(element.id, value)"
                 style="flex: 5;"
               >
-                <el-option value="click" label="主动触发" />
-                <el-option value="meantime" label="与上一动画同时" />
-                <el-option value="auto" label="上一动画之后" />
-              </el-select>
+                <a-select-option value="click">主动触发</a-select-option>
+                <a-select-option value="meantime">与上一动画同时</a-select-option>
+                <a-select-option value="auto">上一动画之后</a-select-option>
+              </a-select>
             </div>
             <div class="config-item">
-              <el-button style="flex: 1;" @click="openAnimationPool(element.id)">更换动画</el-button>
+              <a-button style="flex: 1;" @click="openAnimationPool(element.id)">更换动画</a-button>
             </div>
           </div>
         </div>

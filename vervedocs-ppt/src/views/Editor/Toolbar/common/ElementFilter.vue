@@ -3,8 +3,8 @@
     <div class="row">
       <div style="flex: 2;">启用滤镜：</div>
       <div class="switch-wrapper" style="flex: 3;">
-        <el-switch 
-          :model-value="hasFilters" 
+        <a-switch 
+          :checked="hasFilters" 
           @change="(checked: any) => toggleFilters(checked)" 
         />
       </div>
@@ -12,12 +12,12 @@
     <div class="filter" v-if="hasFilters">
       <div class="filter-item" v-for="filter in filterOptions" :key="filter.key">
         <div class="name">{{filter.label}}</div>
-        <el-slider
+        <a-slider
           class="filter-slider"
           :max="filter.max"
           :min="0"
           :step="filter.step"
-          :model-value="filter.value"
+          :value="filter.value"
           @change="(value: any) => updateFilter(filter, value)"
         />
       </div>

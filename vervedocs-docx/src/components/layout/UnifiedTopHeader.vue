@@ -11,14 +11,12 @@
           <span class="doc-name" :title="title">{{ title }}</span>
           <div class="cloud-tip">
             <template v-if="isViewMode">
-              <el-icon class="cloud-icon" style="color:#909399"><View /></el-icon>
+              <EyeOutlined class="cloud-icon" style="color:#909399" />
               <span class="cloud-text">只读模式</span>
             </template>
             <template v-else>
-              <el-icon class="cloud-icon">
-                <CircleCheck v-if="lastSaveTime" />
-                <Cloudy v-else />
-              </el-icon>
+              <CheckCircleOutlined v-if="lastSaveTime" class="cloud-icon" />
+              <CloudOutlined v-else class="cloud-icon" />
               <span class="cloud-text">{{ lastSaveTime ? `最近保存: ${lastSaveTime}` : '所有编辑内容将自动保存到云端' }}</span>
             </template>
           </div>
@@ -26,19 +24,20 @@
       </div>
     </div>
     <div class="right">
-      <el-avatar-group v-if="onlineUsers.length > 0" :max="5" :style="{ display: 'flex', alignItems: 'center' }">
-        <el-tooltip v-for="user in onlineUsers" :key="user.userId" :content="user.userName || user.userId" placement="bottom" effect="light">
-          <el-avatar :size="30" :style="{ backgroundColor: user.color }">
+      <a-avatar-group v-if="onlineUsers.length > 0" :max-count="5" :style="{ display: 'flex', alignItems: 'center' }">
+        <a-tooltip v-for="user in onlineUsers" :key="user.userId" placement="bottom">
+          <template #title>{{ user.userName || user.userId }}</template>
+          <a-avatar :size="30" :style="{ backgroundColor: user.color }">
             {{ getAvatarText(user.userName || user.userId) }}
-          </el-avatar>
-        </el-tooltip>
-      </el-avatar-group>
+          </a-avatar>
+        </a-tooltip>
+      </a-avatar-group>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { CircleCheck, Cloudy, View } from '@element-plus/icons-vue'
+import { CheckCircleOutlined, CloudOutlined, EyeOutlined } from '@ant-design/icons-vue'
 
 interface CollabUser {
   userId: string
@@ -68,7 +67,7 @@ const getAvatarText = (name: string) => {
 </script>
 
 <style scoped>
-.top-header { height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid #ebeef5; background: #fff; }
+.top-header { height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid #f0f0f0; background: #fff; }
 .left { min-width: 0; display: flex; align-items: center; gap: 12px; }
 .doc-icon { display: inline-flex; align-items: center; justify-content: center; }
 .file-icon { width: 30px; height: 30px; color: #606266; }

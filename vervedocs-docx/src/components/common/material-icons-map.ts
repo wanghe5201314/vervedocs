@@ -155,7 +155,10 @@ const iconMap: Record<string, string> = {
   'eye-off-outline': 'visibility_off',
   'form-select': 'list_alt',
   'check-all': 'done_all',
-  'close-box-multiple-outline': 'indeterminate_check_box'
+  'close-box-multiple-outline': 'indeterminate_check_box',
+  'functions': 'functions',
+  'bolt': 'bolt',
+  'science': 'science'
 }
 
 export function resolveMaterialIcon(name: string): string | undefined {

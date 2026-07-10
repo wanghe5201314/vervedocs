@@ -5,7 +5,7 @@ import { useSlidesStore } from '@/store'
 import { KEYS } from '@/configs/hotkey'
 import { ANIMATION_CLASS_PREFIX } from '@/configs/animation'
 
-import { ElMessage } from 'element-plus'
+import { message } from 'ant-design-vue'
 
 export default () => {
   const slidesStore = useSlidesStore()
@@ -101,7 +101,7 @@ export default () => {
   onUnmounted(closeAutoPlay)
 
   const throttleMassage = throttle(function(msg) {
-    ElMessage.success(msg)
+    message.success(msg)
   }, 1000, { leading: true, trailing: false })
 
   // 向上/向下播放
@@ -145,7 +145,7 @@ export default () => {
   // 自动播放
   const autoPlay = () => {
     closeAutoPlay()
-    ElMessage.success('开始自动放映')
+    message.success('开始自动放映')
     autoPlayTimer.value = window.setInterval(execNext, 2500)
   }
 

@@ -23,5 +23,6 @@ export enum ElementType {
   FOOTNOTE_SEPARATOR = 'footnoteSeparator',
   COLUMN_BREAK = 'columnBreak',
   REVISION_INSERT = 'revisionInsert',
-  REVISION_DELETE = 'revisionDelete'
+  REVISION_DELETE = 'revisionDelete',
+  SHAPE = 'shape'
 }

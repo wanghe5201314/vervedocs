@@ -7,6 +7,7 @@
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import DocxEditor, { ICatalogItem, IElement, PaperDirection, TableBorder, parseDocx } from '@vervedoc/core'
 import { debounce } from '@/utils'
+// @ts-ignore
 import { getChartSampleManualData } from '@/utils/chartSampleData'
 import { editorStateStore } from '@/stores/editor-state'
 import { getAuthToken } from '@/api/document.api'
@@ -24,15 +25,13 @@ const options = {
   paragraphHighlightDisabled: false,
   showCommentBalloons: true,
   showRevisionBalloons: true,
-  revisionDisplayMode: 'all',
+  revisionDisplayMode: 'all' as const,
   lineBreak: {
     disabled: false,
     color: '#4A9EFF'
   }
 }
 
-// HTML 转义使用公共工具函数
-// import { escapeHtml } from '@/utils' - 已在顶部导入
 
 // 事件触发
 const emit = defineEmits(['command', 'ready', 'saved'])
@@ -842,7 +841,14 @@ const executeCommand = (command: string, ...args: any[]) => {
 
     // 设置页码
     setPageNumber: (payload: any) => {
-      editorInstance.command.executePageNumber(payload)
+      const currentOptions = editorInstance.command.getOptions?.() || {}
+      editorInstance.command.executeUpdateOptions({
+        ...currentOptions,
+        pageNumber: {
+          ...(currentOptions.pageNumber || {}),
+          ...payload
+        }
+      })
     },
 
     // 导入 Word 文档
@@ -1214,10 +1220,8 @@ onBeforeUnmount(() => {
   document.removeEventListener('mousedown', handleGlobalMouseDown)
   eventBusSubscriptions.forEach(subscription => subscription.unsubscribe())
   eventBusSubscriptions.length = 0
-  // 清理编辑器实例
   if (editorInstance) {
-    // 如果编辑器有销毁方法，调用它
-    // editorInstance.destroy()
+    editorInstance.destroy()
   }
 })
 

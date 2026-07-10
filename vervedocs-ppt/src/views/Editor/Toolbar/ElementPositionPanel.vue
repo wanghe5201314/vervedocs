@@ -1,59 +1,57 @@
 <template>
   <div class="element-positopn-panel">
     <div class="title">层级：</div>
-    <el-button-group class="row">
-      <el-button style="flex: 1;" @click="orderElement(handleElement as any, 'top' as any)"><IconSendToBack class="btn-icon" /> 置于顶层</el-button>
-      <el-button style="flex: 1;" @click="orderElement(handleElement as any, 'bottom' as any)"><IconBringToFrontOne class="btn-icon" /> 置于底层</el-button>
-    </el-button-group>
-    <el-button-group class="row">
-      <el-button style="flex: 1;" @click="orderElement(handleElement as any, 'up' as any)"><IconBringToFront class="btn-icon" /> 上移一层</el-button>
-      <el-button style="flex: 1;" @click="orderElement(handleElement as any, 'down' as any)"><IconSentToBack class="btn-icon" /> 下移一层</el-button>
-    </el-button-group>
+    <a-button-group class="row">
+      <a-button style="flex: 1;" @click="orderElement(handleElement as any, 'top' as any)"><IconSendToBack class="btn-icon" /> 置于顶层</a-button>
+      <a-button style="flex: 1;" @click="orderElement(handleElement as any, 'bottom' as any)"><IconBringToFrontOne class="btn-icon" /> 置于底层</a-button>
+    </a-button-group>
+    <a-button-group class="row">
+      <a-button style="flex: 1;" @click="orderElement(handleElement as any, 'up' as any)"><IconBringToFront class="btn-icon" /> 上移一层</a-button>
+      <a-button style="flex: 1;" @click="orderElement(handleElement as any, 'down' as any)"><IconSentToBack class="btn-icon" /> 下移一层</a-button>
+    </a-button-group>
 
-    <el-divider />
+    <a-divider />
     
     <div class="title">对齐：</div>
-    <el-button-group class="row">
-      <el-tooltip content="左对齐" :show-after="500" :hide-after="0">
-        <el-button style="flex: 1;" @click="alignElementToCanvas('left' as any)"><IconAlignLeft /></el-button>
-      </el-tooltip>
-      <el-tooltip content="水平居中" :show-after="500" :hide-after="0">
-        <el-button style="flex: 1;" @click="alignElementToCanvas('horizontal' as any)"><IconAlignVertically /></el-button>
-      </el-tooltip>
-      <el-tooltip content="右对齐" :show-after="500" :hide-after="0">
-        <el-button style="flex: 1;" @click="alignElementToCanvas('right' as any)"><IconAlignRight /></el-button>
-      </el-tooltip>
-    </el-button-group>
-    <el-button-group class="row">
-      <el-tooltip content="上对齐" :show-after="500" :hide-after="0">
-        <el-button style="flex: 1;" @click="alignElementToCanvas('top' as any)"><IconAlignTop /></el-button>
-      </el-tooltip>
-      <el-tooltip content="垂直居中" :show-after="500" :hide-after="0">
-        <el-button style="flex: 1;" @click="alignElementToCanvas('vertical' as any)"><IconAlignHorizontally /></el-button>
-      </el-tooltip>
-      <el-tooltip content="下对齐" :show-after="500" :hide-after="0">
-        <el-button style="flex: 1;" @click="alignElementToCanvas('bottom' as any)"><IconAlignBottom /></el-button>
-      </el-tooltip>
-    </el-button-group>
+    <a-button-group class="row">
+      <a-tooltip title="左对齐">
+        <a-button style="flex: 1;" @click="alignElementToCanvas('left' as any)"><IconAlignLeft /></a-button>
+      </a-tooltip>
+      <a-tooltip title="水平居中">
+        <a-button style="flex: 1;" @click="alignElementToCanvas('horizontal' as any)"><IconAlignVertically /></a-button>
+      </a-tooltip>
+      <a-tooltip title="右对齐">
+        <a-button style="flex: 1;" @click="alignElementToCanvas('right' as any)"><IconAlignRight /></a-button>
+      </a-tooltip>
+    </a-button-group>
+    <a-button-group class="row">
+      <a-tooltip title="上对齐">
+        <a-button style="flex: 1;" @click="alignElementToCanvas('top' as any)"><IconAlignTop /></a-button>
+      </a-tooltip>
+      <a-tooltip title="垂直居中">
+        <a-button style="flex: 1;" @click="alignElementToCanvas('vertical' as any)"><IconAlignHorizontally /></a-button>
+      </a-tooltip>
+      <a-tooltip title="下对齐">
+        <a-button style="flex: 1;" @click="alignElementToCanvas('bottom' as any)"><IconAlignBottom /></a-button>
+      </a-tooltip>
+    </a-button-group>
 
-    <el-divider />
+    <a-divider />
 
     <div class="row">
       <div style="flex: 3;">位置：</div>
-      <el-input-number
+      <a-input-number
         :step="5"
-        :model-value="left"
+        :value="left"
         @change="(value: number) => updateLeft(value)"
         style="flex: 4;"
-        controls-position="right"
       />
       <div style="flex: 1;"></div>
-      <el-input-number
+      <a-input-number
         :step="5"
-        :model-value="top"
+        :value="top"
         @change="(value: number) => updateTop(value)"
         style="flex: 4;"
-        controls-position="right"
       />
     </div>
     <div class="row">
@@ -66,33 +64,31 @@
     <template v-if="handleElement?.type !== 'line'">
       <div class="row">
         <div style="flex: 3;">大小：</div>
-        <el-input-number
+        <a-input-number
           :min="minSize"
           :max="1500"
           :step="5"
-          :model-value="width"
+          :value="width"
           @change="(value: number) => updateWidth(value)"
           style="flex: 4;"
-          controls-position="right"
         />
         <template v-if="['image', 'shape', 'audio'].includes(handleElement?.type || '')">
-          <el-tooltip content="解除宽高比锁定" :show-after="500" :hide-after="0" v-if="fixedRatio">
+          <a-tooltip title="解除宽高比锁定" v-if="fixedRatio">
             <IconLock style="flex: 1;" class="icon-btn" @click="updateFixedRatio(false)" />
-          </el-tooltip>
-          <el-tooltip content="宽高比锁定" :show-after="500" :hide-after="0" v-else>
+          </a-tooltip>
+          <a-tooltip title="宽高比锁定" v-else>
             <IconUnlock style="flex: 1;" class="icon-btn" @click="updateFixedRatio(true)" />
-          </el-tooltip>
+          </a-tooltip>
         </template>
         <div style="flex: 1;" v-else></div>
-        <el-input-number 
+        <a-input-number 
           :min="minSize"
           :max="800"
           :step="5"
           :disabled="handleElement?.type === 'text'" 
-          :model-value="height" 
+          :value="height" 
           @change="(value: number) => updateHeight(value)"
           style="flex: 4;"
-          controls-position="right"
         />
       </div>
       <div class="row">
@@ -104,14 +100,14 @@
     </template>
 
     <template v-if="!['line', 'video', 'audio'].includes((handleElement as any)?.type || '')">
-      <el-divider />
+      <a-divider />
 
       <div class="row">
         <div style="flex: 3;">旋转：</div>
-        <el-tooltip content="逆时针旋转" :show-after="500" :hide-after="0">
+        <a-tooltip title="逆时针旋转">
           <IconRotate class="icon-btn" @click="updateRotate45('-')" style="flex: 2;" />
-        </el-tooltip>
-        <el-tooltip content="顺时针旋转" :show-after="500" :hide-after="0">
+        </a-tooltip>
+        <a-tooltip title="顺时针旋转">
           <IconRotate 
             class="icon-btn" 
             @click="updateRotate45('+')" 
@@ -120,16 +116,15 @@
               transform: 'rotateY(180deg)',
             }" 
           />
-        </el-tooltip>
+        </a-tooltip>
         <div style="flex: 1;"></div>
-        <el-input-number 
+        <a-input-number 
           :min="-180"
           :max="180"
           :step="5"
-          :model-value="rotate" 
+          :value="rotate" 
           @change="(value: number) => updateRotate(value)" 
           style="flex: 4;"
-          controls-position="right"
         />
       </div>
     </template>
@@ -303,15 +298,15 @@ export default defineComponent({
   }
 }
 
-:deep(.el-divider) {
+:deep(.ant-divider) {
   margin: 16px 0;
 }
 
-:deep(.el-button-group) {
+:deep(.ant-btn-group) {
   display: flex;
   width: 100%;
 
-  .el-button {
+  .ant-btn {
     flex: 1;
     height: 36px;
     padding: 0;

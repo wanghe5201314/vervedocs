@@ -9,7 +9,7 @@
         <IconOffScreenOne class="tool-icon" v-else />
         <span>{{ fullscreenState ? '退出全屏' : '全屏' }}</span>
       </div>
-      <el-divider class="divider" />
+      <a-divider class="divider" />
       <div class="tool-btn" @click="exitScreening()"><IconPower class="tool-icon" /><span>结束放映</span></div>
     </div>
 

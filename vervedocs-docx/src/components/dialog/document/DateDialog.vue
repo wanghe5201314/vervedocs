@@ -1,9 +1,9 @@
 <template>
-  <el-dialog v-model="visible" title="日期和时间" width="500px" :close-on-click-modal="false" class="app-dialog">
+  <a-modal v-model:open="visible" title="日期和时间" width="500px" :maskClosable="false" class="app-dialog">
     <div class="date-body">
       <div class="date-left">
         <div class="form-label">可用格式(A):</div>
-        <el-scrollbar height="200px">
+        <div style="overflow-y:auto;height:200px">
           <div
             v-for="f in dateFormats"
             :key="f"
@@ -13,37 +13,37 @@
           >
             {{ f }}
           </div>
-        </el-scrollbar>
+        </div>
       </div>
       <div class="date-right">
         <div class="form-label">语言(国家/地区)(L):</div>
-        <el-select v-model="dateLanguage" style="width: 100%; margin-top: 8px;">
-          <el-option label="中文(中国)" value="zh-CN" />
-        </el-select>
+        <a-select v-model:value="dateLanguage" style="width: 100%; margin-top: 8px;">
+          <a-select-option label="中文(中国)" value="zh-CN" />
+        </a-select>
         <div style="margin-top: 20px;">
-          <el-checkbox>使用全角字符(W)</el-checkbox>
+          <a-checkbox>使用全角字符(W)</a-checkbox>
         </div>
         <div style="margin-top: 10px;">
-          <el-checkbox>自动更新(U)</el-checkbox>
+          <a-checkbox>自动更新(U)</a-checkbox>
         </div>
       </div>
     </div>
     <template #footer>
-      <el-button type="primary" @click="confirmDate">
-        <el-icon><Check /></el-icon>
+      <a-button type="primary" @click="confirmDate">
+        <CheckOutlined />
         确定
-      </el-button>
-      <el-button @click="visible = false">
-        <el-icon><Close /></el-icon>
+      </a-button>
+      <a-button @click="visible = false">
+        <CloseOutlined />
         取消
-      </el-button>
+      </a-button>
     </template>
-  </el-dialog>
+  </a-modal>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Check, Close } from '@element-plus/icons-vue'
+import { CheckOutlined, CloseOutlined } from '@ant-design/icons-vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -76,13 +76,18 @@ const dateLanguage = ref('zh-CN')
 
 const confirmDate = () => {
   const now = new Date()
+  const weekDays = ['日', '一', '二', '三', '四', '五', '六']
+  const year = now.getFullYear().toString()
+  const yy = year.slice(-2)
   let value = selectedDateFormat.value
-    .replace('yyyy', now.getFullYear().toString())
+    .replace('yyyy', year)
+    .replace('yy', yy)
     .replace('MM', (now.getMonth() + 1).toString().padStart(2, '0'))
     .replace('dd', now.getDate().toString().padStart(2, '0'))
     .replace('HH', now.getHours().toString().padStart(2, '0'))
     .replace('mm', now.getMinutes().toString().padStart(2, '0'))
     .replace('ss', now.getSeconds().toString().padStart(2, '0'))
+    .replace('E', weekDays[now.getDay()])
 
   emit('confirm', { format: selectedDateFormat.value, value })
   visible.value = false
@@ -121,7 +126,7 @@ const confirmDate = () => {
 }
 
 .format-item.active {
-  background: #ecf5ff;
-  color: #409eff;
+  background: #e6f7ff;
+  color: #1890ff;
 }
 </style>

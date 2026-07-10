@@ -7,58 +7,58 @@
       :last-save-time="headerLastSaveTime"
       :t="t"
     />
-    <el-card class="menu-card" :body-style="{ padding: '0 0 0 8px' }" shadow="never">
-      <el-menu mode="horizontal" class="ppt-menu-bar" :ellipsis="false">
+    <div class="menu-card">
+      <a-menu mode="horizontal" class="ppt-menu-bar" :selectable="false">
         <!-- 文件 -->
-        <el-sub-menu index="file" popper-class="ppt-menu-popper">
+        <a-sub-menu key="file" popupClassName="ppt-menu-popper">
           <template #title>{{ t('editor.file') }}</template>
-          <el-menu-item index="file-new-slide" @click="handleCreateNewFile()"><el-icon class="menu-el-icon"><Plus /></el-icon>{{ t('editor.newPresentation') }}</el-menu-item>
-          <el-menu-item index="file-import" @click="handleImportPptx()">
-            <el-icon class="menu-el-icon"><Upload /></el-icon>{{ t('editor.importPresentation') }}
-            <el-tag size="small" type="danger">1.0.0-BETA.20260402</el-tag>
-          </el-menu-item>
-          <el-menu-item index="file-export" @click="handleExportPpt()"><el-icon class="menu-el-icon"><Download /></el-icon>{{ t('editor.exportFile') }}</el-menu-item>
-          <el-menu-item index="file-print" @click="handlePrint()"><el-icon class="menu-el-icon"><Printer /></el-icon>{{ t('editor.print') }}</el-menu-item>
-        </el-sub-menu>
+          <a-menu-item key="file-new-slide" @click="handleCreateNewFile()"><PlusOutlined class="menu-el-icon" />{{ t('editor.newPresentation') }}</a-menu-item>
+          <a-menu-item key="file-import" @click="handleImportPptx()">
+            <UploadOutlined class="menu-el-icon" />{{ t('editor.importPresentation') }}
+            <a-tag color="red">1.0.0-BETA.20260402</a-tag>
+          </a-menu-item>
+          <a-menu-item key="file-export" @click="handleExportPpt()"><DownloadOutlined class="menu-el-icon" />{{ t('editor.exportFile') }}</a-menu-item>
+          <a-menu-item key="file-print" @click="handlePrint()"><PrinterOutlined class="menu-el-icon" />{{ t('editor.print') }}</a-menu-item>
+        </a-sub-menu>
 
         <!-- 编辑 -->
-        <el-sub-menu index="edit" popper-class="ppt-menu-popper">
+        <a-sub-menu key="edit" popupClassName="ppt-menu-popper">
           <template #title>{{ t('editor.edit') }}</template>
-          <el-menu-item index="undo" @click="undo()">{{ t('editor.undo') }}<span class="shortcut">Ctrl+Z</span></el-menu-item>
-          <el-menu-item index="redo" @click="redo()">{{ t('editor.redo') }}<span class="shortcut">Ctrl+Y</span></el-menu-item>
-          <el-divider />
-          <el-menu-item index="add-slide" @click="createSlide()">{{ t('editor.addSlide') }}</el-menu-item>
-          <el-menu-item index="del-slide" @click="deleteSlide()">{{ t('editor.deleteSlide') }}</el-menu-item>
-          <el-divider />
-          <el-menu-item index="reset" @click="resetSlides()">{{ t('editor.resetSlides') }}</el-menu-item>
-        </el-sub-menu>
+          <a-menu-item key="undo" @click="undo()">{{ t('editor.undo') }}<span class="shortcut">Ctrl+Z</span></a-menu-item>
+          <a-menu-item key="redo" @click="redo()">{{ t('editor.redo') }}<span class="shortcut">Ctrl+Y</span></a-menu-item>
+          <a-divider />
+          <a-menu-item key="add-slide" @click="createSlide()">{{ t('editor.addSlide') }}</a-menu-item>
+          <a-menu-item key="del-slide" @click="deleteSlide()">{{ t('editor.deleteSlide') }}</a-menu-item>
+          <a-divider />
+          <a-menu-item key="reset" @click="resetSlides()">{{ t('editor.resetSlides') }}</a-menu-item>
+        </a-sub-menu>
 
         <!-- 视图 -->
-        <el-sub-menu index="view" popper-class="ppt-menu-popper">
+        <a-sub-menu key="view" popupClassName="ppt-menu-popper">
           <template #title>{{ t('editor.view') }}</template>
-          <el-menu-item index="grid" @click="toggleGridLines()">
+          <a-menu-item key="grid" @click="toggleGridLines()">
             {{ showGridLines ? t('editor.closeGrid') : t('editor.openGrid') }}
-          </el-menu-item>
-          <el-menu-item index="ruler" @click="toggleRuler()">
+          </a-menu-item>
+          <a-menu-item key="ruler" @click="toggleRuler()">
             {{ showRuler ? t('editor.closeRuler') : t('editor.openRuler') }}
-          </el-menu-item>
-        </el-sub-menu>
+          </a-menu-item>
+        </a-sub-menu>
 
         <!-- 放映 -->
-        <el-sub-menu index="present" popper-class="ppt-menu-popper">
+        <a-sub-menu key="present" popupClassName="ppt-menu-popper">
           <template #title>{{ t('editor.present') }}</template>
-          <el-menu-item index="screen-start" @click="enterScreeningFromStart()">{{ t('editor.fromStart') }}<span class="shortcut">F5</span></el-menu-item>
-          <el-menu-item index="screen-current" @click="enterScreening()">{{ t('editor.fromCurrent') }}<span class="shortcut">Shift+F5</span></el-menu-item>
-        </el-sub-menu>
+          <a-menu-item key="screen-start" @click="enterScreeningFromStart()">{{ t('editor.fromStart') }}<span class="shortcut">F5</span></a-menu-item>
+          <a-menu-item key="screen-current" @click="enterScreening()">{{ t('editor.fromCurrent') }}<span class="shortcut">Shift+F5</span></a-menu-item>
+        </a-sub-menu>
 
         <!-- 帮助 -->
-        <el-sub-menu index="help" popper-class="ppt-menu-popper">
+        <a-sub-menu key="help" popupClassName="ppt-menu-popper">
           <template #title>{{ t('editor.help') }}</template>
-          <el-menu-item index="hotkey" @click="shortcutsVisible = true">{{ t('editor.shortcuts') }}</el-menu-item>
-          <el-menu-item index="about" @click="aboutVisible = true">{{ t('editor.about') }}</el-menu-item>
-        </el-sub-menu>
-      </el-menu>
-    </el-card>
+          <a-menu-item key="hotkey" @click="shortcutsVisible = true">{{ t('editor.shortcuts') }}</a-menu-item>
+          <a-menu-item key="about" @click="aboutVisible = true">{{ t('editor.about') }}</a-menu-item>
+        </a-sub-menu>
+      </a-menu>
+    </div>
 
     <!-- 工具栏 -->
     <CanvasTool v-if="!screening" class="canvas-tool" :t="t" />
@@ -80,31 +80,30 @@
       </div>
       <div class="footer-right">
         <IconMinus class="footer-icon" @click="scaleCanvas('-')" />
-        <el-dropdown trigger="click" @command="onScaleDropdownCommand">
+        <a-dropdown :trigger="['click']">
           <span class="footer-scale">
             {{ canvasScalePercentage }}
             <span class="footer-scale-arrow">▾</span>
           </span>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item v-for="item in canvasScalePresetList" :key="item" :command="item">{{ item }}%</el-dropdown-item>
-            </el-dropdown-menu>
+          <template #overlay>
+            <a-menu @click="({ key }: any) => onScaleDropdownCommand(key)">
+              <a-menu-item v-for="item in canvasScalePresetList" :key="item">{{ item }}%</a-menu-item>
+            </a-menu>
           </template>
-        </el-dropdown>
+        </a-dropdown>
         <IconPlus class="footer-icon" @click="scaleCanvas('+')" />
-        <el-slider
+        <a-slider
           class="zoom-slider"
-          size="small"
           :min="50"
           :max="200"
           :step="10"
-          :show-tooltip="false"
-          :model-value="Number(canvasScalePercentage.replace('%', '')) || 100"
-          @input="onScaleSliderInput"
+          :tooltip-open="false"
+          :value="Number(canvasScalePercentage.replace('%', '')) || 100"
+          @change="onScaleSliderInput"
         />
-        <el-tooltip :content="t('editor.fitScreen')" :show-after="500" :hide-after="0">
+        <a-tooltip :title="t('editor.fitScreen')" placement="top">
           <IconFullScreen class="footer-icon" @click="resetCanvas()" />
-        </el-tooltip>
+        </a-tooltip>
       </div>
     </div>
 
@@ -112,28 +111,29 @@
     <Screen v-if="screening" />
 
     <!-- 导出对话框 -->
-    <el-dialog
-      v-model="exportDialogVisible"
+    <a-modal
+      v-model:open="exportDialogVisible"
       :title="t('editor.exportTitle')"
       width="680px"
+      :footer="null"
       destroy-on-close
-      @close="closeExportDialog()"
+      @cancel="closeExportDialog()"
     >
       <ExportDialog />
-    </el-dialog>
+    </a-modal>
 
     <!-- 快捷键对话框 -->
-    <el-dialog v-model="shortcutsVisible" :title="t('editor.shortcutsTitle')" width="400px">
+    <a-modal v-model:open="shortcutsVisible" :title="t('editor.shortcutsTitle')" width="400px" :footer="null">
       <HotkeyDoc />
-    </el-dialog>
+    </a-modal>
 
     <!-- 关于对话框 -->
-    <el-dialog v-model="aboutVisible" :title="t('editor.aboutTitle')" width="400px">
+    <a-modal v-model:open="aboutVisible" :title="t('editor.aboutTitle')" width="400px" :footer="null">
       <div style="text-align: center; padding: 20px 0;">
         <h3 style="margin: 0 0 12px;">{{ t('editor.aboutSubtitle') }}</h3>
         <p style="color: #999; font-size: 12px; margin-top: 8px;">版本 1.0.0 · Apache 2.0 License</p>
       </div>
-    </el-dialog>
+    </a-modal>
 
     <!-- 隐藏的文件选择器 -->
     <input
@@ -148,8 +148,8 @@
 
 <script lang="ts" setup>
 import { ref, computed, onMounted, watch, getCurrentInstance } from 'vue'
-import { Download, Plus, Printer, Upload } from '@element-plus/icons-vue'
-import { ElMessage, ElLoading } from 'element-plus'
+import { DownloadOutlined, PlusOutlined, PrinterOutlined, UploadOutlined } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
 import { parsePptxToEditorData } from '@/utils/pptxImport/index'
 import { storeToRefs } from 'pinia'
 import { useMainStore, useSlidesStore, useSnapshotStore, useScreenStore } from '@/store'
@@ -325,18 +325,13 @@ const onPptxFileSelected = async (e: Event) => {
   // 校验文件格式，只支持 .pptx
   const fileName = file.name
   if (!fileName.toLowerCase().endsWith('.pptx')) {
-    ElMessage.error(t('editor.importOnlyPptx'))
+    message.error(t('editor.importOnlyPptx'))
     input.value = ''
     return
   }
 
-  // 显示红色 loading，持续 1 秒
-  const loading = ElLoading.service({
-    lock: true,
-    text: t('editor.importing'),
-    background: 'rgba(255, 255, 255, 0.9)',
-    customClass: 'custom-red-loading',
-  })
+  // 显示 loading 提示
+  const hideLoading = message.loading(t('editor.importing'), 0)
 
   // 强制 loading 显示至少 1 秒
   const minLoadingTime = 1000
@@ -361,10 +356,10 @@ const onPptxFileSelected = async (e: Event) => {
   }
   catch (err) {
     console.error('[PPTX Import] Failed:', err)
-    ElMessage.error(t('editor.importFailed'))
+    message.error(t('editor.importFailed'))
   }
   finally {
-    loading.close()
+    hideLoading()
     input.value = ''
   }
 }
@@ -540,7 +535,7 @@ watch(
   width: 120px;
 }
 
-.zoom-slider :deep(.el-slider__runway) {
+.zoom-slider :deep(.ant-slider-track) {
   margin: 0;
 }
 
@@ -552,34 +547,36 @@ watch(
 @import '@/assets/styles/prosemirror.scss';
 </style>
 
-<!-- 全局样式：popper 是 teleport 到 body 的，必须用非 scoped 样式 -->
+<!-- 全局样式：popup 是 teleport 到 body 的，必须用非 scoped 样式 -->
 <style>
 .ppt-menu-popper {
   min-width: 200px !important;
 }
 
-.ppt-menu-popper .el-menu {
+.ppt-menu-popper .ant-menu {
   border-right: none !important;
 }
 
-.ppt-menu-popper .el-menu-item {
+.ppt-menu-popper .ant-menu-item {
   height: 32px !important;
   line-height: 32px !important;
   font-size: 13px !important;
   color: #3c4043 !important;
   padding: 0 16px !important;
+  margin: 0 !important;
   display: flex !important;
   align-items: center !important;
   gap: 8px;
   white-space: nowrap;
 }
 
-.ppt-menu-popper .el-sub-menu__title {
+.ppt-menu-popper .ant-menu-submenu-title {
   height: 32px !important;
   line-height: 32px !important;
   font-size: 13px !important;
   color: #3c4043 !important;
   padding: 0 16px !important;
+  margin: 0 !important;
   display: flex !important;
   align-items: center !important;
   gap: 8px;
@@ -595,45 +592,32 @@ watch(
   justify-content: center;
 }
 
-.ppt-menu-popper .el-menu-item:hover {
+.ppt-menu-popper .ant-menu-item:hover {
   background: #f1f3f4 !important;
 }
 
-.ppt-menu-popper .el-divider--horizontal {
+.ppt-menu-popper .ant-divider-horizontal {
   margin: 4px 12px !important;
   width: calc(100% - 24px) !important;
 }
 
-/* 自定义红色 loading 样式 */
-.custom-red-loading .el-loading-spinner {
-  /* 修改旋转图标颜色 */
-  & .path {
-    stroke: #f56c6c !important; /* Element Plus 红色 */
-  }
-  
-  /* 修改文字颜色 */
-  & .el-loading-text {
-    color: #f56c6c !important;
-    font-weight: 500;
-  }
-  
-  /* 修改 SVG 图标颜色 */
-  & svg {
-    fill: #f56c6c !important;
-  }
-}
-
-/* 菜单栏样式 - 全局作用域，防止宿主 Element Plus CSS 覆盖 */
+/* 菜单栏样式 - 全局作用域，防止宿主 Ant Design Vue CSS 覆盖 */
 .ppt-editor .ppt-menu-bar {
   border-bottom: none !important;
   height: auto !important;
   background: transparent !important;
+  line-height: unset !important;
 }
-.ppt-editor .ppt-menu-bar .el-menu--horizontal {
+.ppt-editor .ppt-menu-bar .ant-menu-horizontal {
   border-bottom: none !important;
   background: transparent !important;
+  line-height: unset !important;
 }
-.ppt-editor .ppt-menu-bar .el-sub-menu__title {
+.ppt-editor .ant-menu-horizontal > .ant-menu-item,
+.ppt-editor .ant-menu-horizontal > .ant-menu-submenu {
+  padding-inline: 0 !important;
+}
+.ppt-editor .ppt-menu-bar .ant-menu-submenu-title {
   padding: 6px 12px !important;
   height: auto !important;
   line-height: 1.4 !important;
@@ -642,17 +626,17 @@ watch(
   border-radius: 4px !important;
   border-bottom: none !important;
 }
-.ppt-editor .ppt-menu-bar .el-sub-menu__title:hover {
+.ppt-editor .ppt-menu-bar .ant-menu-submenu-title:hover {
   background: rgba(255, 255, 255, 0.2) !important;
 }
-.ppt-editor .ppt-menu-bar .el-sub-menu.is-opened > .el-sub-menu__title {
+.ppt-editor .ppt-menu-bar .ant-menu-submenu-open > .ant-menu-submenu-title {
   background: rgba(255, 255, 255, 0.3) !important;
 }
-.ppt-editor .ppt-menu-bar .el-sub-menu__icon-arrow {
+.ppt-editor .ppt-menu-bar .ant-menu-submenu-arrow {
   display: none !important;
 }
-.ppt-editor .ppt-menu-bar .el-menu-item,
-.ppt-editor .ppt-menu-bar .el-sub-menu .el-sub-menu__title {
+.ppt-editor .ppt-menu-bar .ant-menu-item,
+.ppt-editor .ppt-menu-bar .ant-menu-submenu .ant-menu-submenu-title {
   height: auto !important;
   line-height: 1.6 !important;
 }
@@ -664,5 +648,6 @@ watch(
   border-bottom: 1px solid #9e2b1a !important;
   background: #b7472a !important;
   flex-shrink: 0;
+  padding: 0 0 0 8px;
 }
 </style>

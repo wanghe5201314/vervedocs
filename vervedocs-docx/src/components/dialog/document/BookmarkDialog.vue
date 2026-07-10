@@ -1,15 +1,15 @@
 <template>
-  <el-dialog v-model="visible" title="书签" width="520px" :close-on-click-modal="false" class="app-dialog">
+  <a-modal v-model:open="visible" title="书签" width="520px" :maskClosable="false" :footer="null" class="app-dialog">
     <div class="bookmark-body">
       <div class="bookmark-left">
-        <el-form :model="form" label-width="70px">
-          <el-form-item label="书签名">
-            <el-input v-model="form.name" placeholder="请输入书签名" @keydown.enter.prevent="handleAdd"/>
-          </el-form-item>
-        </el-form>
+        <a-form :model="form" :label-col="{ style: { width: '70px' } }">
+          <a-form-item label="书签名">
+            <a-input v-model:value="form.name" placeholder="字母、数字、下划线或中文" @keydown.enter.prevent="handleAdd"/>
+          </a-form-item>
+        </a-form>
 
         <div class="bookmark-list-title">书签</div>
-        <el-scrollbar height="220px" class="bookmark-list">
+        <div style="overflow-y:auto;height:220px" class="bookmark-list">
           <div
             v-for="item in bookmarks"
             :key="item.name"
@@ -19,17 +19,17 @@
           >
             {{ item.name }}
           </div>
-        </el-scrollbar>
+        </div>
       </div>
 
       <div class="bookmark-actions">
-        <el-button type="primary" @click="handleAdd">添加</el-button>
-        <el-button :disabled="!selectedName" @click="handleDelete">删除</el-button>
-        <el-button :disabled="!selectedName" @click="handleGoto">转到</el-button>
-        <el-button @click="visible = false">关闭</el-button>
+        <a-button type="primary" @click="handleAdd">添加</a-button>
+        <a-button :disabled="!selectedName" @click="handleDelete">删除</a-button>
+        <a-button :disabled="!selectedName" @click="handleGoto">转到</a-button>
+        <a-button @click="visible = false">关闭</a-button>
       </div>
     </div>
-  </el-dialog>
+  </a-modal>
 </template>
 
 <script setup lang="ts">
@@ -77,6 +77,9 @@ watch(
 const handleAdd = () => {
   const name = form.value.name.trim()
   if (!name) return
+  if (!/^[\w\u4e00-\u9fff]+$/.test(name)) {
+    return
+  }
   emit('add', name)
   form.value.name = ''
 }
@@ -135,15 +138,7 @@ const handleGoto = () => {
 }
 
 .bookmark-item.active {
-  background: #ecf5ff;
-  color: #409eff;
-}
-
-:deep(.el-scrollbar) {
-  height: auto !important;
-}
-
-:deep(.el-button+.el-button) {
-  margin-left: 0 !important;
+  background: #e6f7ff;
+  color: #1890ff;
 }
 </style>

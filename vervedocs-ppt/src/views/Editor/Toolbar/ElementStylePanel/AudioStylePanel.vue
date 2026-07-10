@@ -2,22 +2,22 @@
   <div class="audio-style-panel">
     <div class="row">
       <div style="flex: 2;">图标颜色：</div>
-      <el-popover trigger="click">
-        <ColorPicker
-          :modelValue="(handleElement as any)?.color"
-          @update:modelValue="(value: any) => updateAudio({ color: value })"
-        />
-        <template #reference>
-          <ColorButton :color="(handleElement as any)?.color || ''" style="flex: 3;" />
+      <a-popover trigger="click">
+        <template #content>
+          <ColorPicker
+            :modelValue="(handleElement as any)?.color"
+            @update:modelValue="(value: any) => updateAudio({ color: value })"
+          />
         </template>
-      </el-popover>
+        <ColorButton :color="(handleElement as any)?.color || ''" style="flex: 3;" />
+      </a-popover>
     </div>
 
     <div class="row switch-row">
       <div style="flex: 2;">自动播放：</div>
       <div class="switch-wrapper" style="flex: 3;">
-        <el-switch 
-          :model-value="(handleElement as any)?.autoplay" 
+        <a-switch 
+          :checked="(handleElement as any)?.autoplay" 
           @change="(checked: any) => updateAudio({ autoplay: checked })" 
         />
       </div>
@@ -26,8 +26,8 @@
     <div class="row switch-row">
       <div style="flex: 2;">循环播放：</div>
       <div class="switch-wrapper" style="flex: 3;">
-        <el-switch 
-          :model-value="(handleElement as any)?.loop" 
+        <a-switch 
+          :checked="(handleElement as any)?.loop" 
           @change="(checked: any) => updateAudio({ loop: checked })" 
         />
       </div>

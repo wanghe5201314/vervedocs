@@ -2,47 +2,47 @@
   <div class="slide-design-panel">
     <div class="title">背景填充</div>
     <div class="row">
-      <el-select 
+      <a-select 
         style="flex: 10;" 
-        :model-value="background.type" 
+        :value="background.type" 
         @change="(value: string) => updateBackgroundType(value as 'solid' | 'image' | 'gradient')"
       >
-        <el-option value="solid" label="纯色填充" />
-        <el-option value="image" label="图片填充" />
-        <el-option value="gradient" label="渐变填充" />
-      </el-select>
+        <a-select-option value="solid">纯色填充</a-select-option>
+        <a-select-option value="image">图片填充</a-select-option>
+        <a-select-option value="gradient">渐变填充</a-select-option>
+      </a-select>
       <div style="flex: 1;"></div>
 
-      <el-popover trigger="click" v-if="background.type === 'solid'" width="auto">
-        <ColorPicker
-          :modelValue="background.color"
-          @update:modelValue="(color: string) => updateBackground({ color })"
-        />
-        <template #reference>
-          <ColorButton :color="background.color || '#fff'" style="flex: 10;" />
+      <a-popover trigger="click" v-if="background.type === 'solid'">
+        <ColorButton :color="background.color || '#fff'" style="flex: 10;" />
+        <template #content>
+          <ColorPicker
+            :modelValue="background.color"
+            @update:modelValue="(color: string) => updateBackground({ color })"
+          />
         </template>
-      </el-popover>
+      </a-popover>
 
-      <el-select 
+      <a-select 
         style="flex: 10;" 
-        :model-value="background.imageSize || 'cover'" 
+        :value="background.imageSize || 'cover'" 
         @change="(value: string) => updateBackground({ imageSize: value as 'cover' | 'contain' | 'repeat' })"
         v-else-if="background.type === 'image'"
       >
-        <el-option value="contain" label="缩放" />
-        <el-option value="repeat" label="拼贴" />
-        <el-option value="cover" label="缩放铺满" />
-      </el-select>
+        <a-select-option value="contain">缩放</a-select-option>
+        <a-select-option value="repeat">拼贴</a-select-option>
+        <a-select-option value="cover">缩放铺满</a-select-option>
+      </a-select>
 
-      <el-select 
+      <a-select 
         style="flex: 10;" 
-        :model-value="background.gradientType" 
+        :value="background.gradientType" 
         @change="(value: string) => updateBackground({ gradientType: value as 'linear' | 'radial' })"
         v-else
       >
-        <el-option value="linear" label="线性渐变" />
-        <el-option value="radial" label="径向渐变" />
-      </el-select>
+        <a-select-option value="linear">线性渐变</a-select-option>
+        <a-select-option value="radial">径向渐变</a-select-option>
+      </a-select>
     </div>
 
     <div class="background-image-wrapper" v-if="background.type === 'image'">
@@ -58,111 +58,111 @@
     <div class="background-gradient-wrapper" v-if="background.type === 'gradient'">
       <div class="row">
         <div style="flex: 2;">起点颜色：</div>
-        <el-popover trigger="click" width="auto">
-          <ColorPicker
-            :modelValue="background.gradientColor?.[0]"
-            @update:modelValue="(value: string) => updateBackground({ gradientColor: [value, background.gradientColor?.[1] ?? '#fff'] })"
-          />
-          <template #reference>
-            <ColorButton :color="background.gradientColor?.[0] ?? '#fff'" style="flex: 3;" />
+        <a-popover trigger="click">
+          <ColorButton :color="background.gradientColor?.[0] ?? '#fff'" style="flex: 3;" />
+          <template #content>
+            <ColorPicker
+              :modelValue="background.gradientColor?.[0]"
+              @update:modelValue="(value: string) => updateBackground({ gradientColor: [value, background.gradientColor?.[1] ?? '#fff'] })"
+            />
           </template>
-        </el-popover>
+        </a-popover>
       </div>
       <div class="row">
         <div style="flex: 2;">终点颜色：</div>
-        <el-popover trigger="click" width="auto">
-          <ColorPicker
-            :modelValue="background.gradientColor?.[1]"
-            @update:modelValue="(value: string) => updateBackground({ gradientColor: [background.gradientColor?.[0] ?? '#fff', value] })"
-          />
-          <template #reference>
-            <ColorButton :color="background.gradientColor?.[1] ?? '#fff'" style="flex: 3;" />
+        <a-popover trigger="click">
+          <ColorButton :color="background.gradientColor?.[1] ?? '#fff'" style="flex: 3;" />
+          <template #content>
+            <ColorPicker
+              :modelValue="background.gradientColor?.[1]"
+              @update:modelValue="(value: string) => updateBackground({ gradientColor: [background.gradientColor?.[0] ?? '#fff', value] })"
+            />
           </template>
-        </el-popover>
+        </a-popover>
       </div>
       <div class="row" v-if="background.gradientType === 'linear'">
         <div style="flex: 2;">渐变角度：</div>
-        <el-slider
+        <a-slider
           class="slider"
           :min="0"
           :max="360"
           :step="15"
-          :model-value="background.gradientRotate"
+          :value="background.gradientRotate"
           @change="(value: number) => updateBackground({ gradientRotate: value })" 
         />
       </div>
     </div>
 
-    <div class="row"><el-button style="flex: 1;" @click="applyBackgroundAllSlide()">应用背景到全选</el-button></div>
+    <div class="row"><a-button style="flex: 1;" @click="applyBackgroundAllSlide()">应用背景到全选</a-button></div>
 
-    <el-divider />
+    <a-divider />
 
     <div class="row">
       <div style="flex: 2;">画布尺寸：</div>
-      <el-select style="flex: 3;" :model-value="viewportRatio" @change="(value: number) => updateViewportRatio(value)">
-        <el-option :value="0.5625" label="宽屏 16 : 9" />
-        <el-option :value="0.625" label="宽屏 16 : 10" />
-        <el-option :value="0.75" label="标准 4 : 3" />
-      </el-select>
+      <a-select style="flex: 3;" :value="viewportRatio" @change="(value: number) => updateViewportRatio(value)">
+        <a-select-option :value="0.5625">宽屏 16 : 9</a-select-option>
+        <a-select-option :value="0.625">宽屏 16 : 10</a-select-option>
+        <a-select-option :value="0.75">标准 4 : 3</a-select-option>
+      </a-select>
     </div>
 
-    <el-divider />
+    <a-divider />
 
     <div class="title">全局主题</div>
     <div class="row">
       <div style="flex: 2;">字体：</div>
-      <el-select
+      <a-select
         style="flex: 3;"
-        :model-value="theme.fontName"
+        :value="theme.fontName"
         @change="(value: string) => updateTheme({ fontName: value })"
       >
-        <el-option-group label="系统字体">
-          <el-option v-for="font in availableFonts" :key="font.value" :value="font.value" :label="font.label">
+        <a-select-opt-group label="系统字体">
+          <a-select-option v-for="font in availableFonts" :key="font.value" :value="font.value">
             <span :style="{ fontFamily: font.value }">{{font.label}}</span>
-          </el-option>
-        </el-option-group>
-        <el-option-group label="在线字体">
-          <el-option v-for="font in webFonts" :key="font.value" :value="font.value" :label="font.label">
+          </a-select-option>
+        </a-select-opt-group>
+        <a-select-opt-group label="在线字体">
+          <a-select-option v-for="font in webFonts" :key="font.value" :value="font.value">
             <span>{{font.label}}</span>
-          </el-option>
-        </el-option-group>
-      </el-select>
+          </a-select-option>
+        </a-select-opt-group>
+      </a-select>
     </div>
     <div class="row">
       <div style="flex: 2;">字体颜色：</div>
-      <el-popover trigger="click" width="auto">
-        <ColorPicker
-          :modelValue="theme.fontColor"
-          @update:modelValue="(value: string) => updateTheme({ fontColor: value })"
-        />
-        <template #reference>
-          <ColorButton :color="theme.fontColor" style="flex: 3;" />
+      <a-popover trigger="click">
+        <ColorButton :color="theme.fontColor" style="flex: 3;" />
+        <template #content>
+          <ColorPicker
+            :modelValue="theme.fontColor"
+            @update:modelValue="(value: string) => updateTheme({ fontColor: value })"
+          />
         </template>
-      </el-popover>
+      </a-popover>
     </div>
     <div class="row">
       <div style="flex: 2;">背景颜色：</div>
-      <el-popover trigger="click" width="auto">
-        <ColorPicker
-          :modelValue="theme.backgroundColor"
-          @update:modelValue="(value: string) => updateTheme({ backgroundColor: value })"
-        />
-        <template #reference>
-          <ColorButton :color="theme.backgroundColor" style="flex: 3;" />
+      <a-popover trigger="click">
+        <ColorButton :color="theme.backgroundColor" style="flex: 3;" />
+        <template #content>
+          <ColorPicker
+            :modelValue="theme.backgroundColor"
+            @update:modelValue="(value: string) => updateTheme({ backgroundColor: value })"
+          />
         </template>
-      </el-popover>
+      </a-popover>
     </div>
     <div class="row">
       <div style="flex: 2;">主题色：</div>
-      <el-popover trigger="click" width="auto">
-        <ColorPicker
-          :modelValue="theme.themeColor"
-          @update:modelValue="(value: string) => updateTheme({ themeColor: value })"
-        />
-        <template #reference>
-          <ColorButton :color="theme.themeColor" style="flex: 3;" />
+      <a-popover trigger="click">
+        <ColorButton :color="theme.themeColor" style="flex: 3;" />
+        <template #content>
+          <ColorPicker
+            :modelValue="theme.themeColor"
+            @update:modelValue="(value: string) => updateTheme({ themeColor: value })"
+          />
         </template>
-      </el-popover>
+      </a-popover>
     </div>
 
     <div class="title dropdown" :class="{ 'active': showPresetThemes }" @click="togglePresetThemesVisible()" style="margin-top: 20px;">
@@ -187,7 +187,7 @@
       </div>
     </div>
 
-    <div class="row"><el-button style="flex: 1;" @click="applyThemeAllSlide()">应用主题到全选</el-button></div>
+    <div class="row"><a-button style="flex: 1;" @click="applyThemeAllSlide()">应用主题到全选</a-button></div>
   </div>
 </template>
 
@@ -491,7 +491,7 @@ export default defineComponent({
   flex: 3;
 }
 
-:deep(.el-divider) {
+:deep(.ant-divider) {
   margin: 16px 0;
 }
 </style>

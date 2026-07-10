@@ -1,6 +1,6 @@
 {
   "name": "@vervedoc/docx-lite",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "玉衡云文档 轻量版UI",
   "author": "wanghe",
   "license": "MIT",
@@ -53,7 +53,7 @@
     "node": ">=16.0.0"
   },
   "dependencies": {
-    "@vervedoc/core": "^3.0.10",
+    "@vervedoc/core": "^3.0.11",
     "vue": "^3.4.0"
   },
   "peerDependencies": {

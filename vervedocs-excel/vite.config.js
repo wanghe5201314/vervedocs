@@ -30,11 +30,11 @@ export default defineConfig(function (_a) {
                 fileName: 'excel-editor-ui'
             },
             rollupOptions: {
-                external: ['vue', 'element-plus', '@mdi/js'],
+                external: ['vue', 'ant-design-vue', '@mdi/js'],
                 output: {
                     globals: {
                         vue: 'Vue',
-                        'element-plus': 'ElementPlus',
+                        'ant-design-vue': 'antd',
                         '@mdi/js': 'MdiJs'
                     },
                     dir: 'dist'

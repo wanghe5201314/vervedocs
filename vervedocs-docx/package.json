@@ -2,7 +2,7 @@
   "name": "@vervedoc/docx",
   "author": "wanghe",
   "license": "MIT",
-  "version": "1.2.10",
+  "version": "1.2.11",
   "description": "玉衡云文档 完整版UI",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
@@ -26,10 +26,10 @@
     },
     "./style.css": "./dist/docx.css"
   },
-  "homepage": "https://gitee.com/wanghe520/docx-editor",
+  "homepage": "https://gitee.com/wanghe520/vervedocs",
   "repository": {
     "type": "git",
-    "url": "https://gitee.com/wanghe520/docx-editor.git"
+    "url": "https://gitee.com/wanghe520/vervedocs"
   },
   "keywords": [
     "vervedoc-docx",
@@ -71,7 +71,7 @@
   },
   "dependencies": {
     "@ant-design/icons-vue": "^7.0.1",
-    "@vervedoc/core": "file:../vervedocs-core",
+    "@vervedoc/core": "^3.0.11",
     "@vervedoc/docx-editor-ai": "^1.0.3",
     "@vervedoc/docx-editor-chart": "^1.0.4",
     "@vervedoc/docx-editor-collaboration": "^1.0.0",
@@ -96,6 +96,7 @@
   "overrides": {
     "minimist": "^1.2.6",
     "node-fetch": "^2.6.7",
-    "tmp": "^0.2.6"
+    "tmp": "^0.2.6",
+    "core-js": "^3.49.0"
   }
 }

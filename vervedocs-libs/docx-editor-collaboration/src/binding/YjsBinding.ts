@@ -146,33 +146,69 @@ export class YjsBinding {
     operations: Operation[],
     current: Record<string, unknown>[]
   ): void {
+    const rootReplaceIndexes = new Set<number>()
+
     for (const operation of operations) {
       const index = this.getTopLevelIndex(operation.path)
       if (index === null) continue
 
+      if (!this.isTopLevelOperation(operation.path)) {
+        rootReplaceIndexes.add(index)
+        continue
+      }
+
+      this.applyTopLevelOperation(yArray, index, operation, current)
+    }
+
+    for (const index of Array.from(rootReplaceIndexes).sort((a, b) => a - b)) {
+      const rootValue = current[index]
+      if (!rootValue || Array.isArray(rootValue)) {
+        continue
+      }
+      this.replaceElementAtIndex(yArray, index, this.jsonToYMap(rootValue))
+    }
+  }
+
+  private isTopLevelOperation(path: string): boolean {
+    return path.split('/').length <= 2
+  }
+
+  private applyTopLevelOperation(
+    yArray: Y.Array<Y.Map<unknown>>,
+    index: number,
+    operation: Operation,
+    current: Record<string, unknown>[]
+  ): void {
       if (operation.op === 'remove') {
         if (index < yArray.length) {
           yArray.delete(index, 1)
         }
-        continue
+        return
       }
 
       if (operation.op === 'add' || operation.op === 'replace') {
         const rootValue = this.getRootValueFromOperation(operation, current)
         if (!rootValue || Array.isArray(rootValue)) {
-          continue
+          return
         }
         const yMap = this.jsonToYMap(rootValue)
         if (operation.op === 'add') {
           yArray.insert(index, [yMap])
         } else {
-          if (index < yArray.length) {
-            yArray.delete(index, 1)
-          }
-          yArray.insert(index, [yMap])
+          this.replaceElementAtIndex(yArray, index, yMap)
         }
       }
+  }
+
+  private replaceElementAtIndex(
+    yArray: Y.Array<Y.Map<unknown>>,
+    index: number,
+    yMap: Y.Map<unknown>
+  ): void {
+    if (index < yArray.length) {
+      yArray.delete(index, 1)
     }
+    yArray.insert(index, [yMap])
   }
 
   private getTopLevelIndex(path: string): number | null {

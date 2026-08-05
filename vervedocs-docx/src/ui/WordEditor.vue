@@ -32,6 +32,8 @@ const emit = defineEmits<{
   (e: 'collab-connection-change', payload: any): void
   (e: 'collabSyncStateChange', payload: any): void
   (e: 'collab-sync-state-change', payload: any): void
+  (e: 'collabSharedSyncStateChange', payload: any): void
+  (e: 'collab-shared-sync-state-change', payload: any): void
   (e: 'collabUsersChange', payload: any): void
   (e: 'collab-users-change', payload: any): void
   (e: 'collabError', payload: any): void
@@ -81,6 +83,7 @@ const events: ExternalEventName[] = [
   'contentChange',
   'collabConnectionChange',
   'collabSyncStateChange',
+  'collabSharedSyncStateChange',
   'collabUsersChange',
   'collabError'
 ]

@@ -11,6 +11,9 @@
       :app-name-with-version="appNameWithVersion"
       :document-meta="documentMeta"
       :document-stats="documentStats"
+      :show-collaboration-menu="showCollaborationMenu"
+      :cursor-collaboration-enabled="collabSharedSyncState.cursor"
+      :selection-collaboration-enabled="collabSharedSyncState.selection"
       @command="handleCommand"
     />
     <div class="body">
@@ -135,7 +138,8 @@ import ImportNotification from '@/components/common/ImportNotification.vue'
 
 import type { DocxCommentMeta } from '@/utils/docxParser/types'
 
-import { CollaborationPlugin } from '@vervedoc/docx-editor-collaboration'
+import { CollaborationPlugin, ConnectionState } from '@vervedoc/docx-editor-collaboration'
+import type { SharedSyncState } from '@vervedoc/docx-editor-collaboration'
 import type { CollaborationOptions } from '@/ui/index'
 import { appConfig } from '@/config/app-config'
 
@@ -176,6 +180,9 @@ const cachedCatalog = ref<any[]>([])
 
 // 协同状态
 const collabOnlineUsers = ref<Array<{userId: string, userName: string, color: string}>>([])
+const collabConnectionState = ref<ConnectionState>(ConnectionState.DISCONNECTED)
+const collabSharedSyncState = ref<SharedSyncState>({ cursor: true, selection: true })
+const showCollaborationMenu = computed(() => collabConnectionState.value === ConnectionState.CONNECTED)
 const isViewMode = computed(() => documentMeta.status === 'view' || documentMeta.status === 'lock')
 const headerTitle = computed(() => {
   const name = String(documentMeta.name || '').trim()
@@ -878,13 +885,20 @@ const initCollaboration = () => {
   })
 
   collabPlugin.install(editorInstance)
+  collabConnectionState.value = collabPlugin.getConnectionState()
+  collabSharedSyncState.value = collabPlugin.getSharedSyncState()
 
   collabOffFns.push(
     collabPlugin.on('connectionChange', (state) => {
+      collabConnectionState.value = state
       emitExternalEvent('collabConnectionChange', { state })
     }),
     collabPlugin.on('syncStateChange', (state) => {
       emitExternalEvent('collabSyncStateChange', { state })
+    }),
+    collabPlugin.on('sharedSyncStateChange', (state) => {
+      collabSharedSyncState.value = state
+      emitExternalEvent('collabSharedSyncStateChange', { state })
     }),
     collabPlugin.on('usersChange', (users) => {
       collabOnlineUsers.value = users
@@ -1204,6 +1218,20 @@ const handleCommand = (command: string, ...args: any[]) => {
   }
   if (command === 'compare') {
     message.info('暂不支持比较文档')
+    return
+  }
+  if (command === 'toggleCollaborationCursor') {
+    if (!collabPlugin) return
+    collabPlugin.setSharedSyncState({
+      cursor: !collabSharedSyncState.value.cursor
+    })
+    return
+  }
+  if (command === 'toggleCollaborationSelection') {
+    if (!collabPlugin) return
+    collabPlugin.setSharedSyncState({
+      selection: !collabSharedSyncState.value.selection
+    })
     return
   }
   if (command === 'toggleTrackChanges') {

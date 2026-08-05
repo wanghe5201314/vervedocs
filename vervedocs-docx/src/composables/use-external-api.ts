@@ -12,6 +12,7 @@ export type ExternalEventName =
   | 'contentChange'
   | 'collabConnectionChange'
   | 'collabSyncStateChange'
+  | 'collabSharedSyncStateChange'
   | 'collabUsersChange'
   | 'collabError'
 

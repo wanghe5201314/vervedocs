@@ -10,7 +10,7 @@
 import {
   Extension,
   onAuthenticatePayload,
-  onConnectPayload,
+
 } from '@hocuspocus/server'
 
 export interface UserContext {
@@ -60,19 +60,17 @@ export class AuthExtension implements Extension {
       throw new Error('Authentication failed: userId is required')
     }
 
-    // 将用户信息注入上下文，后续 hook 和 Awareness 可使用
     const userContext: UserContext = {
       userId,
       userName: userName || `User-${userId}`,
       color: String(parsed.color ?? '') || randomColor(),
     }
 
-    // data.context 是一个可写对象，写入的内容会在后续 hook 中持续可用
-    Object.assign(data.context, { user: userContext })
-
     console.log(
-      `[Auth] User authenticated: ${userContext.userName} (${userContext.userId})`,
+      `[认证] 用户已认证: ${userContext.userName} (${userContext.userId})`,
     )
+
+    return { user: userContext }
   }
 
   // ---- 空实现 ----
@@ -82,6 +80,7 @@ export class AuthExtension implements Extension {
   async onLoadDocument() {}
   async afterLoadDocument() {}
   async onStoreDocument() {}
+  async afterStoreDocument() {}
   async onChange() {}
   async onDisconnect() {}
   async afterUnloadDocument() {}
@@ -89,4 +88,13 @@ export class AuthExtension implements Extension {
   async onRequest() {}
   async onUpgrade() {}
   async onStateless() {}
+  async onCreateDocument() {}
+  async onTokenSync() {}
+  async beforeHandleMessage() {}
+  async afterHandleMessage() {}
+  async beforeHandleAwareness() {}
+  async beforeSync() {}
+  async beforeBroadcastStateless() {}
+  async onAwarenessUpdate() {}
+  async beforeUnloadDocument() {}
 }

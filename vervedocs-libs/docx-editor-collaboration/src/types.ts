@@ -34,6 +34,11 @@ export interface CursorPosition {
   endIndex?: number
 }
 
+export interface SharedSyncState {
+  cursor: boolean
+  selection: boolean
+}
+
 /**
  * 远程用户光标
  */
@@ -43,6 +48,37 @@ export interface RemoteCursor {
   color: string
   position: CursorPosition
   lastUpdate: number
+}
+
+export interface EditorCursorMetrics {
+  width: number
+  height: number
+  boundingBoxAscent: number
+  boundingBoxDescent: number
+}
+
+export interface EditorCursorCoordinate {
+  leftTop: number[]
+  leftBottom: number[]
+  rightTop: number[]
+  rightBottom: number[]
+}
+
+export interface EditorCursorPoint {
+  pageNo: number
+  rowIndex: number
+  rowNo: number
+  ascent: number
+  lineHeight: number
+  metrics: Partial<EditorCursorMetrics> & Pick<EditorCursorMetrics, 'height'>
+  coordinate: Partial<EditorCursorCoordinate>
+}
+
+export interface EditorCursorOptions {
+  scale?: number
+  cursor?: {
+    width?: number
+  }
 }
 
 /**
@@ -61,6 +97,8 @@ export interface EditorInterface {
     ): void
     getRange(): { startIndex: number; endIndex: number } | null
     executeSetRange(startIndex: number, endIndex: number): void
+    getPositionList?(): EditorCursorPoint[]
+    getOptions?(): EditorCursorOptions
   }
   listener: {
     contentChange?: () => void

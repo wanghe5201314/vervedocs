@@ -11,6 +11,7 @@ export {
   type CollaborationConfig,
   type CursorPosition,
   type RemoteCursor,
+  type SharedSyncState,
   type EditorInterface,
   ConnectionState,
   SyncState,

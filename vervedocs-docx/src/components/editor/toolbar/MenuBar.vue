@@ -394,6 +394,30 @@
         <a-menu-item key="revisionPanel"><span class="mi"><MdiIcon name="dock-right" /><span>修订面板</span></span></a-menu-item>
       </a-sub-menu>
 
+      <a-sub-menu
+        v-if="showCollaborationMenu"
+        key="collaboration"
+        popupClassName="gdocs-menu-popper"
+      >
+        <template #title>协同</template>
+        <a-menu-item key="toggleCollaborationCursor">
+          <div class="mi-row mi-row--toggle">
+            <span class="mi"><MdiIcon name="pencil" /><span>光标协同</span></span>
+            <span class="menu-toggle-check" aria-hidden="true">
+              <MdiIcon v-if="cursorCollaborationEnabled" name="check" />
+            </span>
+          </div>
+        </a-menu-item>
+        <a-menu-item key="toggleCollaborationSelection">
+          <div class="mi-row mi-row--toggle">
+            <span class="mi"><MdiIcon name="select-all" /><span>选区协同</span></span>
+            <span class="menu-toggle-check" aria-hidden="true">
+              <MdiIcon v-if="selectionCollaborationEnabled" name="check" />
+            </span>
+          </div>
+        </a-menu-item>
+      </a-sub-menu>
+
       <!-- 工具菜单 -->
       <a-sub-menu key="tools" popupClassName="gdocs-menu-popper">
         <template #title>工具</template>
@@ -527,6 +551,9 @@ const props = defineProps<{
   inTable?: boolean
   inCanvas?: boolean
   showLineBreak?: boolean
+  showCollaborationMenu?: boolean
+  cursorCollaborationEnabled?: boolean
+  selectionCollaborationEnabled?: boolean
 
   revisionDisplayMode?: 'all' | 'comments' | 'revisions'
   documentStats?: {
@@ -652,6 +679,8 @@ const handleMenuClick = (key: string) => {
     tocCustom: () => emit('view', 'tocCustom'),
     tocRemove: () => emit('view', 'tocRemove'),
     revisionPanel: () => emit('cmd', 'openRevisionPanel'),
+    toggleCollaborationCursor: () => emit('cmd', 'toggleCollaborationCursor'),
+    toggleCollaborationSelection: () => emit('cmd', 'toggleCollaborationSelection'),
     showAllMarks: () => emit('cmd', 'revisionDisplayMode', 'all'),
     showComments: () => emit('cmd', 'revisionDisplayMode', 'comments'),
     showRevisions: () => emit('cmd', 'revisionDisplayMode', 'revisions'),
@@ -734,8 +763,29 @@ const handleMenuClick = (key: string) => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 400;
+}
+
+.mi-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.mi-row--toggle {
+  min-width: 180px;
+}
+
+.menu-toggle-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  min-width: 16px;
+  color: #1677ff;
 }
 
 /* 工具栏切换下拉菜单 */

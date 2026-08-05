@@ -2,7 +2,7 @@
   <div 
     class="multi-select-operate"
     :style="{
-      left: rangenX * canvasScale + 'px',
+      left: range.minX * canvasScale + 'px',
       top: range.minY * canvasScale + 'px',
     }"
   >

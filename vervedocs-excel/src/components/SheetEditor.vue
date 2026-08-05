@@ -415,105 +415,11 @@
       </div>
     </div>
 
-    <!-- 编辑栏 -->
-    <div class="formula-row" v-if="showFormulaBar">
-      <div class="cell-ref" @click="selectCellRefInput()">{{ currentCellRef }}</div>
-      <input
-        ref="formulaInputRef"
-        class="formula-input"
-        :value="formulaValue"
-        :disabled="readOnly"
-        placeholder="输入单元格内容或公式"
-        @input="onFormulaInput"
-        @keydown.enter.prevent="confirmFormulaAndMove('down')"
-        @keydown.tab.prevent="confirmFormulaAndMove('right')"
-        @keydown.escape="cancelEditing()"
-        @focus="formulaFocused = true"
-        @blur="formulaFocused = false"
-      />
-    </div>
-
     <!-- 表格网格 -->
-    <div class="grid-scroll" ref="gridScrollRef" @mousedown="handleGridMouseDown">
-      <table class="sheet-grid" :class="{ 'hide-gridlines': !showGridlines }" :style="sheetGridStyle">
-        <colgroup>
-          <col class="col-index" />
-          <col
-            v-for="col in currentColumns"
-            :key="`cg-${col}`"
-            :style="{ width: (colWidths[col] || 100) + 'px', display: isColHidden(col) ? 'none' : '' }"
-          />
-        </colgroup>
-        <thead>
-          <tr>
-            <th class="corner" @click="selectAll()"></th>
-            <th
-              v-for="col in currentColumns"
-              :key="`h-${col}`"
-              v-show="!isColHidden(col)"
-              :style="getColumnHeaderStyle(col)"
-              :class="{ 'col-selected': isColInSelection(col) }"
-              @click="selectEntireCol(col)"
-              @mousedown.prevent="startColResize($event, col)"
-            >
-              <span>{{ columnLabel(col) }}</span>
-              <div class="col-resize-handle" @mousedown.stop.prevent="startColResize($event, col)"></div>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="row in currentRows"
-            :key="`r-${row}`"
-            v-show="!isRowHidden(row)"
-            :style="{ height: getRowHeight(row) + 'px' }"
-          >
-            <th
-              class="row-index"
-              :style="getRowHeaderStyle(row)"
-              :class="{ 'row-selected': isRowInSelection(row) }"
-              @click="selectEntireRow(row)"
-            >{{ row + 1 }}</th>
-            <template v-for="col in currentColumns" :key="`c-${row}-${col}`">
-              <td
-                v-if="!isMergeHidden(row, col) && !isColHidden(col)"
-                :class="getCellClass(row, col)"
-                :style="getCellStyle(row, col)"
-                :rowspan="getMergeSpan(row, col).rowSpan"
-                :colspan="getMergeSpan(row, col).colSpan"
-                @mousedown.prevent="onCellMouseDown(row, col, $event)"
-                @mouseover="onCellMouseOver(row, col)"
-                @dblclick="startEditing(row, col)"
-                @contextmenu.prevent="showCellContextMenu($event, row, col)"
-              >
-                <template v-if="editingCell && editingCell.row === row && editingCell.col === col">
-                  <input
-                    ref="cellInputRef"
-                    class="cell-input"
-                    :value="editingValue"
-                    @input="onCellInput"
-                    @keydown="onCellInputKeydown"
-                    @blur="confirmEditing()"
-                    autofocus
-                  />
-                </template>
-                <template v-else>
-                  <a
-                    v-if="getCellHyperlink(row, col)"
-                    class="cell-text cell-link"
-                    :href="getCellHyperlink(row, col)"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    :title="getCellComment(row, col) || getCellHyperlink(row, col) || ''"
-                    @click.stop
-                  >{{ displayCellValue(row, col) || getCellHyperlink(row, col) }}</a>
-                  <span v-else class="cell-text" :title="getCellComment(row, col) || ''">{{ displayCellValue(row, col) }}</span>
-                </template>
-              </td>
-            </template>
-          </tr>
-        </tbody>
-      </table>
+    <div class="grid-scroll luckysheet-grid-scroll" ref="gridScrollRef" @mousedown="handleGridMouseDown">
+      <div class="luckysheet-grid-zoom" :style="sheetGridStyle">
+        <div :id="luckysheetContainerId" ref="luckysheetHostRef" class="luckysheet-host"></div>
+      </div>
     </div>
 
     <!-- 单元格右键菜单 -->
@@ -549,52 +455,6 @@
       </div>
     </Teleport>
 
-
-    <!-- 工作表标签栏 -->
-    <div class="sheet-tabs">
-      <button
-        v-for="(sheet, idx) in workbook.sheets"
-        :key="sheet.id"
-        class="sheet-tab"
-        :class="{ active: activeSheetIndex === idx }"
-        type="button"
-        @click="switchSheet(idx)"
-        @dblclick="renameSheet(idx)"
-        @contextmenu.prevent="showSheetContextMenu($event, idx)"
-      >
-        {{ sheet.name }}
-      </button>
-      <button class="sheet-add" type="button" :disabled="readOnly" @click="addSheet" title="添加工作表">
-        <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/></svg>
-      </button>
-      <div class="sheet-tabs-spacer"></div>
-      <div class="sheet-view-controls">
-        <button class="view-btn" :class="{ active: isEyeCareMode }" type="button" title="护眼模式" @click="toggleEyeCareMode()">
-          <SheetIcon name="eye-outline" size="15" />
-        </button>
-        <a-dropdown :trigger="['click']">
-          <button class="view-btn zoom-label" type="button">
-            {{ zoomPercent }}%
-            <SheetIcon name="chevron-down" size="14" />
-          </button>
-          <template #overlay>
-            <a-menu @click="(info: any) => onZoomDropdownCommand(info.key)">
-              <a-menu-item v-for="level in zoomLevels" :key="level">{{ level }}%</a-menu-item>
-            </a-menu>
-          </template>
-        </a-dropdown>
-        <button class="view-btn" type="button" @click="changeZoom(-10)">
-          <SheetIcon name="minus" size="16" />
-        </button>
-        <a-slider class="zoom-slider" :min="50" :max="200" :step="10" :tooltip-open="false" :value="zoomPercent" @change="onZoomSliderInput" />
-        <button class="view-btn" type="button" @click="changeZoom(10)">
-          <SheetIcon name="plus" size="16" />
-        </button>
-        <button class="view-btn" type="button" @click="toggleFullscreen()">
-          <SheetIcon :name="isFullscreen ? 'fullscreen-exit' : 'fullscreen'" size="16" />
-        </button>
-      </div>
-    </div>
 
     <!-- 快捷键对话框 -->
     <a-modal v-model:open="showShortcutsDialog" title="键盘快捷键" width="480px" :footer="null">
@@ -634,6 +494,12 @@
 <script setup lang="ts">
 import { computed, h, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { message, Modal } from 'ant-design-vue'
+import 'luckysheet/dist/plugins/css/pluginsCss.css'
+import 'luckysheet/dist/plugins/plugins.css'
+import 'luckysheet/dist/css/luckysheet.css'
+import 'luckysheet/dist/assets/iconfont/iconfont.css'
+import pluginScriptUrl from 'luckysheet/dist/plugins/js/plugin.js?url'
+import luckysheetScriptUrl from 'luckysheet/dist/luckysheet.umd.js?url'
 import SheetIcon from './SheetIcon.vue'
 import UnifiedTopHeader from './UnifiedTopHeader.vue'
 import type { Align, VerticalAlign, WrapMode, ICellStyle, ICellMeta, IUiSheet, IWorkbook, UndoEntry } from '../types'
@@ -641,6 +507,7 @@ import { createExcelI18n } from '../i18n'
 import type { ExcelI18nMessages, ExcelLocale } from '../i18n'
 import { readExcelFileToWorkbook } from '../utils/excel-import'
 import { writeWorkbookToExcelBuffer } from '../utils/excel-export'
+import { extractWorkbookFromLuckysheet, workbookToLuckySheets } from '../utils/luckysheet-adapter'
 
 const props = withDefaults(defineProps<{
   initialContent?: any
@@ -798,6 +665,25 @@ const zoomPercent = ref(100)
 const isFullscreen = ref(false)
 const isEyeCareMode = ref(false)
 const zoomLevels = [50, 75, 100, 125, 150, 175, 200]
+const luckysheetHostRef = ref<HTMLElement | null>(null)
+const luckysheetContainerId = `luckysheet-${Math.random().toString(36).slice(2)}`
+
+type LuckyRange = {
+  row: [number, number]
+  column: [number, number]
+}
+
+type LuckySheetInstance = {
+  create: (options: Record<string, any>) => void
+  destroy?: () => void
+  getAllSheets?: () => any[]
+  getRange?: () => LuckyRange[]
+  setSheetActive?: (index: number | string) => void
+}
+
+let luckysheetLoadPromise: Promise<void> | null = null
+let luckysheetRenderTimer: number | undefined
+let renderingLuckysheet = false
 
 const toolbarState = reactive<ICellStyle & { numberFormat: string; decimalPlaces: number; rotation: number; verticalAlign: VerticalAlign }>({
   fontFamily: 'Microsoft YaHei, sans-serif',
@@ -815,6 +701,53 @@ const toolbarState = reactive<ICellStyle & { numberFormat: string; decimalPlaces
   decimalPlaces: 2,
   rotation: 0,
 })
+
+function getLuckysheet(): LuckySheetInstance | undefined {
+  return (window as any).luckysheet
+}
+
+function loadClassicScript(url: string, marker: string) {
+  return new Promise<void>((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>(`script[data-luckysheet-script="${marker}"]`)
+    if (existing) {
+      if (existing.dataset.loaded === 'true') {
+        resolve()
+        return
+      }
+      existing.addEventListener('load', () => resolve(), { once: true })
+      existing.addEventListener('error', () => reject(new Error(`Failed to load ${marker}`)), { once: true })
+      return
+    }
+    const script = document.createElement('script')
+    script.src = url
+    script.async = false
+    script.dataset.luckysheetScript = marker
+    script.onload = () => {
+      script.dataset.loaded = 'true'
+      resolve()
+    }
+    script.onerror = () => reject(new Error(`Failed to load ${marker}`))
+    document.head.appendChild(script)
+  })
+}
+
+async function ensureLuckysheetLoaded() {
+  if (getLuckysheet()) return
+  if (!luckysheetLoadPromise) {
+    luckysheetLoadPromise = (async () => {
+      await loadClassicScript(pluginScriptUrl, 'plugin')
+      await loadClassicScript(luckysheetScriptUrl, 'core')
+    })()
+  }
+  await luckysheetLoadPromise
+}
+
+function clearLuckysheetRenderTimer() {
+  if (luckysheetRenderTimer !== undefined) {
+    window.clearTimeout(luckysheetRenderTimer)
+    luckysheetRenderTimer = undefined
+  }
+}
 
 function syncDimensionStateFromActiveSheet() {
   Object.keys(colWidths).forEach(key => delete colWidths[Number(key)])
@@ -906,6 +839,7 @@ watch(
     syncToolbarAndFormula()
     undoStack.value = []
     redoStack.value = []
+    scheduleLuckysheetRender()
   },
   { deep: true }
 )
@@ -974,7 +908,120 @@ watch([activeSheetIndex, () => selected.row, () => selected.col], () => {
 
 watch(activeSheetIndex, () => {
   loadFilterStateFromActiveSheet()
+  getLuckysheet()?.setSheetActive?.(activeSheetIndex.value)
 })
+
+function updateSelectionFromLuckysheet() {
+  const range = getLuckysheet()?.getRange?.()?.[0]
+  if (!range) return
+  selected.row = Number(range.row?.[0] || 0)
+  selectionEnd.row = Number(range.row?.[1] || selected.row)
+  selected.col = Number(range.column?.[0] || 0)
+  selectionEnd.col = Number(range.column?.[1] || selected.col)
+  syncToolbarAndFormula()
+}
+
+function syncWorkbookFromLuckysheet() {
+  const extracted = extractWorkbookFromLuckysheet()
+  if (!Array.isArray(extracted.sheets) || extracted.sheets.length === 0) return
+  const currentSheets = workbook.sheets || []
+  workbook.version = extracted.version || workbook.version || 1
+  workbook.sheets = extracted.sheets.map((sheet, index) => {
+    const current = currentSheets[index]
+    return {
+      ...sheet,
+      cellMeta: { ...(current?.cellMeta || {}) },
+      filterColumn: current?.filterColumn ?? null,
+      filterKeyword: current?.filterKeyword || '',
+      filterSelectedValues: { ...(current?.filterSelectedValues || {}) },
+      filterActive: !!current?.filterActive
+    }
+  })
+}
+
+async function waitForLuckysheetHost(host: HTMLElement) {
+  for (let index = 0; index < 4; index++) {
+    await nextTick()
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+    if (host.clientHeight > 0) {
+      return true
+    }
+  }
+  return false
+}
+
+async function renderLuckysheet() {
+  await ensureLuckysheetLoaded()
+  const lucky = getLuckysheet()
+  const host = luckysheetHostRef.value
+  if (!lucky || !host) return
+  renderingLuckysheet = true
+  try {
+    try {
+      lucky.destroy?.()
+    } catch {
+      // ignore luckysheet destroy errors
+    }
+    host.innerHTML = ''
+    const hostReady = await waitForLuckysheetHost(host)
+    if (!hostReady) {
+      console.warn('[SheetEditor] luckysheet host height is 0')
+      return
+    }
+    lucky.create({
+      container: luckysheetContainerId,
+      data: workbookToLuckySheets(workbook),
+      lang: props.locale === 'enUS' ? 'en' : 'zh',
+      showtoolbar: false,
+      showinfobar: false,
+      showsheetbar: true,
+      showstatisticBar: false,
+      showConfigWindow: false,
+      sheetBottomConfig: true,
+      allowEdit: !props.readOnly,
+      enableAddRow: !props.readOnly,
+      enableAddBack: !props.readOnly,
+      forceCalculation: false,
+      hook: {
+        cellMousedown: () => {
+          window.setTimeout(updateSelectionFromLuckysheet, 0)
+        },
+        rangeSelect: () => {
+          window.setTimeout(updateSelectionFromLuckysheet, 0)
+        },
+        sheetActivate: () => {
+          window.setTimeout(updateSelectionFromLuckysheet, 0)
+        },
+        cellUpdateBefore: () => {
+          if (props.readOnly) return false
+          return true
+        },
+        cellUpdated: () => {
+          if (renderingLuckysheet) return
+          syncWorkbookFromLuckysheet()
+          updateSelectionFromLuckysheet()
+          emitChange('luckysheet')
+        },
+        workbookCreateAfter: () => {
+          lucky.setSheetActive?.(activeSheetIndex.value)
+          updateSelectionFromLuckysheet()
+          window.dispatchEvent(new Event('resize'))
+        }
+      }
+    })
+  } catch (error) {
+    console.error('[SheetEditor] luckysheet render error:', error)
+  } finally {
+    renderingLuckysheet = false
+  }
+}
+
+function scheduleLuckysheetRender() {
+  clearLuckysheetRenderTimer()
+  luckysheetRenderTimer = window.setTimeout(() => {
+    renderLuckysheet()
+  }, 0)
+}
 
 // ===== Normalization =====
 function normalizeWorkbook(input: any): IWorkbook {
@@ -1961,6 +2008,7 @@ function switchSheet(idx: number) {
   selectionEnd.col = 0
   syncDimensionStateFromActiveSheet()
   syncToolbarAndFormula()
+  getLuckysheet()?.setSheetActive?.(activeSheetIndex.value)
 }
 
 function addSheet() {
@@ -2245,10 +2293,18 @@ onMounted(async () => {
       message.error(e instanceof Error ? e.message : t('message.importFailed'))
     }
   }
+  await nextTick()
+  scheduleLuckysheetRender()
 })
 onUnmounted(() => {
   document.removeEventListener('click', onDocumentClick)
   document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  clearLuckysheetRenderTimer()
+  try {
+    getLuckysheet()?.destroy?.()
+  } catch {
+    // ignore luckysheet destroy errors
+  }
 })
 
 // ===== Column resize =====
@@ -2785,7 +2841,10 @@ function escapeRegex(str: string): string {
 }
 
 // ===== Emit =====
-function emitChange() {
+function emitChange(source: 'internal' | 'luckysheet' = 'internal') {
+  if (source !== 'luckysheet') {
+    scheduleLuckysheetRender()
+  }
   headerLastSaveTime.value = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
   emit('change', {
     format: 'sheet',
@@ -2802,7 +2861,7 @@ function emitChange() {
 .sheet-editor {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  min-height: 100vh;
   background: #fff;
   outline: none;
 }
@@ -3058,10 +3117,35 @@ function emitChange() {
 
 /* ===== 表格网格 ===== */
 .grid-scroll {
+  display: flex;
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
   position: relative;
+}
+
+.luckysheet-grid-scroll {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  background: #fff;
+}
+
+.luckysheet-grid-zoom {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.luckysheet-host {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  height: auto;
 }
 
 .sheet-grid {

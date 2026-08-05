@@ -3,6 +3,9 @@
     <GoogleDocsToolbar
       :is-locked="isLocked"
       :document-stats="documentStats"
+      :show-collaboration-menu="showCollaborationMenu"
+      :cursor-collaboration-enabled="cursorCollaborationEnabled"
+      :selection-collaboration-enabled="selectionCollaborationEnabled"
       @command="handleTabCommand"
     />
   </div>
@@ -19,6 +22,9 @@ const props = defineProps<{
   appNameWithVersion: string
   documentMeta: DocumentMeta
   documentStats: DocumentStats
+  showCollaborationMenu?: boolean
+  cursorCollaborationEnabled?: boolean
+  selectionCollaborationEnabled?: boolean
 }>()
 
 const isLocked = computed(() => props.documentMeta?.status === 'lock' || props.documentMeta?.status === 'view')

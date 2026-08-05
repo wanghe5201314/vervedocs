@@ -12,6 +12,9 @@
       :in-table="inTable"
       :in-canvas="inCanvas"
       :show-line-break="showLineBreak"
+      :show-collaboration-menu="showCollaborationMenu"
+      :cursor-collaboration-enabled="cursorCollaborationEnabled"
+      :selection-collaboration-enabled="selectionCollaborationEnabled"
 
       :revision-display-mode="revisionDisplayMode"
       @cmd="doMenuCmd"
@@ -91,6 +94,9 @@ const props = defineProps<{
     charCount: number
     charCountWithSpaces: number
   }
+  showCollaborationMenu?: boolean
+  cursorCollaborationEnabled?: boolean
+  selectionCollaborationEnabled?: boolean
 }>()
 
 // 状态

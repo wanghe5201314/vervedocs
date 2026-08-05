@@ -3,13 +3,18 @@
  *
  * 职责：
  * 1. onLoadDocument  — 从 MongoDB 加载文档，支持旧文档自动迁移
- * 2. onStoreDocument — 将 Yjs 状态 + IElement[] 快照双写回 MongoDB
- * 3. 敏感词过滤     — 保存前调用 Java 后端 API 检测并替换敏感词
+ * 2. onStoreDocument — 将 Yjs 状态 + 内容快照双写回 MongoDB
+ * 3. 敏感词过滤     — 保存前调用 Java 后端 API 检测并替换敏感词（仅 Word）
+ *
+ * 支持 Word 和 Excel 两种文档类型：
+ *   Word:  documentName 为纯数字，Y.Doc 使用 "elements" Y.Array
+ *   Excel: documentName 以 "excel:" 前缀，Y.Doc 使用 "workbook" Y.Map
  *
  * 集合 schema（df_document_content）:
  *   _id          ObjectId
  *   documentId   Long       (唯一索引，对应 MySQL Document.id)
- *   content      Object     (IElement[] 的 BSON 表示，后向兼容)
+ *   docType      String     ("word" | "excel")
+ *   content      Object     (Word: IElement[] / Excel: IWorkbookData)
  *   yjsState     Binary     (Y.encodeStateAsUpdate 的 Uint8Array)
  *   createdAt    Date
  *   updatedAt    Date
@@ -24,6 +29,9 @@ import * as Y from 'yjs'
 import { config } from '../config.js'
 import { elementArrayToYDoc } from '../utils/elementToYDoc.js'
 import { yDocToElementArray } from '../utils/yDocToElement.js'
+import { yDocToWorkbookData, workbookDataToYDoc } from '../utils/workbookToYDoc.js'
+
+const EXCEL_DOC_PREFIX = 'excel:'
 
 /** Java 后端内部 API 地址 */
 const BACKEND_BASE_URL = process.env.BACKEND_URL || 'http://localhost:8090'
@@ -47,7 +55,7 @@ export class MongoDBExtension implements Extension {
     await this.client.connect()
     this.db = this.client.db()
     this.collection = this.db.collection(config.mongoCollection)
-    console.log(`[MongoDB] Connected, collection: ${config.mongoCollection}`)
+    console.log(`[MongoDB] 已连接，集合: ${config.mongoCollection}`)
   }
 
   async onDestroy() {
@@ -59,7 +67,7 @@ export class MongoDBExtension implements Extension {
 
     if (this.client) {
       await this.client.close()
-      console.log('[MongoDB] Disconnected')
+      console.log('[MongoDB] 已断开')
     }
   }
 
@@ -67,18 +75,21 @@ export class MongoDBExtension implements Extension {
    * 文档加载
    *
    * Hocuspocus 在首次有客户端连接某个 documentName 时调用。
-   * documentName 格式约定为纯数字的 documentId 字符串。
+   * documentName 格式：
+   *   Word:  纯数字的 documentId 字符串
+   *   Excel: "excel:" 前缀 + documentId
    */
   async onLoadDocument(data: onLoadDocumentPayload) {
+    const isExcel = data.documentName.startsWith(EXCEL_DOC_PREFIX)
     const docId = this.parseDocId(data.documentName)
     if (docId === null) {
-      console.warn(`[MongoDB] Invalid documentName: ${data.documentName}`)
+      console.warn(`[MongoDB] 无效的文档名: ${data.documentName}`)
       return
     }
 
     const row = await this.collection!.findOne({ documentId: docId })
     if (!row) {
-      console.log(`[MongoDB] No document found for id=${docId}, starting empty`)
+      console.log(`[MongoDB] 未找到文档 id=${docId}，以空文档启动`)
       return
     }
 
@@ -89,18 +100,26 @@ export class MongoDBExtension implements Extension {
           ? row.yjsState.buffer
           : row.yjsState
       Y.applyUpdate(data.document, new Uint8Array(state as ArrayBuffer))
-      console.log(`[MongoDB] Loaded yjsState for docId=${docId}`)
+      console.log(`[MongoDB] 已加载 yjsState，docId=${docId}，类型=${isExcel ? 'excel' : 'word'}`)
       return
     }
 
-    // 回退：旧文档只有 content 字段（IElement[] BSON）
+    // 回退：旧文档只有 content 字段
     if (row.content) {
-      const elements = row.content as Record<string, unknown>[]
-      if (Array.isArray(elements) && elements.length > 0) {
-        elementArrayToYDoc(elements, data.document)
-        console.log(
-          `[MongoDB] Migrated legacy content for docId=${docId}, ${elements.length} elements`,
-        )
+      if (isExcel) {
+        const workbookData = row.content as Record<string, unknown>
+        if (workbookData && typeof workbookData === 'object') {
+          workbookDataToYDoc(workbookData, data.document)
+          console.log(`[MongoDB] 已迁移旧版 Excel 内容，docId=${docId}`)
+        }
+      } else {
+        const elements = row.content as Record<string, unknown>[]
+        if (Array.isArray(elements) && elements.length > 0) {
+          elementArrayToYDoc(elements, data.document)
+          console.log(
+            `[MongoDB] 已迁移旧版内容，docId=${docId}，${elements.length} 个元素`,
+          )
+        }
       }
     }
   }
@@ -111,7 +130,7 @@ export class MongoDBExtension implements Extension {
    * 每次 Y.Doc 变更都会触发，通过防抖合并高频写入。
    * 双写策略：
    *   - yjsState:  Y.encodeStateAsUpdate()，下次加载可直接 applyUpdate
-   *   - content:   yDocToElementArray()，保证 REST API 读取兼容
+   *   - content:   Word: yDocToElementArray() / Excel: yDocToWorkbookData()
    */
   async onStoreDocument(data: onStoreDocumentPayload) {
     const docId = this.parseDocId(data.documentName)
@@ -128,9 +147,10 @@ export class MongoDBExtension implements Extension {
     const timer = setTimeout(async () => {
       this.debounceTimers.delete(data.documentName)
       try {
-        await this.persistDocument(docId, data.document)
+        const isExcel = data.documentName.startsWith(EXCEL_DOC_PREFIX)
+        await this.persistDocument(docId, data.document, isExcel)
       } catch (err) {
-        console.error(`[MongoDB] Failed to persist docId=${docId}:`, err)
+        console.error(`[MongoDB] 持久化失败，docId=${docId}:`, err)
       }
     }, this.debounceMs)
 
@@ -138,7 +158,36 @@ export class MongoDBExtension implements Extension {
   }
 
   /** 实际写入 MongoDB */
-  private async persistDocument(docId: number, doc: Y.Doc) {
+  private async persistDocument(docId: number, doc: Y.Doc, isExcel: boolean) {
+    const docType = isExcel ? 'excel' : 'word'
+
+    if (isExcel) {
+      const content = yDocToWorkbookData(doc)
+      const yjsState = new Binary(Y.encodeStateAsUpdate(doc))
+      const now = new Date()
+
+      await this.collection!.updateOne(
+        { documentId: docId },
+        {
+          $set: {
+            docType,
+            content,
+            yjsState,
+            updatedAt: now,
+          },
+          $setOnInsert: {
+            documentId: docId,
+            createdAt: now,
+          },
+        },
+        { upsert: true },
+      )
+
+      console.log(`[MongoDB] 已持久化 Excel，docId=${docId}`)
+      return
+    }
+
+    // Word 文档：原有逻辑
     const content = yDocToElementArray(doc)
 
     // 调用 Java 后端过滤敏感词
@@ -147,7 +196,7 @@ export class MongoDBExtension implements Extension {
       const filterResult = await this.callFilterApi(content)
       if (filterResult && filterResult.filtered) {
         filteredContent = filterResult.content
-        console.log(`[MongoDB] Sensitive words filtered for docId=${docId}: ${filterResult.hitWords.join(',')}`)
+        console.log(`[MongoDB] 敏感词已过滤，docId=${docId}，命中: ${filterResult.hitWords.join(',')}`)
 
         // 将过滤后的内容回写到 Y.Doc（让所有连接的客户端同步看到替换后的内容）
         this.filteringDocs.add(docId)
@@ -159,7 +208,7 @@ export class MongoDBExtension implements Extension {
         }
       }
     } catch (err) {
-      console.error(`[MongoDB] Filter API call failed for docId=${docId}, saving unfiltered:`, err)
+      console.error(`[MongoDB] 过滤API调用失败，docId=${docId}，将保存未过滤内容:`, err)
     }
 
     // 过滤后重新编码 yjsState（因为 Y.Doc 可能已被修改）
@@ -170,6 +219,7 @@ export class MongoDBExtension implements Extension {
       { documentId: docId },
       {
         $set: {
+          docType: 'word',
           content: filteredContent,
           yjsState,
           updatedAt: now,
@@ -182,7 +232,7 @@ export class MongoDBExtension implements Extension {
       { upsert: true },
     )
 
-    console.log(`[MongoDB] Persisted docId=${docId}, elements=${filteredContent.length}`)
+    console.log(`[MongoDB] 已持久化 Word，docId=${docId}，元素数=${filteredContent.length}`)
   }
 
   /**
@@ -199,7 +249,7 @@ export class MongoDBExtension implements Extension {
       body: JSON.stringify(content),
     })
     if (!resp.ok) {
-      console.error(`[MongoDB] Filter API returned ${resp.status}`)
+      console.error(`[MongoDB] 过滤API返回 ${resp.status}`)
       return null
     }
     const body = await resp.json() as {
@@ -295,9 +345,10 @@ export class MongoDBExtension implements Extension {
     }
   }
 
-  /** 将 documentName 解析为数字 documentId */
+  /** 将 documentName 解析为数字 documentId，支持 "excel:" 前缀 */
   private parseDocId(name: string): number | null {
-    const n = Number(name)
+    const raw = name.startsWith(EXCEL_DOC_PREFIX) ? name.slice(EXCEL_DOC_PREFIX.length) : name
+    const n = Number(raw)
     return Number.isFinite(n) && n > 0 ? n : null
   }
 
@@ -312,4 +363,14 @@ export class MongoDBExtension implements Extension {
   async onUpgrade() {}
   async onListen() {}
   async onStateless() {}
+  async onCreateDocument() {}
+  async onTokenSync() {}
+  async beforeHandleMessage() {}
+  async afterHandleMessage() {}
+  async beforeHandleAwareness() {}
+  async beforeSync() {}
+  async beforeBroadcastStateless() {}
+  async onAwarenessUpdate() {}
+  async beforeUnloadDocument() {}
+  async afterStoreDocument() {}
 }

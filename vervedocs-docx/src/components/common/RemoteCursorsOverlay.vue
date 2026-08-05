@@ -60,7 +60,7 @@ const getCursorStyle = (cursor: CursorEntry) => {
   const canvasRect = canvas.getBoundingClientRect()
   const areaRect = area.getBoundingClientRect()
 
-  const x = canvasRect.left - areaRect.left + area.scrollLeft + (elemPos.coordinate.leftTop?.[0] || 0)
+  const x = canvasRect.left - areaRect.left + area.scrollLeft + (elemPos.coordinate.rightTop?.[0] || 0)
   const y = canvasRect.top - areaRect.top + area.scrollTop + (elemPos.coordinate.leftTop?.[1] || 0)
   const height = elemPos.lineHeight || 16
 

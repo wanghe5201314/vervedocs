@@ -27,6 +27,6 @@ export type DocxEditorUiExternalEventName =
   | 'contentChange'
   | 'collabConnectionChange'
   | 'collabSyncStateChange'
+  | 'collabSharedSyncStateChange'
   | 'collabUsersChange'
   | 'collabError'
-

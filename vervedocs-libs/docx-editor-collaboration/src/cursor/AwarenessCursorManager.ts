@@ -1,15 +1,6 @@
-/**
- * 基于 Yjs Awareness 协议的远程光标管理器
- *
- * 与旧版 RemoteCursorManager 保持相同的 DOM 渲染逻辑，
- * 但数据源从手动 WebSocket 消息切换为 Awareness 状态自动同步。
- */
 import type { Awareness } from 'y-protocols/awareness'
 import type { CursorPosition, RemoteCursor, UserInfo } from '../types'
 
-/**
- * 光标渲染配置
- */
 export interface CursorRenderConfig {
   showLabel: boolean
   labelDuration: number
@@ -19,31 +10,52 @@ export interface CursorRenderConfig {
 
 const DEFAULT_CONFIG: CursorRenderConfig = {
   showLabel: true,
-  labelDuration: 3000,
+  labelDuration: 0,
   enableBlink: true,
   expireTime: 30000,
 }
 
+export interface CursorRenderLayout {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+export interface SelectionRenderLayout {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+export type PositionCalculator = (
+  index: number,
+) => CursorRenderLayout | null
+
+export type SelectionCalculator = (
+  position: CursorPosition,
+) => SelectionRenderLayout[]
+
 interface CursorElement {
-  container: HTMLDivElement
+  root: HTMLDivElement
+  selectionLayer: HTMLDivElement
   cursor: HTMLDivElement
+  line: HTMLDivElement
   label: HTMLDivElement
+  selectionNodes: HTMLDivElement[]
   labelTimer: ReturnType<typeof setTimeout> | null
 }
 
-/**
- * 位置计算回调：将文档中的元素索引转换为屏幕像素坐标
- */
-export type PositionCalculator = (
-  index: number,
-) => { x: number; y: number; height: number } | null
-
 export class AwarenessCursorManager {
   private awareness: Awareness | null = null
-
   private container: HTMLElement | null = null
+  private overlay: HTMLDivElement | null = null
   private config: CursorRenderConfig
   private positionCalculator: PositionCalculator | null = null
+  private selectionCalculator: SelectionCalculator | null = null
+  private cursorEnabled = true
+  private selectionEnabled = true
 
   private cursors = new Map<string, RemoteCursor>()
   private elements = new Map<string, CursorElement>()
@@ -55,81 +67,75 @@ export class AwarenessCursorManager {
     this.config = { ...DEFAULT_CONFIG, ...config }
   }
 
-  /**
-   * 绑定 Awareness 实例和当前用户信息
-   */
   bindAwareness(awareness: Awareness, localUser: UserInfo): void {
+    if (this.awarenessHandler && this.awareness) {
+      this.awareness.off('change', this.awarenessHandler)
+    }
+
     this.awareness = awareness
 
-    // 设置本地 awareness 用户信息
     awareness.setLocalStateField('user', {
       userId: localUser.userId,
       userName: localUser.userName,
       color: localUser.color,
     })
 
-    // 监听远程 awareness 变化
     this.awarenessHandler = ({ added, updated, removed }) => {
-      const changed = [...added, ...updated]
-      for (const clientId of changed) {
-        if (clientId === this.awareness!.clientID) continue
-        const state = this.awareness!.getStates().get(clientId)
-        if (!state?.user || !state?.cursor) continue
-
-        const user = state.user as UserInfo
-        const cursor = state.cursor as CursorPosition
-        const remoteCursor: RemoteCursor = {
-          userId: user.userId,
-          userName: user.userName,
-          color: user.color,
-          position: cursor,
-          lastUpdate: Date.now(),
-        }
-        this.cursors.set(user.userId, remoteCursor)
-        this.renderCursor(remoteCursor)
-      }
+      this.syncRemoteCursors([...added, ...updated])
       if (removed.length > 0) {
         const allStates = this.awareness!.getStates()
         this.cleanupRemovedClients(allStates)
       }
     }
     awareness.on('change', this.awarenessHandler)
+    this.syncRemoteCursors(Array.from(awareness.getStates().keys()))
   }
 
-  /**
-   * 更新本地光标位置（写入 Awareness，自动广播到其他客户端）
-   */
   setLocalCursor(position: CursorPosition): void {
     this.awareness?.setLocalStateField('cursor', position)
   }
 
-  /**
-   * 初始化 DOM 渲染
-   */
-  initializeCursorRendering(container: HTMLElement, positionCalculator: PositionCalculator): void {
-    this.container = container
-    this.positionCalculator = positionCalculator
-    this.injectStyles()
-    this.startCleanupTimer()
+  clearLocalCursor(): void {
+    this.awareness?.setLocalStateField('cursor', null)
   }
 
-  /**
-   * 刷新所有光标位置（文档内容变化后调用）
-   */
+  setSyncVisibility(state: { cursor: boolean; selection: boolean }): void {
+    this.cursorEnabled = state.cursor
+    this.selectionEnabled = state.selection
+    this.refreshAllCursors()
+  }
+
+  initializeCursorRendering(
+    container: HTMLElement,
+    positionCalculator: PositionCalculator,
+    selectionCalculator?: SelectionCalculator,
+  ): void {
+    if (this.container !== container) {
+      this.clearAllElements()
+      this.overlay?.remove()
+      this.overlay = null
+    }
+    this.container = container
+    this.positionCalculator = positionCalculator
+    this.selectionCalculator = selectionCalculator ?? null
+    this.injectStyles()
+    this.ensureOverlay()
+    this.startCleanupTimer()
+    this.refreshAllCursors()
+  }
+
   refreshAllCursors(): void {
     this.cursors.forEach((cursor) => this.renderCursor(cursor))
   }
 
-  /**
-   * 获取所有远程光标
-   */
   getAllCursors(): RemoteCursor[] {
     return Array.from(this.cursors.values())
   }
 
-  /**
-   * 销毁
-   */
+  reset(): void {
+    this.clearAllElements()
+  }
+
   destroy(): void {
     if (this.awarenessHandler && this.awareness) {
       this.awareness.off('change', this.awarenessHandler)
@@ -137,23 +143,17 @@ export class AwarenessCursorManager {
     }
     this.stopCleanupTimer()
     this.clearAllElements()
+    this.overlay?.remove()
+    this.overlay = null
     this.removeStyles()
     this.container = null
     this.positionCalculator = null
+    this.selectionCalculator = null
     this.awareness = null
   }
 
-  // ---- 内部渲染 ----
-
   private renderCursor(cursor: RemoteCursor): void {
     if (!this.container || !this.positionCalculator) return
-
-    const position = this.positionCalculator(cursor.position.index)
-    if (!position) {
-      const el = this.elements.get(cursor.userId)
-      if (el) el.container.style.display = 'none'
-      return
-    }
 
     let el = this.elements.get(cursor.userId)
     if (!el) {
@@ -161,38 +161,77 @@ export class AwarenessCursorManager {
       this.elements.set(cursor.userId, el)
     }
 
-    el.container.style.left = `${position.x}px`
-    el.container.style.top = `${position.y}px`
-    el.container.style.display = 'block'
-    el.cursor.style.height = `${position.height}px`
-    el.cursor.style.backgroundColor = cursor.color
-    el.label.textContent = cursor.userName
-    el.label.style.backgroundColor = cursor.color
+    const selectionLayouts = this.selectionEnabled
+      ? (this.selectionCalculator?.(cursor.position) ?? [])
+      : []
+    const anchorIndex = cursor.position.endIndex ?? cursor.position.index
+    const position = this.cursorEnabled ? this.positionCalculator(anchorIndex) : null
 
-    if (this.config.showLabel) this.showLabel(el)
+    this.renderSelection(cursor, el, selectionLayouts)
+
+    if (position) {
+      el.cursor.style.left = `${position.x}px`
+      el.cursor.style.top = `${position.y}px`
+      el.cursor.style.display = 'block'
+      el.line.style.width = `${position.width}px`
+      el.line.style.height = `${position.height}px`
+      el.line.style.backgroundColor = cursor.color
+      el.line.style.borderRadius = `${Math.max(position.width / 2, 1)}px`
+      el.label.textContent = cursor.userName
+      el.label.style.backgroundColor = cursor.color
+
+      if (this.config.showLabel) {
+        this.showLabel(el)
+      } else {
+        el.label.style.display = 'none'
+      }
+    } else {
+      el.cursor.style.display = 'none'
+    }
+
+    el.root.style.display = position || selectionLayouts.length > 0 ? 'block' : 'none'
   }
 
   private createCursorElement(cursor: RemoteCursor): CursorElement {
-    const container = document.createElement('div')
-    container.className = 'remote-cursor-container'
-    container.dataset.userId = cursor.userId
+    const root = document.createElement('div')
+    root.className = 'vd-remote-presence'
+    root.dataset.userId = cursor.userId
 
-    const cursorLine = document.createElement('div')
-    cursorLine.className = 'remote-cursor-line'
-    if (this.config.enableBlink) cursorLine.classList.add('remote-cursor-blink')
+    const selectionLayer = document.createElement('div')
+    selectionLayer.className = 'vd-remote-selection-layer'
+
+    const cursorWrapper = document.createElement('div')
+    cursorWrapper.className = 'vd-remote-cursor'
+
+    const line = document.createElement('div')
+    line.className = 'vd-remote-cursor__line'
+    if (this.config.enableBlink) {
+      line.classList.add('vd-remote-cursor__line--blink')
+    }
 
     const label = document.createElement('div')
-    label.className = 'remote-cursor-label'
+    label.className = 'vd-remote-cursor__label'
     label.textContent = cursor.userName
 
-    container.appendChild(cursorLine)
-    container.appendChild(label)
-    this.container!.appendChild(container)
+    cursorWrapper.appendChild(line)
+    cursorWrapper.appendChild(label)
+    root.appendChild(selectionLayer)
+    root.appendChild(cursorWrapper)
+    this.ensureOverlay().appendChild(root)
 
-    return { container, cursor: cursorLine, label, labelTimer: null }
+    return {
+      root,
+      selectionLayer,
+      cursor: cursorWrapper,
+      line,
+      label,
+      selectionNodes: [],
+      labelTimer: null,
+    }
   }
 
   private showLabel(el: CursorElement): void {
+    el.label.style.display = 'block'
     el.label.style.opacity = '1'
     if (el.labelTimer) {
       clearTimeout(el.labelTimer)
@@ -206,16 +245,43 @@ export class AwarenessCursorManager {
     }
   }
 
+  private renderSelection(
+    cursor: RemoteCursor,
+    el: CursorElement,
+    layouts: SelectionRenderLayout[],
+  ): void {
+    while (el.selectionNodes.length > layouts.length) {
+      const node = el.selectionNodes.pop()
+      node?.remove()
+    }
+
+    layouts.forEach((layout, index) => {
+      let node = el.selectionNodes[index]
+      if (!node) {
+        node = document.createElement('div')
+        node.className = 'vd-remote-selection'
+        el.selectionLayer.appendChild(node)
+        el.selectionNodes.push(node)
+      }
+
+      node.style.left = `${layout.x}px`
+      node.style.top = `${layout.y}px`
+      node.style.width = `${layout.width}px`
+      node.style.height = `${layout.height}px`
+      node.style.backgroundColor = cursor.color
+      node.style.display = 'block'
+    })
+  }
+
   private clearAllElements(): void {
     this.elements.forEach((el) => {
       if (el.labelTimer) clearTimeout(el.labelTimer)
-      el.container.remove()
+      el.root.remove()
     })
     this.elements.clear()
     this.cursors.clear()
   }
 
-  /** 移除已经不在 awareness 中的客户端光标 */
   private cleanupRemovedClients(allStates: Map<number, Record<string, unknown>>): void {
     const activeUserIds = new Set<string>()
     allStates.forEach((state, clientId) => {
@@ -238,14 +304,13 @@ export class AwarenessCursorManager {
     const el = this.elements.get(userId)
     if (el) {
       if (el.labelTimer) clearTimeout(el.labelTimer)
-      el.container.remove()
+      el.root.remove()
       this.elements.delete(userId)
     }
   }
 
-  // ---- 过期清理 ----
-
   private startCleanupTimer(): void {
+    if (this.cleanupTimer) return
     this.cleanupTimer = setInterval(() => {
       const now = Date.now()
       this.cursors.forEach((cursor, userId) => {
@@ -263,45 +328,106 @@ export class AwarenessCursorManager {
     }
   }
 
-  // ---- 样式注入 ----
+  private syncRemoteCursors(clientIds: number[]): void {
+    if (!this.awareness) return
+
+    for (const clientId of clientIds) {
+      if (clientId === this.awareness.clientID) continue
+      const state = this.awareness.getStates().get(clientId)
+      if (!state?.user || !state?.cursor) continue
+
+      const user = state.user as UserInfo
+      const cursor = state.cursor as CursorPosition
+      this.cursors.set(user.userId, {
+        userId: user.userId,
+        userName: user.userName,
+        color: user.color,
+        position: cursor,
+        lastUpdate: Date.now(),
+      })
+    }
+
+    const states = this.awareness.getStates()
+    this.cursors.forEach((_, userId) => {
+      const matchedState = Array.from(states.values()).find((state) => {
+        const user = state.user as UserInfo | undefined
+        return user?.userId === userId
+      })
+      if (!matchedState?.cursor) {
+        this.removeCursor(userId)
+      }
+    })
+
+    this.refreshAllCursors()
+  }
+
+  private ensureOverlay(): HTMLDivElement {
+    if (this.overlay) return this.overlay
+    if (!this.container) {
+      throw new Error('Cursor container is not initialized')
+    }
+
+    const overlay = document.createElement('div')
+    overlay.className = 'vd-remote-cursor-layer'
+    this.container.appendChild(overlay)
+    this.overlay = overlay
+    return overlay
+  }
 
   private injectStyles(): void {
     if (this.styleElement) return
     this.styleElement = document.createElement('style')
     this.styleElement.textContent = `
-      .remote-cursor-container {
+      .vd-remote-cursor-layer {
         position: absolute;
+        inset: 0;
+        overflow: visible;
         pointer-events: none;
         z-index: 1000;
       }
-      .remote-cursor-line {
-        width: 2px;
-        min-height: 16px;
-        border-radius: 1px;
+      .vd-remote-presence {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
       }
-      .remote-cursor-blink {
+      .vd-remote-selection-layer {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+      .vd-remote-selection {
+        position: absolute;
+        pointer-events: none;
+        border-radius: 2px;
+        opacity: 0.22;
+      }
+      .vd-remote-cursor {
+        position: absolute;
+        pointer-events: none;
+      }
+      .vd-remote-cursor__line {
+        min-height: 1px;
+      }
+      .vd-remote-cursor__line--blink {
         animation: remote-cursor-blink 1s infinite;
       }
       @keyframes remote-cursor-blink {
         0%, 50% { opacity: 1; }
         51%, 100% { opacity: 0; }
       }
-      .remote-cursor-label {
+      .vd-remote-cursor__label {
         position: absolute;
         top: -20px;
         left: 0;
         padding: 2px 6px;
         border-radius: 3px;
-        color: white;
+        color: #ffffff;
         font-size: 12px;
+        line-height: 16px;
+        font-weight: 500;
         white-space: nowrap;
         transition: opacity 0.3s ease;
-        opacity: 0;
-      }
-      .remote-cursor-selection {
-        position: absolute;
-        opacity: 0.3;
-        pointer-events: none;
+        opacity: 1;
       }
     `
     document.head.appendChild(this.styleElement)

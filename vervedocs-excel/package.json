@@ -99,6 +99,7 @@
     "@univerjs/thread-comment": "^0.25.1",
     "@univerjs/thread-comment-ui": "^0.25.1",
     "@univerjs/ui": "^0.25.1",
+    "@vervedoc/docx-editor-collaboration": "file:../vervedocs-libs/docx-editor-collaboration",
     "exceljs": "^4.4.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

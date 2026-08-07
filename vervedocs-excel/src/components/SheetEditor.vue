@@ -776,6 +776,8 @@ import { readExcelFileToWorkbook } from '../utils/excel-import'
 import { writeWorkbookToExcelBuffer } from '../utils/excel-export'
 import { loadUniverRuntime } from '../utils/univer-runtime'
 import type { LoadedUniverRuntime } from '../utils/univer-runtime'
+import { ExcelCollaborationPlugin, ConnectionState } from '@vervedoc/docx-editor-collaboration'
+import type { ExcelCollaborationConfig, UserInfo } from '@vervedoc/docx-editor-collaboration'
 
 const props = withDefaults(defineProps<{
   initialContent?: any
@@ -784,12 +786,14 @@ const props = withDefaults(defineProps<{
   readOnly?: boolean
   locale?: ExcelLocale
   i18n?: Partial<ExcelI18nMessages>
+  collaboration?: ExcelCollaborationConfig
 }>(), {
   initialContent: undefined,
   documentUrl: undefined,
   documentName: '',
   readOnly: false,
-  locale: 'zhCN'
+  locale: 'zhCN',
+  collaboration: undefined
 })
 
 const excelI18n = createExcelI18n({
@@ -2217,6 +2221,65 @@ function applyColWidth() {
   showColWidthDialog.value = false
 }
 
+// ===== 协同功能 =====
+let collabPlugin: ExcelCollaborationPlugin | null = null
+const collabConnectionState = ref<string>('disconnected')
+const collabOnlineUsers = ref<UserInfo[]>([])
+const collabOffFns: Array<() => void> = []
+
+async function initCollaboration() {
+  if (!props.collaboration || collabPlugin) return
+  if (!univerAPI) return
+
+  collabPlugin = new ExcelCollaborationPlugin({
+    collaboration: {
+      serverUrl: props.collaboration.serverUrl,
+      docId: props.collaboration.docId,
+      user: props.collaboration.user,
+      token: props.collaboration.token
+    }
+  })
+
+  collabPlugin.install(univerAPI)
+  collabConnectionState.value = collabPlugin.getConnectionState()
+
+  collabOffFns.push(
+    collabPlugin.on('connectionChange', (state) => {
+      collabConnectionState.value = state
+    }),
+    collabPlugin.on('usersChange', (users) => {
+      collabOnlineUsers.value = users
+    }),
+    collabPlugin.on('error', (err) => {
+      console.error('[ExcelCollab] Error:', err)
+    })
+  )
+
+  await collabPlugin.connect()
+
+  nextTick(() => {
+    const editorEl = sheetEditorRef.value
+    if (!editorEl) return
+    collabPlugin!.initializeSelections(editorEl)
+  })
+
+  window.addEventListener('beforeunload', () => {
+    collabPlugin?.disconnect()
+  })
+}
+
+function destroyCollaboration() {
+  collabOffFns.forEach(fn => fn())
+  collabOffFns.length = 0
+  if (collabPlugin) {
+    collabPlugin.disconnect()
+    collabPlugin.uninstall()
+    collabPlugin = null
+  }
+  collabConnectionState.value = 'disconnected'
+  collabOnlineUsers.value = []
+}
+
 
 
 onMounted(async () => {
@@ -2252,9 +2315,12 @@ onMounted(async () => {
   }
   await nextTick()
   scheduleUniverRender()
+  
+  await initCollaboration()
 })
 onUnmounted(() => {
 
+  destroyCollaboration()
   clearUniverRenderTimer()
   clearUniverWorkbookDisposables()
   disposeActiveUniverWorkbook()

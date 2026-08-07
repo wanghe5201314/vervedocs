@@ -35,3 +35,19 @@ export {
 
 // ==================== 绑定层 ====================
 export { YjsBinding } from './binding/YjsBinding'
+
+// ==================== Excel 协同 ====================
+export {
+  type ExcelCollaborationConfig,
+  type ExcelSelection,
+  type RemoteSelection,
+} from './excel/types'
+
+export {
+  ExcelCollaborationPlugin,
+  type ExcelCollaborationPluginConfig,
+  type ExcelPluginEvents,
+} from './excel/ExcelCollaborationPlugin'
+
+export { UniverSyncBinding } from './excel/UniverSyncBinding'
+export { ExcelCursorManager } from './excel/ExcelCursorManager'

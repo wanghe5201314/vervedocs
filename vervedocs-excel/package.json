@@ -5,15 +5,15 @@
   "type": "module",
   "main": "./dist/excel-editor-ui.js",
   "module": "./dist/excel-editor-ui.js",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/src/index.d.ts",
   "exports": {
     ".": {
       "import": "./dist/excel-editor-ui.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/src/index.d.ts"
     },
     "./utils": {
-      "import": "./dist/utils/index.js",
-      "types": "./dist/utils/index.d.ts"
+      "import": "./dist/excel-editor-ui.js",
+      "types": "./dist/src/utils/index.d.ts"
     }
   },
   "publishConfig": {
@@ -61,6 +61,47 @@
   "author": "wanghe1995",
   "license": "MIT",
   "dependencies": {
-    "exceljs": "^4.4.0"
+    "@univerjs/core": "^0.25.1",
+    "@univerjs/design": "^0.25.1",
+    "@univerjs/docs": "^0.25.1",
+    "@univerjs/docs-ui": "^0.25.1",
+    "@univerjs/engine-formula": "^0.25.1",
+    "@univerjs/engine-render": "^0.25.1",
+    "@univerjs/find-replace": "^0.25.1",
+    "@univerjs/sheets": "^0.25.1",
+    "@univerjs/sheets-conditional-formatting": "^0.25.1",
+    "@univerjs/sheets-conditional-formatting-ui": "^0.25.1",
+    "@univerjs/sheets-crosshair-highlight": "^0.25.1",
+    "@univerjs/sheets-data-validation": "^0.25.1",
+    "@univerjs/sheets-data-validation-ui": "^0.25.1",
+    "@univerjs/sheets-drawing": "^0.25.1",
+    "@univerjs/sheets-drawing-ui": "^0.25.1",
+    "@univerjs/sheets-filter": "^0.25.1",
+    "@univerjs/sheets-filter-ui": "^0.25.1",
+    "@univerjs/sheets-find-replace": "^0.25.1",
+    "@univerjs/sheets-formula": "^0.25.1",
+    "@univerjs/sheets-formula-ui": "^0.25.1",
+    "@univerjs/sheets-graphics": "^0.25.1",
+    "@univerjs/sheets-hyper-link": "^0.25.1",
+    "@univerjs/sheets-hyper-link-ui": "^0.25.1",
+    "@univerjs/sheets-note": "^0.25.1",
+    "@univerjs/sheets-note-ui": "^0.25.1",
+    "@univerjs/sheets-numfmt": "^0.25.1",
+    "@univerjs/sheets-numfmt-ui": "^0.25.1",
+    "@univerjs/sheets-sort": "^0.25.1",
+    "@univerjs/sheets-sort-ui": "^0.25.1",
+    "@univerjs/sheets-table": "^0.25.1",
+    "@univerjs/sheets-table-ui": "^0.25.1",
+    "@univerjs/sheets-thread-comment": "^0.25.1",
+    "@univerjs/sheets-thread-comment-ui": "^0.25.1",
+    "@univerjs/sheets-ui": "^0.25.1",
+    "@univerjs/sheets-zen-editor": "^0.25.1",
+    "@univerjs/thread-comment": "^0.25.1",
+    "@univerjs/thread-comment-ui": "^0.25.1",
+    "@univerjs/ui": "^0.25.1",
+    "exceljs": "^4.4.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "rxjs": "^7.8.2"
   }
 }

@@ -1,4 +1,3 @@
-import ExcelJS from 'exceljs'
 import type { BorderStyle } from 'exceljs'
 import type { ICellMeta, ICellStyle, IWorkbook } from '../types'
 
@@ -33,13 +32,13 @@ function toExcelBorder(cssBorder?: string): { style: BorderStyle; color?: { argb
   }
 }
 
-function toExcelAlignment(style: ICellStyle): ExcelJS.Alignment | undefined {
-  const alignMap: Record<string, ExcelJS.Alignment['horizontal']> = {
+function toExcelAlignment(style: ICellStyle): Record<string, any> | undefined {
+  const alignMap: Record<string, string> = {
     left: 'left',
     center: 'center',
     right: 'right'
   }
-  const verticalMap: Record<string, ExcelJS.Alignment['vertical']> = {
+  const verticalMap: Record<string, string> = {
     top: 'top',
     middle: 'middle',
     bottom: 'bottom'
@@ -50,12 +49,12 @@ function toExcelAlignment(style: ICellStyle): ExcelJS.Alignment | undefined {
   const rawRotation = Number.isFinite(style.rotation) ? Number(style.rotation) : undefined
   const textRotation = rawRotation !== undefined && rawRotation >= -90 && rawRotation <= 90 ? rawRotation : undefined
   if (!horizontal && !vertical && !wrapText && textRotation === undefined) return
-  const alignment: Partial<ExcelJS.Alignment> = {}
+  const alignment: Record<string, any> = {}
   if (horizontal) alignment.horizontal = horizontal
   if (vertical) alignment.vertical = vertical
   if (wrapText) alignment.wrapText = true
   if (textRotation !== undefined) alignment.textRotation = textRotation
-  return alignment as ExcelJS.Alignment
+  return alignment
 }
 
 function toExcelNumFmt(style: ICellStyle): string | undefined {
@@ -75,7 +74,7 @@ function toExcelNumFmt(style: ICellStyle): string | undefined {
   return
 }
 
-function applyStyle(cell: ExcelJS.Cell, style: ICellStyle) {
+function applyStyle(cell: any, style: ICellStyle) {
   const color = String(style.fontColor || '').replace('#', '')
   const fillColor = String(style.bgColor || '').replace('#', '')
   const fontName = String(style.fontFamily || '').split(',')[0]?.trim()
@@ -117,7 +116,7 @@ function normalizeHyperlink(url: string): string {
   return `https://${text}`
 }
 
-function writeCellValue(cell: ExcelJS.Cell, value: string, meta?: ICellMeta) {
+function writeCellValue(cell: any, value: string, meta?: ICellMeta) {
   const text = String(value ?? '')
   const hyperlink = normalizeHyperlink(String(meta?.hyperlink || ''))
   const comment = String(meta?.comment || '').trim()
@@ -142,6 +141,7 @@ function writeCellValue(cell: ExcelJS.Cell, value: string, meta?: ICellMeta) {
 }
 
 export async function writeWorkbookToExcelBuffer(data: IWorkbook, options?: ExportI18nOptions): Promise<ArrayBuffer> {
+  const { default: ExcelJS } = await import('exceljs')
   const workbook = new ExcelJS.Workbook()
   const sheets = Array.isArray(data?.sheets) ? data.sheets : []
   sheets.forEach((sheet, index) => {

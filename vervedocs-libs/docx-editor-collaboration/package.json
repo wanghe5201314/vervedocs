@@ -1,6 +1,6 @@
 {
   "name": "@vervedoc/docx-editor-collaboration",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "DocxEditor 协同编辑库 - 基于 Yjs CRDT + Hocuspocus 实现实时协作",
   "author": "wanghe",
   "license": "MIT",

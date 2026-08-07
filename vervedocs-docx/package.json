@@ -2,7 +2,7 @@
   "name": "@vervedoc/docx",
   "author": "wanghe",
   "license": "MIT",
-  "version": "1.2.11",
+  "version": "1.2.15",
   "description": "玉衡云文档 完整版UI",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
@@ -74,7 +74,7 @@
     "@vervedoc/core": "^3.0.11",
     "@vervedoc/docx-editor-ai": "^1.0.3",
     "@vervedoc/docx-editor-chart": "^1.0.4",
-    "@vervedoc/docx-editor-collaboration": "^1.0.0",
+    "@vervedoc/docx-editor-collaboration": "^1.0.2",
     "ant-design-vue": "^4.2.6",
     "cypress": "^15.15.0",
     "docx": "^9.5.1",

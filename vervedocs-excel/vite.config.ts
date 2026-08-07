@@ -6,6 +6,12 @@ import { resolve } from 'path'
 
 export default defineConfig(({ mode }) => {
   const isLib = mode === 'lib'
+  const isExternal = (id: string) => {
+    if (['vue', 'ant-design-vue', '@mdi/js'].includes(id)) {
+      return true
+    }
+    return false
+  }
 
   return {
     plugins: [
@@ -31,14 +37,33 @@ export default defineConfig(({ mode }) => {
         fileName: 'excel-editor-ui'
       },
       rollupOptions: {
-        external: ['vue', 'ant-design-vue', '@mdi/js'],
+        external: isExternal,
+        onwarn(warning, warn) {
+          if (warning.code === 'MODULE_LEVEL_DIRECTIVE' && warning.message.includes('"use client"')) {
+            return
+          }
+          warn(warning)
+        },
         output: {
           globals: {
             vue: 'Vue',
             'ant-design-vue': 'antd',
-            '@mdi/js': 'MdiJs'
+            '@mdi/js': 'MdiJs',
           },
-
+          chunkFileNames: 'chunks/[name]-[hash].js',
+          assetFileNames: 'assets/[name]-[hash][extname]',
+          manualChunks(id) {
+            if (id.includes('node_modules/exceljs')) {
+              return 'exceljs'
+            }
+            if (id.includes('node_modules/@univerjs/') || id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('node_modules/rxjs')) {
+              if (id.includes('/locale/en-US')) return 'univer-locale-en'
+              if (id.includes('/locale/zh-CN')) return 'univer-locale-zh'
+              if (id.includes('/locale/')) return 'univer-locales'
+              return 'univer-core'
+            }
+            return undefined
+          },
           dir: 'dist'
         }
       },

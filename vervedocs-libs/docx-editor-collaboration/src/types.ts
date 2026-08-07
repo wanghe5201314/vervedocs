@@ -39,6 +39,44 @@ export interface SharedSyncState {
   selection: boolean
 }
 
+export interface CollaborationCommentAnchor {
+  startX: number
+  startY: number
+  endX: number
+  endY: number
+  lineHeight?: number
+}
+
+export interface CollaborationCommentPosition {
+  top: number
+  left: number
+  lineWidth: number
+  originalTop?: number
+}
+
+export interface CollaborationComment {
+  id: string
+  groupId: string
+  content: string
+  userName: string
+  avatarColor?: string
+  createdDate: string
+  rangeText: string
+  status?: number
+  replies?: CollaborationComment[]
+  position?: CollaborationCommentPosition
+  anchor?: CollaborationCommentAnchor
+  isHovered?: boolean
+  isEditing?: boolean
+  isReplying?: boolean
+}
+
+export interface CommentComponentBridge {
+  getComments(): CollaborationComment[]
+  setComments(comments: CollaborationComment[]): void
+  render(): void
+}
+
 /**
  * 远程用户光标
  */

@@ -1,5 +1,5 @@
-<template>
-  <div ref="sheetEditorRef" class="sheet-editor" :class="{ 'eye-care-mode': isEyeCareMode }" @keydown="handleGlobalKeydown">
+﻿<template>
+  <div ref="sheetEditorRef" class="sheet-editor" @keydown="handleGlobalKeydown">
     <!-- 固定头部区域 -->
     <div class="fixed-header">
       <UnifiedTopHeader
@@ -13,101 +13,410 @@
       <a-menu mode="horizontal" class="sheet-menu-bar" :selectable="false">
         <a-sub-menu key="file" popupClassName="sheet-menu-popper">
           <template #title>文件</template>
-          <a-menu-item key="newWorkbook" :disabled="readOnly" @click="handleCreateNewWorkbook()"><SheetIcon name="plus" />新建表格</a-menu-item>
-          <a-menu-item key="save" @click="emitChange()"><SheetIcon name="content-save-outline" />保存<span class="shortcut">Ctrl+S</span></a-menu-item>
+          <a-menu-item key="newWorkbook" :disabled="readOnly" @click="handleCreateNewWorkbook()">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="plus" />新建表格</span>
+              <span class="menu-item-meta"></span>
+            </span>
+          </a-menu-item>
+          <a-menu-item key="save" @click="emitChange()">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="content-save-outline" />保存</span>
+              <span class="menu-item-meta"><span class="shortcut">Ctrl+S</span></span>
+            </span>
+          </a-menu-item>
           <a-menu-divider />
           <a-menu-item key="importExcel" :disabled="readOnly" @click="triggerImportExcel()">
-            <SheetIcon name="file-excel-box" />导入表格&nbsp;&nbsp;<a-tag color="red">BETA</a-tag><span class="shortcut">Ctrl+O</span></a-menu-item>
-          <a-menu-item key="exportExcel" @click="handleExportExcel()"><SheetIcon name="file-excel-box" />导出 Excel</a-menu-item>
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="file-excel-box" />导入表格&nbsp;&nbsp;<a-tag color="red">BETA</a-tag></span>
+              <span class="menu-item-meta"><span class="shortcut">Ctrl+O</span></span>
+            </span>
+          </a-menu-item>
+          <a-menu-item key="exportExcel" @click="handleExportExcel()">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="file-excel-box" />导出 Excel</span>
+              <span class="menu-item-meta"></span>
+            </span>
+          </a-menu-item>
           <a-menu-divider />
-          <a-menu-item key="print" @click="handlePrint()"><SheetIcon name="printer-outline" />打印<span class="shortcut">Ctrl+P</span></a-menu-item>
+          <a-menu-item key="print" @click="handlePrint()">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="printer-outline" />打印</span>
+              <span class="menu-item-meta"><span class="shortcut">Ctrl+P</span></span>
+            </span>
+          </a-menu-item>
         </a-sub-menu>
 
         <a-sub-menu key="edit" popupClassName="sheet-menu-popper">
           <template #title>编辑</template>
-          <a-menu-item key="undo" @click="handleUndo()"><SheetIcon name="undo" />撤销<span class="shortcut">Ctrl+Z</span></a-menu-item>
-          <a-menu-item key="redo" @click="handleRedo()"><SheetIcon name="redo" />重做<span class="shortcut">Ctrl+Y</span></a-menu-item>
+          <a-menu-item key="undo" @click="handleUndo()">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="undo" />撤销</span>
+              <span class="menu-item-meta"><span class="shortcut">Ctrl+Z</span></span>
+            </span>
+          </a-menu-item>
+          <a-menu-item key="redo" @click="handleRedo()">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="redo" />重做</span>
+              <span class="menu-item-meta"><span class="shortcut">Ctrl+Y</span></span>
+            </span>
+          </a-menu-item>
           <a-menu-divider />
-          <a-menu-item key="cut" @click="handleCut()"><SheetIcon name="content-cut" />剪切<span class="shortcut">Ctrl+X</span></a-menu-item>
-          <a-menu-item key="copy" @click="handleCopy()"><SheetIcon name="content-copy" />复制<span class="shortcut">Ctrl+C</span></a-menu-item>
-          <a-menu-item key="paste" @click="handlePaste()"><SheetIcon name="content-paste" />粘贴<span class="shortcut">Ctrl+V</span></a-menu-item>
+          <a-menu-item key="cut" @click="handleCut()">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="content-cut" />剪切</span>
+              <span class="menu-item-meta"><span class="shortcut">Ctrl+X</span></span>
+            </span>
+          </a-menu-item>
+          <a-menu-item key="copy" @click="handleCopy()">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="content-copy" />复制</span>
+              <span class="menu-item-meta"><span class="shortcut">Ctrl+C</span></span>
+            </span>
+          </a-menu-item>
+          <a-menu-item key="paste" @click="handlePaste()">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="content-paste" />粘贴</span>
+              <span class="menu-item-meta"><span class="shortcut">Ctrl+V</span></span>
+            </span>
+          </a-menu-item>
           <a-menu-divider />
-          <a-menu-item key="selectAll" @click="selectAll()"><SheetIcon name="select-all" />全选<span class="shortcut">Ctrl+A</span></a-menu-item>
-          <a-menu-item key="deleteContent" @click="deleteSelectedContent()"><SheetIcon name="delete-outline" />删除内容<span class="shortcut">Delete</span></a-menu-item>
+          <a-menu-item key="selectAll" @click="selectAll()">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="select-all" />全选</span>
+              <span class="menu-item-meta"><span class="shortcut">Ctrl+A</span></span>
+            </span>
+          </a-menu-item>
+          <a-menu-item key="deleteContent" @click="deleteSelectedContent()">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="delete-outline" />删除内容</span>
+              <span class="menu-item-meta"><span class="shortcut">Delete</span></span>
+            </span>
+          </a-menu-item>
         </a-sub-menu>
 
         <a-sub-menu key="view" popupClassName="sheet-menu-popper">
           <template #title>视图</template>
           <a-menu-item key="showGridlines" @click="toggleGridlines()">
-            <SheetIcon :name="showGridlines ? 'checkbox-marked-outline' : 'checkbox-blank-outline'" />
-            {{ showGridlines ? '显示网格线' : '隐藏网格线' }}
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="grid" />{{ showGridlines ? '显示网格线' : '隐藏网格线' }}</span>
+              <span class="menu-item-meta"><SheetIcon v-if="showGridlines" name="check" class="menu-check" /></span>
+            </span>
           </a-menu-item>
           <a-menu-item key="showFormulaBar" @click="showFormulaBar = !showFormulaBar">
-            <SheetIcon :name="showFormulaBar ? 'checkbox-marked-outline' : 'checkbox-blank-outline'" />
-            {{ showFormulaBar ? '显示编辑栏' : '隐藏编辑栏' }}
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="function-variant" />{{ showFormulaBar ? '显示编辑栏' : '隐藏编辑栏' }}</span>
+              <span class="menu-item-meta"><SheetIcon v-if="showFormulaBar" name="check" class="menu-check" /></span>
+            </span>
           </a-menu-item>
           <a-menu-divider />
+          <a-sub-menu key="zoomMenu" popupClassName="sheet-menu-popper">
+            <template #title><SheetIcon name="magnify" />缩放</template>
+            <a-menu-item key="zoom50" @click="setZoom(50)">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="magnify-minus" />50%</span>
+                <span class="menu-item-meta"><SheetIcon v-if="zoomLevel === 50" name="check" class="menu-check" /></span>
+              </span>
+            </a-menu-item>
+            <a-menu-item key="zoom75" @click="setZoom(75)">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="magnify-minus" />75%</span>
+                <span class="menu-item-meta"><SheetIcon v-if="zoomLevel === 75" name="check" class="menu-check" /></span>
+              </span>
+            </a-menu-item>
+            <a-menu-item key="zoom100" @click="setZoom(100)">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="magnify" />100%</span>
+                <span class="menu-item-meta"><SheetIcon v-if="zoomLevel === 100" name="check" class="menu-check" /></span>
+              </span>
+            </a-menu-item>
+            <a-menu-item key="zoom125" @click="setZoom(125)">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="magnify-plus" />125%</span>
+                <span class="menu-item-meta"><SheetIcon v-if="zoomLevel === 125" name="check" class="menu-check" /></span>
+              </span>
+            </a-menu-item>
+            <a-menu-item key="zoom150" @click="setZoom(150)">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="magnify-plus" />150%</span>
+                <span class="menu-item-meta"><SheetIcon v-if="zoomLevel === 150" name="check" class="menu-check" /></span>
+              </span>
+            </a-menu-item>
+            <a-menu-item key="zoom200" @click="setZoom(200)">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="magnify-plus" />200%</span>
+                <span class="menu-item-meta"><SheetIcon v-if="zoomLevel === 200" name="check" class="menu-check" /></span>
+              </span>
+            </a-menu-item>
+          </a-sub-menu>
+          <a-menu-divider />
           <a-menu-item key="freezeRow" @click="toggleFreezeRow()">
-            <SheetIcon name="snowflake" />
-            {{ frozenRows > 0 ? '取消冻结行' : '冻结第一行' }}
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="snowflake" />{{ frozenRows > 0 ? '取消冻结行' : '冻结第一行' }}</span>
+              <span class="menu-item-meta"><SheetIcon v-if="frozenRows > 0" name="check" class="menu-check" /></span>
+            </span>
           </a-menu-item>
           <a-menu-item key="freezeCol" @click="toggleFreezeCol()">
-            <SheetIcon name="snowflake" />
-            {{ frozenCols > 0 ? '取消冻结列' : '冻结第一列' }}
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="snowflake" />{{ frozenCols > 0 ? '取消冻结列' : '冻结第一列' }}</span>
+              <span class="menu-item-meta"><SheetIcon v-if="frozenCols > 0" name="check" class="menu-check" /></span>
+            </span>
           </a-menu-item>
         </a-sub-menu>
 
+
         <a-sub-menu key="insert" popupClassName="sheet-menu-popper">
           <template #title>插入</template>
-          <a-menu-item key="insertRowAbove" @click="insertRow('above')"><SheetIcon name="table-row-plus-before" />在上方插入行</a-menu-item>
-          <a-menu-item key="insertRowBelow" @click="insertRow('below')"><SheetIcon name="table-row-plus-after" />在下方插入行</a-menu-item>
+          <a-menu-item key="insertRowAbove" @click="insertRow('above')">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="table-row-plus-before" />在上方插入行</span>
+              <span class="menu-item-meta"></span>
+            </span>
+          </a-menu-item>
+          <a-menu-item key="insertRowBelow" @click="insertRow('below')">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="table-row-plus-after" />在下方插入行</span>
+              <span class="menu-item-meta"></span>
+            </span>
+          </a-menu-item>
           <a-menu-divider />
-          <a-menu-item key="insertColLeft" @click="insertCol('left')"><SheetIcon name="table-column-plus-before" />在左侧插入列</a-menu-item>
-          <a-menu-item key="insertColRight" @click="insertCol('right')"><SheetIcon name="table-column-plus-after" />在右侧插入列</a-menu-item>
+          <a-menu-item key="insertColLeft" @click="insertCol('left')">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="table-column-plus-before" />在左侧插入列</span>
+              <span class="menu-item-meta"></span>
+            </span>
+          </a-menu-item>
+          <a-menu-item key="insertColRight" @click="insertCol('right')">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="table-column-plus-after" />在右侧插入列</span>
+              <span class="menu-item-meta"></span>
+            </span>
+          </a-menu-item>
         </a-sub-menu>
+
+        <a-sub-menu key="delete" popupClassName="sheet-menu-popper">
+          <template #title>删除</template>
+          <a-menu-item key="deleteRow" @click="deleteRow()">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="table-row-remove" />删除行</span>
+              <span class="menu-item-meta"></span>
+            </span>
+          </a-menu-item>
+          <a-menu-item key="deleteCol" @click="deleteCol()">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="table-column-remove" />删除列</span>
+              <span class="menu-item-meta"></span>
+            </span>
+          </a-menu-item>
+        </a-sub-menu>
+
 
         <a-sub-menu key="format" popupClassName="sheet-menu-popper">
           <template #title>格式</template>
           <a-sub-menu key="textFormat" popupClassName="sheet-menu-popper">
             <template #title><SheetIcon name="format-text" />文本</template>
-            <a-menu-item key="fBold" @click="toggleStyle('bold')"><SheetIcon name="format-bold" />粗体<span class="shortcut">Ctrl+B</span></a-menu-item>
-            <a-menu-item key="fItalic" @click="toggleStyle('italic')"><SheetIcon name="format-italic" />斜体<span class="shortcut">Ctrl+I</span></a-menu-item>
-            <a-menu-item key="fUnderline" @click="toggleStyle('underline')"><SheetIcon name="format-underline" />下划线<span class="shortcut">Ctrl+U</span></a-menu-item>
-            <a-menu-item key="fStrikethrough" @click="toggleStyle('strikethrough')"><SheetIcon name="format-strikethrough" />删除线</a-menu-item>
+            <a-menu-item key="fBold" @click="toggleStyle('bold')">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="format-bold" />粗体</span>
+                <span class="menu-item-meta"><span class="shortcut">Ctrl+B</span><SheetIcon v-if="toolbarState.bold" name="check" class="menu-check" /></span>
+              </span>
+            </a-menu-item>
+            <a-menu-item key="fItalic" @click="toggleStyle('italic')">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="format-italic" />斜体</span>
+                <span class="menu-item-meta"><span class="shortcut">Ctrl+I</span><SheetIcon v-if="toolbarState.italic" name="check" class="menu-check" /></span>
+              </span>
+            </a-menu-item>
+            <a-menu-item key="fUnderline" @click="toggleStyle('underline')">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="format-underline" />下划线</span>
+                <span class="menu-item-meta"><span class="shortcut">Ctrl+U</span><SheetIcon v-if="toolbarState.underline" name="check" class="menu-check" /></span>
+              </span>
+            </a-menu-item>
+            <a-menu-item key="fStrikethrough" @click="toggleStyle('strikethrough')">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="format-strikethrough" />删除线</span>
+                <span class="menu-item-meta"><SheetIcon v-if="toolbarState.strikethrough" name="check" class="menu-check" /></span>
+              </span>
+            </a-menu-item>
           </a-sub-menu>
           <a-sub-menu key="alignFormat" popupClassName="sheet-menu-popper">
             <template #title><SheetIcon name="format-align-left" />对齐方式</template>
-            <a-menu-item key="aLeft" @click="setAlign('left')"><SheetIcon name="format-align-left" />左对齐</a-menu-item>
-            <a-menu-item key="aCenter" @click="setAlign('center')"><SheetIcon name="format-align-center" />居中对齐</a-menu-item>
-            <a-menu-item key="aRight" @click="setAlign('right')"><SheetIcon name="format-align-right" />右对齐</a-menu-item>
+            <a-menu-item key="aLeft" @click="setAlign('left')">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="format-align-left" />左对齐</span>
+                <span class="menu-item-meta"><SheetIcon v-if="toolbarState.align === 'left'" name="check" class="menu-check" /></span>
+              </span>
+            </a-menu-item>
+            <a-menu-item key="aCenter" @click="setAlign('center')">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="format-align-center" />居中对齐</span>
+                <span class="menu-item-meta"><SheetIcon v-if="toolbarState.align === 'center'" name="check" class="menu-check" /></span>
+              </span>
+            </a-menu-item>
+            <a-menu-item key="aRight" @click="setAlign('right')">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="format-align-right" />右对齐</span>
+                <span class="menu-item-meta"><SheetIcon v-if="toolbarState.align === 'right'" name="check" class="menu-check" /></span>
+              </span>
+            </a-menu-item>
             <a-menu-divider />
-            <a-menu-item key="vaTop" @click="setVerticalAlign('top')"><SheetIcon name="format-vertical-align-top" />顶部对齐</a-menu-item>
-            <a-menu-item key="vaMiddle" @click="setVerticalAlign('middle')"><SheetIcon name="format-vertical-align-center" />垂直居中</a-menu-item>
-            <a-menu-item key="vaBottom" @click="setVerticalAlign('bottom')"><SheetIcon name="format-vertical-align-bottom" />底部对齐</a-menu-item>
+            <a-menu-item key="vaTop" @click="setVerticalAlign('top')">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="format-vertical-align-top" />顶部对齐</span>
+                <span class="menu-item-meta"><SheetIcon v-if="toolbarState.verticalAlign === 'top'" name="check" class="menu-check" /></span>
+              </span>
+            </a-menu-item>
+            <a-menu-item key="vaMiddle" @click="setVerticalAlign('middle')">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="format-vertical-align-center" />垂直居中</span>
+                <span class="menu-item-meta"><SheetIcon v-if="toolbarState.verticalAlign === 'middle'" name="check" class="menu-check" /></span>
+              </span>
+            </a-menu-item>
+            <a-menu-item key="vaBottom" @click="setVerticalAlign('bottom')">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="format-vertical-align-bottom" />底部对齐</span>
+                <span class="menu-item-meta"><SheetIcon v-if="toolbarState.verticalAlign === 'bottom'" name="check" class="menu-check" /></span>
+              </span>
+            </a-menu-item>
           </a-sub-menu>
           <a-sub-menu key="wrapFormat" popupClassName="sheet-menu-popper">
             <template #title><SheetIcon name="text-wrap" />文本换行</template>
-            <a-menu-item key="wrapClip" @click="setWrap('clip')">裁剪</a-menu-item>
-            <a-menu-item key="wrapOverflow" @click="setWrap('overflow')">溢出</a-menu-item>
-            <a-menu-item key="wrapWrap" @click="setWrap('wrap')">自动换行</a-menu-item>
+            <a-menu-item key="wrapClip" @click="setWrap('clip')">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="crop" />裁剪</span>
+                <span class="menu-item-meta"><SheetIcon v-if="toolbarState.wrap === 'clip'" name="check" class="menu-check" /></span>
+              </span>
+            </a-menu-item>
+            <a-menu-item key="wrapOverflow" @click="setWrap('overflow')">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="arrow-right" />溢出</span>
+                <span class="menu-item-meta"><SheetIcon v-if="toolbarState.wrap === 'overflow'" name="check" class="menu-check" /></span>
+              </span>
+            </a-menu-item>
+            <a-menu-item key="wrapWrap" @click="setWrap('wrap')">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="text-wrap" />自动换行</span>
+                <span class="menu-item-meta"><SheetIcon v-if="toolbarState.wrap === 'wrap'" name="check" class="menu-check" /></span>
+              </span>
+            </a-menu-item>
           </a-sub-menu>
           <a-menu-divider />
-          <a-menu-item key="mergeCells" @click="handleMergeCells()"><SheetIcon name="table-merge-cells" />合并单元格</a-menu-item>
-          <a-menu-item key="unmergeCells" @click="handleUnmergeCells()"><SheetIcon name="table-split-cell" />取消合并</a-menu-item>
+          <a-sub-menu key="rowFormat" popupClassName="sheet-menu-popper">
+            <template #title><SheetIcon name="table-row" />行</template>
+            <a-menu-item key="rowHeight" @click="showRowHeightDialog = true">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="arrow-expand-vertical" />行高</span>
+                <span class="menu-item-meta"></span>
+              </span>
+            </a-menu-item>
+            <a-menu-item key="autoRowHeight" @click="autoFitRowHeight()">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="arrow-fit-vertical" />自动调整行高</span>
+                <span class="menu-item-meta"></span>
+              </span>
+            </a-menu-item>
+            <a-menu-divider />
+            <a-menu-item key="hideRow" @click="hideRow()">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="eye-off-outline" />隐藏行</span>
+                <span class="menu-item-meta"></span>
+              </span>
+            </a-menu-item>
+            <a-menu-item key="unhideRow" @click="unhideRow()">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="eye-outline" />取消隐藏行</span>
+                <span class="menu-item-meta"></span>
+              </span>
+            </a-menu-item>
+          </a-sub-menu>
+          <a-sub-menu key="colFormat" popupClassName="sheet-menu-popper">
+            <template #title><SheetIcon name="table-column" />列</template>
+            <a-menu-item key="colWidth" @click="showColWidthDialog = true">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="arrow-expand-horizontal" />列宽</span>
+                <span class="menu-item-meta"></span>
+              </span>
+            </a-menu-item>
+            <a-menu-item key="autoColWidth" @click="autoFitColWidth()">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="arrow-fit-horizontal" />自动调整列宽</span>
+                <span class="menu-item-meta"></span>
+              </span>
+            </a-menu-item>
+            <a-menu-divider />
+            <a-menu-item key="hideCol" @click="hideCol()">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="eye-off-outline" />隐藏列</span>
+                <span class="menu-item-meta"></span>
+              </span>
+            </a-menu-item>
+            <a-menu-item key="unhideCol" @click="unhideCol()">
+              <span class="menu-item-content">
+                <span class="menu-item-label"><SheetIcon name="eye-outline" />取消隐藏列</span>
+                <span class="menu-item-meta"></span>
+              </span>
+            </a-menu-item>
+          </a-sub-menu>
           <a-menu-divider />
-          <a-menu-item key="clearFormat" @click="clearSelectedFormat()"><SheetIcon name="format-clear" />清除格式</a-menu-item>
+          <a-menu-item key="mergeCells" @click="handleMergeCells()">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="table-merge-cells" />合并单元格</span>
+              <span class="menu-item-meta"></span>
+            </span>
+          </a-menu-item>
+          <a-menu-item key="unmergeCells" @click="handleUnmergeCells()">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="table-split-cell" />取消合并</span>
+              <span class="menu-item-meta"></span>
+            </span>
+          </a-menu-item>
+          <a-menu-divider />
+          <a-menu-item key="clearFormat" @click="clearSelectedFormat()">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="format-clear" />清除格式</span>
+              <span class="menu-item-meta"></span>
+            </span>
+          </a-menu-item>
         </a-sub-menu>
 
         <a-sub-menu key="data" popupClassName="sheet-menu-popper">
           <template #title>数据</template>
-          <a-menu-item key="sortAsc" @click="sortColumn('asc')"><SheetIcon name="sort-ascending" />按列升序排序</a-menu-item>
-          <a-menu-item key="sortDesc" @click="sortColumn('desc')"><SheetIcon name="sort-descending" />按列降序排序</a-menu-item>
+          <a-menu-item key="sortAsc" @click="openUniverSort('asc')">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="sort-ascending" />按列升序排序</span>
+              <span class="menu-item-meta"></span>
+            </span>
+          </a-menu-item>
+          <a-menu-item key="sortDesc" @click="openUniverSort('desc')">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="sort-descending" />按列降序排序</span>
+              <span class="menu-item-meta"></span>
+            </span>
+          </a-menu-item>
+          <a-menu-divider />
+          <a-menu-item key="dataValidation" @click="openUniverDataValidation()">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="check-circle-outline" />数据验证</span>
+              <span class="menu-item-meta"></span>
+            </span>
+          </a-menu-item>
+          <a-menu-item key="removeDuplicates" @click="removeDuplicates()">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="table-minus" />删除重复值</span>
+              <span class="menu-item-meta"></span>
+            </span>
+          </a-menu-item>
         </a-sub-menu>
+
 
         <a-sub-menu key="help" popupClassName="sheet-menu-popper">
           <template #title>帮助</template>
           <a-menu-item key="shortcuts" @click="showShortcutsDialog = true">
-            <SheetIcon name="keyboard-outline" />键盘快捷键
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="keyboard-outline" />键盘快捷键</span>
+              <span class="menu-item-meta"></span>
+            </span>
           </a-menu-item>
 
         </a-sub-menu>
@@ -128,7 +437,7 @@
       </button>
       <span class="toolbar-divider" />
 
-      <!-- 货币/百分比/小数位 快捷按钮 -->
+      <!-- 货币/百分比/小数位快捷按钮 -->
       <button class="tb" :disabled="readOnly" @click="quickFormat('currency')" title="货币格式 (¥)">
         <SheetIcon name="currency-usd" />
       </button>
@@ -203,7 +512,7 @@
         </template>
       </a-popover>
 
-      <!-- 填充色 -->
+      <!-- 填充颜色 -->
       <a-popover placement="bottom" :width="260" trigger="click">
         <template #content>
           <div class="color-panel">
@@ -319,47 +628,25 @@
         <SheetIcon name="snowflake" />
       </button>
       <!-- 筛选排序 -->
-      <a-popover placement="bottom" :width="280" trigger="click" v-model:open="filterPopoverVisible" @afterOpenChange="(v: boolean) => v && prepareFilterPanel()">
-        <template #content>
-          <div class="filter-panel">
-            <div class="filter-title">筛选列 {{ columnLabel(filterColumn ?? selected.col) }}</div>
-            <input v-model="filterKeyword" class="filter-input" placeholder="包含关键词" />
-            <div class="filter-actions-inline">
-              <button class="tb-sm" @click="toggleAllFilterValues(true)">全选</button>
-              <button class="tb-sm" @click="toggleAllFilterValues(false)">全不选</button>
-            </div>
-            <div class="filter-values">
-              <label v-for="value in filterValueOptions" :key="`fv-${value}`" class="filter-value-item">
-                <input type="checkbox" :checked="isFilterValueSelected(value)" @change="onFilterValueChange(value, $event)" />
-                <span>{{ value === FILTER_EMPTY_TOKEN ? '(空白)' : value }}</span>
-              </label>
-            </div>
-            <div class="filter-actions-inline">
-              <button class="tb-sm" @click="sortColumn('asc')">升序</button>
-              <button class="tb-sm" @click="sortColumn('desc')">降序</button>
-              <button class="tb-sm replace-btn" @click="applyFilterAndClose()">应用</button>
-              <button class="tb-sm" @click="clearFilter()">清除</button>
-            </div>
-          </div>
-        </template>
-        <template #default>
-          <button class="tb" :disabled="readOnly" :class="{ active: filterActive }" title="筛选">
-            <SheetIcon name="filter-outline" />
-          </button>
-        </template>
-      </a-popover>
+      <button class="tb" :disabled="readOnly" @click="toggleUniverFilter()" title="筛选">
+        <SheetIcon name="filter-outline" />
+      </button>
       <span class="toolbar-divider" />
 
       <!-- 超链接 -->
-      <button class="tb" :disabled="readOnly" @click="insertHyperlink()" title="插入链接">
+      <button class="tb" :disabled="readOnly" @click="openUniverHyperlink()" title="插入链接">
         <SheetIcon name="link-variant" />
       </button>
       <!-- 插入图片 -->
       <button class="tb" :disabled="readOnly" @click="insertImage()" title="插入图片">
         <SheetIcon name="image-outline" />
       </button>
+      <!-- 便签 -->
+      <button class="tb" :disabled="readOnly" @click="openUniverNote()" title="便签">
+        <SheetIcon name="note-text-outline" />
+      </button>
       <!-- 评论 -->
-      <button class="tb" :disabled="readOnly" @click="insertComment()" title="评论">
+      <button class="tb" :disabled="readOnly" @click="openUniverThreadComment()" title="评论">
         <SheetIcon name="comment-plus-outline" />
       </button>
       <span class="toolbar-divider" />
@@ -393,67 +680,34 @@
         <SheetIcon name="printer" />
       </button>
       <!-- 查找替换 -->
-      <button class="tb" @click="openSearch()" title="查找和替换 (Ctrl+H)">
+      <button class="tb" @click="openUniverReplaceDialog()" title="查找和替换 (Ctrl+H)">
         <SheetIcon name="find-replace" />
       </button>
     </div>
     </div>
 
-    <!-- 查找替换面板 -->
-    <div class="search-panel" v-if="searchVisible">
-      <div class="search-row">
-        <input v-model="searchText" placeholder="查找" class="search-input" @keydown.enter="performSearch()" />
-        <span class="search-count" v-if="searchResults.length > 0">{{ searchIndex + 1 }}/{{ searchResults.length }}</span>
-        <button class="tb-sm" @click="searchPrev()" title="上一个">&#9650;</button>
-        <button class="tb-sm" @click="searchNext()" title="下一个">&#9660;</button>
-        <button class="tb-sm" @click="searchVisible = false; searchResults = []; searchIndex = -1" title="关闭">&#10005;</button>
-      </div>
-      <div class="search-row">
-        <input v-model="replaceText" placeholder="替换为" class="search-input" @keydown.enter="replaceOne()" />
-        <button class="tb-sm replace-btn" @click="replaceOne()" :disabled="readOnly || searchResults.length === 0">替换</button>
-        <button class="tb-sm replace-btn" @click="replaceAll()" :disabled="readOnly || searchResults.length === 0">全部</button>
-      </div>
+    <div v-if="showFormulaBar" class="formula-row">
+      <div class="cell-ref" @click="selectCellRefInput()">{{ currentCellRef }}</div>
+      <input
+        ref="formulaInputRef"
+        :value="formulaValue"
+        class="formula-input"
+        :readonly="readOnly"
+        placeholder="输入内容或公式"
+        @input="onFormulaInput"
+        @focus="formulaFocused = true"
+        @blur="formulaFocused = false"
+        @keydown.enter.prevent="confirmFormulaAndMove('down')"
+        @keydown.tab.prevent="confirmFormulaAndMove('right')"
+      />
     </div>
 
     <!-- 表格网格 -->
-    <div class="grid-scroll luckysheet-grid-scroll" ref="gridScrollRef" @mousedown="handleGridMouseDown">
-      <div class="luckysheet-grid-zoom" :style="sheetGridStyle">
-        <div :id="luckysheetContainerId" ref="luckysheetHostRef" class="luckysheet-host"></div>
+    <div class="grid-scroll univer-grid-scroll">
+      <div class="univer-grid-viewport">
+        <div :id="univerContainerId" ref="univerHostRef" class="univer-host"></div>
       </div>
     </div>
-
-    <!-- 单元格右键菜单 -->
-    <Teleport to="body">
-      <div v-if="cellMenu.visible" class="sheet-ctx-menu" :style="{ left: cellMenu.x + 'px', top: cellMenu.y + 'px' }" @click.stop>
-        <div class="ctx-menu-item" @click="ctxCut()"><SheetIcon name="content-cut" /><span>剪切</span><span class="ctx-shortcut">Ctrl+X</span></div>
-        <div class="ctx-menu-item" @click="ctxCopy()"><SheetIcon name="content-copy" /><span>复制</span><span class="ctx-shortcut">Ctrl+C</span></div>
-        <div class="ctx-menu-item" @click="ctxPaste()"><SheetIcon name="content-paste" /><span>粘贴</span><span class="ctx-shortcut">Ctrl+V</span></div>
-        <div class="ctx-menu-divider"></div>
-        <div class="ctx-menu-item" @click="ctxInsertRowAbove()"><SheetIcon name="table-row-plus-before" /><span>在上方插入行</span></div>
-        <div class="ctx-menu-item" @click="ctxInsertRowBelow()"><SheetIcon name="table-row-plus-after" /><span>在下方插入行</span></div>
-        <div class="ctx-menu-item" @click="ctxDeleteRow()"><SheetIcon name="delete-outline" /><span>删除行</span></div>
-        <div class="ctx-menu-divider"></div>
-        <div class="ctx-menu-item" @click="ctxInsertColLeft()"><SheetIcon name="table-column-plus-before" /><span>在左侧插入列</span></div>
-        <div class="ctx-menu-item" @click="ctxInsertColRight()"><SheetIcon name="table-column-plus-after" /><span>在右侧插入列</span></div>
-        <div class="ctx-menu-item" @click="ctxDeleteCol()"><SheetIcon name="delete-outline" /><span>删除列</span></div>
-        <div class="ctx-menu-divider"></div>
-        <div class="ctx-menu-item" @click="ctxClearContent()"><SheetIcon name="delete-outline" /><span>删除内容</span><span class="ctx-shortcut">Delete</span></div>
-        <div class="ctx-menu-item" @click="ctxClearFormat()"><SheetIcon name="format-clear" /><span>清除格式</span></div>
-      </div>
-    </Teleport>
-
-    <!-- 工作表标签右键菜单 -->
-    <Teleport to="body">
-      <div v-if="sheetMenu.visible" class="sheet-ctx-menu" :style="{ left: sheetMenu.x + 'px', bottom: sheetMenu.y + 'px' }" @click.stop>
-        <div class="ctx-menu-item" @click="ctxRenameSheet()"><SheetIcon name="format-text" /><span>重命名</span></div>
-        <div class="ctx-menu-item" @click="ctxDuplicateSheet()"><SheetIcon name="content-copy" /><span>创建副本</span></div>
-        <div class="ctx-menu-item" @click="ctxInsertSheet()"><SheetIcon name="plus" /><span>插入工作表</span></div>
-        <template v-if="workbook.sheets.length > 1">
-          <div class="ctx-menu-divider"></div>
-          <div class="ctx-menu-item ctx-danger" @click="ctxDeleteSheet()"><SheetIcon name="delete-outline" /><span>删除工作表</span></div>
-        </template>
-      </div>
-    </Teleport>
 
 
     <!-- 快捷键对话框 -->
@@ -481,6 +735,22 @@
       </div>
     </a-modal>
 
+    <!-- 行高对话框 -->
+    <a-modal v-model:open="showRowHeightDialog" title="设置行高" width="360px" @ok="applyRowHeight">
+      <div style="padding: 16px 0">
+        <label>行高（像素）：</label>
+        <a-input-number v-model:value="rowHeightValue" :min="0" :max="500" style="width: 100%; margin-top: 8px" />
+      </div>
+    </a-modal>
+
+    <!-- 列宽对话框 -->
+    <a-modal v-model:open="showColWidthDialog" title="设置列宽" width="360px" @ok="applyColWidth">
+      <div style="padding: 16px 0">
+        <label>列宽（像素）：</label>
+        <a-input-number v-model:value="colWidthValue" :min="0" :max="500" style="width: 100%; margin-top: 8px" />
+      </div>
+    </a-modal>
+
     <input
       ref="importExcelInputRef"
       type="file"
@@ -492,22 +762,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { message, Modal } from 'ant-design-vue'
-import 'luckysheet/dist/plugins/css/pluginsCss.css'
-import 'luckysheet/dist/plugins/plugins.css'
-import 'luckysheet/dist/css/luckysheet.css'
-import 'luckysheet/dist/assets/iconfont/iconfont.css'
-import pluginScriptUrl from 'luckysheet/dist/plugins/js/plugin.js?url'
-import luckysheetScriptUrl from 'luckysheet/dist/luckysheet.umd.js?url'
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { message } from 'ant-design-vue'
+import type { Univer as UniverType } from '@univerjs/core'
+import type { FUniver } from '@univerjs/core/facade'
+import type { FRange, FWorkbook, FWorksheet } from '@univerjs/sheets/facade'
 import SheetIcon from './SheetIcon.vue'
 import UnifiedTopHeader from './UnifiedTopHeader.vue'
-import type { Align, VerticalAlign, WrapMode, ICellStyle, ICellMeta, IUiSheet, IWorkbook, UndoEntry } from '../types'
-import { createExcelI18n } from '../i18n'
-import type { ExcelI18nMessages, ExcelLocale } from '../i18n'
+import type { Align, VerticalAlign, WrapMode, ICellStyle, IUiSheet, IWorkbook, UndoEntry } from '../types'
+import { createExcelI18n } from '@/i18n'
+import type { ExcelI18nMessages, ExcelLocale } from '@/i18n'
 import { readExcelFileToWorkbook } from '../utils/excel-import'
 import { writeWorkbookToExcelBuffer } from '../utils/excel-export'
-import { extractWorkbookFromLuckysheet, workbookToLuckySheets } from '../utils/luckysheet-adapter'
+import { loadUniverRuntime } from '../utils/univer-runtime'
+import type { LoadedUniverRuntime } from '../utils/univer-runtime'
 
 const props = withDefaults(defineProps<{
   initialContent?: any
@@ -625,27 +893,23 @@ const workbook = reactive<IWorkbook>(normalizeWorkbook(props.initialContent))
 const activeSheetIndex = ref(0)
 const selected = reactive({ row: 0, col: 0 })
 const selectionEnd = reactive({ row: 0, col: 0 })
-const isSelecting = ref(false)
+
 const formulaValue = ref('')
 const formulaFocused = ref(false)
 const formulaInputRef = ref<HTMLInputElement | null>(null)
-const cellInputRef = ref<HTMLInputElement[] | HTMLInputElement | null>(null)
-const gridScrollRef = ref<HTMLElement | null>(null)
+
+
 const sheetEditorRef = ref<HTMLElement | null>(null)
 const showGridlines = ref(true)
 const showFormulaBar = ref(true)
 const frozenRows = ref(0)
 const frozenCols = ref(0)
 const formatPainterActive = ref(false)
-const formatPainterStyle = ref<ICellStyle | null>(null)
+
 const colWidths = reactive<Record<number, number>>({})
 const rowHeights = reactive<Record<number, number>>({})
 
-const editingCell = ref<{ row: number; col: number } | null>(null)
-const editingValue = ref('')
 
-const cellMenu = reactive({ visible: false, x: 0, y: 0 })
-const sheetMenu = reactive({ visible: false, x: 0, y: 0, index: 0 })
 
 const undoStack = ref<UndoEntry[]>([])
 const redoStack = ref<UndoEntry[]>([])
@@ -661,29 +925,24 @@ const showShortcutsDialog = ref(false)
 
 const importExcelInputRef = ref<HTMLInputElement | null>(null)
 const FILTER_EMPTY_TOKEN = '__EMPTY__'
-const zoomPercent = ref(100)
-const isFullscreen = ref(false)
-const isEyeCareMode = ref(false)
-const zoomLevels = [50, 75, 100, 125, 150, 175, 200]
-const luckysheetHostRef = ref<HTMLElement | null>(null)
-const luckysheetContainerId = `luckysheet-${Math.random().toString(36).slice(2)}`
 
-type LuckyRange = {
-  row: [number, number]
-  column: [number, number]
-}
+const zoomLevel = ref(100)
+const showRowHeightDialog = ref(false)
+const showColWidthDialog = ref(false)
+const rowHeightValue = ref(20)
+const colWidthValue = ref(100)
 
-type LuckySheetInstance = {
-  create: (options: Record<string, any>) => void
-  destroy?: () => void
-  getAllSheets?: () => any[]
-  getRange?: () => LuckyRange[]
-  setSheetActive?: (index: number | string) => void
-}
+const univerContainerId = 'vervedocs-univer-host'
+const univerHostRef = ref<HTMLElement | null>(null)
+let univerRenderTimer: number | undefined
+let renderingUniver = false
+let univerRuntime: LoadedUniverRuntime | null = null
+let univerInstance: UniverType | null = null
+let univerAPI: FUniver | null = null
+let activeUniverWorkbook: FWorkbook | null = null
+let univerWorkbookDisposables: Array<{ dispose: () => void }> = []
+let lastUniverSnapshot = ''
 
-let luckysheetLoadPromise: Promise<void> | null = null
-let luckysheetRenderTimer: number | undefined
-let renderingLuckysheet = false
 
 const toolbarState = reactive<ICellStyle & { numberFormat: string; decimalPlaces: number; rotation: number; verticalAlign: VerticalAlign }>({
   fontFamily: 'Microsoft YaHei, sans-serif',
@@ -702,50 +961,269 @@ const toolbarState = reactive<ICellStyle & { numberFormat: string; decimalPlaces
   rotation: 0,
 })
 
-function getLuckysheet(): LuckySheetInstance | undefined {
-  return (window as any).luckysheet
+async function ensureUniverRuntime() {
+  if (!univerRuntime) {
+    univerRuntime = await loadUniverRuntime(props.locale)
+  }
+  return univerRuntime
 }
 
-function loadClassicScript(url: string, marker: string) {
-  return new Promise<void>((resolve, reject) => {
-    const existing = document.querySelector<HTMLScriptElement>(`script[data-luckysheet-script="${marker}"]`)
-    if (existing) {
-      if (existing.dataset.loaded === 'true') {
-        resolve()
-        return
-      }
-      existing.addEventListener('load', () => resolve(), { once: true })
-      existing.addEventListener('error', () => reject(new Error(`Failed to load ${marker}`)), { once: true })
-      return
-    }
-    const script = document.createElement('script')
-    script.src = url
-    script.async = false
-    script.dataset.luckysheetScript = marker
-    script.onload = () => {
-      script.dataset.loaded = 'true'
-      resolve()
-    }
-    script.onerror = () => reject(new Error(`Failed to load ${marker}`))
-    document.head.appendChild(script)
+function getUniverLocaleType(runtime: LoadedUniverRuntime) {
+  return props.locale === 'enUS' ? runtime.core.LocaleType.EN_US : runtime.core.LocaleType.ZH_CN
+}
+
+function getActiveSheet(): FWorksheet | null {
+  return activeUniverWorkbook?.getActiveSheet() ?? null
+}
+
+function getSelectionRange(): FRange | null {
+  const sheet = getActiveSheet()
+  if (!sheet) return null
+  const { r1, r2, c1, c2 } = selectionRange.value
+  return sheet.getRange(r1, c1, r2 - r1 + 1, c2 - c1 + 1)
+}
+
+const UNIVER_COMMANDS = {
+  addNote: 'sheet.operation.add-note-popup',
+  addThreadComment: 'sheet.operation.show-comment-modal',
+  dataValidation: 'data-validation.operation.open-validation-panel',
+  find: 'ui.operation.open-find-dialog',
+  hyperlink: 'sheet.operation.insert-hyper-link',
+  replace: 'ui.operation.open-replace-dialog',
+  sortRange: 'sheet.command.sort-range',
+  toggleFilter: 'sheet.command.smart-toggle-filter',
+} as const
+
+async function executeUniverCommand(commandId: string, params?: Record<string, any>) {
+  if (!univerAPI) {
+    message.warning('表格尚未初始化')
+    return false
+  }
+  try {
+    return await univerAPI.executeCommand(commandId, params)
+  } catch (error) {
+    console.error(`[SheetEditor] command failed: ${commandId}`, error)
+    message.error('官方功能执行失败')
+    return false
+  }
+}
+
+async function openUniverSort(order: 'asc' | 'desc') {
+  if (props.readOnly) return false
+  const sheet = getActiveSheet()
+  const workbook = activeUniverWorkbook
+  if (!sheet || !workbook) {
+    message.warning('表格尚未初始化')
+    return false
+  }
+
+  const { r1, r2, c1, c2 } = selectionRange.value
+  const sortWholeSheet = r1 === r2 && c1 === c2
+  const startRow = sortWholeSheet ? 0 : r1
+  const endRow = sortWholeSheet ? Math.max(0, (activeSheet.value?.rowCount || 1) - 1) : r2
+  const startColumn = sortWholeSheet ? 0 : c1
+  const endColumn = sortWholeSheet ? Math.max(0, (activeSheet.value?.colCount || 1) - 1) : c2
+  const colIndex = Math.max(0, selected.col - startColumn)
+
+  return executeUniverCommand(UNIVER_COMMANDS.sortRange, {
+    unitId: workbook.getId(),
+    subUnitId: sheet.getSheetId(),
+    range: {
+      startRow,
+      endRow,
+      startColumn,
+      endColumn,
+    },
+    orderRules: [{
+      colIndex,
+      type: order,
+    }],
+    hasTitle: false,
   })
 }
 
-async function ensureLuckysheetLoaded() {
-  if (getLuckysheet()) return
-  if (!luckysheetLoadPromise) {
-    luckysheetLoadPromise = (async () => {
-      await loadClassicScript(pluginScriptUrl, 'plugin')
-      await loadClassicScript(luckysheetScriptUrl, 'core')
-    })()
-  }
-  await luckysheetLoadPromise
+async function openUniverDataValidation() {
+  if (props.readOnly) return false
+  return executeUniverCommand(UNIVER_COMMANDS.dataValidation)
 }
 
-function clearLuckysheetRenderTimer() {
-  if (luckysheetRenderTimer !== undefined) {
-    window.clearTimeout(luckysheetRenderTimer)
-    luckysheetRenderTimer = undefined
+async function toggleUniverFilter() {
+  if (props.readOnly) return false
+  return executeUniverCommand(UNIVER_COMMANDS.toggleFilter)
+}
+
+async function openUniverHyperlink() {
+  if (props.readOnly) return false
+  return executeUniverCommand(UNIVER_COMMANDS.hyperlink)
+}
+
+async function openUniverNote() {
+  if (props.readOnly) return false
+  return executeUniverCommand(UNIVER_COMMANDS.addNote)
+}
+
+async function openUniverThreadComment() {
+  if (props.readOnly) return false
+  return executeUniverCommand(UNIVER_COMMANDS.addThreadComment)
+}
+
+async function openUniverFindDialog() {
+  return executeUniverCommand(UNIVER_COMMANDS.find)
+}
+
+async function openUniverReplaceDialog() {
+  return executeUniverCommand(UNIVER_COMMANDS.replace)
+}
+
+function clearUniverWorkbookDisposables() {
+  univerWorkbookDisposables.forEach(disposable => disposable.dispose())
+  univerWorkbookDisposables = []
+}
+
+async function ensureUniverInitialized(host: HTMLElement) {
+  if (univerInstance && univerAPI) return
+  const runtime = await ensureUniverRuntime()
+
+  univerInstance = new runtime.core.Univer({
+    locale: getUniverLocaleType(runtime),
+    locales: {
+      [runtime.core.LocaleType.ZH_CN]: runtime.core.mergeLocales(
+        runtime.locales.conditionalFormattingUI,
+        runtime.locales.crosshairHighlight,
+        runtime.locales.dataValidation,
+        runtime.locales.dataValidationUI,
+        runtime.locales.design,
+        runtime.locales.ui,
+        runtime.locales.docsUI,
+        runtime.locales.drawingUI,
+        runtime.locales.findReplace,
+        runtime.locales.sheets,
+        runtime.locales.sheetsFilter,
+        runtime.locales.sheetsFilterUI,
+        runtime.locales.sheetsHyperLink,
+        runtime.locales.sheetsHyperLinkUI,
+        runtime.locales.sheetsUI,
+        runtime.locales.sheetsFormulaUI,
+        runtime.locales.sheetsNoteUI,
+        runtime.locales.sheetsNumfmtUI,
+        runtime.locales.sheetsSortUI,
+        runtime.locales.sheetsTable,
+        runtime.locales.sheetsTableUI,
+        runtime.locales.sheetsThreadCommentUI,
+        runtime.locales.threadCommentUI,
+        runtime.locales.zenEditor,
+      ),
+      [runtime.core.LocaleType.EN_US]: runtime.core.mergeLocales(
+        runtime.locales.conditionalFormattingUI,
+        runtime.locales.crosshairHighlight,
+        runtime.locales.dataValidation,
+        runtime.locales.dataValidationUI,
+        runtime.locales.design,
+        runtime.locales.ui,
+        runtime.locales.docsUI,
+        runtime.locales.drawingUI,
+        runtime.locales.findReplace,
+        runtime.locales.sheets,
+        runtime.locales.sheetsFilter,
+        runtime.locales.sheetsFilterUI,
+        runtime.locales.sheetsHyperLink,
+        runtime.locales.sheetsHyperLinkUI,
+        runtime.locales.sheetsUI,
+        runtime.locales.sheetsFormulaUI,
+        runtime.locales.sheetsNoteUI,
+        runtime.locales.sheetsNumfmtUI,
+        runtime.locales.sheetsSortUI,
+        runtime.locales.sheetsTable,
+        runtime.locales.sheetsTableUI,
+        runtime.locales.sheetsThreadCommentUI,
+        runtime.locales.threadCommentUI,
+        runtime.locales.zenEditor,
+      ),
+    },
+  })
+  univerInstance.registerPlugin(runtime.plugins.UniverRenderEnginePlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverFormulaEnginePlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverUIPlugin, {
+    container: host,
+    header: false,
+    toolbar: false,
+    footer: true,
+    contextMenu: true,
+  })
+  univerInstance.registerPlugin(runtime.plugins.UniverDocsPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverDocsUIPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsGraphicsPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsDrawingPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsTablePlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsDataValidationPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsConditionalFormattingPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsFilterPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsSortPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsHyperLinkPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsNotePlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverThreadCommentPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsThreadCommentPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverFindReplacePlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsFindReplacePlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsUIPlugin, {
+    footer: {
+      addSheetButtonConfig: {
+        show: true,
+        defaultRowCount: 50,
+        defaultColumnCount: 26,
+      }
+    }
+  })
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsFormulaPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsFormulaUIPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsNumfmtPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsNumfmtUIPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsDrawingUIPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsTableUIPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsDataValidationUIPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsConditionalFormattingUIPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsFilterUIPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsSortUIPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsHyperLinkUIPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsNoteUIPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverThreadCommentUIPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsThreadCommentUIPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsCrosshairHighlightPlugin)
+  univerInstance.registerPlugin(runtime.plugins.UniverSheetsZenEditorPlugin)
+  univerAPI = runtime.facade.FUniver.newAPI(univerInstance)
+}
+
+function bindUniverEvents() {
+  clearUniverWorkbookDisposables()
+  if (!univerAPI) return
+  univerWorkbookDisposables.push(univerAPI.addEvent(univerAPI.Event.CommandExecuted, () => {
+    if (renderingUniver) return
+    window.setTimeout(() => {
+      if (renderingUniver) return
+      updateSelectionFromUniver()
+      const changed = syncWorkbookFromUniver()
+      if (changed) {
+        emitChange('univer')
+      }
+    }, 0)
+  }))
+}
+
+function disposeActiveUniverWorkbook() {
+  if (!univerAPI || !activeUniverWorkbook) {
+    activeUniverWorkbook = null
+    return
+  }
+  const unitId = activeUniverWorkbook.getId()
+  activeUniverWorkbook = null
+  univerAPI.disposeUnit(unitId)
+}
+
+function clearUniverRenderTimer() {
+  if (univerRenderTimer !== undefined) {
+    window.clearTimeout(univerRenderTimer)
+    univerRenderTimer = undefined
   }
 }
 
@@ -828,6 +1306,7 @@ watch(
   next => {
     const normalized = normalizeWorkbook(next)
     workbook.version = normalized.version
+    workbook.resources = normalized.resources
     workbook.sheets = normalized.sheets
     activeSheetIndex.value = 0
     selected.row = 0
@@ -839,7 +1318,7 @@ watch(
     syncToolbarAndFormula()
     undoStack.value = []
     redoStack.value = []
-    scheduleLuckysheetRender()
+    scheduleUniverRender()
   },
   { deep: true }
 )
@@ -857,49 +1336,7 @@ const selectionRange = computed(() => {
   return { r1, r2, c1, c2 }
 })
 
-const sheetGridStyle = computed(() => ({
-  zoom: `${zoomPercent.value}%`
-}))
 
-const filteredCellCount = computed(() => {
-  const sheet = activeSheet.value
-  if (!sheet) return 0
-  return Object.values(sheet.cells).filter(v => v !== '').length
-})
-
-// ===== Merge rendering =====
-const mergeMap = computed(() => {
-  const map: Record<string, { hidden: true } | { rowSpan: number; colSpan: number }> = {}
-  const sheet = activeSheet.value
-  if (!sheet?.merges) return map
-  for (const m of sheet.merges) {
-    const [r1, c1, r2, c2] = m.split(':').map(Number)
-    map[cellKey(r1, c1)] = { rowSpan: r2 - r1 + 1, colSpan: c2 - c1 + 1 }
-    for (let r = r1; r <= r2; r++) {
-      for (let c = c1; c <= c2; c++) {
-        if (r !== r1 || c !== c1) {
-          map[cellKey(r, c)] = { hidden: true }
-        }
-      }
-    }
-  }
-  return map
-})
-
-function getMergeInfo(row: number, col: number) {
-  return mergeMap.value[cellKey(row, col)]
-}
-
-function isMergeHidden(row: number, col: number): boolean {
-  const info = getMergeInfo(row, col)
-  return !!info && 'hidden' in info
-}
-
-function getMergeSpan(row: number, col: number): { rowSpan?: number; colSpan?: number } {
-  const info = getMergeInfo(row, col)
-  if (info && 'rowSpan' in info) return { rowSpan: info.rowSpan, colSpan: info.colSpan }
-  return {}
-}
 
 watch([activeSheetIndex, () => selected.row, () => selected.col], () => {
   syncDimensionStateFromActiveSheet()
@@ -908,35 +1345,53 @@ watch([activeSheetIndex, () => selected.row, () => selected.col], () => {
 
 watch(activeSheetIndex, () => {
   loadFilterStateFromActiveSheet()
-  getLuckysheet()?.setSheetActive?.(activeSheetIndex.value)
+  const nextSheet = activeUniverWorkbook?.getSheets()?.[activeSheetIndex.value]
+  if (nextSheet) {
+    activeUniverWorkbook?.setActiveSheet(nextSheet)
+    applySelectionToUniver()
+  }
 })
 
-function updateSelectionFromLuckysheet() {
-  const range = getLuckysheet()?.getRange?.()?.[0]
-  if (!range) return
-  selected.row = Number(range.row?.[0] || 0)
-  selectionEnd.row = Number(range.row?.[1] || selected.row)
-  selected.col = Number(range.column?.[0] || 0)
-  selectionEnd.col = Number(range.column?.[1] || selected.col)
+function updateSelectionFromUniver() {
+  const activeSheet = activeUniverWorkbook?.getActiveSheet()
+  const activeRange = activeSheet?.getActiveRange()
+  if (!activeSheet || !activeRange) return
+  const nextIndex = workbook.sheets.findIndex(sheet => sheet.id === activeSheet.getSheetId())
+  if (nextIndex >= 0) {
+    activeSheetIndex.value = nextIndex
+  }
+  selected.row = activeRange.getRow()
+  selectionEnd.row = activeRange.getLastRow()
+  selected.col = activeRange.getColumn()
+  selectionEnd.col = activeRange.getLastColumn()
   syncToolbarAndFormula()
 }
 
-function syncWorkbookFromLuckysheet() {
-  const extracted = extractWorkbookFromLuckysheet()
-  if (!Array.isArray(extracted.sheets) || extracted.sheets.length === 0) return
+function syncWorkbookFromUniver() {
+  const snapshot = activeUniverWorkbook?.save()
+  if (!snapshot || !univerRuntime) return false
+  const serialized = JSON.stringify(snapshot)
+  const changed = serialized !== lastUniverSnapshot
+  lastUniverSnapshot = serialized
+  const extracted = univerRuntime.adapter.univerWorkbookToInternal(snapshot)
   const currentSheets = workbook.sheets || []
   workbook.version = extracted.version || workbook.version || 1
+  workbook.resources = extracted.resources && typeof extracted.resources === 'object'
+    ? JSON.parse(JSON.stringify(extracted.resources))
+    : undefined
   workbook.sheets = extracted.sheets.map((sheet, index) => {
-    const current = currentSheets[index]
+    const currentById = currentSheets.find(item => item.id === sheet.id)
+    const current = currentById || currentSheets[index]
     return {
       ...sheet,
-      cellMeta: { ...(current?.cellMeta || {}) },
+      cellMeta: { ...(sheet.cellMeta || current?.cellMeta || {}) },
       filterColumn: current?.filterColumn ?? null,
       filterKeyword: current?.filterKeyword || '',
       filterSelectedValues: { ...(current?.filterSelectedValues || {}) },
       filterActive: !!current?.filterActive
     }
   })
+  return changed
 }
 
 async function waitForLuckysheetHost(host: HTMLElement) {
@@ -950,76 +1405,57 @@ async function waitForLuckysheetHost(host: HTMLElement) {
   return false
 }
 
+function applySelectionToUniver() {
+  const sheets = activeUniverWorkbook?.getSheets() || []
+  const targetSheet = sheets[activeSheetIndex.value]
+  if (!targetSheet) return
+  const { r1, r2, c1, c2 } = selectionRange.value
+  activeUniverWorkbook?.setActiveSheet(targetSheet)
+  const range = targetSheet.getRange(r1, c1, r2 - r1 + 1, c2 - c1 + 1)
+  targetSheet.setActiveRange(range)
+}
+
 async function renderLuckysheet() {
-  await ensureLuckysheetLoaded()
-  const lucky = getLuckysheet()
-  const host = luckysheetHostRef.value
-  if (!lucky || !host) return
-  renderingLuckysheet = true
+  const host = univerHostRef.value
+
+  if (!host) return
+  renderingUniver = true
   try {
-    try {
-      lucky.destroy?.()
-    } catch {
-      // ignore luckysheet destroy errors
-    }
-    host.innerHTML = ''
+    const runtime = await ensureUniverRuntime()
+    await ensureUniverInitialized(host)
     const hostReady = await waitForLuckysheetHost(host)
     if (!hostReady) {
-      console.warn('[SheetEditor] luckysheet host height is 0')
+
+      console.warn('[SheetEditor] univer host height is 0')
       return
     }
-    lucky.create({
-      container: luckysheetContainerId,
-      data: workbookToLuckySheets(workbook),
-      lang: props.locale === 'enUS' ? 'en' : 'zh',
-      showtoolbar: false,
-      showinfobar: false,
-      showsheetbar: true,
-      showstatisticBar: false,
-      showConfigWindow: false,
-      sheetBottomConfig: true,
-      allowEdit: !props.readOnly,
-      enableAddRow: !props.readOnly,
-      enableAddBack: !props.readOnly,
-      forceCalculation: false,
-      hook: {
-        cellMousedown: () => {
-          window.setTimeout(updateSelectionFromLuckysheet, 0)
-        },
-        rangeSelect: () => {
-          window.setTimeout(updateSelectionFromLuckysheet, 0)
-        },
-        sheetActivate: () => {
-          window.setTimeout(updateSelectionFromLuckysheet, 0)
-        },
-        cellUpdateBefore: () => {
-          if (props.readOnly) return false
-          return true
-        },
-        cellUpdated: () => {
-          if (renderingLuckysheet) return
-          syncWorkbookFromLuckysheet()
-          updateSelectionFromLuckysheet()
-          emitChange('luckysheet')
-        },
-        workbookCreateAfter: () => {
-          lucky.setSheetActive?.(activeSheetIndex.value)
-          updateSelectionFromLuckysheet()
-          window.dispatchEvent(new Event('resize'))
-        }
-      }
-    })
+
+    disposeActiveUniverWorkbook()
+    activeUniverWorkbook = univerAPI?.createWorkbook(runtime.adapter.internalWorkbookToUniver(workbook, props.locale)) || null
+
+    bindUniverEvents()
+    const sheets = activeUniverWorkbook?.getSheets() || []
+    const nextSheet = sheets[activeSheetIndex.value] || sheets[0]
+    if (nextSheet) {
+      activeUniverWorkbook?.setActiveSheet(nextSheet)
+    }
+    lastUniverSnapshot = activeUniverWorkbook ? JSON.stringify(activeUniverWorkbook.save()) : ''
+    applySelectionToUniver()
+    updateSelectionFromUniver()
+
+    window.dispatchEvent(new Event('resize'))
   } catch (error) {
-    console.error('[SheetEditor] luckysheet render error:', error)
+
+    console.error('[SheetEditor] univer render error:', error)
   } finally {
-    renderingLuckysheet = false
+    renderingUniver = false
   }
 }
 
-function scheduleLuckysheetRender() {
-  clearLuckysheetRenderTimer()
-  luckysheetRenderTimer = window.setTimeout(() => {
-    renderLuckysheet()
+function scheduleUniverRender() {
+  clearUniverRenderTimer()
+  univerRenderTimer = window.setTimeout(() => {
+    void renderLuckysheet()
   }, 0)
 }
 
@@ -1029,23 +1465,30 @@ function normalizeWorkbook(input: any): IWorkbook {
     if (Array.isArray(input?.data)) {
       return {
         version: Number(input?.version || 1),
+        resources: undefined,
         sheets: input.data.map((sheet: any, i: number) => fromFortuneSheetRecord(sheet, i))
       }
     }
     if (input?.data && typeof input.data === 'object' && Array.isArray(input.data?.sheets)) {
       return {
         version: Number(input?.version || 1),
+        resources: input.data?.resources && typeof input.data.resources === 'object'
+          ? JSON.parse(JSON.stringify(input.data.resources))
+          : undefined,
         sheets: input.data.sheets.map((sheet: any, i: number) => fromInternalSheet(sheet, i))
       }
     }
     if (Array.isArray(input?.sheets)) {
       return {
         version: Number(input?.version || 1),
+        resources: input?.resources && typeof input.resources === 'object'
+          ? JSON.parse(JSON.stringify(input.resources))
+          : undefined,
         sheets: input.sheets.map((sheet: any, i: number) => fromInternalSheet(sheet, i))
       }
     }
   }
-  return { version: 1, sheets: [createDefaultSheet(0)] }
+  return { version: 1, resources: undefined, sheets: [createDefaultSheet(0)] }
 }
 
 function fromInternalSheet(sheet: any, i: number): IUiSheet {
@@ -1155,166 +1598,9 @@ function cellValue(row: number, col: number): string {
   return activeSheet.value?.cells[cellKey(row, col)] || ''
 }
 
-function normalizeHyperlink(url: string): string {
-  const trimmed = String(url || '').trim()
-  if (!trimmed) return ''
-  if (/^(https?:\/\/|mailto:|tel:)/i.test(trimmed)) return trimmed
-  return `https://${trimmed}`
-}
-
-function getCellMeta(row: number, col: number): ICellMeta {
-  return activeSheet.value?.cellMeta?.[cellKey(row, col)] || {}
-}
-
-function getCellHyperlink(row: number, col: number): string {
-  return normalizeHyperlink(String(getCellMeta(row, col).hyperlink || ''))
-}
-
-function getCellComment(row: number, col: number): string {
-  return String(getCellMeta(row, col).comment || '')
-}
-
-function displayCellValue(row: number, col: number): string {
-  const val = cellValue(row, col)
-  const key = cellKey(row, col)
-  const style = activeSheet.value?.styles[key]
-  if (!val || !style?.numberFormat || style.numberFormat === 'auto' || style.numberFormat === 'text') return val
-  const num = Number(val)
-  if (!Number.isFinite(num)) return val
-  const dp = style.decimalPlaces ?? 2
-  switch (style.numberFormat) {
-    case 'percent': return (num * 100).toFixed(dp) + '%'
-    case 'currency': return '¥' + num.toFixed(dp)
-    case 'number': return num.toFixed(dp)
-    default: return val
-  }
-}
-
-function getCellStyle(row: number, col: number) {
-  const key = cellKey(row, col)
-  const style = activeSheet.value?.styles[key] || {}
-  const result: Record<string, string> = {
-    textAlign: style.align || 'left',
-    fontWeight: style.bold ? '700' : '400',
-    fontStyle: style.italic ? 'italic' : 'normal',
-    textDecoration: [
-      style.underline ? 'underline' : '',
-      style.strikethrough ? 'line-through' : ''
-    ].filter(Boolean).join(' ') || 'none',
-    fontFamily: style.fontFamily || 'Microsoft YaHei, sans-serif',
-    fontSize: `${style.fontSize || 12}px`,
-  }
-  if (style.fontColor) result.color = style.fontColor
-  if (style.bgColor) result.backgroundColor = style.bgColor
-  if (style.borderTop) result.borderTop = style.borderTop
-  if (style.borderBottom) result.borderBottom = style.borderBottom
-  if (style.borderLeft) result.borderLeft = style.borderLeft
-  if (style.borderRight) result.borderRight = style.borderRight
-  const vaMap: Record<string, string> = { top: 'top', middle: 'middle', bottom: 'bottom' }
-  result.verticalAlign = vaMap[style.verticalAlign as string] || 'middle'
-  if (style.rotation) {
-    result.transform = `rotate(${style.rotation}deg)`
-    result.writingMode = style.rotation === 90 ? 'vertical-rl' : 'horizontal-tb'
-  }
-  if (style.wrap === 'wrap') {
-    result.whiteSpace = 'pre-wrap'
-    result.wordBreak = 'break-word'
-  }
-  const isFrozenRow = frozenRows.value > 0 && row < frozenRows.value
-  const isFrozenCol = frozenCols.value > 0 && col < frozenCols.value
-  if (isFrozenRow) {
-    result.position = 'sticky'
-    result.top = `${getFrozenTopOffset(row)}px`
-  }
-  if (isFrozenCol) {
-    result.position = 'sticky'
-    result.left = `${getFrozenLeftOffset(col)}px`
-  }
-  if (isFrozenRow || isFrozenCol) {
-    result.backgroundColor = result.backgroundColor || '#ffffff'
-    result.zIndex = isFrozenRow && isFrozenCol ? '5' : '2'
-  }
-  return result
-}
-
-function getRowHeight(row: number): number {
-  return rowHeights[row] || 25
-}
-
-function getColWidth(col: number): number {
-  return colWidths[col] || 100
-}
-
-function isRowHidden(row: number): boolean {
-  return !!activeSheet.value?.hiddenRows?.[row] || !!filteredRows[row]
-}
-
-function isColHidden(col: number): boolean {
-  return !!activeSheet.value?.hiddenCols?.[col]
-}
-
-function getFrozenLeftOffset(col: number): number {
-  let left = 46
-  for (let c = 0; c < col; c++) {
-    if (isColHidden(c)) continue
-    if (c >= frozenCols.value) break
-    left += getColWidth(c)
-  }
-  return left
-}
-
-function getFrozenTopOffset(row: number): number {
-  let top = 25
-  for (let r = 0; r < row; r++) {
-    if (isRowHidden(r)) continue
-    if (r >= frozenRows.value) break
-    top += getRowHeight(r)
-  }
-  return top
-}
-
-function getColumnHeaderStyle(col: number): Record<string, string> {
-  if (!(frozenCols.value > 0 && col < frozenCols.value) || isColHidden(col)) return {}
-  return {
-    left: `${getFrozenLeftOffset(col)}px`,
-    zIndex: '4'
-  }
-}
-
-function getRowHeaderStyle(row: number): Record<string, string> {
-  if (!(frozenRows.value > 0 && row < frozenRows.value) || isRowHidden(row)) return {}
-  return {
-    top: `${getFrozenTopOffset(row)}px`,
-    zIndex: '3'
-  }
-}
-
-function getCellClass(row: number, col: number) {
-  const { r1, r2, c1, c2 } = selectionRange.value
-  const inRange = row >= r1 && row <= r2 && col >= c1 && col <= c2
-  const isAnchor = row === selected.row && col === selected.col
-  const meta = getCellMeta(row, col)
-  return {
-    active: isAnchor && r1 === r2 && c1 === c2,
-    'in-selection': inRange && !isAnchor,
-    'selection-anchor': isAnchor && (r1 !== r2 || c1 !== c2),
-    'has-comment': !!meta.comment
-  }
-}
-
-function isRowInSelection(row: number): boolean {
-  const { r1, r2 } = selectionRange.value
-  return row >= r1 && row <= r2
-}
-
-function isColInSelection(col: number): boolean {
-  const { c1, c2 } = selectionRange.value
-  return col >= c1 && col <= c2
-}
-
 // ===== Selection =====
 function selectCell(row: number, col: number) {
-  if (editingCell.value) confirmEditing()
+
   selected.row = row
   selected.col = col
   selectionEnd.row = row
@@ -1322,39 +1608,6 @@ function selectCell(row: number, col: number) {
   syncToolbarAndFormula()
 }
 
-function onCellMouseDown(row: number, col: number, e: MouseEvent) {
-  if (formatPainterActive.value && formatPainterStyle.value) {
-    applyFormatPainter(row, col)
-    return
-  }
-  if (editingCell.value && (editingCell.value.row !== row || editingCell.value.col !== col)) {
-    confirmEditing()
-  }
-  if (e.shiftKey) {
-    selectionEnd.row = row
-    selectionEnd.col = col
-  } else {
-    selected.row = row
-    selected.col = col
-    selectionEnd.row = row
-    selectionEnd.col = col
-  }
-  isSelecting.value = true
-  syncToolbarAndFormula()
-
-  const onMouseUp = () => {
-    isSelecting.value = false
-    document.removeEventListener('mouseup', onMouseUp)
-  }
-  document.addEventListener('mouseup', onMouseUp)
-}
-
-function onCellMouseOver(row: number, col: number) {
-  if (isSelecting.value) {
-    selectionEnd.row = row
-    selectionEnd.col = col
-  }
-}
 
 function selectAll() {
   selected.row = 0
@@ -1363,134 +1616,49 @@ function selectAll() {
   selectionEnd.col = currentColumns.value.length - 1
 }
 
-function selectEntireRow(row: number) {
-  selected.row = row
-  selected.col = 0
-  selectionEnd.row = row
-  selectionEnd.col = currentColumns.value.length - 1
-  syncToolbarAndFormula()
-}
-
-function selectEntireCol(col: number) {
-  selected.row = 0
-  selected.col = col
-  selectionEnd.row = currentRows.value.length - 1
-  selectionEnd.col = col
-  syncToolbarAndFormula()
-}
 
 function selectCellRefInput() {
   formulaInputRef.value?.focus()
   formulaInputRef.value?.select()
 }
 
-// ===== Editing =====
-function startEditing(row: number, col: number) {
-  if (props.readOnly) return
-  selectCell(row, col)
-  editingCell.value = { row, col }
-  editingValue.value = cellValue(row, col)
-  nextTick(() => {
-    const input = Array.isArray(cellInputRef.value) ? cellInputRef.value[0] : cellInputRef.value
-    input?.focus()
-  })
-}
-
-function startTypingEdit(char: string) {
-  if (props.readOnly || editingCell.value) return
-  editingCell.value = { row: selected.row, col: selected.col }
-  editingValue.value = char
-  nextTick(() => {
-    const input = Array.isArray(cellInputRef.value) ? cellInputRef.value[0] : cellInputRef.value
-    if (input) {
-      input.focus()
-    }
-  })
-}
-
-function onCellInput(e: Event) {
-  editingValue.value = (e.target as HTMLInputElement).value
-  formulaValue.value = editingValue.value
-}
 
 function onFormulaInput(e: Event) {
   const val = (e.target as HTMLInputElement).value
   formulaValue.value = val
-  if (editingCell.value) {
-    editingValue.value = val
-  }
-}
-
-function confirmEditing() {
-  if (!editingCell.value || !activeSheet.value) return
-  saveUndoState()
-  const { row, col } = editingCell.value
-  const key = cellKey(row, col)
-  const value = editingValue.value
-  if (value) {
-    activeSheet.value.cells[key] = value
-  } else {
-    delete activeSheet.value.cells[key]
-  }
-  editingCell.value = null
-  editingValue.value = ''
-  syncToolbarAndFormula()
-  emitChange()
 }
 
 function confirmFormulaAndMove(dir: 'down' | 'right') {
-  if (editingCell.value) {
-    confirmEditing()
-  } else if (formulaFocused.value) {
+  if (formulaFocused.value) {
     applyFormulaValue()
   }
   if (dir === 'down') moveSelection(1, 0)
   else moveSelection(0, 1)
 }
 
-function cancelEditing() {
-  editingCell.value = null
-  editingValue.value = ''
-  syncToolbarAndFormula()
-}
-
 function applyFormulaValue() {
-  if (props.readOnly || !activeSheet.value) return
-  saveUndoState()
-  const key = cellKey(selected.row, selected.col)
+  if (props.readOnly) return
   const value = String(formulaValue.value || '')
-  if (value) {
-    activeSheet.value.cells[key] = value
+  const range = getSelectionRange()
+  if (!range) return
+  saveUndoState()
+  if (value.startsWith('=') && value.length > 1) {
+    range.setFormula(value.slice(1))
   } else {
-    delete activeSheet.value.cells[key]
+    range.setValue(value)
   }
-  updateCellStyle()
-  emitChange()
 }
 
-// ===== Keyboard Navigation =====
-function onCellInputKeydown(e: KeyboardEvent) {
-  if (e.key === 'Enter') {
-    e.preventDefault()
-    confirmEditing()
-    moveSelection(e.shiftKey ? -1 : 1, 0)
-  } else if (e.key === 'Tab') {
-    e.preventDefault()
-    confirmEditing()
-    moveSelection(0, e.shiftKey ? -1 : 1)
-  } else if (e.key === 'Escape') {
-    e.preventDefault()
-    cancelEditing()
-  }
-}
+
 
 function handleGlobalKeydown(e: KeyboardEvent) {
-  if (editingCell.value) return
   if (formulaFocused.value) return
+  const target = e.target as HTMLElement | null
+  if (target?.closest('.univer-host') || target?.closest('[class*="univer"]')) return
+  if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') return
 
   const ctrl = e.ctrlKey || e.metaKey
 
-  // Ctrl shortcuts
   if (ctrl) {
     switch (e.key.toLowerCase()) {
       case 'z': e.preventDefault(); handleUndo(); return
@@ -1502,39 +1670,12 @@ function handleGlobalKeydown(e: KeyboardEvent) {
       case 'x': handleCut(); return
       case 'v': handlePaste(); return
       case 'a': e.preventDefault(); selectAll(); return
-      case 'f': e.preventDefault(); openSearch(); return
-      case 'h': e.preventDefault(); openSearch(); return
+      case 'f': e.preventDefault(); void openUniverFindDialog(); return
+      case 'h': e.preventDefault(); void openUniverReplaceDialog(); return
       case 'p': e.preventDefault(); handlePrint(); return
       case 's': e.preventDefault(); emitChange(); return
       case 'o': e.preventDefault(); triggerImportExcel(); return
     }
-  }
-
-  // Navigation
-  switch (e.key) {
-    case 'ArrowUp': e.preventDefault(); moveSelection(-1, 0); return
-    case 'ArrowDown': e.preventDefault(); moveSelection(1, 0); return
-    case 'ArrowLeft': e.preventDefault(); moveSelection(0, -1); return
-    case 'ArrowRight': e.preventDefault(); moveSelection(0, 1); return
-    case 'Tab': e.preventDefault(); moveSelection(0, e.shiftKey ? -1 : 1); return
-    case 'Enter': e.preventDefault(); moveSelection(e.shiftKey ? -1 : 1, 0); return
-    case 'Home': e.preventDefault(); selectCell(selected.row, 0); return
-    case 'End': e.preventDefault(); selectCell(selected.row, currentColumns.value.length - 1); return
-    case 'Delete':
-    case 'Backspace':
-      e.preventDefault()
-      deleteSelectedContent()
-      return
-    case 'F2':
-      e.preventDefault()
-      startEditing(selected.row, selected.col)
-      return
-  }
-
-  // Start typing to edit
-  if (e.key.length === 1 && !ctrl && !e.altKey) {
-    e.preventDefault()
-    startTypingEdit(e.key)
   }
 }
 
@@ -1548,25 +1689,52 @@ function moveSelection(dr: number, dc: number) {
 
 // ===== Toolbar sync =====
 function syncToolbarAndFormula() {
-  const key = cellKey(selected.row, selected.col)
-  if (!editingCell.value) {
+  const range = getSelectionRange()
+  if (range) {
+    const value = String(range.getValue() || '')
+    formulaValue.value = value
+    const fontWeight = String((range as any).getFontWeight?.() || 'normal')
+    const fontStyle = String((range as any).getFontStyle?.() || 'normal')
+    const fontLine = String((range as any).getFontLine?.() || 'none')
+    toolbarState.bold = fontWeight === 'bold'
+    toolbarState.italic = fontStyle === 'italic'
+    toolbarState.underline = fontLine === 'underline'
+    toolbarState.strikethrough = fontLine === 'line-through'
+    const hAlign = String((range as any).getHorizontalAlignment?.() || 'left')
+    toolbarState.align = (hAlign === 'center' ? 'center' : hAlign === 'right' ? 'right' : 'left') as Align
+    const vAlign = String((range as any).getVerticalAlignment?.() || 'bottom')
+    toolbarState.verticalAlign = (vAlign === 'top' ? 'top' : vAlign === 'middle' ? 'middle' : 'bottom') as VerticalAlign
+    const fontFamily = String((range as any).getFontFamily?.() || 'Microsoft YaHei, sans-serif')
+    toolbarState.fontFamily = fontFamily
+    const fontSize = Number((range as any).getFontSize?.() || 12)
+    toolbarState.fontSize = fontSize
+    const fontColor = String((range as any).getFontColor?.() || '#000000')
+    toolbarState.fontColor = fontColor === 'null' ? '#000000' : fontColor
+    const bgColor = String((range as any).getBackground?.() || '')
+    toolbarState.bgColor = bgColor === 'null' ? '' : bgColor
+    const wrapStrategy = Number((range as any).getWrapStrategy?.() ?? 0)
+    toolbarState.wrap = (wrapStrategy === 2 ? 'wrap' : wrapStrategy === 1 ? 'overflow' : 'clip') as WrapMode
+    const textRotation = Number((range as any).getTextRotation?.() ?? 0)
+    toolbarState.rotation = textRotation
+  } else {
+    const key = cellKey(selected.row, selected.col)
     formulaValue.value = activeSheet.value?.cells[key] || ''
+    const style = activeSheet.value?.styles[key] || {}
+    toolbarState.bold = !!style.bold
+    toolbarState.italic = !!style.italic
+    toolbarState.underline = !!style.underline
+    toolbarState.strikethrough = !!style.strikethrough
+    toolbarState.align = (style.align || 'left') as Align
+    toolbarState.fontFamily = style.fontFamily || 'Microsoft YaHei, sans-serif'
+    toolbarState.fontSize = Number(style.fontSize || 12)
+    toolbarState.fontColor = style.fontColor || '#000000'
+    toolbarState.bgColor = style.bgColor || ''
+    toolbarState.wrap = style.wrap || 'clip'
+    toolbarState.numberFormat = style.numberFormat || 'auto'
+    toolbarState.verticalAlign = (style.verticalAlign || 'bottom') as VerticalAlign
+    toolbarState.decimalPlaces = Number(style.decimalPlaces ?? 2)
+    toolbarState.rotation = Number(style.rotation ?? 0)
   }
-  const style = activeSheet.value?.styles[key] || {}
-  toolbarState.bold = !!style.bold
-  toolbarState.italic = !!style.italic
-  toolbarState.underline = !!style.underline
-  toolbarState.strikethrough = !!style.strikethrough
-  toolbarState.align = (style.align || 'left') as Align
-  toolbarState.fontFamily = style.fontFamily || 'Microsoft YaHei, sans-serif'
-  toolbarState.fontSize = Number(style.fontSize || 12)
-  toolbarState.fontColor = style.fontColor || '#000000'
-  toolbarState.bgColor = style.bgColor || ''
-  toolbarState.wrap = style.wrap || 'clip'
-  toolbarState.numberFormat = style.numberFormat || 'auto'
-  toolbarState.verticalAlign = (style.verticalAlign || 'bottom') as VerticalAlign
-  toolbarState.decimalPlaces = Number(style.decimalPlaces ?? 2)
-  toolbarState.rotation = Number(style.rotation ?? 0)
 }
 
 // ===== Style operations =====
@@ -1584,50 +1752,60 @@ function saveUndoState() {
 }
 
 function updateCellStyle() {
-  if (props.readOnly || !activeSheet.value) return
+  if (props.readOnly) return
+  const range = getSelectionRange()
+  if (!range) return
   saveUndoState()
-  const { r1, r2, c1, c2 } = selectionRange.value
-  for (let r = r1; r <= r2; r++) {
-    for (let c = c1; c <= c2; c++) {
-      const key = cellKey(r, c)
-      activeSheet.value.styles[key] = {
-        ...(activeSheet.value.styles[key] || {}),
-        bold: !!toolbarState.bold,
-        italic: !!toolbarState.italic,
-        underline: !!toolbarState.underline,
-        strikethrough: !!toolbarState.strikethrough,
-        align: toolbarState.align || 'left',
-        verticalAlign: toolbarState.verticalAlign || 'bottom',
-        fontFamily: toolbarState.fontFamily || 'Microsoft YaHei, sans-serif',
-        fontSize: Number(toolbarState.fontSize || 12),
-        fontColor: toolbarState.fontColor,
-        bgColor: toolbarState.bgColor,
-        wrap: toolbarState.wrap,
-        numberFormat: toolbarState.numberFormat,
-        decimalPlaces: toolbarState.decimalPlaces,
-        rotation: toolbarState.rotation,
-      }
-    }
+  range.setFontWeight(toolbarState.bold ? 'bold' : 'normal')
+  range.setFontStyle(toolbarState.italic ? 'italic' : 'normal')
+  if (toolbarState.underline && toolbarState.strikethrough) {
+    range.setFontLine('underline')
+  } else if (toolbarState.underline) {
+    range.setFontLine('underline')
+  } else if (toolbarState.strikethrough) {
+    range.setFontLine('line-through')
+  } else {
+    range.setFontLine('none')
   }
-  emitChange()
+  range.setHorizontalAlignment(toolbarState.align === 'left' ? 'left' : toolbarState.align === 'center' ? 'center' : 'normal')
+  range.setVerticalAlignment(toolbarState.verticalAlign === 'top' ? 'top' : toolbarState.verticalAlign === 'middle' ? 'middle' : 'bottom')
+  range.setFontFamily(toolbarState.fontFamily || 'Microsoft YaHei, sans-serif')
+  range.setFontSize(Number(toolbarState.fontSize || 12))
+  range.setFontColor(toolbarState.fontColor || null)
+  range.setBackground(toolbarState.bgColor || '')
+  range.setWrapStrategy(toolbarState.wrap === 'wrap' ? 2 : toolbarState.wrap === 'overflow' ? 1 : 0)
+  range.setTextRotation(Number(toolbarState.rotation ?? 0))
 }
+
 
 function toggleStyle(style: 'bold' | 'italic' | 'underline' | 'strikethrough') {
   if (props.readOnly) return
   toolbarState[style] = !toolbarState[style]
-  updateCellStyle()
+  const range = getSelectionRange()
+  if (!range) return
+  saveUndoState()
+  if (style === 'bold') range.setFontWeight(toolbarState.bold ? 'bold' : 'normal')
+  else if (style === 'italic') range.setFontStyle(toolbarState.italic ? 'italic' : 'normal')
+  else if (style === 'underline') range.setFontLine(toolbarState.underline ? 'underline' : 'none')
+  else if (style === 'strikethrough') range.setFontLine(toolbarState.strikethrough ? 'line-through' : 'none')
 }
 
 function setAlign(align: Align) {
   if (props.readOnly) return
   toolbarState.align = align
-  updateCellStyle()
+  const range = getSelectionRange()
+  if (!range) return
+  saveUndoState()
+  range.setHorizontalAlignment(align === 'left' ? 'left' : align === 'center' ? 'center' : 'normal')
 }
 
 function setWrap(wrap: WrapMode) {
   if (props.readOnly) return
   toolbarState.wrap = wrap
-  updateCellStyle()
+  const range = getSelectionRange()
+  if (!range) return
+  saveUndoState()
+  range.setWrapStrategy(wrap === 'wrap' ? 2 : wrap === 'overflow' ? 1 : 0)
 }
 
 function toggleWrap() {
@@ -1637,76 +1815,65 @@ function toggleWrap() {
 function setFontColor(color: string) {
   if (props.readOnly) return
   toolbarState.fontColor = color
-  updateCellStyle()
+  const range = getSelectionRange()
+  if (!range) return
+  saveUndoState()
+  range.setFontColor(color || null)
 }
 
 function setBgColor(color: string) {
   if (props.readOnly) return
   toolbarState.bgColor = color
-  updateCellStyle()
+  const range = getSelectionRange()
+  if (!range) return
+  saveUndoState()
+  range.setBackground(color || '')
 }
 
 function setBorders(type: string) {
-  if (props.readOnly || !activeSheet.value) return
+  if (props.readOnly) return
+  if (!univerRuntime) return
+  const range = getSelectionRange()
+  if (!range) return
   saveUndoState()
-  const { r1, r2, c1, c2 } = selectionRange.value
-  const borderValue = '1px solid #000'
-  const noBorder = ''
-  for (let r = r1; r <= r2; r++) {
-    for (let c = c1; c <= c2; c++) {
-      const key = cellKey(r, c)
-      const existing = activeSheet.value.styles[key] || {}
-      let borders = { borderTop: noBorder, borderBottom: noBorder, borderLeft: noBorder, borderRight: noBorder }
-      if (type === 'all') {
-        borders = { borderTop: borderValue, borderBottom: borderValue, borderLeft: borderValue, borderRight: borderValue }
-      } else if (type === 'outer') {
-        borders.borderTop = r === r1 ? borderValue : noBorder
-        borders.borderBottom = r === r2 ? borderValue : noBorder
-        borders.borderLeft = c === c1 ? borderValue : noBorder
-        borders.borderRight = c === c2 ? borderValue : noBorder
-      } else if (type === 'bottom') {
-        borders.borderBottom = r === r2 ? borderValue : noBorder
-      } else if (type === 'top') {
-        borders.borderTop = r === r1 ? borderValue : noBorder
-      } else if (type === 'left') {
-        borders.borderLeft = c === c1 ? borderValue : noBorder
-      } else if (type === 'right') {
-        borders.borderRight = c === c2 ? borderValue : noBorder
-      }
-      activeSheet.value.styles[key] = { ...existing, ...borders }
-    }
+  const borderStyle = univerRuntime.core.BorderStyleTypes.THIN
+  const borderType = univerRuntime.core.BorderType
+  const color = '#000000'
+  if (type === 'all') {
+    range.setBorder(borderType.ALL, borderStyle, color)
+  } else if (type === 'outer') {
+    range.setBorder(borderType.OUTSIDE, borderStyle, color)
+  } else if (type === 'none') {
+    range.setBorder(borderType.NONE, univerRuntime.core.BorderStyleTypes.NONE, '')
+  } else if (type === 'top') {
+    range.setBorder(borderType.TOP, borderStyle, color)
+  } else if (type === 'bottom') {
+    range.setBorder(borderType.BOTTOM, borderStyle, color)
+  } else if (type === 'left') {
+    range.setBorder(borderType.LEFT, borderStyle, color)
+  } else if (type === 'right') {
+    range.setBorder(borderType.RIGHT, borderStyle, color)
   }
-  emitChange()
 }
 
 function clearSelectedFormat() {
-  if (props.readOnly || !activeSheet.value) return
+  if (props.readOnly) return
+  const range = getSelectionRange()
+  if (!range) return
   saveUndoState()
-  const { r1, r2, c1, c2 } = selectionRange.value
-  for (let r = r1; r <= r2; r++) {
-    for (let c = c1; c <= c2; c++) {
-      delete activeSheet.value.styles[cellKey(r, c)]
-    }
-  }
+  range.clearFormat()
   syncToolbarAndFormula()
-  emitChange()
 }
 
 function deleteSelectedContent() {
-  if (props.readOnly || !activeSheet.value) return
+  if (props.readOnly) return
+  const range = getSelectionRange()
+  if (!range) return
   saveUndoState()
-  const { r1, r2, c1, c2 } = selectionRange.value
-  for (let r = r1; r <= r2; r++) {
-    for (let c = c1; c <= c2; c++) {
-      delete activeSheet.value.cells[cellKey(r, c)]
-      if (activeSheet.value.cellMeta) {
-        delete activeSheet.value.cellMeta[cellKey(r, c)]
-      }
-    }
-  }
+  range.clearContent()
   syncToolbarAndFormula()
-  emitChange()
 }
+
 
 // ===== Undo/Redo =====
 function handleUndo() {
@@ -1778,10 +1945,12 @@ function handleCut() {
 }
 
 async function handlePaste() {
-  if (props.readOnly || !activeSheet.value) return
+  if (props.readOnly) return
   try {
     const text = await navigator.clipboard?.readText()
     if (!text) return
+    const range = getSelectionRange()
+    if (!range) return
     saveUndoState()
     const rows = text.split('\n')
     for (let ri = 0; ri < rows.length; ri++) {
@@ -1789,155 +1958,159 @@ async function handlePaste() {
       for (let ci = 0; ci < cols.length; ci++) {
         const r = selected.row + ri
         const c = selected.col + ci
-        if (r < currentRows.value.length && c < currentColumns.value.length) {
-          const key = cellKey(r, c)
-          if (cols[ci]) {
-            activeSheet.value.cells[key] = cols[ci]
-          } else {
-            delete activeSheet.value.cells[key]
+        const sheet = getActiveSheet()
+        if (sheet) {
+          const cell = sheet.getRange(r, c, 1, 1)
+          if (cell) {
+            cell.setValue(cols[ci])
           }
         }
       }
     }
-    emitChange()
   } catch { /* clipboard access denied */ }
 }
+
 
 // ===== Format Painter =====
 function handleFormatPainter() {
   if (props.readOnly) return
-  if (formatPainterActive.value) {
-    formatPainterActive.value = false
-    formatPainterStyle.value = null
-    return
-  }
-  const key = cellKey(selected.row, selected.col)
-  formatPainterStyle.value = { ...(activeSheet.value?.styles[key] || {}) }
-  formatPainterActive.value = true
-}
-
-function applyFormatPainter(row: number, col: number) {
-  if (!formatPainterStyle.value || !activeSheet.value) return
-  saveUndoState()
-  const key = cellKey(row, col)
-  activeSheet.value.styles[key] = { ...formatPainterStyle.value }
-  formatPainterActive.value = false
-  formatPainterStyle.value = null
-  syncToolbarAndFormula()
-  emitChange()
+  formatPainterActive.value = !formatPainterActive.value
 }
 
 // ===== Row/Col operations =====
 function insertRow(position: 'above' | 'below') {
-  if (props.readOnly || !activeSheet.value) return
+  if (props.readOnly) return
   saveUndoState()
-  const sheet = activeSheet.value
+  const sheet = getActiveSheet()
+  if (!sheet) return
   const insertAt = position === 'above' ? selected.row : selected.row + 1
-  const newCells: Record<string, string> = {}
-  const newStyles: Record<string, ICellStyle> = {}
-  const newMeta: Record<string, ICellMeta> = {}
-  for (const [key, val] of Object.entries(sheet.cells)) {
-    const [r, c] = key.split(':').map(Number)
-    if (r >= insertAt) {
-      newCells[cellKey(r + 1, c)] = val
-    } else {
-      newCells[key] = val
-    }
-  }
-  for (const [key, val] of Object.entries(sheet.styles)) {
-    const [r, c] = key.split(':').map(Number)
-    if (r >= insertAt) {
-      newStyles[cellKey(r + 1, c)] = val
-    } else {
-      newStyles[key] = val
-    }
-  }
-  for (const [key, val] of Object.entries(sheet.cellMeta || {})) {
-    const [r, c] = key.split(':').map(Number)
-    if (r >= insertAt) {
-      newMeta[cellKey(r + 1, c)] = val
-    } else {
-      newMeta[key] = val
-    }
-  }
-  sheet.cells = newCells
-  sheet.styles = newStyles
-  sheet.cellMeta = newMeta
-  sheet.rowCount++
-  emitChange()
+  sheet.insertRows(insertAt, 1)
 }
 
+
 function insertCol(position: 'left' | 'right') {
-  if (props.readOnly || !activeSheet.value) return
+  if (props.readOnly) return
   saveUndoState()
-  const sheet = activeSheet.value
+  const sheet = getActiveSheet()
+  if (!sheet) return
   const insertAt = position === 'left' ? selected.col : selected.col + 1
-  const newCells: Record<string, string> = {}
-  const newStyles: Record<string, ICellStyle> = {}
-  const newMeta: Record<string, ICellMeta> = {}
-  for (const [key, val] of Object.entries(sheet.cells)) {
-    const [r, c] = key.split(':').map(Number)
-    if (c >= insertAt) {
-      newCells[cellKey(r, c + 1)] = val
-    } else {
-      newCells[key] = val
-    }
-  }
-  for (const [key, val] of Object.entries(sheet.styles)) {
-    const [r, c] = key.split(':').map(Number)
-    if (c >= insertAt) {
-      newStyles[cellKey(r, c + 1)] = val
-    } else {
-      newStyles[key] = val
-    }
-  }
-  for (const [key, val] of Object.entries(sheet.cellMeta || {})) {
-    const [r, c] = key.split(':').map(Number)
-    if (c >= insertAt) {
-      newMeta[cellKey(r, c + 1)] = val
-    } else {
-      newMeta[key] = val
-    }
-  }
-  sheet.cells = newCells
-  sheet.styles = newStyles
-  sheet.cellMeta = newMeta
-  sheet.colCount++
-  emitChange()
+  sheet.insertColumns(insertAt, 1)
 }
+
+function deleteRow() {
+  if (props.readOnly) return
+  saveUndoState()
+  const sheet = getActiveSheet()
+  if (!sheet) return
+  const { r1, r2 } = selectionRange.value
+  const rowCount = r2 - r1 + 1
+  sheet.deleteRows(r1, rowCount)
+}
+
+function deleteCol() {
+  if (props.readOnly) return
+  saveUndoState()
+  const sheet = getActiveSheet()
+  if (!sheet) return
+  const { c1, c2 } = selectionRange.value
+  const colCount = c2 - c1 + 1
+  sheet.deleteColumns(c1, colCount)
+}
+
+function hideRow() {
+  if (props.readOnly) return
+  saveUndoState()
+  const sheet = getActiveSheet()
+  if (!sheet) return
+  const { r1, r2 } = selectionRange.value
+  for (let r = r1; r <= r2; r++) {
+    ;(sheet as any).setRowHidden?.(r, true)
+  }
+}
+
+function unhideRow() {
+  if (props.readOnly) return
+  saveUndoState()
+  const sheet = getActiveSheet()
+  if (!sheet) return
+  const { r1, r2 } = selectionRange.value
+  for (let r = r1; r <= r2; r++) {
+    ;(sheet as any).setRowHidden?.(r, false)
+  }
+}
+
+function hideCol() {
+  if (props.readOnly) return
+  saveUndoState()
+  const sheet = getActiveSheet()
+  if (!sheet) return
+  const { c1, c2 } = selectionRange.value
+  for (let c = c1; c <= c2; c++) {
+    ;(sheet as any).setColumnHidden?.(c, true)
+  }
+}
+
+function unhideCol() {
+  if (props.readOnly) return
+  saveUndoState()
+  const sheet = getActiveSheet()
+  if (!sheet) return
+  const { c1, c2 } = selectionRange.value
+  for (let c = c1; c <= c2; c++) {
+    ;(sheet as any).setColumnHidden?.(c, false)
+  }
+}
+
+function autoFitRowHeight() {
+  if (props.readOnly) return
+  const sheet = getActiveSheet()
+  if (!sheet) return
+  const { r1, r2 } = selectionRange.value
+  for (let r = r1; r <= r2; r++) {
+    ;(sheet as any).autoFitRowHeight?.(r)
+  }
+}
+
+function autoFitColWidth() {
+  if (props.readOnly) return
+  const sheet = getActiveSheet()
+  if (!sheet) return
+  const { c1, c2 } = selectionRange.value
+  for (let c = c1; c <= c2; c++) {
+    ;(sheet as any).autoFitColumnWidth?.(c)
+  }
+}
+
+function setZoom(level: number) {
+  zoomLevel.value = level
+  applyZoom()
+}
+
+function applyZoom() {
+  const sheet = getActiveSheet()
+  if (!sheet) return
+  ;(activeUniverWorkbook as any)?.setZoomRatio?.(zoomLevel.value / 100)
+}
+
 
 // ===== Merge cells =====
 function handleMergeCells() {
-  if (props.readOnly || !activeSheet.value) return
+  if (props.readOnly) return
   const { r1, r2, c1, c2 } = selectionRange.value
   if (r1 === r2 && c1 === c2) return
+  const range = getSelectionRange()
+  if (!range) return
   saveUndoState()
-  // Keep value from top-left cell, clear others
-  const mergeKey = `${r1}:${c1}:${r2}:${c2}`
-  if (!activeSheet.value.merges) activeSheet.value.merges = []
-  activeSheet.value.merges.push(mergeKey)
-  for (let r = r1; r <= r2; r++) {
-    for (let c = c1; c <= c2; c++) {
-      if (r !== r1 || c !== c1) {
-        delete activeSheet.value.cells[cellKey(r, c)]
-        if (activeSheet.value.cellMeta) {
-          delete activeSheet.value.cellMeta[cellKey(r, c)]
-        }
-      }
-    }
-  }
-  emitChange()
+  range.merge()
 }
 
+
 function handleUnmergeCells() {
-  if (props.readOnly || !activeSheet.value || !activeSheet.value.merges) return
+  if (props.readOnly) return
+  const range = getSelectionRange()
+  if (!range) return
   saveUndoState()
-  const { r1, r2, c1, c2 } = selectionRange.value
-  activeSheet.value.merges = activeSheet.value.merges.filter(m => {
-    const [mr1, mc1, mr2, mc2] = m.split(':').map(Number)
-    return !(mr1 >= r1 && mr2 <= r2 && mc1 >= c1 && mc2 <= c2)
-  })
-  emitChange()
+  range.breakApart()
 }
 
 // ===== View operations =====
@@ -1945,326 +2118,109 @@ function toggleGridlines() { showGridlines.value = !showGridlines.value }
 function toggleFreezeRow() {
   frozenRows.value = frozenRows.value > 0 ? 0 : 1
   syncDimensionStateToActiveSheet()
-  emitChange()
+  const sheet = getActiveSheet()
+  if (sheet) {
+    sheet.setFrozenRows(frozenRows.value)
+  }
 }
 function toggleFreezeCol() {
   frozenCols.value = frozenCols.value > 0 ? 0 : 1
   syncDimensionStateToActiveSheet()
-  emitChange()
+  const sheet = getActiveSheet()
+  if (sheet) {
+    sheet.setFrozenColumns(frozenCols.value)
+  }
 }
 
 // ===== Sort =====
 function sortColumn(order: 'asc' | 'desc') {
-  if (props.readOnly || !activeSheet.value) return
+  if (props.readOnly) return
   saveUndoState()
-  const col = selected.col
-  const sheet = activeSheet.value
-  const rowData: Array<{ row: number; val: string }> = []
-  for (let r = 0; r < sheet.rowCount; r++) {
-    rowData.push({ row: r, val: cellValue(r, col) })
-  }
-  rowData.sort((a, b) => {
-    const va = a.val
-    const vb = b.val
-    const na = Number(va)
-    const nb = Number(vb)
-    if (Number.isFinite(na) && Number.isFinite(nb)) {
-      return order === 'asc' ? na - nb : nb - na
-    }
-    return order === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va)
-  })
-  const oldCells = { ...sheet.cells }
-  const oldStyles = { ...sheet.styles }
-  const oldMeta = { ...(sheet.cellMeta || {}) }
-  const newCells: Record<string, string> = {}
-  const newStyles: Record<string, ICellStyle> = {}
-  const newMeta: Record<string, ICellMeta> = {}
-  for (let newRow = 0; newRow < rowData.length; newRow++) {
-    const oldRow = rowData[newRow].row
-    for (let c = 0; c < sheet.colCount; c++) {
-      const oldKey = cellKey(oldRow, c)
-      const newKey = cellKey(newRow, c)
-      if (oldCells[oldKey]) newCells[newKey] = oldCells[oldKey]
-      if (oldStyles[oldKey]) newStyles[newKey] = oldStyles[oldKey]
-      if (oldMeta[oldKey]) newMeta[newKey] = oldMeta[oldKey]
-    }
-  }
-  sheet.cells = newCells
-  sheet.styles = newStyles
-  sheet.cellMeta = newMeta
-  if (filterColumn.value !== null) {
-    applyFilterRows()
-  }
-  emitChange()
-}
-
-// ===== Sheet operations =====
-function switchSheet(idx: number) {
-  if (editingCell.value) confirmEditing()
-  activeSheetIndex.value = idx
-  selected.row = 0
-  selected.col = 0
-  selectionEnd.row = 0
-  selectionEnd.col = 0
-  syncDimensionStateFromActiveSheet()
-  syncToolbarAndFormula()
-  getLuckysheet()?.setSheetActive?.(activeSheetIndex.value)
-}
-
-function addSheet() {
-  if (props.readOnly) return
-  const nextIndex = workbook.sheets.length
-  workbook.sheets.push(createDefaultSheet(nextIndex))
-  switchSheet(nextIndex)
-  emitChange()
-}
-
-async function renameSheet(idx: number) {
-  if (props.readOnly) return
-  const sheet = workbook.sheets[idx]
+  const sheet = getActiveSheet()
   if (!sheet) return
-  try {
-    const { value } = await new Promise<{ value: string }>((resolve, reject) => {
-      let inputValue = sheet.name
-      Modal.confirm({
-        title: t('dialog.renameSheetTitle'),
-        content: () => h('input', {
-          value: inputValue,
-          onInput: (e: Event) => { inputValue = (e.target as HTMLInputElement).value },
-          style: { width: '100%', padding: '4px 8px', border: '1px solid #d9d9d9', borderRadius: '4px', marginTop: '8px' },
-          placeholder: t('dialog.renameSheetInputPlaceholder')
-        }),
-        okText: t('common.confirm'),
-        cancelText: t('common.cancel'),
-        onOk: () => resolve({ value: inputValue }),
-        onCancel: () => reject(new Error('cancel'))
-      })
-    })
-    const name = String(value || '').trim()
-    if (!name) return
-    sheet.name = name
-    emitChange()
-  } catch {
-    return
+  const col = selected.col
+  const rowCount = (sheet as any).getRowCount?.() ?? activeSheet.value?.rowCount ?? 50
+  const range = sheet.getRange(0, col, rowCount, 1)
+  if (range) {
+    if (order === 'asc') {
+      ;(range as any).sort(col + 1, true)
+    } else {
+      ;(range as any).sort(col + 1, false)
+    }
   }
 }
 
-function showSheetContextMenu(e: MouseEvent, idx: number) {
+// ===== Remove Duplicates =====
+function removeDuplicates() {
   if (props.readOnly) return
-  cellMenu.visible = false
-  sheetMenu.index = idx
-  sheetMenu.x = e.clientX
-  sheetMenu.y = window.innerHeight - e.clientY
-  sheetMenu.visible = true
-}
-
-function showCellContextMenu(e: MouseEvent, row: number, col: number) {
-  if (props.readOnly) return
-  sheetMenu.visible = false
   const { r1, r2, c1, c2 } = selectionRange.value
-  const inRange = row >= r1 && row <= r2 && col >= c1 && col <= c2
-  if (!inRange) {
-    selectCell(row, col)
-  }
-  cellMenu.x = e.clientX
-  cellMenu.y = e.clientY
-  cellMenu.visible = true
-}
-
-function closeAllMenus() {
-  cellMenu.visible = false
-  sheetMenu.visible = false
-}
-
-// ===== 单元格右键菜单操作 =====
-function ctxCut() { closeAllMenus(); handleCut() }
-function ctxCopy() { closeAllMenus(); handleCopy() }
-function ctxPaste() { closeAllMenus(); handlePaste() }
-function ctxClearContent() { closeAllMenus(); deleteSelectedContent() }
-function ctxClearFormat() { closeAllMenus(); clearSelectedFormat() }
-function ctxInsertRowAbove() { closeAllMenus(); insertRow('above') }
-function ctxInsertRowBelow() { closeAllMenus(); insertRow('below') }
-function ctxInsertColLeft() { closeAllMenus(); insertCol('left') }
-function ctxInsertColRight() { closeAllMenus(); insertCol('right') }
-
-function ctxDeleteRow() {
-  closeAllMenus()
-  if (props.readOnly || !activeSheet.value) return
-  saveUndoState()
-  const sheet = activeSheet.value
-  const { r1, r2 } = selectionRange.value
-  const count = r2 - r1 + 1
-  if (count >= sheet.rowCount) return // 不允许删除所有行
-  const newCells: Record<string, string> = {}
-  const newStyles: Record<string, ICellStyle> = {}
-  const newMeta: Record<string, ICellMeta> = {}
-  for (const [key, val] of Object.entries(sheet.cells)) {
-    const [r, c] = key.split(':').map(Number)
-    if (r < r1) {
-      newCells[key] = val
-    } else if (r > r2) {
-      newCells[cellKey(r - count, c)] = val
-    }
-  }
-  for (const [key, val] of Object.entries(sheet.styles)) {
-    const [r, c] = key.split(':').map(Number)
-    if (r < r1) {
-      newStyles[key] = val
-    } else if (r > r2) {
-      newStyles[cellKey(r - count, c)] = val
-    }
-  }
-  for (const [key, val] of Object.entries(sheet.cellMeta || {})) {
-    const [r, c] = key.split(':').map(Number)
-    if (r < r1) {
-      newMeta[key] = val
-    } else if (r > r2) {
-      newMeta[cellKey(r - count, c)] = val
-    }
-  }
-  sheet.cells = newCells
-  sheet.styles = newStyles
-  sheet.cellMeta = newMeta
-  sheet.rowCount -= count
-  if (selected.row >= sheet.rowCount) {
-    selectCell(Math.max(0, sheet.rowCount - 1), selected.col)
-  }
-  syncToolbarAndFormula()
-  emitChange()
-}
-
-function ctxDeleteCol() {
-  closeAllMenus()
-  if (props.readOnly || !activeSheet.value) return
-  saveUndoState()
-  const sheet = activeSheet.value
-  const { c1, c2 } = selectionRange.value
-  const count = c2 - c1 + 1
-  if (count >= sheet.colCount) return // 不允许删除所有列
-  const newCells: Record<string, string> = {}
-  const newStyles: Record<string, ICellStyle> = {}
-  const newMeta: Record<string, ICellMeta> = {}
-  for (const [key, val] of Object.entries(sheet.cells)) {
-    const [r, c] = key.split(':').map(Number)
-    if (c < c1) {
-      newCells[key] = val
-    } else if (c > c2) {
-      newCells[cellKey(r, c - count)] = val
-    }
-  }
-  for (const [key, val] of Object.entries(sheet.styles)) {
-    const [r, c] = key.split(':').map(Number)
-    if (c < c1) {
-      newStyles[key] = val
-    } else if (c > c2) {
-      newStyles[cellKey(r, c - count)] = val
-    }
-  }
-  for (const [key, val] of Object.entries(sheet.cellMeta || {})) {
-    const [r, c] = key.split(':').map(Number)
-    if (c < c1) {
-      newMeta[key] = val
-    } else if (c > c2) {
-      newMeta[cellKey(r, c - count)] = val
-    }
-  }
-  sheet.cells = newCells
-  sheet.styles = newStyles
-  sheet.cellMeta = newMeta
-  sheet.colCount -= count
-  if (selected.col >= sheet.colCount) {
-    selectCell(selected.row, Math.max(0, sheet.colCount - 1))
-  }
-  syncToolbarAndFormula()
-  emitChange()
-}
-
-// ===== 工作表标签右键菜单操作 =====
-function ctxRenameSheet() {
-  const idx = sheetMenu.index
-  closeAllMenus()
-  void renameSheet(idx)
-}
-
-function ctxDuplicateSheet() {
-  const idx = sheetMenu.index
-  closeAllMenus()
-  if (props.readOnly) return
-  const source = workbook.sheets[idx]
-  if (!source) return
-  const copy: IUiSheet = {
-    id: String(Date.now()),
-    name: source.name + t('sheet.duplicateSuffix'),
-    rowCount: source.rowCount,
-    colCount: source.colCount,
-    cells: { ...source.cells },
-    styles: JSON.parse(JSON.stringify(source.styles)),
-    cellMeta: JSON.parse(JSON.stringify(source.cellMeta || {})),
-    merges: source.merges ? [...source.merges] : [],
-    colWidths: { ...(source.colWidths || {}) },
-    rowHeights: { ...(source.rowHeights || {}) },
-    hiddenCols: { ...(source.hiddenCols || {}) },
-    hiddenRows: { ...(source.hiddenRows || {}) },
-    frozenCols: Number(source.frozenCols || 0),
-    frozenRows: Number(source.frozenRows || 0)
-  }
-  workbook.sheets.splice(idx + 1, 0, copy)
-  switchSheet(idx + 1)
-  emitChange()
-}
-
-function ctxInsertSheet() {
-  closeAllMenus()
-  addSheet()
-}
-
-async function ctxDeleteSheet() {
-  const idx = sheetMenu.index
-  closeAllMenus()
-  if (props.readOnly || workbook.sheets.length <= 1) return
-  const name = workbook.sheets[idx]?.name || ''
-  try {
-    await new Promise<void>((resolve, reject) => {
-      Modal.confirm({
-        title: t('dialog.deleteSheetTitle'),
-        content: t('dialog.deleteSheetContent', { name }),
-        okText: t('dialog.deleteButton'),
-        okType: 'danger',
-        cancelText: t('common.cancel'),
-        onOk: () => resolve(),
-        onCancel: () => reject(new Error('cancel'))
-      })
-    })
-  } catch {
+  if (r1 === r2 && c1 === c2) {
+    message.warning('请选择包含数据的区域')
     return
   }
-  workbook.sheets.splice(idx, 1)
-  if (activeSheetIndex.value >= workbook.sheets.length) {
-    activeSheetIndex.value = workbook.sheets.length - 1
-  } else if (activeSheetIndex.value > idx) {
-    activeSheetIndex.value--
-  } else if (activeSheetIndex.value === idx) {
-    activeSheetIndex.value = Math.min(idx, workbook.sheets.length - 1)
+  saveUndoState()
+  const sheet = getActiveSheet()
+  if (!sheet) return
+  
+  const seen = new Set<string>()
+  const rowsToDelete: number[] = []
+  
+  for (let r = r1; r <= r2; r++) {
+    const rowData: string[] = []
+    for (let c = c1; c <= c2; c++) {
+      const value = String(sheet.getRange(r, c, 1, 1).getValue() || '')
+      rowData.push(value)
+    }
+    const rowKey = rowData.join('\t')
+    if (seen.has(rowKey)) {
+      rowsToDelete.push(r)
+    } else {
+      seen.add(rowKey)
+    }
   }
-  selected.row = 0
-  selected.col = 0
-  selectionEnd.row = 0
-  selectionEnd.col = 0
-  syncToolbarAndFormula()
-  emitChange()
+  
+  if (rowsToDelete.length === 0) {
+    message.info('未找到重复值')
+    return
+  }
+  
+  rowsToDelete.sort((a, b) => b - a)
+  for (const r of rowsToDelete) {
+    sheet.deleteRows(r, 1)
+  }
+  
+  message.success(`已删除 ${rowsToDelete.length} 个重复行`)
 }
 
-// 点击空白处关闭右键菜单
-function onDocumentClick() {
-  closeAllMenus()
+// ===== Row Height & Column Width =====
+function applyRowHeight() {
+  if (props.readOnly) return
+  saveUndoState()
+  const sheet = getActiveSheet()
+  if (!sheet) return
+  const { r1, r2 } = selectionRange.value
+  for (let r = r1; r <= r2; r++) {
+    ;(sheet as any).setRowHeight?.(r, rowHeightValue.value)
+  }
+  showRowHeightDialog.value = false
 }
-function handleFullscreenChange() {
-  const current = document.fullscreenElement
-  isFullscreen.value = !!current && current === sheetEditorRef.value
+
+function applyColWidth() {
+  if (props.readOnly) return
+  saveUndoState()
+  const sheet = getActiveSheet()
+  if (!sheet) return
+  const { c1, c2 } = selectionRange.value
+  for (let c = c1; c <= c2; c++) {
+    ;(sheet as any).setColumnWidth?.(c, colWidthValue.value)
+  }
+  showColWidthDialog.value = false
 }
+
+
+
 onMounted(async () => {
-  document.addEventListener('click', onDocumentClick)
-  document.addEventListener('fullscreenchange', handleFullscreenChange)
+
 
   if (!props.initialContent && props.documentUrl) {
     try {
@@ -2276,6 +2232,7 @@ onMounted(async () => {
         defaultSheetName: index => t('sheet.defaultSheetName', { index: index + 1 }),
       })
       workbook.version = importedWorkbook.version
+      workbook.resources = importedWorkbook.resources
       workbook.sheets = importedWorkbook.sheets
       resetFilterState()
       activeSheetIndex.value = 0
@@ -2294,90 +2251,26 @@ onMounted(async () => {
     }
   }
   await nextTick()
-  scheduleLuckysheetRender()
+  scheduleUniverRender()
 })
 onUnmounted(() => {
-  document.removeEventListener('click', onDocumentClick)
-  document.removeEventListener('fullscreenchange', handleFullscreenChange)
-  clearLuckysheetRenderTimer()
-  try {
-    getLuckysheet()?.destroy?.()
-  } catch {
-    // ignore luckysheet destroy errors
-  }
+
+  clearUniverRenderTimer()
+  clearUniverWorkbookDisposables()
+  disposeActiveUniverWorkbook()
+  univerAPI?.dispose()
+  univerAPI = null
+  univerInstance?.dispose()
+  univerInstance = null
 })
 
-// ===== Column resize =====
-function startColResize(e: MouseEvent, col: number) {
-  const startX = e.clientX
-  const startWidth = colWidths[col] || 100
-  const onMove = (ev: MouseEvent) => {
-    const diff = ev.clientX - startX
-    colWidths[col] = Math.max(30, startWidth + diff)
-  }
-  const onUp = () => {
-    syncDimensionStateToActiveSheet()
-    emitChange()
-    document.removeEventListener('mousemove', onMove)
-    document.removeEventListener('mouseup', onUp)
-  }
-  document.addEventListener('mousemove', onMove)
-  document.addEventListener('mouseup', onUp)
-}
 
 // ===== Misc =====
-function handleGridMouseDown(e: MouseEvent) {
-  // If clicking on the grid scroll area (not a cell), deselect editing
-  const target = e.target as HTMLElement
-  if (target.classList.contains('grid-scroll')) {
-    if (editingCell.value) confirmEditing()
-  }
-}
 
 function handlePrint() {
   window.print()
 }
 
-function clampZoom(value: number): number {
-  return Math.max(50, Math.min(200, value))
-}
-
-function applyZoom(value: number) {
-  zoomPercent.value = clampZoom(Math.round(value / 10) * 10)
-}
-
-function changeZoom(delta: number) {
-  applyZoom(zoomPercent.value + delta)
-}
-
-function onZoomSliderInput(value: number) {
-  if (!Number.isFinite(value)) return
-  applyZoom(value)
-}
-
-function toggleEyeCareMode() {
-  isEyeCareMode.value = !isEyeCareMode.value
-}
-
-function onZoomDropdownCommand(level: number | string) {
-  const value = Number(level)
-  if (!Number.isFinite(value)) return
-  applyZoom(value)
-}
-
-async function toggleFullscreen() {
-  const root = sheetEditorRef.value
-  if (!root) return
-  try {
-    if (document.fullscreenElement === root) {
-      await document.exitFullscreen()
-      return
-    }
-    await root.requestFullscreen()
-  } catch {
-    return
-  }
-}
 
 function triggerImportExcel() {
   if (props.readOnly) return
@@ -2396,6 +2289,7 @@ async function handleImportExcelChange(e: Event) {
       defaultSheetName: index => t('sheet.defaultSheetName', { index: index + 1 }),
     })
     workbook.version = importedWorkbook.version
+    workbook.resources = importedWorkbook.resources
     workbook.sheets = importedWorkbook.sheets
     resetFilterState()
     activeSheetIndex.value = 0
@@ -2443,6 +2337,7 @@ async function handleExportExcel() {
 
 function resetWorkbookForNewDocument() {
   workbook.version = 1
+  workbook.resources = undefined
   workbook.sheets = [createDefaultSheet(0)]
   activeSheetIndex.value = 0
   selected.row = 0
@@ -2462,9 +2357,10 @@ async function handleCreateNewWorkbook() {
     resetWorkbookForNewDocument()
     const dbPayload = {
       format: 'sheet',
-      engine: 'custom-grid',
+      engine: 'univer',
       version: workbook.version,
       data: {
+        resources: workbook.resources,
         sheets: workbook.sheets
       }
     }
@@ -2479,8 +2375,7 @@ async function handleCreateNewWorkbook() {
       mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       buffer
     }
-    console.log('[SheetEditor] 新建表格-数据库数据:', dbPayload)
-    console.log('[SheetEditor] 新建表格-Excel文件流(ArrayBuffer):', buffer)
+
     emit('new-document', { dbPayload, excelPayload })
     emitChange()
     message.success(t('message.createSuccess'))
@@ -2503,34 +2398,58 @@ function changeFontSize(delta: number) {
     newIdx = idx <= 0 ? 0 : idx - 1
   }
   toolbarState.fontSize = numericSizes[newIdx]
-  updateCellStyle()
+  const range = getSelectionRange()
+  if (!range) return
+  saveUndoState()
+  range.setFontSize(numericSizes[newIdx])
 }
 
 // ===== 快捷格式按钮 =====
 function quickFormat(fmt: 'currency' | 'percent') {
   if (props.readOnly) return
   toolbarState.numberFormat = fmt
-  updateCellStyle()
+  const range = getSelectionRange()
+  if (!range) return
+  saveUndoState()
+  if (fmt === 'currency') {
+    range.setNumberFormat('¥#,##0.00')
+  } else if (fmt === 'percent') {
+    range.setNumberFormat('0.00%')
+  }
 }
 
 function changeDecimal(delta: number) {
   if (props.readOnly) return
   toolbarState.decimalPlaces = Math.max(0, Math.min(10, (toolbarState.decimalPlaces ?? 2) + delta))
-  updateCellStyle()
+  const range = getSelectionRange()
+  if (!range) return
+  saveUndoState()
+  const fmt = toolbarState.numberFormat || 'auto'
+  if (fmt === 'currency') {
+    range.setNumberFormat(`¥#,##0.${'#'.repeat(toolbarState.decimalPlaces)}`)
+  } else if (fmt === 'percent') {
+    range.setNumberFormat(`0.${'#'.repeat(toolbarState.decimalPlaces)}%`)
+  }
 }
 
 // ===== 垂直对齐 =====
 function setVerticalAlign(va: VerticalAlign) {
   if (props.readOnly) return
   toolbarState.verticalAlign = va
-  updateCellStyle()
+  const range = getSelectionRange()
+  if (!range) return
+  saveUndoState()
+  range.setVerticalAlignment(va === 'top' ? 'top' : va === 'middle' ? 'middle' : 'bottom')
 }
 
 // ===== 文字旋转 =====
 function setRotation(deg: number) {
   if (props.readOnly) return
   toolbarState.rotation = deg
-  updateCellStyle()
+  const range = getSelectionRange()
+  if (!range) return
+  saveUndoState()
+  range.setTextRotation(deg)
 }
 
 // ===== 筛选 =====
@@ -2636,13 +2555,13 @@ function insertImage() {
   input.accept = 'image/*'
   input.onchange = () => {
     const file = input.files?.[0]
-    if (!file || !activeSheet.value) return
+    if (!file) return
     const reader = new FileReader()
     reader.onload = () => {
+      const range = getSelectionRange()
+      if (!range) return
       saveUndoState()
-      const key = cellKey(selected.row, selected.col)
-      activeSheet.value!.cells[key] = `[image:${file.name}]`
-      emitChange()
+      range.setValue(`[image:${file.name}]`)
     }
     reader.readAsDataURL(file)
   }
@@ -2651,206 +2570,27 @@ function insertImage() {
 
 // ===== 快速函数 =====
 function insertFunction(fn: string) {
-  if (props.readOnly || !activeSheet.value) return
+  if (props.readOnly) return
+  const range = getSelectionRange()
+  if (!range) return
   saveUndoState()
-  const key = cellKey(selected.row, selected.col)
-  activeSheet.value.cells[key] = `=${fn}()`
-  startEditing(selected.row, selected.col)
-  editingValue.value = `=${fn}()`
+  range.setFormula(`${fn}()`)
+  formulaValue.value = `=${fn}()`
   syncToolbarAndFormula()
-}
-
-// ===== 超链接 =====
-async function insertHyperlink() {
-  if (props.readOnly || !activeSheet.value) return
-  const key = cellKey(selected.row, selected.col)
-  const currentHyperlink = activeSheet.value.cellMeta?.[key]?.hyperlink || ''
-  const currentValue = activeSheet.value.cells[key] || ''
-  const defaultUrl = currentHyperlink || (currentValue.startsWith('http') ? currentValue : 'https://')
-  let url = ''
-  try {
-    url = await new Promise<string>((resolve, reject) => {
-      let inputValue = defaultUrl
-      Modal.confirm({
-        title: '插入链接',
-        content: () => h('input', {
-          value: inputValue,
-          onInput: (e: Event) => { inputValue = (e.target as HTMLInputElement).value },
-          style: { width: '100%', padding: '4px 8px', border: '1px solid #d9d9d9', borderRadius: '4px', marginTop: '8px' },
-          placeholder: '请输入链接地址'
-        }),
-        okText: '确定',
-        cancelText: '取消',
-        onOk: () => resolve(inputValue),
-        onCancel: () => reject(new Error('cancel'))
-      })
-    })
-  } catch {
-    return
-  }
-  const normalized = normalizeHyperlink(url)
-  saveUndoState()
-  if (!activeSheet.value.cellMeta) {
-    activeSheet.value.cellMeta = {}
-  }
-  const meta = { ...(activeSheet.value.cellMeta[key] || {}) }
-  if (normalized) {
-    meta.hyperlink = normalized
-    activeSheet.value.cellMeta[key] = meta
-    if (!activeSheet.value.cells[key]) {
-      activeSheet.value.cells[key] = normalized
-    }
-  } else if (meta.comment) {
-    delete meta.hyperlink
-    activeSheet.value.cellMeta[key] = meta
-  } else {
-    delete activeSheet.value.cellMeta[key]
-  }
-  syncToolbarAndFormula()
-  emitChange()
-}
-
-// ===== 评论 =====
-async function insertComment() {
-  if (props.readOnly || !activeSheet.value) return
-  const key = cellKey(selected.row, selected.col)
-  const currentComment = activeSheet.value.cellMeta?.[key]?.comment || ''
-  let comment = ''
-  try {
-    comment = await new Promise<string>((resolve, reject) => {
-      let inputValue = currentComment
-      Modal.confirm({
-        title: '批注',
-        content: () => h('textarea', {
-          value: inputValue,
-          onInput: (e: Event) => { inputValue = (e.target as HTMLTextAreaElement).value },
-          style: { width: '100%', padding: '4px 8px', border: '1px solid #d9d9d9', borderRadius: '4px', marginTop: '8px', minHeight: '60px' },
-          placeholder: '请输入批注内容'
-        }),
-        okText: '确定',
-        cancelText: '取消',
-        onOk: () => resolve(inputValue),
-        onCancel: () => reject(new Error('cancel'))
-      })
-    })
-  } catch {
-    return
-  }
-  const normalized = comment.trim()
-  saveUndoState()
-  if (!activeSheet.value.cellMeta) {
-    activeSheet.value.cellMeta = {}
-  }
-  const meta = { ...(activeSheet.value.cellMeta[key] || {}) }
-  if (normalized) {
-    meta.comment = normalized
-    activeSheet.value.cellMeta[key] = meta
-  } else if (meta.hyperlink) {
-    delete meta.comment
-    activeSheet.value.cellMeta[key] = meta
-  } else {
-    delete activeSheet.value.cellMeta[key]
-  }
-  emitChange()
-}
-
-// ===== 查找替换 =====
-const searchVisible = ref(false)
-const searchText = ref('')
-const replaceText = ref('')
-const searchResults = ref<Array<{ row: number; col: number }>>([])
-const searchIndex = ref(-1)
-
-function openSearch() {
-  searchVisible.value = !searchVisible.value
-  if (searchVisible.value) {
-    nextTick(() => {
-      const input = document.querySelector('.search-panel input') as HTMLInputElement
-      input?.focus()
-    })
-  }
-}
-
-function performSearch() {
-  if (!activeSheet.value || !searchText.value) {
-    searchResults.value = []
-    searchIndex.value = -1
-    return
-  }
-  const keyword = searchText.value.toLowerCase()
-  const results: Array<{ row: number; col: number }> = []
-  const sheet = activeSheet.value
-  for (let r = 0; r < sheet.rowCount; r++) {
-    for (let c = 0; c < sheet.colCount; c++) {
-      const val = (sheet.cells[cellKey(r, c)] || '').toLowerCase()
-      if (val.includes(keyword)) {
-        results.push({ row: r, col: c })
-      }
-    }
-  }
-  searchResults.value = results
-  if (results.length > 0) {
-    searchIndex.value = 0
-    selectCell(results[0].row, results[0].col)
-  } else {
-    searchIndex.value = -1
-  }
-}
-
-function searchNext() {
-  if (searchResults.value.length === 0) return
-  searchIndex.value = (searchIndex.value + 1) % searchResults.value.length
-  const r = searchResults.value[searchIndex.value]
-  selectCell(r.row, r.col)
-}
-
-function searchPrev() {
-  if (searchResults.value.length === 0) return
-  searchIndex.value = (searchIndex.value - 1 + searchResults.value.length) % searchResults.value.length
-  const r = searchResults.value[searchIndex.value]
-  selectCell(r.row, r.col)
-}
-
-function replaceOne() {
-  if (props.readOnly || !activeSheet.value || searchResults.value.length === 0 || searchIndex.value < 0) return
-  saveUndoState()
-  const r = searchResults.value[searchIndex.value]
-  const key = cellKey(r.row, r.col)
-  const oldVal = activeSheet.value.cells[key] || ''
-  const regex = new RegExp(escapeRegex(searchText.value), 'gi')
-  activeSheet.value.cells[key] = oldVal.replace(regex, replaceText.value)
-  emitChange()
-  performSearch()
-}
-
-function replaceAll() {
-  if (props.readOnly || !activeSheet.value || searchResults.value.length === 0) return
-  saveUndoState()
-  const regex = new RegExp(escapeRegex(searchText.value), 'gi')
-  for (const r of searchResults.value) {
-    const key = cellKey(r.row, r.col)
-    const oldVal = activeSheet.value.cells[key] || ''
-    activeSheet.value.cells[key] = oldVal.replace(regex, replaceText.value)
-  }
-  emitChange()
-  performSearch()
-}
-
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 // ===== Emit =====
-function emitChange(source: 'internal' | 'luckysheet' = 'internal') {
-  if (source !== 'luckysheet') {
-    scheduleLuckysheetRender()
+function emitChange(source: 'internal' | 'univer' = 'internal') {
+  if (source !== 'univer') {
+    scheduleUniverRender()
   }
   headerLastSaveTime.value = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
   emit('change', {
     format: 'sheet',
-    engine: 'custom-grid',
+    engine: 'univer',
     version: workbook.version,
     data: {
+      resources: workbook.resources,
       sheets: workbook.sheets
     }
   })
@@ -2861,6 +2601,7 @@ function emitChange(source: 'internal' | 'luckysheet' = 'internal') {
 .sheet-editor {
   display: flex;
   flex-direction: column;
+  height: 100vh;
   min-height: 100vh;
   background: #fff;
   outline: none;
@@ -2876,14 +2617,6 @@ function emitChange(source: 'internal' | 'luckysheet' = 'internal') {
 
 /* ===== 菜单栏 ===== */
 
-
-.shortcut {
-  margin-left: auto;
-  padding-left: 24px;
-  color: #9aa0a6;
-  font-size: 12px;
-}
-
 /* ===== 工具栏 ===== */
 .toolbar {
   display: flex;
@@ -2898,7 +2631,7 @@ function emitChange(source: 'internal' | 'luckysheet' = 'internal') {
 .toolbar-divider {
   display: inline-block;
   width: 1px;
-  height: 20px;
+  height: 18px;
   background: #dadce0;
   margin: 0 4px;
   flex-shrink: 0;
@@ -2916,9 +2649,9 @@ function emitChange(source: 'internal' | 'luckysheet' = 'internal') {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 6px;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 5px;
   border: none;
   background: transparent;
   border-radius: 4px;
@@ -2946,9 +2679,6 @@ function emitChange(source: 'internal' | 'luckysheet' = 'internal') {
   flex-shrink: 0;
 }
 
-.arrow-icon {
-  margin-left: -2px;
-}
 
 /* 颜色按钮 */
 .color-btn {
@@ -3124,7 +2854,7 @@ function emitChange(source: 'internal' | 'luckysheet' = 'internal') {
   position: relative;
 }
 
-.luckysheet-grid-scroll {
+.univer-grid-scroll {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -3132,7 +2862,7 @@ function emitChange(source: 'internal' | 'luckysheet' = 'internal') {
   background: #fff;
 }
 
-.luckysheet-grid-zoom {
+.univer-grid-viewport {
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -3141,301 +2871,15 @@ function emitChange(source: 'internal' | 'luckysheet' = 'internal') {
   min-height: 0;
 }
 
-.luckysheet-host {
+.univer-host {
   flex: 1 1 auto;
   width: 100%;
   min-height: 0;
-  height: auto;
-}
-
-.sheet-grid {
-  border-collapse: collapse;
-  min-width: 100%;
-  table-layout: fixed;
-}
-
-.sheet-grid .col-index {
-  width: 46px;
-}
-
-.sheet-grid th,
-.sheet-grid td {
-  border: 1px solid #e2e6ed;
-  height: 25px;
-}
-
-.sheet-grid.hide-gridlines td {
-  border-color: transparent;
-}
-
-.sheet-grid thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: #f8f9fa;
-  font-size: 11px;
-  color: #5f6368;
-  text-align: center;
-  font-weight: 500;
-  user-select: none;
-  border-bottom: 1px solid #dadce0;
-  padding: 0;
-  cursor: default;
-}
-
-.sheet-grid thead th:hover {
-  background: #e8eaed;
-}
-
-.sheet-grid thead th.col-selected {
-  background: #d3e3fd;
-  color: #1a73e8;
-}
-
-.sheet-grid thead th span {
-  display: block;
-  padding: 2px 4px;
-}
-
-.col-resize-handle {
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  cursor: col-resize;
-}
-
-.sheet-grid thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-}
-
-.sheet-grid .row-index {
-  position: sticky;
-  left: 0;
-  z-index: 1;
-  min-width: 46px;
-  width: 46px;
-  background: #f8f9fa;
-  font-size: 11px;
-  color: #5f6368;
-  text-align: center;
-  font-weight: 500;
-  user-select: none;
-  cursor: default;
-  border-right: 1px solid #dadce0;
-}
-
-.sheet-grid .row-index:hover {
-  background: #e8eaed;
-}
-
-.sheet-grid .row-index.row-selected {
-  background: #d3e3fd;
-  color: #1a73e8;
-}
-
-.sheet-grid .corner {
-  position: sticky;
-  left: 0;
-  top: 0;
-  z-index: 3;
-  min-width: 46px;
-  width: 46px;
-  background: #f8f9fa;
-  cursor: pointer;
-  border-right: 1px solid #dadce0;
-  border-bottom: 1px solid #dadce0;
-}
-
-.sheet-grid .corner:hover {
-  background: #e8eaed;
-}
-
-.sheet-grid td {
-  min-width: 100px;
-  padding: 0 6px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  cursor: cell;
-  font-size: 13px;
-  color: #202124;
-  position: relative;
-}
-
-.sheet-grid td.active {
-  outline: 2px solid #1a73e8;
-  outline-offset: -1px;
-  background: #fff;
-}
-
-.sheet-grid td.selection-anchor {
-  outline: 2px solid #1a73e8;
-  outline-offset: -1px;
-  background: #fff;
-}
-
-.sheet-grid td.in-selection {
-  background: #d3e3fd;
-}
-
-.sheet-grid td.has-comment::after {
-  content: '';
-  position: absolute;
-  top: 1px;
-  right: 1px;
-  width: 0;
-  height: 0;
-  border-top: 8px solid #f59e0b;
-  border-left: 8px solid transparent;
-}
-
-.sheet-editor.eye-care-mode .sheet-grid td,
-.sheet-editor.eye-care-mode .sheet-grid td.active,
-.sheet-editor.eye-care-mode .sheet-grid td.selection-anchor,
-.sheet-editor.eye-care-mode .sheet-grid td.in-selection {
-  background: #e8f5e9;
-}
-
-.cell-text {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.cell-link {
-  color: #1a73e8;
-  text-decoration: underline;
-}
-
-.cell-input {
-  position: absolute;
-  inset: 0;
-  width: 100%;
   height: 100%;
-  border: none;
-  outline: 2px solid #1a73e8;
-  outline-offset: -1px;
-  padding: 0 6px;
-  font-size: 13px;
-  font-family: inherit;
-  color: #202124;
-  background: #fff;
-  z-index: 1;
-  box-sizing: border-box;
+  position: relative;
+
 }
 
-/* ===== 工作表标签栏 ===== */
-.sheet-tabs {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  padding: 0 8px;
-  height: 36px;
-  border-top: 1px solid #e2e6ed;
-  background: #f8f9fa;
-  flex-shrink: 0;
-  position: sticky;
-  bottom: 0;
-  z-index: 10;
-}
-
-.sheet-tab {
-  border: none;
-  background: transparent;
-  color: #5f6368;
-  font-size: 12px;
-  padding: 6px 16px;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-
-.sheet-tab:hover {
-  background: #e8eaed;
-  color: #202124;
-}
-
-.sheet-tab.active {
-  color: #1a73e8;
-  border-bottom-color: #1a73e8;
-  background: #fff;
-  font-weight: 500;
-}
-
-.sheet-add {
-  border: none;
-  background: transparent;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: #5f6368;
-  border-radius: 50%;
-  margin-left: 4px;
-}
-
-.sheet-add:hover:not(:disabled) {
-  background: #e8eaed;
-}
-
-.sheet-add:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.sheet-tabs-spacer {
-  flex: 1;
-}
-
-.sheet-view-controls {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.view-btn {
-  border: none;
-  background: transparent;
-  color: #3c4043;
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.view-btn:hover {
-  background: #e8eaed;
-}
-
-.view-btn.active {
-  color: #2e7d32;
-  background: #e8f5e9;
-}
-
-.view-btn.zoom-label {
-  width: auto;
-  padding: 0 6px;
-  gap: 2px;
-  font-size: 12px;
-}
-
-.zoom-slider {
-  width: 120px;
-}
-
-.zoom-slider :deep(.ant-slider-track) {
-  margin: 0;
-}
 
 /* ===== 查找替换面板 ===== */
 .search-panel {
@@ -3608,13 +3052,9 @@ function emitChange(source: 'internal' | 'luckysheet' = 'internal') {
   color: #5f6368;
 }
 
-.about-content {
-  text-align: center;
-  padding: 16px 0;
-}
 </style>
 
-<!-- 全局样式：弹出菜单（teleport 到 body，scoped 无法影响） -->
+<!-- 全局样式：弹出菜单（teleport 到 body，scoped 无法影响）-->
 <style>
 .sheet-menu-popper {
   min-width: 220px !important;
@@ -3635,21 +3075,63 @@ function emitChange(source: 'internal' | 'luckysheet' = 'internal') {
   align-items: center !important;
 }
 
+.sheet-menu-popper .ant-menu-title-content {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+
 .sheet-menu-popper .ant-menu-item:hover {
   background: #f1f3f4 !important;
 }
 
-.sheet-menu-popper .ant-menu-item .mdi-icon {
+.sheet-menu-popper .ant-menu-item .menu-item-label .mdi-icon {
   margin-right: 12px;
   color: #5f6368;
   flex-shrink: 0;
 }
 
-.sheet-menu-popper .ant-menu-item .shortcut {
+.sheet-menu-popper .ant-menu-item .menu-item-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 100%;
+  gap: 12px;
+}
+
+.sheet-menu-popper .ant-menu-item .menu-item-label {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 100%;
+}
+
+.sheet-menu-popper .ant-menu-item .menu-item-meta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
   margin-left: auto;
-  padding-left: 24px;
+  flex-shrink: 0;
+  min-height: 100%;
+}
+
+.sheet-menu-popper .ant-menu-item .shortcut {
+  display: inline-flex;
+  align-items: center;
   color: #9aa0a6;
   font-size: 12px;
+  line-height: 1;
+}
+
+.sheet-menu-popper .ant-menu-item .menu-check {
+  display: inline-flex;
+  align-items: center;
+  color: #1a1a1a;
+  flex-shrink: 0;
 }
 
 .sheet-menu-popper .ant-menu-submenu-title {
@@ -3727,57 +3209,4 @@ function emitChange(source: 'internal' | 'luckysheet' = 'internal') {
   display: none !important;
 }
 
-/* ===== 右键菜单（Teleport 到 body） ===== */
-.sheet-ctx-menu {
-  position: fixed;
-  min-width: 220px;
-  padding: 6px 0;
-  border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.14), 0 1px 4px rgba(0,0,0,0.08);
-  z-index: 9999;
-}
-
-.sheet-ctx-menu .ctx-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  padding: 0 16px;
-  height: 34px;
-  line-height: 34px;
-  font-size: 13px;
-  color: #3c4043;
-  cursor: pointer;
-  user-select: none;
-}
-
-.sheet-ctx-menu .ctx-menu-item:hover {
-  background: #f1f3f4;
-}
-
-.sheet-ctx-menu .ctx-menu-item .mdi-icon {
-  margin-right: 12px;
-  color: #5f6368;
-  flex-shrink: 0;
-}
-
-.sheet-ctx-menu .ctx-menu-item span:first-of-type {
-  flex: 1;
-}
-
-.sheet-ctx-menu .ctx-shortcut {
-  margin-left: 24px;
-  color: #9aa0a6;
-  font-size: 12px;
-  flex: none;
-}
-
-.sheet-ctx-menu .ctx-danger {
-  color: #d93025;
-}
-
-.sheet-ctx-menu .ctx-menu-divider {
-  margin: 4px 12px;
-  border-top: 1px solid #e8eaed;
-}
 </style>

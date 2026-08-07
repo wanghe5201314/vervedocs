@@ -52,6 +52,7 @@ export interface IUiSheet {
 
 export interface IWorkbook {
   version: number
+  resources?: Record<string, any>
   sheets: IUiSheet[]
 }
 

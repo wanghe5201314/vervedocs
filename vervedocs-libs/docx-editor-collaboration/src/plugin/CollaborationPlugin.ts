@@ -18,6 +18,7 @@ import type {
   RemoteCursor,
   CursorPosition,
   SharedSyncState,
+  CommentComponentBridge,
 } from '../types'
 import { ConnectionState, SyncState } from '../types'
 import { YjsBinding } from '../binding/YjsBinding'
@@ -105,6 +106,7 @@ export class CollaborationPlugin {
   private sharedSyncStateMap: Y.Map<boolean> | null = null
   private sharedSyncStateObserver: ((event: Y.YMapEvent<boolean>) => void) | null = null
   private sharedSyncState: SharedSyncState = { ...DEFAULT_SHARED_SYNC_STATE }
+  private commentComponent: CommentComponentBridge | null = null
 
   private connectionState: ConnectionState = ConnectionState.DISCONNECTED
   private syncState: SyncState = SyncState.SYNCING
@@ -153,6 +155,7 @@ export class CollaborationPlugin {
     this.rangeChangeSubscription = null
     this.rangeChangeHandler = null
     this.cursorManager.destroy()
+    this.commentComponent = null
     this.editor = null
   }
 
@@ -194,9 +197,10 @@ export class CollaborationPlugin {
           this.setSyncState(SyncState.SYNCED)
           // 同步完成后再建立双向绑定，避免绑定期间的空文档问题
           if (!this.binding && this.editor && this.doc) {
-            this.binding = new YjsBinding(this.doc, this.editor)
+            this.binding = new YjsBinding(this.doc, this.editor, this.commentComponent)
           }
           this.ensureSharedSyncStateDefaults()
+          this.binding?.bindCommentBridge(this.commentComponent)
         }
       },
       onAuthenticationFailed: ({ reason }) => {
@@ -279,6 +283,15 @@ export class CollaborationPlugin {
     }
 
     this.applySharedSyncState(nextState)
+  }
+
+  bindCommentComponent(component: CommentComponentBridge | null): void {
+    this.commentComponent = component
+    this.binding?.bindCommentBridge(component)
+  }
+
+  syncComments(): void {
+    this.binding?.syncCommentsFromBridge()
   }
 
   initializeCursors(container: HTMLElement, positionCalculator: PositionCalculator): void {

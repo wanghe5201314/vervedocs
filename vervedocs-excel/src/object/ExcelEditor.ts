@@ -1,12 +1,21 @@
-import { createApp, defineComponent, h, reactive } from 'vue'
+import { createApp, defineAsyncComponent, defineComponent, h, reactive } from 'vue'
 import Antd from 'ant-design-vue'
 import 'ant-design-vue/dist/reset.css'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
 import '@/assets/iconfont/iconfont.css'
 import '@/assets/iconfont/iconfont.js'
-import SheetEditorComponent from '@/components/SheetEditor.vue'
 import type { ExcelLocale, ExcelI18nMessages } from '@/i18n'
+import type { SheetDocumentApi, AuthTokenProvider, SheetRequestConfig } from '@/api/sheet.api'
+import {
+  setSheetDocumentApi,
+  setAuthProvider as setSheetAuthProvider,
+  setSheetRequestConfig,
+  createHttpSheetDocumentApi,
+  getSheetApiBaseUrl,
+} from '@/api/sheet.api'
 import { version as PKG_VERSION } from '../../package.json'
+
+const SheetEditorComponent = defineAsyncComponent(() => import('@/components/SheetEditor.vue'))
 
 export interface Options {
   container: string | HTMLElement
@@ -16,6 +25,11 @@ export interface Options {
   readOnly?: boolean
   locale?: ExcelLocale
   i18n?: Partial<ExcelI18nMessages>
+  apiBaseUrl?: string
+  authToken?: string
+  authTokenGetter?: AuthTokenProvider
+  sheetApi?: SheetDocumentApi
+  requestConfig?: SheetRequestConfig
   onReady?: (payload: any) => void
   onChange?: (payload: any) => void
   onNewDocument?: (payload: { dbPayload: any; excelPayload: { fileName: string; mimeType: string; buffer: ArrayBuffer } }) => void
@@ -46,6 +60,20 @@ export class ExcelEditor {
   static version: string = PKG_VERSION
 
   constructor(private options: Options) {
+    if (options.sheetApi) {
+      setSheetDocumentApi(options.sheetApi)
+    }
+    if (options.authTokenGetter) {
+      setSheetAuthProvider(options.authTokenGetter)
+    } else if (options.authToken) {
+      setSheetAuthProvider(() => options.authToken)
+    }
+    if (options.requestConfig) {
+      setSheetRequestConfig(options.requestConfig)
+    } else if (options.apiBaseUrl) {
+      setSheetRequestConfig({ baseUrl: options.apiBaseUrl })
+    }
+
     const host = resolveTarget(options.container)
     this.state = reactive({
       initialContent: options.initialContent,
@@ -92,6 +120,22 @@ export class ExcelEditor {
 
   setI18n(i18n?: Partial<ExcelI18nMessages>) {
     this.state.i18n = i18n
+  }
+
+  static setApi(api: SheetDocumentApi) {
+    setSheetDocumentApi(api)
+  }
+
+  static setAuthProvider(provider: AuthTokenProvider | null) {
+    setSheetAuthProvider(provider)
+  }
+
+  static setRequestConfig(config: SheetRequestConfig | null) {
+    setSheetRequestConfig(config)
+  }
+
+  static createHttpApi(baseUrl: string): SheetDocumentApi {
+    return createHttpSheetDocumentApi(baseUrl)
   }
 
   static getVersion() {

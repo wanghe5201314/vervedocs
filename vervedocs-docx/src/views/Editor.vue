@@ -760,6 +760,35 @@ const handleProtectConfirm = async (password: string) => {
   emitExternalEvent('statusChange', { command: nextStatus === 'lock' ? 'locked' : 'unlocked', args: [] })
 }
 
+const installCommentCallbacks = (targetInstance: any) => {
+  if (!targetInstance?.command) return
+  const commentComp = getCommentComponent()
+  if (!commentComp) return
+
+  commentComp.install(targetInstance.command, {
+    onSave: () => {
+      collabPlugin?.syncComments()
+    },
+    onDelete: () => {
+      collabPlugin?.syncComments()
+    },
+    onReply: () => {
+      collabPlugin?.syncComments()
+    },
+    onResolve: () => {
+      collabPlugin?.syncComments()
+    },
+    onCancel: () => {
+      collabPlugin?.syncComments()
+    },
+    onRequestSave: () => {
+      if (!suppressSaveOnce) scheduleSave()
+    }
+  })
+
+  collabPlugin?.bindCommentComponent(commentComp)
+}
+
 const handleReady = (...args: any[]) => {
   emitExternalEvent('ready', args[0] ?? null)
   if (loaded) return
@@ -767,6 +796,7 @@ const handleReady = (...args: any[]) => {
   emitMetaChange()
 
   const instance = getEditorInstance()
+
   if (instance?.command) {
     const revisionComp = getRevisionComponent()
     if (revisionComp) {
@@ -804,11 +834,7 @@ const handleReady = (...args: any[]) => {
     }
   }
 
-  if (instance?.command) {
-    getCommentComponent()?.install(instance.command, {
-      onRequestSave: () => { if (!suppressSaveOnce) scheduleSave() }
-    })
-  }
+  installCommentCallbacks(instance)
 
   const content = (initialDocument as any)?.content
   const docUrl = (initialDocument as any)?.url
@@ -885,6 +911,7 @@ const initCollaboration = () => {
   })
 
   collabPlugin.install(editorInstance)
+  installCommentCallbacks(editorInstance)
   collabConnectionState.value = collabPlugin.getConnectionState()
   collabSharedSyncState.value = collabPlugin.getSharedSyncState()
 
@@ -1208,8 +1235,9 @@ const handleCommand = (command: string, ...args: any[]) => {
     return
   }
   if (command === 'comment') {
-    getCommentComponent()?.addComment('当前用户')
-    nextTick(() => getCommentComponent()?.render())
+    nextTick(() => {
+      getCommentComponent()?.render()
+    })
     return
   }
   if (command === 'spellcheck') {

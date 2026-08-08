@@ -3,9 +3,13 @@ import vue from '@vitejs/plugin-vue';
 import dts from 'vite-plugin-dts';
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 import { resolve } from 'path';
+import { existsSync } from 'node:fs';
 export default defineConfig(function (_a) {
     var mode = _a.mode;
     var isLib = mode === 'lib';
+    var collabNodeModules = existsSync(resolve(__dirname, '../vervedocs-libs/docx-editor-collaboration/node_modules'))
+        ? resolve(__dirname, '../vervedocs-libs/docx-editor-collaboration/node_modules')
+        : resolve(__dirname, 'node_modules');
     var isExternal = function (id) {
         if (['vue', 'ant-design-vue', '@mdi/js'].includes(id)) {
             return true;
@@ -23,8 +27,14 @@ export default defineConfig(function (_a) {
             }) : null
         ].filter(Boolean),
         resolve: {
+            dedupe: ['yjs', 'y-protocols', '@hocuspocus/provider', 'lib0', 'eventemitter3'],
             alias: {
-                '@': resolve(__dirname, 'src')
+                '@': resolve(__dirname, 'src'),
+                'yjs': resolve(collabNodeModules, 'yjs'),
+                'y-protocols': resolve(collabNodeModules, 'y-protocols'),
+                '@hocuspocus/provider': resolve(collabNodeModules, '@hocuspocus/provider'),
+                'lib0': resolve(collabNodeModules, 'lib0'),
+                'eventemitter3': resolve(collabNodeModules, 'eventemitter3'),
             }
         },
         base: isLib ? undefined : './',

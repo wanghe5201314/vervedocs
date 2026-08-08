@@ -8,6 +8,7 @@
         :is-view-mode="readOnly"
         :last-save-time="headerLastSaveTime"
         :t="t"
+        :online-users="collabOnlineUsers"
       />
       <div class="menu-card">
       <a-menu mode="horizontal" class="sheet-menu-bar" :selectable="false">
@@ -764,8 +765,39 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
+import { BorderStyleTypes, BorderType, Direction } from '@univerjs/core'
 import type { Univer as UniverType } from '@univerjs/core'
 import type { FUniver } from '@univerjs/core/facade'
+import {
+  AddWorksheetMergeAllCommand,
+  ClearSelectionContentCommand,
+  ClearSelectionFormatCommand,
+  InsertColCommand,
+  InsertRowCommand,
+  RemoveColCommand,
+  RemoveRowCommand,
+  RemoveWorksheetMergeCommand,
+  ResetBackgroundColorCommand,
+  ResetTextColorCommand,
+  SetBackgroundColorCommand,
+  SetBorderBasicCommand,
+  SetBoldCommand,
+  SetColHiddenCommand,
+  SetFontFamilyCommand,
+  SetFontSizeCommand,
+  SetHorizontalTextAlignCommand,
+  SetItalicCommand,
+  SetRowHiddenCommand,
+  SetSpecificColsVisibleCommand,
+  SetSpecificRowsVisibleCommand,
+  SetStrikeThroughCommand,
+  SetTextColorCommand,
+  SetTextRotationCommand,
+  SetTextWrapCommand,
+  SetUnderlineCommand,
+  SetVerticalTextAlignCommand,
+} from '@univerjs/sheets'
+import { SetNumfmtCommand } from '@univerjs/sheets-numfmt'
 import type { FRange, FWorkbook, FWorksheet } from '@univerjs/sheets/facade'
 import SheetIcon from './SheetIcon.vue'
 import UnifiedTopHeader from './UnifiedTopHeader.vue'
@@ -774,9 +806,10 @@ import { createExcelI18n } from '@/i18n'
 import type { ExcelI18nMessages, ExcelLocale } from '@/i18n'
 import { readExcelFileToWorkbook } from '../utils/excel-import'
 import { writeWorkbookToExcelBuffer } from '../utils/excel-export'
+import { getAuthToken } from '../api/sheet.api'
 import { loadUniverRuntime } from '../utils/univer-runtime'
 import type { LoadedUniverRuntime } from '../utils/univer-runtime'
-import { ExcelCollaborationPlugin, ConnectionState } from '@vervedoc/docx-editor-collaboration'
+import { ExcelCollaborationPlugin, ConnectionState, SyncState } from '@vervedoc/docx-editor-collaboration'
 import type { ExcelCollaborationConfig, UserInfo } from '@vervedoc/docx-editor-collaboration'
 
 const props = withDefaults(defineProps<{
@@ -826,6 +859,10 @@ const headerTitle = computed(() => {
 const emit = defineEmits<{
   (e: 'change', value: any): void
   (e: 'new-document', payload: { dbPayload: any; excelPayload: { fileName: string; mimeType: string; buffer: ArrayBuffer } }): void
+  (e: 'collabConnectionChange', payload: { state: ConnectionState | string }): void
+  (e: 'collabSyncStateChange', payload: { state: SyncState | string }): void
+  (e: 'collabUsersChange', payload: UserInfo[]): void
+  (e: 'collabError', payload: { code: string; message: string }): void
 }>()
 
 const fontOptions = [
@@ -1005,11 +1042,71 @@ async function executeUniverCommand(commandId: string, params?: Record<string, a
   }
   try {
     return await univerAPI.executeCommand(commandId, params)
-  } catch (error) {
-    console.error(`[SheetEditor] command failed: ${commandId}`, error)
+  } catch {
     message.error('官方功能执行失败')
     return false
   }
+}
+
+async function executeStyleCommand(commandId: string, params?: Record<string, any>) {
+  syncUniverSelection()
+  const ok = await executeUniverCommand(commandId, params)
+  if (ok) {
+    await nextTick()
+    syncToolbarAndFormula()
+  }
+  return ok
+}
+
+function getActiveSheetCommandContext() {
+  const workbook = activeUniverWorkbook
+  const sheet = getActiveSheet()
+  if (!workbook || !sheet) {
+    message.warning('表格尚未初始化')
+    return null
+  }
+  const { r1, r2, c1, c2 } = selectionRange.value
+  return {
+    unitId: workbook.getId(),
+    subUnitId: sheet.getSheetId(),
+    range: {
+      startRow: r1,
+      endRow: r2,
+      startColumn: c1,
+      endColumn: c2,
+    },
+    rowRange: {
+      startRow: r1,
+      endRow: r2,
+      startColumn: 0,
+      endColumn: Math.max(0, (activeSheet.value?.colCount || 1) - 1),
+    },
+    colRange: {
+      startRow: 0,
+      endRow: Math.max(0, (activeSheet.value?.rowCount || 1) - 1),
+      startColumn: c1,
+      endColumn: c2,
+    },
+  }
+}
+
+async function executeSheetCommand(commandId: string, params?: Record<string, any>) {
+  syncUniverSelection()
+  const ok = await executeUniverCommand(commandId, params)
+  if (ok) {
+    await nextTick()
+    syncToolbarAndFormula()
+  }
+  return ok
+}
+
+function syncUniverSelection() {
+  const target = univerAPI?.getActiveSheet?.()
+  const worksheet = target?.worksheet
+  if (!worksheet) return
+  const { r1, r2, c1, c2 } = selectionRange.value
+  const range = worksheet.getRange(r1, c1, r2 - r1 + 1, c2 - c1 + 1)
+  worksheet.setActiveSelection(range)
 }
 
 async function openUniverSort(order: 'asc' | 'desc') {
@@ -1308,20 +1405,9 @@ function syncFilterStateToActiveSheet() {
 watch(
   () => props.initialContent,
   next => {
+    if (!hasUsableWorkbookContent(next)) return
     const normalized = normalizeWorkbook(next)
-    workbook.version = normalized.version
-    workbook.resources = normalized.resources
-    workbook.sheets = normalized.sheets
-    activeSheetIndex.value = 0
-    selected.row = 0
-    selected.col = 0
-    selectionEnd.row = 0
-    selectionEnd.col = 0
-    syncDimensionStateFromActiveSheet()
-    loadFilterStateFromActiveSheet()
-    syncToolbarAndFormula()
-    undoStack.value = []
-    redoStack.value = []
+    applyWorkbookState(normalized)
     scheduleUniverRender()
   },
   { deep: true }
@@ -1429,8 +1515,6 @@ async function renderLuckysheet() {
     await ensureUniverInitialized(host)
     const hostReady = await waitForLuckysheetHost(host)
     if (!hostReady) {
-
-      console.warn('[SheetEditor] univer host height is 0')
       return
     }
 
@@ -1446,6 +1530,7 @@ async function renderLuckysheet() {
     lastUniverSnapshot = activeUniverWorkbook ? JSON.stringify(activeUniverWorkbook.save()) : ''
     applySelectionToUniver()
     updateSelectionFromUniver()
+    await initCollaboration()
 
     window.dispatchEvent(new Event('resize'))
   } catch (error) {
@@ -1464,6 +1549,37 @@ function scheduleUniverRender() {
 }
 
 // ===== Normalization =====
+function hasUsableWorkbookContent(input: any): boolean {
+  if (!input || typeof input !== 'object') return false
+  if (Array.isArray(input?.data)) {
+    return input.data.length > 0
+  }
+  if (input?.data && typeof input.data === 'object' && Array.isArray(input.data?.sheets)) {
+    return input.data.sheets.length > 0
+  }
+  if (Array.isArray(input?.sheets)) {
+    return input.sheets.length > 0
+  }
+  return false
+}
+
+function applyWorkbookState(next: IWorkbook) {
+  workbook.version = next.version
+  workbook.resources = next.resources
+  workbook.sheets = next.sheets
+  resetFilterState()
+  activeSheetIndex.value = 0
+  selected.row = 0
+  selected.col = 0
+  selectionEnd.row = 0
+  selectionEnd.col = 0
+  syncDimensionStateFromActiveSheet()
+  loadFilterStateFromActiveSheet()
+  undoStack.value = []
+  redoStack.value = []
+  syncToolbarAndFormula()
+}
+
 function normalizeWorkbook(input: any): IWorkbook {
   if (input && typeof input === 'object') {
     if (Array.isArray(input?.data)) {
@@ -1493,6 +1609,22 @@ function normalizeWorkbook(input: any): IWorkbook {
     }
   }
   return { version: 1, resources: undefined, sheets: [createDefaultSheet(0)] }
+}
+
+async function loadWorkbookFromDocumentUrl(url: string) {
+  const token = String(getAuthToken() || '').trim()
+  const headers: Record<string, string> = {}
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  const resp = await fetch(url, { headers })
+  if (!resp.ok) throw new Error(`请求失败: ${resp.status}`)
+  const buffer = await resp.arrayBuffer()
+  if (!buffer || buffer.byteLength === 0) throw new Error('远程文件内容为空')
+  const file = new File([buffer], 'import.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+  const importedWorkbook = await readExcelFileToWorkbook(file, {
+    defaultSheetName: index => t('sheet.defaultSheetName', { index: index + 1 }),
+  })
+  applyWorkbookState(importedWorkbook)
+  emitChange()
 }
 
 function fromInternalSheet(sheet: any, i: number): IUiSheet {
@@ -1609,6 +1741,7 @@ function selectCell(row: number, col: number) {
   selected.col = col
   selectionEnd.row = row
   selectionEnd.col = col
+  syncUniverSelection()
   syncToolbarAndFormula()
 }
 
@@ -1618,6 +1751,7 @@ function selectAll() {
   selected.col = 0
   selectionEnd.row = currentRows.value.length - 1
   selectionEnd.col = currentColumns.value.length - 1
+  syncUniverSelection()
 }
 
 
@@ -1650,6 +1784,16 @@ function applyFormulaValue() {
     range.setFormula(value.slice(1))
   } else {
     range.setValue(value)
+  }
+}
+
+function commitUniverFacadeMutation() {
+  const changed = syncWorkbookFromUniver()
+  if (collabPlugin) {
+    collabPlugin.forceSyncWorkbook(true)
+  }
+  if (changed) {
+    emitChange('univer')
   }
 }
 
@@ -1755,127 +1899,139 @@ function saveUndoState() {
   redoStack.value = []
 }
 
-function updateCellStyle() {
+async function updateCellStyle() {
   if (props.readOnly) return
   const range = getSelectionRange()
   if (!range) return
   saveUndoState()
-  range.setFontWeight(toolbarState.bold ? 'bold' : 'normal')
-  range.setFontStyle(toolbarState.italic ? 'italic' : 'normal')
-  if (toolbarState.underline && toolbarState.strikethrough) {
-    range.setFontLine('underline')
-  } else if (toolbarState.underline) {
-    range.setFontLine('underline')
-  } else if (toolbarState.strikethrough) {
-    range.setFontLine('line-through')
-  } else {
-    range.setFontLine('none')
-  }
-  range.setHorizontalAlignment(toolbarState.align === 'left' ? 'left' : toolbarState.align === 'center' ? 'center' : 'normal')
-  range.setVerticalAlignment(toolbarState.verticalAlign === 'top' ? 'top' : toolbarState.verticalAlign === 'middle' ? 'middle' : 'bottom')
-  range.setFontFamily(toolbarState.fontFamily || 'Microsoft YaHei, sans-serif')
-  range.setFontSize(Number(toolbarState.fontSize || 12))
-  range.setFontColor(toolbarState.fontColor || null)
-  range.setBackground(toolbarState.bgColor || '')
-  range.setWrapStrategy(toolbarState.wrap === 'wrap' ? 2 : toolbarState.wrap === 'overflow' ? 1 : 0)
-  range.setTextRotation(Number(toolbarState.rotation ?? 0))
+  const currentFontLine = String((range as any).getFontLine?.() || 'none')
+  const currentBold = String((range as any).getFontWeight?.() || 'normal') === 'bold'
+  const currentItalic = String((range as any).getFontStyle?.() || 'normal') === 'italic'
+  const currentUnderline = currentFontLine === 'underline'
+  const currentStrikethrough = currentFontLine === 'line-through'
+
+  if (toolbarState.bold !== currentBold) await executeStyleCommand(SetBoldCommand.id)
+  if (toolbarState.italic !== currentItalic) await executeStyleCommand(SetItalicCommand.id)
+  if (toolbarState.underline !== currentUnderline) await executeStyleCommand(SetUnderlineCommand.id)
+  if (toolbarState.strikethrough !== currentStrikethrough) await executeStyleCommand(SetStrikeThroughCommand.id)
+
+  await executeStyleCommand(SetHorizontalTextAlignCommand.id, {
+    value: toolbarState.align === 'left' ? 'left' : toolbarState.align === 'center' ? 'center' : 'right',
+  })
+  await executeStyleCommand(SetVerticalTextAlignCommand.id, { value: toolbarState.verticalAlign })
+  await executeStyleCommand(SetFontFamilyCommand.id, { value: toolbarState.fontFamily || 'Microsoft YaHei, sans-serif' })
+  await executeStyleCommand(SetFontSizeCommand.id, { value: Number(toolbarState.fontSize || 12) })
+  await executeStyleCommand(
+    toolbarState.fontColor ? SetTextColorCommand.id : ResetTextColorCommand.id,
+    toolbarState.fontColor ? { value: toolbarState.fontColor } : undefined
+  )
+  await executeStyleCommand(
+    toolbarState.bgColor ? SetBackgroundColorCommand.id : ResetBackgroundColorCommand.id,
+    toolbarState.bgColor ? { value: toolbarState.bgColor } : undefined
+  )
+  await executeStyleCommand(SetTextWrapCommand.id, {
+    value: toolbarState.wrap === 'wrap' ? 2 : toolbarState.wrap === 'overflow' ? 1 : 0,
+  })
+  await executeStyleCommand(SetTextRotationCommand.id, { value: Number(toolbarState.rotation ?? 0) })
 }
 
 
-function toggleStyle(style: 'bold' | 'italic' | 'underline' | 'strikethrough') {
+async function toggleStyle(style: 'bold' | 'italic' | 'underline' | 'strikethrough') {
   if (props.readOnly) return
   toolbarState[style] = !toolbarState[style]
   const range = getSelectionRange()
   if (!range) return
   saveUndoState()
-  if (style === 'bold') range.setFontWeight(toolbarState.bold ? 'bold' : 'normal')
-  else if (style === 'italic') range.setFontStyle(toolbarState.italic ? 'italic' : 'normal')
-  else if (style === 'underline') range.setFontLine(toolbarState.underline ? 'underline' : 'none')
-  else if (style === 'strikethrough') range.setFontLine(toolbarState.strikethrough ? 'line-through' : 'none')
+  if (style === 'bold') await executeStyleCommand(SetBoldCommand.id)
+  else if (style === 'italic') await executeStyleCommand(SetItalicCommand.id)
+  else if (style === 'underline') await executeStyleCommand(SetUnderlineCommand.id)
+  else if (style === 'strikethrough') await executeStyleCommand(SetStrikeThroughCommand.id)
 }
 
-function setAlign(align: Align) {
+async function setAlign(align: Align) {
   if (props.readOnly) return
   toolbarState.align = align
-  const range = getSelectionRange()
-  if (!range) return
   saveUndoState()
-  range.setHorizontalAlignment(align === 'left' ? 'left' : align === 'center' ? 'center' : 'normal')
+  await executeStyleCommand(SetHorizontalTextAlignCommand.id, {
+    value: align === 'left' ? 'left' : align === 'center' ? 'center' : 'right',
+  })
 }
 
-function setWrap(wrap: WrapMode) {
+async function setWrap(wrap: WrapMode) {
   if (props.readOnly) return
   toolbarState.wrap = wrap
-  const range = getSelectionRange()
-  if (!range) return
   saveUndoState()
-  range.setWrapStrategy(wrap === 'wrap' ? 2 : wrap === 'overflow' ? 1 : 0)
+  await executeStyleCommand(SetTextWrapCommand.id, {
+    value: wrap === 'wrap' ? 2 : wrap === 'overflow' ? 1 : 0,
+  })
 }
 
 function toggleWrap() {
   setWrap(toolbarState.wrap === 'wrap' ? 'clip' : 'wrap')
 }
 
-function setFontColor(color: string) {
+async function setFontColor(color: string) {
   if (props.readOnly) return
   toolbarState.fontColor = color
-  const range = getSelectionRange()
-  if (!range) return
   saveUndoState()
-  range.setFontColor(color || null)
+  await executeStyleCommand(SetTextColorCommand.id, { value: color || '#000000' })
 }
 
-function setBgColor(color: string) {
+async function setBgColor(color: string) {
   if (props.readOnly) return
   toolbarState.bgColor = color
-  const range = getSelectionRange()
-  if (!range) return
   saveUndoState()
-  range.setBackground(color || '')
+  await executeStyleCommand(
+    color ? SetBackgroundColorCommand.id : ResetBackgroundColorCommand.id,
+    color ? { value: color } : undefined
+  )
 }
 
-function setBorders(type: string) {
+async function setBorders(type: string) {
   if (props.readOnly) return
-  if (!univerRuntime) return
-  const range = getSelectionRange()
-  if (!range) return
   saveUndoState()
-  const borderStyle = univerRuntime.core.BorderStyleTypes.THIN
-  const borderType = univerRuntime.core.BorderType
-  const color = '#000000'
-  if (type === 'all') {
-    range.setBorder(borderType.ALL, borderStyle, color)
-  } else if (type === 'outer') {
-    range.setBorder(borderType.OUTSIDE, borderStyle, color)
-  } else if (type === 'none') {
-    range.setBorder(borderType.NONE, univerRuntime.core.BorderStyleTypes.NONE, '')
-  } else if (type === 'top') {
-    range.setBorder(borderType.TOP, borderStyle, color)
-  } else if (type === 'bottom') {
-    range.setBorder(borderType.BOTTOM, borderStyle, color)
-  } else if (type === 'left') {
-    range.setBorder(borderType.LEFT, borderStyle, color)
-  } else if (type === 'right') {
-    range.setBorder(borderType.RIGHT, borderStyle, color)
+  const borderTypeMap: Record<string, BorderType> = {
+    all: BorderType.ALL,
+    outer: BorderType.OUTSIDE,
+    none: BorderType.NONE,
+    top: BorderType.TOP,
+    bottom: BorderType.BOTTOM,
+    left: BorderType.LEFT,
+    right: BorderType.RIGHT,
   }
+  const borderInfo = {
+    type: borderTypeMap[type] ?? BorderType.ALL,
+    color: type === 'none' ? undefined : '#000000',
+    style: type === 'none' ? BorderStyleTypes.NONE : BorderStyleTypes.THIN,
+    activeBorderType: type !== 'none',
+  }
+  await executeSheetCommand(SetBorderBasicCommand.id, {
+    value: borderInfo,
+  })
 }
 
-function clearSelectedFormat() {
+async function clearSelectedFormat() {
   if (props.readOnly) return
-  const range = getSelectionRange()
-  if (!range) return
+  const context = getActiveSheetCommandContext()
+  if (!context) return
   saveUndoState()
-  range.clearFormat()
-  syncToolbarAndFormula()
+  await executeSheetCommand(ClearSelectionFormatCommand.id, {
+    unitId: context.unitId,
+    subUnitId: context.subUnitId,
+    ranges: [context.range],
+  })
 }
 
-function deleteSelectedContent() {
+async function deleteSelectedContent() {
   if (props.readOnly) return
-  const range = getSelectionRange()
-  if (!range) return
+  const context = getActiveSheetCommandContext()
+  if (!context) return
   saveUndoState()
-  range.clearContent()
-  syncToolbarAndFormula()
+  await executeSheetCommand(ClearSelectionContentCommand.id, {
+    unitId: context.unitId,
+    subUnitId: context.subUnitId,
+    ranges: [context.range],
+  })
 }
 
 
@@ -1982,87 +2138,115 @@ function handleFormatPainter() {
 }
 
 // ===== Row/Col operations =====
-function insertRow(position: 'above' | 'below') {
+async function insertRow(position: 'above' | 'below') {
   if (props.readOnly) return
   saveUndoState()
-  const sheet = getActiveSheet()
-  if (!sheet) return
+  const context = getActiveSheetCommandContext()
+  if (!context) return
   const insertAt = position === 'above' ? selected.row : selected.row + 1
-  sheet.insertRows(insertAt, 1)
+  await executeSheetCommand(InsertRowCommand.id, {
+    unitId: context.unitId,
+    subUnitId: context.subUnitId,
+    direction: position === 'above' ? Direction.UP : Direction.DOWN,
+    range: {
+      startRow: insertAt,
+      endRow: insertAt,
+      startColumn: 0,
+      endColumn: Math.max(0, (activeSheet.value?.colCount || 1) - 1),
+    },
+  })
 }
 
 
-function insertCol(position: 'left' | 'right') {
+async function insertCol(position: 'left' | 'right') {
   if (props.readOnly) return
   saveUndoState()
-  const sheet = getActiveSheet()
-  if (!sheet) return
+  const context = getActiveSheetCommandContext()
+  if (!context) return
   const insertAt = position === 'left' ? selected.col : selected.col + 1
-  sheet.insertColumns(insertAt, 1)
+  await executeSheetCommand(InsertColCommand.id, {
+    unitId: context.unitId,
+    subUnitId: context.subUnitId,
+    direction: position === 'left' ? Direction.LEFT : Direction.RIGHT,
+    range: {
+      startRow: 0,
+      endRow: Math.max(0, (activeSheet.value?.rowCount || 1) - 1),
+      startColumn: insertAt,
+      endColumn: insertAt,
+    },
+  })
 }
 
-function deleteRow() {
+async function deleteRow() {
   if (props.readOnly) return
   saveUndoState()
-  const sheet = getActiveSheet()
-  if (!sheet) return
-  const { r1, r2 } = selectionRange.value
-  const rowCount = r2 - r1 + 1
-  sheet.deleteRows(r1, rowCount)
+  const context = getActiveSheetCommandContext()
+  if (!context) return
+  await executeSheetCommand(RemoveRowCommand.id, {
+    unitId: context.unitId,
+    subUnitId: context.subUnitId,
+    range: context.rowRange,
+  })
 }
 
-function deleteCol() {
+async function deleteCol() {
   if (props.readOnly) return
   saveUndoState()
-  const sheet = getActiveSheet()
-  if (!sheet) return
-  const { c1, c2 } = selectionRange.value
-  const colCount = c2 - c1 + 1
-  sheet.deleteColumns(c1, colCount)
+  const context = getActiveSheetCommandContext()
+  if (!context) return
+  await executeSheetCommand(RemoveColCommand.id, {
+    unitId: context.unitId,
+    subUnitId: context.subUnitId,
+    range: context.colRange,
+  })
 }
 
-function hideRow() {
+async function hideRow() {
   if (props.readOnly) return
   saveUndoState()
-  const sheet = getActiveSheet()
-  if (!sheet) return
-  const { r1, r2 } = selectionRange.value
-  for (let r = r1; r <= r2; r++) {
-    ;(sheet as any).setRowHidden?.(r, true)
-  }
+  const context = getActiveSheetCommandContext()
+  if (!context) return
+  await executeSheetCommand(SetRowHiddenCommand.id, {
+    unitId: context.unitId,
+    subUnitId: context.subUnitId,
+    ranges: [context.rowRange],
+  })
 }
 
-function unhideRow() {
+async function unhideRow() {
   if (props.readOnly) return
   saveUndoState()
-  const sheet = getActiveSheet()
-  if (!sheet) return
-  const { r1, r2 } = selectionRange.value
-  for (let r = r1; r <= r2; r++) {
-    ;(sheet as any).setRowHidden?.(r, false)
-  }
+  const context = getActiveSheetCommandContext()
+  if (!context) return
+  await executeSheetCommand(SetSpecificRowsVisibleCommand.id, {
+    unitId: context.unitId,
+    subUnitId: context.subUnitId,
+    ranges: [context.rowRange],
+  })
 }
 
-function hideCol() {
+async function hideCol() {
   if (props.readOnly) return
   saveUndoState()
-  const sheet = getActiveSheet()
-  if (!sheet) return
-  const { c1, c2 } = selectionRange.value
-  for (let c = c1; c <= c2; c++) {
-    ;(sheet as any).setColumnHidden?.(c, true)
-  }
+  const context = getActiveSheetCommandContext()
+  if (!context) return
+  await executeSheetCommand(SetColHiddenCommand.id, {
+    unitId: context.unitId,
+    subUnitId: context.subUnitId,
+    ranges: [context.colRange],
+  })
 }
 
-function unhideCol() {
+async function unhideCol() {
   if (props.readOnly) return
   saveUndoState()
-  const sheet = getActiveSheet()
-  if (!sheet) return
-  const { c1, c2 } = selectionRange.value
-  for (let c = c1; c <= c2; c++) {
-    ;(sheet as any).setColumnHidden?.(c, false)
-  }
+  const context = getActiveSheetCommandContext()
+  if (!context) return
+  await executeSheetCommand(SetSpecificColsVisibleCommand.id, {
+    unitId: context.unitId,
+    subUnitId: context.subUnitId,
+    ranges: [context.colRange],
+  })
 }
 
 function autoFitRowHeight() {
@@ -2098,60 +2282,63 @@ function applyZoom() {
 
 
 // ===== Merge cells =====
-function handleMergeCells() {
+async function handleMergeCells() {
   if (props.readOnly) return
   const { r1, r2, c1, c2 } = selectionRange.value
   if (r1 === r2 && c1 === c2) return
-  const range = getSelectionRange()
-  if (!range) return
   saveUndoState()
-  range.merge()
+  await executeSheetCommand(AddWorksheetMergeAllCommand.id)
 }
 
 
-function handleUnmergeCells() {
+async function handleUnmergeCells() {
   if (props.readOnly) return
-  const range = getSelectionRange()
-  if (!range) return
   saveUndoState()
-  range.breakApart()
+  await executeSheetCommand(RemoveWorksheetMergeCommand.id)
 }
 
 // ===== View operations =====
 function toggleGridlines() { showGridlines.value = !showGridlines.value }
-function toggleFreezeRow() {
+async function toggleFreezeRow() {
+  const target = univerAPI?.getActiveSheet?.()
+  const worksheet = target?.worksheet
+  if (!worksheet) return
   frozenRows.value = frozenRows.value > 0 ? 0 : 1
   syncDimensionStateToActiveSheet()
-  const sheet = getActiveSheet()
-  if (sheet) {
-    sheet.setFrozenRows(frozenRows.value)
+  if (frozenRows.value === 0 && frozenCols.value === 0) {
+    worksheet.cancelFreeze()
+    return
   }
+  worksheet.setFreeze({
+    startRow: frozenRows.value,
+    startColumn: frozenCols.value,
+    ySplit: frozenRows.value,
+    xSplit: frozenCols.value,
+  })
 }
-function toggleFreezeCol() {
+async function toggleFreezeCol() {
+  const target = univerAPI?.getActiveSheet?.()
+  const worksheet = target?.worksheet
+  if (!worksheet) return
   frozenCols.value = frozenCols.value > 0 ? 0 : 1
   syncDimensionStateToActiveSheet()
-  const sheet = getActiveSheet()
-  if (sheet) {
-    sheet.setFrozenColumns(frozenCols.value)
+  if (frozenRows.value === 0 && frozenCols.value === 0) {
+    worksheet.cancelFreeze()
+    return
   }
+  worksheet.setFreeze({
+    startRow: frozenRows.value,
+    startColumn: frozenCols.value,
+    ySplit: frozenRows.value,
+    xSplit: frozenCols.value,
+  })
 }
 
 // ===== Sort =====
 function sortColumn(order: 'asc' | 'desc') {
   if (props.readOnly) return
   saveUndoState()
-  const sheet = getActiveSheet()
-  if (!sheet) return
-  const col = selected.col
-  const rowCount = (sheet as any).getRowCount?.() ?? activeSheet.value?.rowCount ?? 50
-  const range = sheet.getRange(0, col, rowCount, 1)
-  if (range) {
-    if (order === 'asc') {
-      ;(range as any).sort(col + 1, true)
-    } else {
-      ;(range as any).sort(col + 1, false)
-    }
-  }
+  void openUniverSort(order)
 }
 
 // ===== Remove Duplicates =====
@@ -2224,8 +2411,25 @@ function applyColWidth() {
 // ===== 协同功能 =====
 let collabPlugin: ExcelCollaborationPlugin | null = null
 const collabConnectionState = ref<string>('disconnected')
+const collabSyncState = ref<string>('syncing')
 const collabOnlineUsers = ref<UserInfo[]>([])
 const collabOffFns: Array<() => void> = []
+let collabBeforeUnloadHandler: (() => void) | null = null
+
+function setCollabConnectionState(state: ConnectionState | string) {
+  collabConnectionState.value = state
+  emit('collabConnectionChange', { state })
+}
+
+function setCollabSyncState(state: SyncState | string) {
+  collabSyncState.value = state
+  emit('collabSyncStateChange', { state })
+}
+
+function setCollabOnlineUsers(users: UserInfo[]) {
+  collabOnlineUsers.value = users
+  emit('collabUsersChange', users)
+}
 
 async function initCollaboration() {
   if (!props.collaboration || collabPlugin) return
@@ -2241,17 +2445,22 @@ async function initCollaboration() {
   })
 
   collabPlugin.install(univerAPI)
-  collabConnectionState.value = collabPlugin.getConnectionState()
+  setCollabConnectionState(collabPlugin.getConnectionState())
+  setCollabSyncState(collabPlugin.getSyncState())
+  setCollabOnlineUsers([props.collaboration.user])
 
   collabOffFns.push(
     collabPlugin.on('connectionChange', (state) => {
-      collabConnectionState.value = state
+      setCollabConnectionState(state)
+    }),
+    collabPlugin.on('syncStateChange', (state) => {
+      setCollabSyncState(state)
     }),
     collabPlugin.on('usersChange', (users) => {
-      collabOnlineUsers.value = users
+      setCollabOnlineUsers(users)
     }),
     collabPlugin.on('error', (err) => {
-      console.error('[ExcelCollab] Error:', err)
+      emit('collabError', err)
     })
   )
 
@@ -2263,60 +2472,71 @@ async function initCollaboration() {
     collabPlugin!.initializeSelections(editorEl)
   })
 
-  window.addEventListener('beforeunload', () => {
+  collabBeforeUnloadHandler = () => {
     collabPlugin?.disconnect()
-  })
+  }
+  window.addEventListener('beforeunload', collabBeforeUnloadHandler)
 }
 
 function destroyCollaboration() {
   collabOffFns.forEach(fn => fn())
   collabOffFns.length = 0
+  if (collabBeforeUnloadHandler) {
+    window.removeEventListener('beforeunload', collabBeforeUnloadHandler)
+    collabBeforeUnloadHandler = null
+  }
   if (collabPlugin) {
     collabPlugin.disconnect()
     collabPlugin.uninstall()
     collabPlugin = null
   }
-  collabConnectionState.value = 'disconnected'
-  collabOnlineUsers.value = []
+  setCollabConnectionState(ConnectionState.DISCONNECTED)
+  setCollabSyncState(SyncState.SYNCING)
+  setCollabOnlineUsers([])
 }
+
+watch(
+  () => {
+    const collab = props.collaboration
+    if (!collab) return ''
+    return JSON.stringify({
+      serverUrl: collab.serverUrl,
+      docId: collab.docId,
+      token: collab.token,
+      userId: collab.user?.userId,
+      userName: collab.user?.userName,
+      color: collab.user?.color,
+    })
+  },
+  async (next, prev) => {
+    if (next === prev) return
+    if (!univerAPI) return
+    destroyCollaboration()
+    if (next) {
+      await nextTick()
+      await initCollaboration()
+    }
+  }
+)
 
 
 
 onMounted(async () => {
 
-
-  if (!props.initialContent && props.documentUrl) {
+  if (hasUsableWorkbookContent(props.initialContent)) {
+    console.log('[ExcelEditor] 文档加载方式: JSON 加载', props.initialContent)
+  } else if (props.documentUrl) {
+    console.log('[ExcelEditor] 文档加载方式: 远程文件加载', props.documentUrl)
     try {
-      const resp = await fetch(props.documentUrl)
-      if (!resp.ok) throw new Error(`请求失败: ${resp.status}`)
-      const buffer = await resp.arrayBuffer()
-      const file = new File([buffer], 'import.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-      const importedWorkbook = await readExcelFileToWorkbook(file, {
-        defaultSheetName: index => t('sheet.defaultSheetName', { index: index + 1 }),
-      })
-      workbook.version = importedWorkbook.version
-      workbook.resources = importedWorkbook.resources
-      workbook.sheets = importedWorkbook.sheets
-      resetFilterState()
-      activeSheetIndex.value = 0
-      selected.row = 0
-      selected.col = 0
-      selectionEnd.row = 0
-      selectionEnd.col = 0
-      syncDimensionStateFromActiveSheet()
-      loadFilterStateFromActiveSheet()
-      undoStack.value = []
-      redoStack.value = []
-      syncToolbarAndFormula()
-      emitChange()
+      await loadWorkbookFromDocumentUrl(props.documentUrl)
     } catch (e) {
       message.error(e instanceof Error ? e.message : t('message.importFailed'))
     }
+  } else {
+    console.log('[ExcelEditor] 文档加载方式: 空白文档')
   }
   await nextTick()
   scheduleUniverRender()
-  
-  await initCollaboration()
 })
 onUnmounted(() => {
 
@@ -2354,20 +2574,7 @@ async function handleImportExcelChange(e: Event) {
     const importedWorkbook = await readExcelFileToWorkbook(file, {
       defaultSheetName: index => t('sheet.defaultSheetName', { index: index + 1 }),
     })
-    workbook.version = importedWorkbook.version
-    workbook.resources = importedWorkbook.resources
-    workbook.sheets = importedWorkbook.sheets
-    resetFilterState()
-    activeSheetIndex.value = 0
-    selected.row = 0
-    selected.col = 0
-    selectionEnd.row = 0
-    selectionEnd.col = 0
-    syncDimensionStateFromActiveSheet()
-    loadFilterStateFromActiveSheet()
-    undoStack.value = []
-    redoStack.value = []
-    syncToolbarAndFormula()
+    applyWorkbookState(importedWorkbook)
     emitChange()
     message.success(t('message.importSuccess', { name: file.name }))
   } catch (error) {
@@ -2452,7 +2659,7 @@ async function handleCreateNewWorkbook() {
 }
 
 // ===== 字号增减 =====
-function changeFontSize(delta: number) {
+async function changeFontSize(delta: number) {
   if (props.readOnly) return
   const numericSizes = sizeOptions.map(s => s.value).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b)
   const current = toolbarState.fontSize || 12
@@ -2464,58 +2671,72 @@ function changeFontSize(delta: number) {
     newIdx = idx <= 0 ? 0 : idx - 1
   }
   toolbarState.fontSize = numericSizes[newIdx]
-  const range = getSelectionRange()
-  if (!range) return
   saveUndoState()
-  range.setFontSize(numericSizes[newIdx])
+  await executeStyleCommand(SetFontSizeCommand.id, { value: numericSizes[newIdx] })
 }
 
 // ===== 快捷格式按钮 =====
-function quickFormat(fmt: 'currency' | 'percent') {
+async function quickFormat(fmt: 'currency' | 'percent') {
   if (props.readOnly) return
   toolbarState.numberFormat = fmt
-  const range = getSelectionRange()
-  if (!range) return
+  const context = getActiveSheetCommandContext()
+  if (!context) return
   saveUndoState()
-  if (fmt === 'currency') {
-    range.setNumberFormat('¥#,##0.00')
-  } else if (fmt === 'percent') {
-    range.setNumberFormat('0.00%')
+  const pattern = fmt === 'currency' ? '¥#,##0.00' : '0.00%'
+  const values = []
+  for (let row = context.range.startRow; row <= context.range.endRow; row++) {
+    for (let col = context.range.startColumn; col <= context.range.endColumn; col++) {
+      values.push({ row, col, pattern })
+    }
   }
+  await executeSheetCommand(SetNumfmtCommand.id, {
+    unitId: context.unitId,
+    subUnitId: context.subUnitId,
+    values,
+  })
 }
 
-function changeDecimal(delta: number) {
+async function changeDecimal(delta: number) {
   if (props.readOnly) return
   toolbarState.decimalPlaces = Math.max(0, Math.min(10, (toolbarState.decimalPlaces ?? 2) + delta))
-  const range = getSelectionRange()
-  if (!range) return
+  const context = getActiveSheetCommandContext()
+  if (!context) return
   saveUndoState()
   const fmt = toolbarState.numberFormat || 'auto'
+  let pattern = ''
   if (fmt === 'currency') {
-    range.setNumberFormat(`¥#,##0.${'#'.repeat(toolbarState.decimalPlaces)}`)
+    pattern = `¥#,##0.${'#'.repeat(toolbarState.decimalPlaces)}`
   } else if (fmt === 'percent') {
-    range.setNumberFormat(`0.${'#'.repeat(toolbarState.decimalPlaces)}%`)
+    pattern = `0.${'#'.repeat(toolbarState.decimalPlaces)}%`
   }
+  if (!pattern) return
+  const values = []
+  for (let row = context.range.startRow; row <= context.range.endRow; row++) {
+    for (let col = context.range.startColumn; col <= context.range.endColumn; col++) {
+      values.push({ row, col, pattern })
+    }
+  }
+  await executeSheetCommand(SetNumfmtCommand.id, {
+    unitId: context.unitId,
+    subUnitId: context.subUnitId,
+    values,
+  })
 }
 
 // ===== 垂直对齐 =====
-function setVerticalAlign(va: VerticalAlign) {
+async function setVerticalAlign(va: VerticalAlign) {
   if (props.readOnly) return
   toolbarState.verticalAlign = va
-  const range = getSelectionRange()
-  if (!range) return
   saveUndoState()
-  range.setVerticalAlignment(va === 'top' ? 'top' : va === 'middle' ? 'middle' : 'bottom')
+  await executeStyleCommand(SetVerticalTextAlignCommand.id, { value: va })
 }
 
 // ===== 文字旋转 =====
-function setRotation(deg: number) {
+async function setRotation(deg: number) {
   if (props.readOnly) return
   toolbarState.rotation = deg
-  const range = getSelectionRange()
-  if (!range) return
   saveUndoState()
-  range.setTextRotation(deg)
+  await executeStyleCommand(SetTextRotationCommand.id, { value: deg })
 }
 
 // ===== 筛选 =====
@@ -2628,6 +2849,7 @@ function insertImage() {
       if (!range) return
       saveUndoState()
       range.setValue(`[image:${file.name}]`)
+      commitUniverFacadeMutation()
     }
     reader.readAsDataURL(file)
   }
@@ -2643,6 +2865,7 @@ function insertFunction(fn: string) {
   range.setFormula(`${fn}()`)
   formulaValue.value = `=${fn}()`
   syncToolbarAndFormula()
+  commitUniverFacadeMutation()
 }
 
 // ===== Emit =====
@@ -2651,15 +2874,17 @@ function emitChange(source: 'internal' | 'univer' = 'internal') {
     scheduleUniverRender()
   }
   headerLastSaveTime.value = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-  emit('change', {
-    format: 'sheet',
+  const payload = {
+    format: 'excel',
     engine: 'univer',
     version: workbook.version,
     data: {
       resources: workbook.resources,
       sheets: workbook.sheets
     }
-  })
+  }
+  console.log('[ExcelEditor] 保存后的JSON:', payload)
+  emit('change', payload)
 }
 </script>
 

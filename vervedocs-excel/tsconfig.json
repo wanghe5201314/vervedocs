@@ -19,7 +19,8 @@
     "noFallthroughCasesInSwitch": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.tsbuildinfo",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@vervedoc/docx-editor-collaboration": ["../vervedocs-libs/docx-editor-collaboration/dist/index.d.ts"]
     },
     "baseUrl": "."
   },

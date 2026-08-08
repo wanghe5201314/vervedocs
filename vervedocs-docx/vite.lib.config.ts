@@ -83,6 +83,8 @@ export default defineConfig({
         'plyr',
         'prismjs',
         /^prismjs\//,
+        '@vervedoc/docx-editor-collaboration',
+        /^@vervedoc\/docx-editor-collaboration\//,
         /^@vervedoc\/docx-editor/,
         /^@vervedoc\/core/,
       ],

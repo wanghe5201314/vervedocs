@@ -809,9 +809,6 @@ const executeCommand = (command: string, ...args: any[]) => {
       }])
     },
 
-    insertShape: (type: string) => {
-      editorInstance.command.execute('insertShape', type)
-    },
 
     // 页眉页脚
     header: () => {

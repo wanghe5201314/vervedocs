@@ -1,5 +1,6 @@
 import type { BorderStyle } from 'exceljs'
 import type { ICellMeta, ICellStyle, IWorkbook } from '../types'
+import { createExcelJsWorkbook } from './exceljs-loader'
 
 type ExportI18nOptions = {
   defaultSheetName?: (index: number) => string
@@ -141,8 +142,7 @@ function writeCellValue(cell: any, value: string, meta?: ICellMeta) {
 }
 
 export async function writeWorkbookToExcelBuffer(data: IWorkbook, options?: ExportI18nOptions): Promise<ArrayBuffer> {
-  const { default: ExcelJS } = await import('exceljs')
-  const workbook = new ExcelJS.Workbook()
+  const workbook = await createExcelJsWorkbook()
   const sheets = Array.isArray(data?.sheets) ? data.sheets : []
   sheets.forEach((sheet, index) => {
     const worksheet = workbook.addWorksheet(sheet?.name || `工作表${index + 1}`)

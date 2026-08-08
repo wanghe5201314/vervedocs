@@ -221,17 +221,7 @@
           <a-menu-item key="video"><span class="mi"><MdiIcon name="video-outline" /><span>视频</span></span></a-menu-item>
         </a-sub-menu>
         <a-menu-item key="insertChart"><span class="mi"><MdiIcon name="chart-bar" /><span>图表</span></span></a-menu-item>
-        <a-sub-menu key="shapes" popupClassName="gdocs-menu-popper gdocs-shapes-popper">
-          <template #title><span class="mi"><MdiIcon name="shape-outline" /><span>形状</span></span></template>
-          <a-sub-menu v-for="cat in shapeCategories" :key="'shapes-' + cat.name" popupClassName="gdocs-menu-popper gdocs-third-popper">
-            <template #title><span class="mi"><MdiIcon :name="cat.icon" /><span>{{ cat.name }}</span></span></template>
-            <div class="shapes-grid">
-              <div v-for="shape in cat.shapes" :key="shape.type" class="shape-item" @click="emit('shape', shape.type)" :title="shape.name">
-                <MdiIcon :name="shape.icon" />
-              </div>
-            </div>
-          </a-sub-menu>
-        </a-sub-menu>
+
         <a-menu-divider />
         <a-menu-item key="hyperlink"><span class="mi"><MdiIcon name="link-variant" /><span>超链接</span></span></a-menu-item>
         <a-menu-item key="bookmark"><span class="mi"><MdiIcon name="bookmark-outline" /><span>书签</span></span></a-menu-item>
@@ -249,17 +239,7 @@
             </a-menu-item>
           </a-sub-menu>
         </a-sub-menu>
-        <a-sub-menu key="symbol" popupClassName="gdocs-menu-popper gdocs-symbol-popper">
-          <template #title><span class="mi"><MdiIcon name="omega" /><span>符号</span></span></template>
-          <a-card size="small" title="插入符号" :bordered="true" class="symbol-categories">
-            <div v-for="category in symbolCategories" :key="category.name" class="symbol-category">
-              <div class="symbol-section-title">{{ category.name }}</div>
-              <div class="symbol-grid">
-                <div class="symbol-item" v-for="s in category.symbols" :key="s" @click="emit('symbol', s)">{{ s }}</div>
-              </div>
-            </div>
-          </a-card>
-        </a-sub-menu>
+
         <a-sub-menu key="separator" popupClassName="gdocs-menu-popper gdocs-separator-popper">
           <template #title><span class="mi"><MdiIcon name="minus" /><span>分割线</span></span></template>
           <a-card size="small" title="分割线类型" :bordered="true" class="separator-card">
@@ -514,7 +494,7 @@ import { computed, ref, toRefs } from 'vue'
 import MdiIcon from '@/components/common/MdiIcon.vue'
 import {
   marginPresets, paperSizes, bgColorPalette, watermarkPresets,
-  symbolCategories, separatorStyles, formulaCategories, zoomLevels, shapeCategories
+  separatorStyles, formulaCategories, zoomLevels
 } from './index'
 
 const hoverCell = ref({ r: -1, c: -1 })
@@ -527,7 +507,6 @@ const emit = defineEmits<{
   (e: 'preview'): void
   (e: 'download', format: string): void
   (e: 'formula', latex: string): void
-  (e: 'symbol', s: string): void
   (e: 'separator', d: { type: string; width: number; dashArray: number[] }): void
   (e: 'watermark', p: any): void
   (e: 'layout', cmd: string): void
@@ -536,7 +515,6 @@ const emit = defineEmits<{
   (e: 'margin', p: any): void
   (e: 'paperSize', s: any): void
   (e: 'bgColor', c: string): void
-  (e: 'shape', type: string): void
   (e: 'insertTable', rows: number, cols: number): void
 }>()
 

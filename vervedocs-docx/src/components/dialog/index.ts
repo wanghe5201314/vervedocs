@@ -17,7 +17,7 @@ export { default as LaTeXDialog } from './insert/LaTeXDialog.vue'
 export { default as BarcodeDialog } from './insert/BarcodeDialog.vue'
 export { default as QrcodeDialog } from './insert/QrcodeDialog.vue'
 export { default as SignatureDialog } from './insert/SignatureDialog.vue'
-export { default as CustomSymbolDialog } from './insert/CustomSymbolDialog.vue'
+
 
 export { default as WatermarkDialog } from './page/WatermarkDialog.vue'
 export { default as PaperSizeDialog } from './page/PaperSizeDialog.vue'

@@ -22,7 +22,7 @@
       @preview="handlePreview"
       @download="handleDownload"
       @formula="handleInsertFormula"
-      @symbol="handleInsertSymbol"
+
       @separator="handleSeparator"
       @watermark="handleWatermarkPreset"
       @layout="doLayoutCmd"
@@ -31,7 +31,7 @@
       @margin="handleMarginPreset"
       @paper-size="handlePaperSize"
       @bg-color="handleBgColor"
-      @shape="handleInsertShape"
+
       @insert-table="handleInsertTable"
     />
     <!-- 紧凑双行工具栏 -->
@@ -63,7 +63,7 @@
       @line-height="handleLineHeight"
       @bullet="handleBullet"
       @number="handleNumber"
-      @custom-bullet="emit('command', 'customBullet')"
+
       @title="handleTitle"
       @insert-table="handleInsertTable"
     />
@@ -317,10 +317,8 @@ const handleMarginPreset = (p: any) => emit('command', 'setPaperMargin', p.margi
 const handlePaperSize = (s: any) => { currentPaperSizeName.value = s.name; emit('command', 'paperSize', s.width, s.height) }
 const handleBgColor = (c: string) => { selectedBgColor.value = c; emit('command', 'setPaperBackground', c) }
 const handleWatermarkPreset = (p: any) => emit('command', 'addWatermark', p.options)
-const handleInsertSymbol = (s: string) => emit('command', 'insertElement', { value: s })
 const handleSeparator = (d: { type: string; width: number; dashArray: number[] }) => emit('command', 'separator', d)
 const handleInsertFormula = (l: string) => emit('command', 'insertLatex', l)
-const handleInsertShape = (type: string) => emit('command', 'insertShape', type)
 
 // 布局命令
 const doLayoutCmd = (cmd: string) => {

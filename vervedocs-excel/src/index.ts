@@ -44,3 +44,4 @@ export { createExcelI18n, registerLangMap, zhCN, enUS } from './i18n'
 // Types
 export type { Align, VerticalAlign, WrapMode, ICellStyle, IUiSheet, IWorkbook, UndoEntry } from './types'
 export type { ExcelLocale, ExcelI18nMessages } from './i18n'
+export type { ExcelCollaborationConfig, UserInfo } from '@vervedoc/docx-editor-collaboration'

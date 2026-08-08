@@ -92,6 +92,7 @@ const offFns: Array<() => void> = []
 const buildChangePayload = (payload: any) => {
   const meta = externalApi.document?.getMeta?.()
   return {
+    format: 'docx',
     content: payload,
     meta: meta || null,
     raw: payload

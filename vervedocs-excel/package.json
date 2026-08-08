@@ -1,6 +1,6 @@
 {
   "name": "@vervedoc/excel",
-  "version": "1.0.4",
+  "version": "1.0.7",
   "description": "VerveDoc Excel 编辑器UI组件",
   "type": "module",
   "main": "./dist/excel-editor-ui.js",
@@ -31,36 +31,6 @@
   },
   "peerDependencies": {
     "@mdi/js": "^7.4.0",
-    "ant-design-vue": "^4.2.0",
-    "vue": "^3.5.0"
-  },
-  "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@mdi/js": "^7.4.47",
-    "@types/node": "^25.3.3",
-    "@vitejs/plugin-vue": "^6.0.7",
-    "ant-design-vue": "^4.2.6",
-    "eslint": "^10.4.0",
-    "eslint-plugin-unused-imports": "^4.4.1",
-    "typescript": "~5.6.2",
-    "typescript-eslint": "^8.59.4",
-    "vite": "^6.4.3",
-    "vite-plugin-css-injected-by-js": "^2.4.0",
-    "vite-plugin-dts": "^4.0.0",
-    "vue": "^3.5.12",
-    "vue-eslint-parser": "^10.4.0",
-    "vue-tsc": "^2.1.8"
-  },
-  "keywords": [
-    "vervedoc-excel",
-    "excel",
-    "spreadsheet",
-    "vue",
-    "editor"
-  ],
-  "author": "wanghe1995",
-  "license": "MIT",
-  "dependencies": {
     "@univerjs/core": "^0.25.1",
     "@univerjs/design": "^0.25.1",
     "@univerjs/docs": "^0.25.1",
@@ -99,10 +69,36 @@
     "@univerjs/thread-comment": "^0.25.1",
     "@univerjs/thread-comment-ui": "^0.25.1",
     "@univerjs/ui": "^0.25.1",
-    "@vervedoc/docx-editor-collaboration": "file:../vervedocs-libs/docx-editor-collaboration",
-    "exceljs": "^4.4.0",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "rxjs": "^7.8.2"
-  }
+    "@vervedoc/docx-editor-collaboration": "^1.0.3",
+    "ant-design-vue": "^4.2.0",
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@mdi/js": "^7.4.47",
+    "@types/node": "^25.3.3",
+    "@vitejs/plugin-vue": "^6.0.7",
+    "ant-design-vue": "^4.2.6",
+    "eslint": "^10.4.0",
+    "eslint-plugin-unused-imports": "^4.4.1",
+    "typescript": "~5.6.2",
+    "typescript-eslint": "^8.59.4",
+    "vite": "^6.4.3",
+    "vite-plugin-css-injected-by-js": "^2.4.0",
+    "vite-plugin-dts": "^4.0.0",
+    "vue": "^3.5.12",
+    "vue-eslint-parser": "^10.4.0",
+    "vue-tsc": "^2.1.8",
+    "exceljs": "^4.4.0"
+  },
+  "keywords": [
+    "vervedoc-excel",
+    "excel",
+    "spreadsheet",
+    "vue",
+    "editor"
+  ],
+  "author": "wanghe1995",
+  "license": "MIT"
 }
+

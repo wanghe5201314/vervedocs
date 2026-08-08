@@ -399,7 +399,7 @@ watch(
     headerLastSaveTime.value = new Date().toLocaleTimeString(formatTimeLocale.value, { hour: '2-digit', minute: '2-digit' })
     const pptData = getCurrentPptData()
     emit('change', {
-      format: 'slide',
+      format: 'pptx',
       data: pptData
     })
   },

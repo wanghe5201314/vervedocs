@@ -648,9 +648,7 @@ ul {
 .gdocs-margin-popper .ant-menu,
 .gdocs-bg-popper .ant-menu,
 .gdocs-table-popper .ant-menu,
-.gdocs-shapes-popper .ant-menu,
 .gdocs-formula-popper .ant-menu,
-.gdocs-symbol-popper .ant-menu,
 .gdocs-separator-popper .ant-menu,
 .gdocs-watermark-popper .ant-menu {
   display: block !important;
@@ -736,17 +734,6 @@ ul {
 .wm-preset-item:hover .wm-preset-preview { border-color: #1890ff; background-color: #f0f7ff; }
 .wm-preset-name { font-size: 11px; color: #606266; text-align: center; }
 
-/* 符号 */
-.symbol-categories { border-radius: 8px; }
-.symbol-categories .ant-card-head { border-bottom: 1px solid #e0e0e0; }
-.symbol-categories .ant-card-head-title { font-size: 14px; font-weight: 600; color: #202124; }
-.symbol-categories .ant-card-body { max-height: 400px; overflow-y: auto; }
-.symbol-category { margin-bottom: 12px; }
-.symbol-category:last-child { margin-bottom: 0; }
-.symbol-section-title { font-size: 12px; color: #909399; font-weight: 600; margin-bottom: 8px; }
-.symbol-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; }
-.symbol-item { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; border-radius: 2px; }
-.symbol-item:hover { background: #e8f0fe; color: #1a73e8; }
 
 /* 分割线（MenuBar & CompactToolbar） */
 .separator-card { border-radius: 8px; }
@@ -800,12 +787,6 @@ ul {
 .tgrid-cell.selected { background: #e8f0fe; border-color: #1a73e8; }
 .table-info { margin-top: 8px; font-size: 12px; color: #5f6368; text-align: center; }
 
-/* 形状网格（MenuBar） */
-.shapes-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 8px 12px; min-width: 240px; box-sizing: border-box; }
-.shape-item { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 1px solid #dadce0; border-radius: 4px; cursor: pointer; background: #fff; transition: all 0.15s; }
-.shape-item:hover { background: #e8f0fe; border-color: #1a73e8; color: #1a73e8; }
-.shape-item .material-icons { width: 20px; height: 20px; color: #5f6368; }
-.shape-item:hover .material-icons { color: #1a73e8; }
 
 /* ==================== CompactToolbar 弹出面板样式（全局） ==================== */
 
@@ -826,9 +807,7 @@ ul {
 .list-cell { border: 1px solid #dadce0; border-radius: 4px; width: 67px; background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 6px 4px; transition: background 0.15s, border-color 0.15s; }
 .list-cell:hover { background: #f1f3f4; border-color: #1a73e8; }
 .list-cell-none { height: 52.6px; font-size: 13px; color: #5f6368; }
-.list-custom-entry { margin-top: 8px; padding: 8px 0; border-top: 1px solid #e8eaed; text-align: center; cursor: pointer; border-radius: 4px; transition: background 0.15s; }
-.list-custom-entry:hover { background: #f1f3f4; }
-.custom-bullet-text { font-size: 13px; color: #1a73e8; }
+
 .list-preview { display: flex; flex-direction: column; gap: 3px; width: 100%; }
 .list-preview-row { display: flex; align-items: center; gap: 4px; }
 .list-symbol { font-size: 12px; line-height: 1; flex-shrink: 0; }
@@ -841,17 +820,6 @@ ul {
 /* Ant Design Popover 覆盖 - 工具栏卡片弹出层 */
 .compact-popover .ant-popover-inner { padding: 0; }
 
-/* 形状选择器（CompactToolbar） */
-.shapes-card .shape-section + .shape-section { margin-top: 12px; }
-.shapes-card { max-height: 380px; overflow: auto; }
-.shape-section-title { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; color: #202124; }
-.shape-section-title .material-icons { width: 16px; height: 16px; color: #5f6368; }
-.shape-section-name { font-size: 12px; font-weight: 500; }
-.shape-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; }
-.shape-cell { width: 34px; height: 34px; border: 1px solid #dadce0; border-radius: 8px; background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #5f6368; transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.05s; }
-.shape-cell .material-icons { width: 18px; height: 18px; }
-.shape-cell:hover { background: #f1f3f4; border-color: #1a73e8; color: #1a73e8; }
-.shape-cell:active { transform: translateY(1px); }
 
 /* 分割线变体样式（CompactToolbar / 通用） */
 .separator-preview.dotted { background: transparent; }

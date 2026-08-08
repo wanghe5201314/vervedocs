@@ -1,4 +1,5 @@
 import type { Align, ICellMeta, ICellStyle, IUiSheet, IWorkbook, VerticalAlign } from '../types'
+import { createExcelJsWorkbook } from './exceljs-loader'
 
 type ImportI18nOptions = {
   defaultSheetName?: (index: number) => string
@@ -304,8 +305,7 @@ function toUiSheet(worksheet: any, index: number, options?: ImportI18nOptions): 
 }
 
 export async function readExcelFileToWorkbook(file: File, options?: ImportI18nOptions): Promise<IWorkbook> {
-  const { default: ExcelJS } = await import('exceljs')
-  const workbook = new ExcelJS.Workbook()
+  const workbook = await createExcelJsWorkbook()
   const buffer = await file.arrayBuffer()
   await workbook.xlsx.load(buffer)
   const worksheetList = Array.isArray(workbook.worksheets) ? workbook.worksheets : []

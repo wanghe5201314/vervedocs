@@ -6,6 +6,7 @@ import '@/assets/iconfont/iconfont.css'
 import '@/assets/iconfont/iconfont.js'
 import type { ExcelLocale, ExcelI18nMessages } from '@/i18n'
 import type { SheetDocumentApi, AuthTokenProvider, SheetRequestConfig } from '@/api/sheet.api'
+import type { ExcelCollaborationConfig, UserInfo } from '@vervedoc/docx-editor-collaboration'
 import {
   setSheetDocumentApi,
   setAuthProvider as setSheetAuthProvider,
@@ -22,6 +23,7 @@ export interface Options {
   initialContent?: any
   documentUrl?: string
   documentName?: string
+  collaboration?: ExcelCollaborationConfig
   readOnly?: boolean
   locale?: ExcelLocale
   i18n?: Partial<ExcelI18nMessages>
@@ -33,6 +35,10 @@ export interface Options {
   onReady?: (payload: any) => void
   onChange?: (payload: any) => void
   onNewDocument?: (payload: { dbPayload: any; excelPayload: { fileName: string; mimeType: string; buffer: ArrayBuffer } }) => void
+  onCollabConnectionChange?: (payload: { state: string }) => void
+  onCollabSyncStateChange?: (payload: { state: string }) => void
+  onCollabUsersChange?: (payload: UserInfo[]) => void
+  onCollabError?: (payload: { code: string; message: string }) => void
 }
 
 const resolveTarget = (target: string | HTMLElement): HTMLElement => {
@@ -45,6 +51,32 @@ const resolveTarget = (target: string | HTMLElement): HTMLElement => {
   return target
 }
 
+const normalizeCollaborationOptions = (
+  input?: ExcelCollaborationConfig,
+  fallbackDocId?: string,
+): ExcelCollaborationConfig | undefined => {
+  if (!input) return undefined
+
+  const source = input as Partial<ExcelCollaborationConfig>
+  const serverUrl = String(source.serverUrl || '').trim() || 'ws://127.0.0.1:1234'
+  const docId = String(source.docId || '').trim() || String(fallbackDocId || '').trim() || 'local'
+  const user = (source.user || {}) as Partial<UserInfo>
+  const userId = String(user.userId || '').trim() || `user-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const userName = String(user.userName || '').trim() || '当前用户'
+  const color = String(user.color || '').trim() || `hsl(${Math.floor(Math.random() * 360)}, 70%, 55%)`
+
+  return {
+    ...source,
+    serverUrl,
+    docId,
+    user: {
+      userId,
+      userName,
+      color,
+    },
+  } as ExcelCollaborationConfig
+}
+
 export class ExcelEditor {
   private app: any
   private editorRef: any = null
@@ -52,6 +84,7 @@ export class ExcelEditor {
     initialContent?: any
     documentUrl?: string
     documentName?: string
+    collaboration?: ExcelCollaborationConfig
     readOnly?: boolean
     locale?: ExcelLocale
     i18n?: Partial<ExcelI18nMessages>
@@ -79,6 +112,7 @@ export class ExcelEditor {
       initialContent: options.initialContent,
       documentUrl: options.documentUrl,
       documentName: options.documentName,
+      collaboration: normalizeCollaborationOptions(options.collaboration, options.documentName),
       readOnly: options.readOnly,
       locale: options.locale,
       i18n: options.i18n
@@ -90,12 +124,17 @@ export class ExcelEditor {
       initialContent: this.state.initialContent,
       documentUrl: this.state.documentUrl,
       documentName: this.state.documentName,
+      collaboration: this.state.collaboration,
       readOnly: this.state.readOnly,
       locale: this.state.locale,
       i18n: this.state.i18n,
       onReady: (payload: any) => this.options.onReady?.(payload),
       onChange: (payload: any) => this.options.onChange?.(payload),
-      onNewDocument: (payload: any) => this.options.onNewDocument?.(payload)
+      onNewDocument: (payload: any) => this.options.onNewDocument?.(payload),
+      onCollabConnectionChange: (payload: any) => this.options.onCollabConnectionChange?.(payload),
+      onCollabSyncStateChange: (payload: any) => this.options.onCollabSyncStateChange?.(payload),
+      onCollabUsersChange: (payload: any) => this.options.onCollabUsersChange?.(payload),
+      onCollabError: (payload: any) => this.options.onCollabError?.(payload)
     }))
     this.app = createApp(root)
     this.app.use(Antd, { locale: zhCN })
@@ -108,6 +147,10 @@ export class ExcelEditor {
 
   setDocumentName(documentName?: string) {
     this.state.documentName = documentName
+  }
+
+  setCollaboration(collaboration?: ExcelCollaborationConfig) {
+    this.state.collaboration = normalizeCollaborationOptions(collaboration, this.state.documentName)
   }
 
   setReadOnly(readOnly?: boolean) {

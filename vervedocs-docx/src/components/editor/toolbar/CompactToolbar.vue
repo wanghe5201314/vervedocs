@@ -96,9 +96,7 @@
                 </div>
               </button>
             </div>
-            <div class="list-custom-entry" @click="handleCustomBullet">
-              <span class="custom-bullet-text">自定义符号...</span>
-            </div>
+
           </div>
         </template>
       </a-popover>
@@ -145,47 +143,12 @@
       <button class="tb" @click="emit('cmd', 'video')" title="视频"><MdiIcon name="video-outline" /></button>
       <button class="tb" @click="emit('cmd', 'audio')" title="音频"><MdiIcon name="music-note" /></button>
       <button class="tb" @click="emit('cmd', 'insertChart')" title="图表"><MdiIcon name="chart-bar" /></button>
-      <a-popover placement="bottom" overlayClassName="compact-popover" :overlayStyle="{ width: '470px' }" trigger="click" v-model:open="shapesPopoverVisible">
-        <button class="tb" title="形状"><MdiIcon name="shape-outline" /><MdiIcon name="chevron-down" class="arrow" /></button>
-        <template #content>
-          <a-card size="small" title="插入形状" :bordered="true" class="shapes-card">
-            <div v-for="cat in shapeCategories" :key="cat.name" class="shape-section">
-              <div class="shape-section-title">
-                <MdiIcon :name="cat.icon" />
-                <span class="shape-section-name">{{ cat.name }}</span>
-              </div>
-              <div class="shape-grid">
-                <button
-                  v-for="shape in cat.shapes"
-                  :key="shape.type"
-                  class="shape-cell"
-                  :title="shape.name"
-                  @click="handleInsertShape(shape.type)"
-                >
-                  <MdiIcon :name="shape.icon" />
-                </button>
-              </div>
-            </div>
-          </a-card>
-        </template>
-      </a-popover>
+
       <a-divider type="vertical" />
       <button class="tb" @click="emit('cmd', 'hyperlink')" title="链接"><MdiIcon name="link-variant" /></button>
       <button class="tb" @click="emit('cmd', 'bookmark')" title="书签"><MdiIcon name="bookmark-outline" /></button>
       <button class="tb" @click="emit('cmd', 'latex')" title="公式"><MdiIcon name="function-variant" /></button>
-      <a-popover placement="bottom" overlayClassName="compact-popover" :overlayStyle="{ width: '520px' }" trigger="click" v-model:open="symbolPopoverVisible">
-        <button class="tb" title="符号"><MdiIcon name="omega" /><MdiIcon name="chevron-down" class="arrow" /></button>
-        <template #content>
-          <a-card size="small" title="插入符号" :bordered="true" class="symbol-categories">
-            <div v-for="category in symbolCategories" :key="category.name" class="symbol-category">
-              <div class="symbol-section-title">{{ category.name }}</div>
-              <div class="symbol-grid">
-                <div class="symbol-item" v-for="s in category.symbols" :key="s" @click="handleInsertSymbol(s)">{{ s }}</div>
-              </div>
-            </div>
-          </a-card>
-        </template>
-      </a-popover>
+
       <a-divider type="vertical" />
       <a-popover placement="bottom" overlayClassName="compact-popover" :overlayStyle="{ width: '220px' }" trigger="click" v-model:open="separatorPopoverVisible">
         <button class="tb" title="分割线"><MdiIcon name="minus" /><MdiIcon name="chevron-down" class="arrow" /></button>
@@ -255,7 +218,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { UI_FONT_OPTIONS, UI_SIZE_OPTIONS, sizeValueToLabel, sizeLabelToValue } from '@/config/ui-constants'
-import { colorPalette, bulletStyles, numberStyles, lineHeightOptions, shapeCategories, symbolCategories, separatorStyles } from './index'
+import { colorPalette, bulletStyles, numberStyles, lineHeightOptions, separatorStyles } from './index'
 import MdiIcon from '@/components/common/MdiIcon.vue'
 
 const INDENT_PX_PER_CHAR = 14
@@ -271,7 +234,7 @@ const emit = defineEmits<{
   (e: 'lineHeight', v: number): void
   (e: 'bullet', s: string | null): void
   (e: 'number', s: string | null): void
-  (e: 'customBullet'): void
+
   (e: 'title', v: string | null): void
   (e: 'insertTable', r: number, c: number): void
 }>()
@@ -306,8 +269,7 @@ const sizeList = UI_SIZE_OPTIONS
 const tablePopoverVisible = ref(false)
 const wordCountVisible = ref(false)
 const hoverCell = ref({ r: -1, c: -1 })
-const shapesPopoverVisible = ref(false)
-const symbolPopoverVisible = ref(false)
+
 const separatorPopoverVisible = ref(false)
 const bulletPopoverVisible = ref(false)
 const firstLineIndentOptions = [
@@ -327,20 +289,7 @@ const handleInsertTable = (r: number, c: number) => {
   setTimeout(() => emit('insertTable', r, c), 10)
 }
 
-const handleInsertShape = (type: string) => {
-  shapesPopoverVisible.value = false
-  setTimeout(() => emit('cmd', 'insertShape', type), 10)
-}
 
-const handleInsertSymbol = (value: string) => {
-  symbolPopoverVisible.value = false
-  setTimeout(() => emit('cmd', 'insertElement', { value }), 10)
-}
-
-const handleCustomBullet = () => {
-  bulletPopoverVisible.value = false
-  emit('customBullet')
-}
 
 const handleInsertSeparator = (sep: any) => {
   separatorPopoverVisible.value = false

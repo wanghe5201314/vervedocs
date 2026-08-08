@@ -99,7 +99,7 @@
     <PageNumberDialog v-model="pageNumberDialogVisible" @confirm="handlePageNumberConfirm" />
     <DateDialog v-model="dateDialogVisible" @confirm="handleDateConfirm" />
     <ParagraphDialog v-model="paragraphDialogVisible" :editor="{ executeCommand }" />
-    <CustomSymbolDialog v-model="customSymbolDialogVisible" @confirm="handleCustomSymbolConfirm" />
+
     <TocDialog v-model="tocDialogVisible" @confirm="handleTocConfirm" />
     <AISettingsDialog v-model="aiSettingsDialogVisible" />
     <VersionHistoryDialog
@@ -119,7 +119,7 @@ import { emitExternalEvent, externalApi } from '@/composables/use-external-api'
 import { executeAIRequest } from '@/composables/use-ai'
 import { aiStateStore } from '@/stores/ai-state'
 import { AIAction } from '@vervedoc/docx-editor-ai'
-import { ShortcutsDialog, ProtectDialog, HyperlinkDialog, BookmarkDialog, InsertTableDialog, ChartDialog, LaTeXDialog, BarcodeDialog, QrcodeDialog, SignatureDialog, WatermarkDialog, PaperSizeDialog, PageNumberDialog, DateDialog, ParagraphDialog, TocDialog, TableBordersDialog, AISettingsDialog, VersionHistoryDialog, CustomSymbolDialog } from '@/components/dialog'
+import { ShortcutsDialog, ProtectDialog, HyperlinkDialog, BookmarkDialog, InsertTableDialog, ChartDialog, LaTeXDialog, BarcodeDialog, QrcodeDialog, SignatureDialog, WatermarkDialog, PaperSizeDialog, PageNumberDialog, DateDialog, ParagraphDialog, TocDialog, TableBordersDialog, AISettingsDialog, VersionHistoryDialog } from '@/components/dialog'
 
 import Menu from '@/components/layout/Menu.vue'
 import LeftDockBar from '@/components/layout/LeftDockBar.vue'
@@ -222,7 +222,7 @@ const paperSizeDialogVisible = ref(false)
 const pageNumberDialogVisible = ref(false)
 const dateDialogVisible = ref(false)
 const paragraphDialogVisible = ref(false)
-const customSymbolDialogVisible = ref(false)
+
 const tocDialogVisible = ref(false)
 const aiSettingsDialogVisible = ref(false)
 const versionHistoryDialogVisible = ref(false)
@@ -672,10 +672,6 @@ const handleTocConfirm = (data: any) => {
   executeCommand('tocInsert', { mode: 'custom', ...data })
 }
 
-const handleCustomSymbolConfirm = (symbol: string, font: string) => {
-  executeCommand('list', 'ul', 'custom')
-  executeCommand('insertElement', { value: symbol, fontFamily: font })
-}
 
 const handleInsertChartConfirm = (payload: any) => {
   const p = payload && typeof payload === 'object' ? payload : {}
@@ -1419,10 +1415,7 @@ const handleCommand = (command: string, ...args: any[]) => {
     paragraphDialogVisible.value = true
     return
   }
-  if (command === 'customBullet') {
-    customSymbolDialogVisible.value = true
-    return
-  }
+
   if (command === 'tocInsert') {
     const p = args[0] ?? {}
     executeCommand('tocInsert', p)
@@ -1449,10 +1442,7 @@ const handleCommand = (command: string, ...args: any[]) => {
     }
     return
   }
-  if (command === 'insertShape') {
-    executeCommand('insertShape', args[0])
-    return
-  }
+
   if (command === 'separatorDialog') {
     message.info('分割线颜色暂未接入')
     return

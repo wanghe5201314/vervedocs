@@ -1,5 +1,5 @@
-import zhCN from './zhCN'
-import enUS from './enUS'
+import zhCN from './zh-cn'
+import enUS from './en-us'
 import type { ExcelI18nMessages, ExcelLocale } from './types'
 
 const messages: Record<ExcelLocale, ExcelI18nMessages> = {

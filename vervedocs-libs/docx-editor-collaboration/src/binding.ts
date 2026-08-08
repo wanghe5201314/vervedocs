@@ -14,28 +14,8 @@ import type {
   CollaborationComment,
   CommentComponentBridge,
   EditorInterface,
-} from '../types'
-
-function subscribeEventBus(
-  eventBus: EditorInterface['eventBus'],
-  event: string,
-  handler: (...args: unknown[]) => void
-): { unsubscribe: () => void } {
-  if (typeof (eventBus as any).select === 'function') {
-    return (eventBus as any).select(event).subscribe(handler)
-  }
-  if (typeof (eventBus as any).on === 'function') {
-    ;(eventBus as any).on(event, handler)
-    return {
-      unsubscribe: () => {
-        if (typeof (eventBus as any).off === 'function') {
-          ;(eventBus as any).off(event, handler)
-        }
-      }
-    }
-  }
-  return { unsubscribe: () => {} }
-}
+} from './types'
+import { subscribeEventBus } from './event-bus'
 
 export class YjsBinding {
   private doc: Y.Doc
@@ -125,7 +105,7 @@ export class YjsBinding {
     try {
       const elements = this.yElements.toJSON() as Record<string, unknown>[]
       this.editor.command.executeSetValue({ main: elements as any }, { isSetCursor: false })
-      this.lastContentSnapshot = this.cloneSnapshot(elements)
+      this.lastContentSnapshot = this.cloneSerializable(elements)
       if (this.commentBridge && this.lastCommentsSnapshot.length > 0) {
         this.commentBridge.render()
       }
@@ -178,7 +158,7 @@ export class YjsBinding {
       this.doc.transact(() => {
         this.applyPatchToYArray(this.yElements, operations, current)
       }, this) // origin = this 表示本地事务
-      this.lastContentSnapshot = this.cloneSnapshot(current)
+      this.lastContentSnapshot = this.cloneSerializable(current)
     } finally {
       this.isApplyingLocal = false
     }
@@ -313,9 +293,6 @@ export class YjsBinding {
     return null
   }
 
-  private cloneSnapshot(arr: Record<string, unknown>[]): Record<string, unknown>[] {
-    return JSON.parse(JSON.stringify(arr))
-  }
 
   private cloneSerializable<T>(value: T): T {
     return JSON.parse(JSON.stringify(value)) as T

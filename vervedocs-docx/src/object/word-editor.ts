@@ -1,10 +1,15 @@
-import { createApp, defineComponent, h, reactive } from 'vue'
+import { createApp, defineComponent, h, reactive, type App, type ComponentPublicInstance } from 'vue'
 import 'ant-design-vue/dist/reset.css'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
 import { ConfigProvider } from 'ant-design-vue'
 import '@/ui'
 import WordEditorComponent from '@/ui/WordEditor.vue'
 import type { CollaborationOptions, DocxEditorUiInitialDocument } from '@/ui'
+
+interface WordEditorComponentRef {
+  executeCommand?: (command: string, ...args: unknown[]) => unknown
+  api?: unknown
+}
 
 export interface Options {
   container: string | HTMLElement
@@ -27,8 +32,8 @@ const resolveTarget = (target: string | HTMLElement): HTMLElement => {
 }
 
 export class WordEditor {
-  private app: any
-  private editorRef: any = null
+  private app: App<Element> | null = null
+  private editorRef: ComponentPublicInstance & WordEditorComponentRef | null = null
   private state: {
     initialDocument?: DocxEditorUiInitialDocument
     collaboration?: CollaborationOptions

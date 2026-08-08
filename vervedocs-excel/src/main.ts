@@ -1,4 +1,4 @@
-import { ExcelEditor } from './object/ExcelEditor'
+import { ExcelEditor } from './object/excel-editor'
 
 const applyExcelTheme = () => {
   const root = document.documentElement
@@ -8,7 +8,19 @@ const applyExcelTheme = () => {
 
 applyExcelTheme()
 
+const params = new URLSearchParams(window.location.search)
+const userName = params.get('user') || `用户${Math.floor(Math.random() * 1000)}`
+const userId = `local-${userName}-${Math.random().toString(36).slice(2, 8)}`
+
+const COLORS = ['#958DF1', '#F98181', '#FBBC88', '#FAF594', '#70CFF8', '#94FADB', '#B9F18D', '#E8A0BF']
+const color = COLORS[Math.floor(Math.random() * COLORS.length)]
+
 new ExcelEditor({
   container: '#app',
-  documentName: '新建文档'
+  documentName: '协同测试',
+  collaboration: {
+    serverUrl: 'ws://127.0.0.1:1234',
+    docId: 'test-excel-collab',
+    user: { userId, userName, color },
+  },
 })

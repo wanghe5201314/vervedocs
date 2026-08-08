@@ -38,12 +38,9 @@
 
 <script setup lang="ts">
 import { CheckCircleOutlined, CloudOutlined, EyeOutlined } from '@ant-design/icons-vue'
+import { getAvatarText } from '@/utils'
+import type { CollabUser } from '@/types/collab'
 
-interface CollabUser {
-  userId: string
-  userName: string
-  color: string
-}
 
 withDefaults(defineProps<{
   title: string
@@ -56,14 +53,6 @@ withDefaults(defineProps<{
   onlineUsers: () => []
 })
 
-const getAvatarText = (name: string) => {
-  const s = String(name || '').trim()
-  if (!s) return '?'
-  if (/[\u4e00-\u9fa5]/.test(s)) return s.slice(-2)
-  const parts = s.split(/[\s_-]+/).filter(Boolean)
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
-  return s.slice(0, 2).toUpperCase()
-}
 </script>
 
 <style scoped>

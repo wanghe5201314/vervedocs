@@ -248,14 +248,14 @@ defineExpose({
 }
 
 .catalog-tree {
-  background: transparent !important;
+  background: #f2f4f7 !important;
 }
 .catalog-tree :deep(.ant-tree-treenode) {
-  background: transparent !important;
+  background: #f2f4f7 !important;
 }
 .catalog-tree :deep(.ant-tree-node-content-wrapper) {
   height: 32px;
-  background: transparent !important;
+  background: #f2f4f7 !important;
 }
 .catalog-tree :deep(.ant-tree-node-content-wrapper:hover) {
   background: #f0f2f5 !important;
@@ -415,5 +415,16 @@ defineExpose({
   margin-top: 8px;
   font-size: 12px;
   color: #595959;
+}
+</style>
+
+<style>
+.catalog-tree,
+.catalog-tree .ant-tree-list,
+.catalog-tree .ant-tree-list-holder,
+.catalog-tree .ant-tree-list-holder-inner,
+.catalog-tree .ant-tree-treenode,
+.catalog-tree .ant-tree-node-content-wrapper {
+  background: #f2f4f7 !important;
 }
 </style>

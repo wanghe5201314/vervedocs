@@ -24,17 +24,17 @@ export {
   CollaborationPlugin,
   type CollaborationPluginConfig,
   type PluginEvents,
-} from './plugin/CollaborationPlugin'
+} from './plugin'
 
 // ==================== 光标管理 ====================
 export {
   AwarenessCursorManager,
   type CursorRenderConfig,
   type PositionCalculator,
-} from './cursor/AwarenessCursorManager'
+} from './cursor-manager'
 
 // ==================== 绑定层 ====================
-export { YjsBinding } from './binding/YjsBinding'
+export { YjsBinding } from './binding'
 
 // ==================== Excel 协同 ====================
 export {
@@ -47,7 +47,7 @@ export {
   ExcelCollaborationPlugin,
   type ExcelCollaborationPluginConfig,
   type ExcelPluginEvents,
-} from './excel/ExcelCollaborationPlugin'
+} from './excel/plugin'
 
-export { UniverSyncBinding } from './excel/UniverSyncBinding'
-export { ExcelCursorManager } from './excel/ExcelCursorManager'
+export { UniverSyncBinding } from './excel/binding'
+export { ExcelCursorManager } from './excel/cursor-manager'

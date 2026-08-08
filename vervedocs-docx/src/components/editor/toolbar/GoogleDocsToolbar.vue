@@ -51,6 +51,7 @@
       :document-stats="documentStats"
       :in-canvas="inCanvas"
       :simple-mode="simpleToolbarMode"
+      :has-selection="hasSelection"
 
       @cmd="handleToolbarCmd"
       @zoom="handleZoom"

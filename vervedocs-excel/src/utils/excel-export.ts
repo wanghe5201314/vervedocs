@@ -1,10 +1,6 @@
 import type { BorderStyle } from 'exceljs'
-import type { ICellMeta, ICellStyle, IWorkbook } from '../types'
+import type { ICellMeta, ICellStyle, IWorkbook, SheetI18nOptions } from '../types'
 import { createExcelJsWorkbook } from './exceljs-loader'
-
-type ExportI18nOptions = {
-  defaultSheetName?: (index: number) => string
-}
 
 function parseCellKey(key: string): { row: number; col: number } | null {
   const [rowText, colText] = String(key || '').split(':')
@@ -141,7 +137,7 @@ function writeCellValue(cell: any, value: string, meta?: ICellMeta) {
   if (comment) cell.note = comment
 }
 
-export async function writeWorkbookToExcelBuffer(data: IWorkbook, options?: ExportI18nOptions): Promise<ArrayBuffer> {
+export async function writeWorkbookToExcelBuffer(data: IWorkbook, options?: SheetI18nOptions): Promise<ArrayBuffer> {
   const workbook = await createExcelJsWorkbook()
   const sheets = Array.isArray(data?.sheets) ? data.sheets : []
   sheets.forEach((sheet, index) => {

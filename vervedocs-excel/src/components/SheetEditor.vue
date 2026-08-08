@@ -94,6 +94,19 @@
               <span class="menu-item-meta"><span class="shortcut">Delete</span></span>
             </span>
           </a-menu-item>
+          <a-menu-divider />
+          <a-menu-item key="deleteRow" @click="deleteRow()">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="table-row-remove" />删除行</span>
+              <span class="menu-item-meta"></span>
+            </span>
+          </a-menu-item>
+          <a-menu-item key="deleteCol" @click="deleteCol()">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="table-column-remove" />删除列</span>
+              <span class="menu-item-meta"></span>
+            </span>
+          </a-menu-item>
         </a-sub-menu>
 
         <a-sub-menu key="view" popupClassName="sheet-menu-popper">
@@ -163,6 +176,7 @@
               <span class="menu-item-meta"><SheetIcon v-if="frozenCols > 0" name="check" class="menu-check" /></span>
             </span>
           </a-menu-item>
+
         </a-sub-menu>
 
 
@@ -195,21 +209,7 @@
           </a-menu-item>
         </a-sub-menu>
 
-        <a-sub-menu key="delete" popupClassName="sheet-menu-popper">
-          <template #title>删除</template>
-          <a-menu-item key="deleteRow" @click="deleteRow()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="table-row-remove" />删除行</span>
-              <span class="menu-item-meta"></span>
-            </span>
-          </a-menu-item>
-          <a-menu-item key="deleteCol" @click="deleteCol()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="table-column-remove" />删除列</span>
-              <span class="menu-item-meta"></span>
-            </span>
-          </a-menu-item>
-        </a-sub-menu>
+
 
 
         <a-sub-menu key="format" popupClassName="sheet-menu-popper">
@@ -410,6 +410,28 @@
           </a-menu-item>
         </a-sub-menu>
 
+
+        <a-sub-menu v-if="collabConnectionState === 'connected'" key="collab" popupClassName="sheet-menu-popper">
+          <template #title>协同</template>
+          <a-menu-item key="syncSelection" @click="toggleSyncSelection()">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="cursor-default" />显示他人选区</span>
+              <span class="menu-item-meta"><SheetIcon v-if="syncSelectionEnabled" name="check" class="menu-check" /></span>
+            </span>
+          </a-menu-item>
+          <a-menu-item key="syncFilter" @click="toggleSyncFilter()">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="filter-outline" />显示他人筛选</span>
+              <span class="menu-item-meta"><SheetIcon v-if="syncFilterEnabled" name="check" class="menu-check" /></span>
+            </span>
+          </a-menu-item>
+          <a-menu-item key="syncSort" @click="toggleSyncSort()">
+            <span class="menu-item-content">
+              <span class="menu-item-label"><SheetIcon name="sort-ascending" />显示他人排序</span>
+              <span class="menu-item-meta"><SheetIcon v-if="syncSortEnabled" name="check" class="menu-check" /></span>
+            </span>
+          </a-menu-item>
+        </a-sub-menu>
 
         <a-sub-menu key="help" popupClassName="sheet-menu-popper">
           <template #title>帮助</template>
@@ -802,15 +824,18 @@ import type { FRange, FWorkbook, FWorksheet } from '@univerjs/sheets/facade'
 import SheetIcon from './SheetIcon.vue'
 import UnifiedTopHeader from './UnifiedTopHeader.vue'
 import type { Align, VerticalAlign, WrapMode, ICellStyle, IUiSheet, IWorkbook, UndoEntry } from '../types'
-import { createExcelI18n } from '@/i18n'
+
 import type { ExcelI18nMessages, ExcelLocale } from '@/i18n'
 import { readExcelFileToWorkbook } from '../utils/excel-import'
 import { writeWorkbookToExcelBuffer } from '../utils/excel-export'
 import { getAuthToken } from '../api/sheet.api'
 import { loadUniverRuntime } from '../utils/univer-runtime'
 import type { LoadedUniverRuntime } from '../utils/univer-runtime'
-import { ExcelCollaborationPlugin, ConnectionState, SyncState } from '@vervedoc/docx-editor-collaboration'
+import { ConnectionState, SyncState } from '@vervedoc/docx-editor-collaboration'
 import type { ExcelCollaborationConfig, UserInfo } from '@vervedoc/docx-editor-collaboration'
+import { useSheetCollaboration } from '@/composables/use-sheet-collaboration'
+import { useSheetI18n } from '@/composables/use-sheet-i18n'
+import { useSheetFilter } from '@/composables/use-sheet-filter'
 
 const props = withDefaults(defineProps<{
   initialContent?: any
@@ -829,20 +854,7 @@ const props = withDefaults(defineProps<{
   collaboration: undefined
 })
 
-const excelI18n = createExcelI18n({
-  locale: props.locale,
-  overrides: props.i18n,
-})
-
-watch(() => props.locale, (locale) => {
-  excelI18n.setLocale(locale || 'zhCN')
-}, { immediate: true })
-
-watch(() => props.i18n, (overrides) => {
-  excelI18n.setOverrides(overrides)
-})
-
-const t = (key: string, params?: Record<string, string | number>) => excelI18n.t(key, params)
+const { t } = useSheetI18n(props)
 
 const headerLastSaveTime = ref('')
 const localDocumentTitle = ref(String(props.documentName || '').trim())
@@ -955,17 +967,9 @@ const rowHeights = reactive<Record<number, number>>({})
 const undoStack = ref<UndoEntry[]>([])
 const redoStack = ref<UndoEntry[]>([])
 
-const filterActive = ref(false)
-const filterColumn = ref<number | null>(null)
-const filterKeyword = ref('')
-const filteredRows = reactive<Record<number, boolean>>({})
-const filterPopoverVisible = ref(false)
-const filterValueOptions = ref<string[]>([])
-const filterSelectedValues = reactive<Record<string, boolean>>({})
 const showShortcutsDialog = ref(false)
 
 const importExcelInputRef = ref<HTMLInputElement | null>(null)
-const FILTER_EMPTY_TOKEN = '__EMPTY__'
 
 const zoomLevel = ref(100)
 const showRowHeightDialog = ref(false)
@@ -1789,9 +1793,7 @@ function applyFormulaValue() {
 
 function commitUniverFacadeMutation() {
   const changed = syncWorkbookFromUniver()
-  if (collabPlugin) {
-    collabPlugin.forceSyncWorkbook(true)
-  }
+  forceCollabSync()
   if (changed) {
     emitChange('univer')
   }
@@ -2409,115 +2411,25 @@ function applyColWidth() {
 }
 
 // ===== 协同功能 =====
-let collabPlugin: ExcelCollaborationPlugin | null = null
-const collabConnectionState = ref<string>('disconnected')
-const collabSyncState = ref<string>('syncing')
-const collabOnlineUsers = ref<UserInfo[]>([])
-const collabOffFns: Array<() => void> = []
-let collabBeforeUnloadHandler: (() => void) | null = null
-
-function setCollabConnectionState(state: ConnectionState | string) {
-  collabConnectionState.value = state
-  emit('collabConnectionChange', { state })
-}
-
-function setCollabSyncState(state: SyncState | string) {
-  collabSyncState.value = state
-  emit('collabSyncStateChange', { state })
-}
-
-function setCollabOnlineUsers(users: UserInfo[]) {
-  collabOnlineUsers.value = users
-  emit('collabUsersChange', users)
-}
-
-async function initCollaboration() {
-  if (!props.collaboration || collabPlugin) return
-  if (!univerAPI) return
-
-  collabPlugin = new ExcelCollaborationPlugin({
-    collaboration: {
-      serverUrl: props.collaboration.serverUrl,
-      docId: props.collaboration.docId,
-      user: props.collaboration.user,
-      token: props.collaboration.token
-    }
-  })
-
-  collabPlugin.install(univerAPI)
-  setCollabConnectionState(collabPlugin.getConnectionState())
-  setCollabSyncState(collabPlugin.getSyncState())
-  setCollabOnlineUsers([props.collaboration.user])
-
-  collabOffFns.push(
-    collabPlugin.on('connectionChange', (state) => {
-      setCollabConnectionState(state)
-    }),
-    collabPlugin.on('syncStateChange', (state) => {
-      setCollabSyncState(state)
-    }),
-    collabPlugin.on('usersChange', (users) => {
-      setCollabOnlineUsers(users)
-    }),
-    collabPlugin.on('error', (err) => {
-      emit('collabError', err)
-    })
-  )
-
-  await collabPlugin.connect()
-
-  nextTick(() => {
-    const editorEl = sheetEditorRef.value
-    if (!editorEl) return
-    collabPlugin!.initializeSelections(editorEl)
-  })
-
-  collabBeforeUnloadHandler = () => {
-    collabPlugin?.disconnect()
-  }
-  window.addEventListener('beforeunload', collabBeforeUnloadHandler)
-}
-
-function destroyCollaboration() {
-  collabOffFns.forEach(fn => fn())
-  collabOffFns.length = 0
-  if (collabBeforeUnloadHandler) {
-    window.removeEventListener('beforeunload', collabBeforeUnloadHandler)
-    collabBeforeUnloadHandler = null
-  }
-  if (collabPlugin) {
-    collabPlugin.disconnect()
-    collabPlugin.uninstall()
-    collabPlugin = null
-  }
-  setCollabConnectionState(ConnectionState.DISCONNECTED)
-  setCollabSyncState(SyncState.SYNCING)
-  setCollabOnlineUsers([])
-}
-
-watch(
-  () => {
-    const collab = props.collaboration
-    if (!collab) return ''
-    return JSON.stringify({
-      serverUrl: collab.serverUrl,
-      docId: collab.docId,
-      token: collab.token,
-      userId: collab.user?.userId,
-      userName: collab.user?.userName,
-      color: collab.user?.color,
-    })
-  },
-  async (next, prev) => {
-    if (next === prev) return
-    if (!univerAPI) return
-    destroyCollaboration()
-    if (next) {
-      await nextTick()
-      await initCollaboration()
-    }
-  }
-)
+const {
+  collabConnectionState,
+  collabSyncState,
+  collabOnlineUsers,
+  syncSelectionEnabled,
+  syncFilterEnabled,
+  syncSortEnabled,
+  toggleSyncSelection,
+  toggleSyncFilter,
+  toggleSyncSort,
+  initCollaboration,
+  destroyCollaboration,
+  forceCollabSync,
+} = useSheetCollaboration({
+  props,
+  emit,
+  getUniverAPI: () => univerAPI,
+  sheetEditorRef,
+})
 
 
 
@@ -2740,99 +2652,31 @@ async function setRotation(deg: number) {
 }
 
 // ===== 筛选 =====
-function resetFilterState() {
-  filterActive.value = false
-  filterColumn.value = null
-  filterKeyword.value = ''
-  filterValueOptions.value = []
-  Object.keys(filterSelectedValues).forEach(key => delete filterSelectedValues[key])
-  Object.keys(filteredRows).forEach(key => delete filteredRows[Number(key)])
-}
-
-function normalizeFilterValue(value: string): string {
-  return value === '' ? FILTER_EMPTY_TOKEN : value
-}
-
-function prepareFilterPanel(useSelectedColumn = true) {
-  const sheet = activeSheet.value
-  if (!sheet) return
-  if (useSelectedColumn) {
-    filterColumn.value = selected.col
-  }
-  const col = filterColumn.value
-  if (col === null) return
-  const unique = new Set<string>()
-  for (let row = 0; row < sheet.rowCount; row++) {
-    if (sheet.hiddenRows?.[row]) continue
-    const text = String(sheet.cells[cellKey(row, col)] || '')
-    unique.add(normalizeFilterValue(text))
-  }
-  filterValueOptions.value = Array.from(unique).sort((a, b) => {
-    if (a === FILTER_EMPTY_TOKEN) return 1
-    if (b === FILTER_EMPTY_TOKEN) return -1
-    return a.localeCompare(b, 'zh-CN')
-  })
-  for (const value of filterValueOptions.value) {
-    if (filterSelectedValues[value] === undefined) {
-      filterSelectedValues[value] = true
-    }
-  }
-}
-
-function isFilterValueSelected(value: string): boolean {
-  return filterSelectedValues[value] !== false
-}
-
-function onFilterValueChange(value: string, event: Event) {
-  const checked = (event.target as HTMLInputElement).checked
-  filterSelectedValues[value] = checked
-}
-
-function toggleAllFilterValues(checked: boolean) {
-  for (const value of filterValueOptions.value) {
-    filterSelectedValues[value] = checked
-  }
-}
-
-function applyFilterRows() {
-  Object.keys(filteredRows).forEach(key => delete filteredRows[Number(key)])
-  const sheet = activeSheet.value
-  const col = filterColumn.value
-  if (!sheet || col === null) return
-  const keyword = filterKeyword.value.toLowerCase()
-  const hasUnchecked = filterValueOptions.value.some(value => !isFilterValueSelected(value))
-  filterActive.value = !!keyword || hasUnchecked
-  for (let row = 0; row < sheet.rowCount; row++) {
-    if (sheet.hiddenRows?.[row]) continue
-    const value = String(sheet.cells[cellKey(row, col)] || '')
-    const normalizedValue = normalizeFilterValue(value)
-    const normalized = value.toLowerCase()
-    const passSelection = isFilterValueSelected(normalizedValue)
-    const visible = keyword
-      ? passSelection && normalized.includes(keyword)
-      : passSelection
-    if (!visible) {
-      filteredRows[row] = true
-    }
-  }
-}
-
-function applyFilterAndClose() {
-  applyFilterRows()
-  syncFilterStateToActiveSheet()
-  emitChange()
-  filterPopoverVisible.value = false
-  const col = filterColumn.value
-  if (col === null) return
-  message.success(`已应用列 ${columnLabel(col)} 筛选`)
-}
-
-function clearFilter() {
-  resetFilterState()
-  syncFilterStateToActiveSheet()
-  emitChange()
-  filterPopoverVisible.value = false
-}
+const {
+  FILTER_EMPTY_TOKEN,
+  filterActive,
+  filterColumn,
+  filterKeyword,
+  filteredRows,
+  filterPopoverVisible,
+  filterValueOptions,
+  filterSelectedValues,
+  resetFilterState,
+  prepareFilterPanel,
+  isFilterValueSelected,
+  onFilterValueChange,
+  toggleAllFilterValues,
+  applyFilterRows,
+  applyFilterAndClose,
+  clearFilter,
+} = useSheetFilter({
+  getActiveSheet: activeSheet,
+  selected,
+  cellKey,
+  columnLabel,
+  syncFilterStateToActiveSheet,
+  emitChange,
+})
 
 // ===== 插入图片 =====
 function insertImage() {

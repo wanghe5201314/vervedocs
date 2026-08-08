@@ -62,3 +62,7 @@ export interface UndoEntry {
   styles: Record<string, ICellStyle>
   cellMeta?: Record<string, ICellMeta>
 }
+
+export type SheetI18nOptions = {
+  defaultSheetName?: (index: number) => string
+}

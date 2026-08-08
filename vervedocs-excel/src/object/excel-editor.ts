@@ -1,4 +1,4 @@
-import { createApp, defineAsyncComponent, defineComponent, h, reactive } from 'vue'
+import { createApp, defineAsyncComponent, defineComponent, h, reactive, type App, type ComponentPublicInstance } from 'vue'
 import Antd from 'ant-design-vue'
 import 'ant-design-vue/dist/reset.css'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
@@ -78,8 +78,8 @@ const normalizeCollaborationOptions = (
 }
 
 export class ExcelEditor {
-  private app: any
-  private editorRef: any = null
+  private app: App<Element> | null = null
+  private editorRef: ComponentPublicInstance | null = null
   private state: {
     initialContent?: any
     documentUrl?: string
@@ -137,7 +137,7 @@ export class ExcelEditor {
       onCollabError: (payload: any) => this.options.onCollabError?.(payload)
     }))
     this.app = createApp(root)
-    this.app.use(Antd, { locale: zhCN })
+    this.app.use(Antd, { locale: zhCN } as never)
     this.app.mount(host)
   }
 

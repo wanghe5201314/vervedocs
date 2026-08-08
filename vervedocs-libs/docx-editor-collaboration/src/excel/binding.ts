@@ -13,7 +13,7 @@ export class UniverSyncBinding {
 
   private lastSnapshotJson = ''
 
-  syncFilter = true
+
   syncSort = true
 
   private commandHandler: ((event: any) => void) | null = null
@@ -29,6 +29,12 @@ export class UniverSyncBinding {
     'sheet.operation.set-scroll',
     'doc.mutation.rich-text-editing',
     'sheet.mutation.set-worksheet-active',
+    'sheet.command.set-filter-range',
+    'sheet.command.remove-sheet-filter',
+    'sheet.command.smart-toggle-filter',
+    'sheet.command.set-filter-criteria',
+    'sheet.command.clear-filter-criteria',
+    'sheet.command.re-calc-filter',
   ])
 
   constructor(doc: Y.Doc, univerAPI: any) {
@@ -81,21 +87,19 @@ export class UniverSyncBinding {
 
       const currentData = workbook.save() as any
       const unitId = currentData?.id ?? workbook.getId?.()
-      const localData = (!this.syncFilter || !this.syncSort) ? currentData : null
+      const localData = !this.syncSort ? currentData : null
       const dataClone = JSON.parse(JSON.stringify(data))
       if (!dataClone.id && unitId) {
         dataClone.id = unitId
       }
+
+      this.stripFilterResources(dataClone)
 
       if (localData?.sheets && dataClone.sheets) {
         for (const [sheetId, remoteSheet] of Object.entries(dataClone.sheets as Record<string, any>)) {
           const localSheet = localData.sheets?.[sheetId]
           if (!localSheet) continue
 
-          if (!this.syncFilter) {
-            remoteSheet.filter = localSheet.filter
-            remoteSheet.autoFilter = localSheet.autoFilter
-          }
           if (!this.syncSort) {
             remoteSheet.sortCondition = localSheet.sortCondition
           }
@@ -150,6 +154,8 @@ export class UniverSyncBinding {
 
     this.isApplyingLocal = true
     try {
+      this.stripFilterResources(current)
+
       this.doc.transact(() => {
         this.yWorkbook.clear()
         for (const [key, value] of Object.entries(current)) {
@@ -159,17 +165,13 @@ export class UniverSyncBinding {
         }
       }, this)
 
-      if (!this.syncFilter || !this.syncSort) {
+      if (!this.syncSort) {
         const remoteData = this.yWorkbook.toJSON() as any
         if (remoteData?.sheets && current.sheets) {
           for (const [sheetId, localSheet] of Object.entries(current.sheets as Record<string, any>)) {
             const remoteSheet = remoteData.sheets?.[sheetId]
             if (!remoteSheet) continue
 
-            if (!this.syncFilter) {
-              if (remoteSheet.filter !== undefined) localSheet.filter = remoteSheet.filter
-              if (remoteSheet.autoFilter !== undefined) localSheet.autoFilter = remoteSheet.autoFilter
-            }
             if (!this.syncSort) {
               if (remoteSheet.sortCondition !== undefined) localSheet.sortCondition = remoteSheet.sortCondition
             }
@@ -197,5 +199,10 @@ export class UniverSyncBinding {
 
   static getDocName(docId: string): string {
     return `${EXCEL_DOC_PREFIX}${docId}`
+  }
+
+  private stripFilterResources(data: any): void {
+    if (!data?.resources) return
+    data.resources = data.resources.filter((r: any) => r.name !== 'SHEET_FILTER_PLUGIN')
   }
 }

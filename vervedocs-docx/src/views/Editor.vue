@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div ref="editorAppRef" class="editor-app">
     <UnifiedTopHeader
       :title="headerTitle"
@@ -111,13 +111,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, inject, onBeforeUnmount, reactive, ref, nextTick, watch } from 'vue'
-import { message, Modal, notification } from 'ant-design-vue'
-import type { DocumentMeta, DocumentStats } from '@/types/document'
+import { computed, inject, onBeforeUnmount, ref, nextTick, type Ref } from 'vue'
+import { message } from 'ant-design-vue'
 import type { InitialDocument } from '@/utils/resolve-app'
 import { emitExternalEvent, externalApi } from '@/composables/use-external-api'
-import { executeAIRequest } from '@/composables/use-ai'
 import { aiStateStore } from '@/stores/ai-state'
+import type { AITab } from '@/stores/ai-state'
 import { AIAction } from '@vervedoc/docx-editor-ai'
 import { ShortcutsDialog, ProtectDialog, HyperlinkDialog, BookmarkDialog, InsertTableDialog, ChartDialog, LaTeXDialog, BarcodeDialog, QrcodeDialog, SignatureDialog, WatermarkDialog, PaperSizeDialog, PageNumberDialog, DateDialog, ParagraphDialog, TocDialog, TableBordersDialog, AISettingsDialog, VersionHistoryDialog } from '@/components/dialog'
 
@@ -132,69 +131,41 @@ import RevisionPanel from '@/components/sidebars/RevisionPanel.vue'
 import type { RevisionItem } from '@/components/sidebars/RevisionPanel.vue'
 import Editor from '@/components/editor/Editor.vue'
 
-
 import UnifiedTopHeader from '@/components/layout/UnifiedTopHeader.vue'
-import ImportNotification from '@/components/common/ImportNotification.vue'
 
-import type { DocxCommentMeta } from '@/utils/docxParser/types'
-
-import { CollaborationPlugin, ConnectionState } from '@vervedoc/docx-editor-collaboration'
-import type { SharedSyncState } from '@vervedoc/docx-editor-collaboration'
 import type { CollaborationOptions } from '@/ui/index'
-import { appConfig } from '@/config/app-config'
 
-type DockKey = 'search' | 'catalog' | 'section' | 'ai' | 'revision' | ''
+import { useDocumentMeta } from '@/composables/use-document-meta'
+import { useDock } from '@/composables/use-dock'
+import { useDialogs } from '@/composables/use-dialogs'
+import { useLoadingOverlay } from '@/composables/use-loading-overlay'
+import { useAIActions } from '@/composables/use-ai-actions'
+import { useBookmarks } from '@/composables/use-bookmarks'
+import { useImportNotification } from '@/composables/use-import-notification'
+import { useEditorSave } from '@/composables/use-editor-save'
+import { useCollaboration } from '@/composables/use-collaboration'
+import { useDocumentActions } from '@/composables/use-document-actions'
+import { useEditorCommand } from '@/composables/use-editor-command'
 
 const initialDocument = inject<InitialDocument | null>('docx-editor-ui:initDocument', null)
 const collaborationConfig = inject<CollaborationOptions | null>('docx-editor-ui:collaboration', null)
 
-const appNameWithVersion = computed(() => {
-  const v = String(__APP_VERSION__ || '').trim()
-  return v ? `docx-editor@${v}` : 'docx-editor'
-})
-
-const documentMeta = reactive<DocumentMeta>({
-  id: String(initialDocument?.meta?.id || 'local'),
-  path: String((initialDocument?.meta as any)?.path || ''),
-  status: ((initialDocument?.meta as any)?.status || 'edit') as DocumentMeta['status'],
-  name: String((initialDocument?.meta as any)?.name || initialDocument?.meta?.fileName || '新建文档'),
-  createdAt: String((initialDocument?.meta as any)?.createdAt || ''),
-  submittedAt: String((initialDocument?.meta as any)?.submittedAt || '')
-})
-
-const documentStats = reactive<DocumentStats>({
-  totalPages: 1,
-  wordCount: 0,
-  paragraphCount: 0,
-  charCount: 0,
-  charCountWithSpaces: 0
-})
-
-const activeDock = ref<DockKey>('search') // 默认打开搜索面板
-const sidebarPanelSize = ref(310)
 const editorAppRef = ref<HTMLElement | null>(null)
 const catalogRef = ref<any>(null)
 const editorRef = ref<any>(null)
 const footerRef = ref<any>(null)
-const cachedCatalog = ref<any[]>([])
 
-// 协同状态
-const collabOnlineUsers = ref<Array<{userId: string, userName: string, color: string}>>([])
-const collabConnectionState = ref<ConnectionState>(ConnectionState.DISCONNECTED)
-const collabSharedSyncState = ref<SharedSyncState>({ cursor: true, selection: true })
-const showCollaborationMenu = computed(() => collabConnectionState.value === ConnectionState.CONNECTED)
-const isViewMode = computed(() => documentMeta.status === 'view' || documentMeta.status === 'lock')
-const headerTitle = computed(() => {
-  const name = String(documentMeta.name || '').trim()
-  return name || '新建文档'
-})
-const headerLastSaveTime = computed(() => {
-  const submittedAt = String(documentMeta.submittedAt || '').trim()
-  if (!submittedAt) return ''
-  const d = new Date(submittedAt)
-  if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-})
+const {
+  appNameWithVersion,
+  documentMeta,
+  documentStats,
+  isViewMode,
+  headerTitle,
+  headerLastSaveTime,
+  emitMetaChange,
+  setMeta
+} = useDocumentMeta({ initialDocument })
+
 const busyState = ref<'idle' | 'loading' | 'saving'>('idle')
 const busy = computed(() => busyState.value !== 'idle')
 const busyText = computed(() => {
@@ -203,197 +174,144 @@ const busyText = computed(() => {
   return ''
 })
 
+const getEditorInstance = () => editorRef.value?.getEditorInstance?.() ?? null
+const getCommentComponent = () => getEditorInstance()?.comment ?? null
+const getRevisionComponent = () => getEditorInstance()?.revision ?? null
 
-const shortcutsDialogVisible = ref(false)
-const protectDialogVisible = ref(false)
-const protectDialogMode = ref<'lock' | 'unlock'>('lock')
+const executeCommand = (command: string, ...args: any[]) => {
+  const fn = editorRef.value?.executeCommand
+  if (typeof fn === 'function') return fn(command, ...args)
+}
 
-const hyperlinkDialogVisible = ref(false)
-const bookmarkDialogVisible = ref(false)
-const insertTableDialogVisible = ref(false)
-const tableBordersDialogVisible = ref(false)
-const chartDialogVisible = ref(false)
-const latexDialogVisible = ref(false)
-const barcodeDialogVisible = ref(false)
-const qrcodeDialogVisible = ref(false)
-const signatureDialogVisible = ref(false)
-const watermarkDialogVisible = ref(false)
-const paperSizeDialogVisible = ref(false)
-const pageNumberDialogVisible = ref(false)
-const dateDialogVisible = ref(false)
-const paragraphDialogVisible = ref(false)
+let suppressSaveOnce = false
+const setSuppressSaveOnce = (value: boolean) => { suppressSaveOnce = value }
 
-const tocDialogVisible = ref(false)
-const aiSettingsDialogVisible = ref(false)
-const versionHistoryDialogVisible = ref(false)
-const importFileName = ref('')
-const importFileSize = ref('')
-const importParseProgress = ref<number | undefined>(undefined) // 解析进度 0-100，undefined 表示完成
+const {
+  activeDock,
+  sidebarPanelSize,
+  cachedCatalog,
+  closeRevisionDock,
+  handleDockSelect,
+  closeDock,
+  closeAIDock,
+  handleResizeStart
+} = useDock({ catalogRef })
+
+const {
+  shortcutsDialogVisible,
+  protectDialogVisible,
+  protectDialogMode,
+  hyperlinkDialogVisible,
+  bookmarkDialogVisible,
+  insertTableDialogVisible,
+  tableBordersDialogVisible,
+  chartDialogVisible,
+  latexDialogVisible,
+  barcodeDialogVisible,
+  qrcodeDialogVisible,
+  signatureDialogVisible,
+  watermarkDialogVisible,
+  paperSizeDialogVisible,
+  pageNumberDialogVisible,
+  dateDialogVisible,
+  paragraphDialogVisible,
+  tocDialogVisible,
+  aiSettingsDialogVisible,
+  versionHistoryDialogVisible,
+  openShortcuts,
+  openProtect,
+  openUnprotect,
+  handleProtectConfirm,
+  handleHyperlinkConfirm,
+  handleLatexConfirm,
+  handleBarcodeConfirm,
+  handleQrcodeConfirm,
+  handleSignatureConfirm,
+  handleWatermarkConfirm,
+  handlePaperSizeConfirm,
+  handlePageNumberConfirm,
+  handleDateConfirm,
+  handleTocConfirm,
+  handleInsertChartConfirm,
+  handleInsertTableDialogConfirm,
+  handleTableBordersConfirm
+} = useDialogs({ executeCommand, documentMeta, emitMetaChange })
+
+const { closeLoadingOverlay } = useLoadingOverlay({ busy, busyText, editorAppRef })
+
+const {
+  handleAIAction,
+  handleAIApplyResult,
+  handleAIRegenerate,
+  handleAIResultClose
+} = useAIActions({ getEditorInstance })
+
+const {
+  bookmarkList,
+  refreshBookmarks,
+  handleAddBookmark,
+  handleDeleteBookmark,
+  handleGotoBookmark
+} = useBookmarks({ getEditorInstance, executeCommand })
+
+const {
+  importFileName,
+  importFileSize,
+  importParseProgress,
+  showImportNotification,
+  setImportModeResolver
+} = useImportNotification({ setSuppressSaveOnce })
 
 const toolbarVisible = ref(true)
 const bottomNavVisible = ref(true)
-
-const bookmarkList = ref<Array<{ name: string }>>([])
-
-
-
-const aiState = aiStateStore.state
 
 const isTrackChanges = ref(false)
 const revisionList = ref<RevisionItem[]>([])
 const activeRevisionId = ref<string>('')
 
+const aiState = aiStateStore.state
 
-const closeRevisionDock = () => {
-  if (activeDock.value === 'revision') {
-    activeDock.value = ''
-  }
-}
-
-
-let saveTimer: number | null = null
-let saving = false
-let pendingSave = false
 let loaded = false
-let suppressSaveOnce = false
-let collabPlugin: CollaborationPlugin | null = null
-const collabOffFns: (() => void)[] = []
-let importModeResolver: ((value: string) => void) | null = null
-const loadingOverlay = ref<HTMLElement | null>(null)
 
-const showLoading = (target: HTMLElement, text: string) => {
-  const el = document.createElement('div')
-  el.className = 'app-loading-overlay'
-  el.innerHTML = `<div class="app-loading-spin"><div class="ant-spin ant-spin-spinning"><span class="ant-spin-dot ant-spin-dot-spin"><i class="ant-spin-dot-item"></i><i class="ant-spin-dot-item"></i><i class="ant-spin-dot-item"></i><i class="ant-spin-dot-item"></i></span></div><span class="app-loading-text">${text}</span></div>`
-  el.style.cssText = 'position:absolute;inset:0;background:rgba(255,255,255,0.65);display:flex;align-items:center;justify-content:center;z-index:9999;'
-  target.style.position = 'relative'
-  target.appendChild(el)
-  loadingOverlay.value = el
-}
+const { getSnapshot, saveNow, scheduleSave } = useEditorSave({
+  getEditorInstance,
+  getCommentComponent,
+  documentMeta,
+  busyState,
+  emitMetaChange
+})
 
-const closeLoadingOverlay = () => {
-  loadingOverlay.value?.remove()
-  loadingOverlay.value = null
-}
+const {
+  collabOnlineUsers,
+  collabSharedSyncState,
+  showCollaborationMenu,
+  initCollaboration,
+  installCommentCallbacks,
+  cleanupCollaboration,
+  getCollabPlugin
+} = useCollaboration({
+  collaborationConfig,
+  getEditorInstance,
+  getCommentComponent,
+  executeCommand,
+  documentMeta,
+  editorRef,
+  isSuppressSaveOnce: () => suppressSaveOnce,
+  scheduleSave
+})
 
-watch([busy, busyText], async ([active, text]) => {
-  if (!active) {
-    closeLoadingOverlay()
-    return
-  }
-  await nextTick()
-  if (!editorAppRef.value) return
-  closeLoadingOverlay()
-  showLoading(editorAppRef.value, text)
-}, { immediate: true })
-
-const getEditorInstance = () => editorRef.value?.getEditorInstance?.() ?? null
-const getCommentComponent = () => getEditorInstance()?.comment ?? null
-const getRevisionComponent = () => getEditorInstance()?.revision ?? null
-
-const emitMetaChange = () => {
-  emitExternalEvent('metaChange', { meta: { ...documentMeta } })
-}
-
-const setMeta = (patch: Partial<DocumentMeta> & { fileName?: string }) => {
-  if (!patch || typeof patch !== 'object') return
-  if (patch.id !== undefined) documentMeta.id = String(patch.id || 'local')
-  if (patch.path !== undefined) documentMeta.path = String(patch.path || '')
-  if (patch.status !== undefined) documentMeta.status = patch.status as DocumentMeta['status']
-  const nextName = (patch as any).name ?? (patch as any).fileName
-  if (nextName !== undefined) documentMeta.name = String(nextName || '新建文档')
-  if (patch.createdAt !== undefined) documentMeta.createdAt = String(patch.createdAt || '')
-  if (patch.submittedAt !== undefined) documentMeta.submittedAt = String(patch.submittedAt || '')
-  emitMetaChange()
-}
-
-const getSnapshot = () => {
-  const instance = getEditorInstance()
-  const content = instance?.command?.getValue?.() ?? null
-  let contentWithExtras: any = content
-  if (content) {
-    const extras: Record<string, unknown> = {}
-    if (getCommentComponent()?.getComments().length > 0) {
-      extras.comments = getCommentComponent()!.serializeComments()
-    }
-    const revisions = instance?.command?.getRevisions?.()
-    if (revisions && revisions.length > 0) {
-      extras.revisions = revisions.map(({ id, type, author, date, content: revContent }) => ({
-        id, type, author, date, content: revContent
-      }))
-    }
-    if (Object.keys(extras).length > 0) {
-      contentWithExtras = { ...content, ...extras }
-    }
-  }
-  return { meta: { ...documentMeta }, content: contentWithExtras }
-}
-
-const saveNow = async (options?: { silent?: boolean }) => {
-  if (saving) {
-    pendingSave = true
-    return
-  }
-  if (documentMeta.status === 'lock' || documentMeta.status === 'view') return
-  const instance = getEditorInstance()
-  const content = instance?.command?.getValue?.()
-  if (!content) return
-
-  // 将批注和修订数据附加到 content 中一并保存
-  let contentWithExtras: any = content
-  if (content) {
-    const extras: Record<string, unknown> = {}
-    if (getCommentComponent()?.getComments().length > 0) {
-      extras.comments = getCommentComponent()!.serializeComments()
-    }
-    const revisions = instance?.command?.getRevisions?.()
-    if (revisions && revisions.length > 0) {
-      extras.revisions = revisions.map(({ id, type, author, date, content: revContent }) => ({
-        id, type, author, date, content: revContent
-      }))
-    }
-    if (Object.keys(extras).length > 0) {
-      contentWithExtras = { ...content, ...extras }
-    }
-  }
-  const saveSnapshot = {
-    meta: { ...documentMeta },
-    content: contentWithExtras
-  }
-
-  saving = true
-  busyState.value = 'saving'
-  pendingSave = false
-  try {
-    documentMeta.submittedAt = new Date().toISOString()
-    emitMetaChange()
-    try {
-      console.log('[Editor.vue saveNow] 完整保存快照对象:', saveSnapshot)
-    } catch (error) {
-      console.warn('[Editor.vue saveNow] 保存快照 JSON 序列化失败:', error)
-    }
-    emitExternalEvent('statusChange', {
-      command: 'save',
-      args: [{ silent: !!options?.silent, snapshot: saveSnapshot }]
-    })
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : '保存失败'
-    emitExternalEvent('statusChange', { command: 'saveError', args: [msg] })
-  } finally {
-    saving = false
-    busyState.value = 'idle'
-    if (pendingSave) scheduleSave()
-  }
-}
-
-const scheduleSave = () => {
-  if (!appConfig['auto-save']) return
-  if (documentMeta.status === 'view') return
-  if (saveTimer) window.clearTimeout(saveTimer)
-  saveTimer = window.setTimeout(() => {
-    void saveNow({ silent: true })
-  }, 800)
-}
+const {
+  renameDoc,
+  newDoc,
+  openAccessPermission,
+  openFeedback
+} = useDocumentActions({
+  documentMeta,
+  emitMetaChange,
+  saveNow,
+  executeCommand,
+  setSuppressSaveOnce
+})
 
 ;(externalApi as any).document = {
   getMeta: () => ({ ...documentMeta }),
@@ -402,387 +320,11 @@ const scheduleSave = () => {
   save: (opts?: { silent?: boolean }) => saveNow(opts)
 }
 
-const handleDockSelect = (key: Exclude<DockKey, ''>) => {
-  activeDock.value = key
-  if (key === 'catalog') {
-    void nextTick(() => {
-      catalogRef.value?.switchToCatalogTab?.()
-      if (cachedCatalog.value.length > 0) {
-        catalogRef.value?.updateCatalog?.(cachedCatalog.value)
-      }
-    })
-  }
-  if (key === 'section') {
-    void nextTick(() => catalogRef.value?.switchToSectionTab?.())
-  }
-  if (key === 'ai') {
-    aiStateStore.setVisible(true)
-  }
-}
-
-const closeDock = () => {
-  activeDock.value = ''
-}
-
-const closeAIDock = () => {
-  if (activeDock.value === 'ai') {
-    activeDock.value = ''
-    aiStateStore.setVisible(false)
-  }
-}
-
-
-const handleResizeStart = (e: MouseEvent) => {
-  e.preventDefault()
-  const startX = e.clientX
-  const startWidth = sidebarPanelSize.value
-
-  const onMouseMove = (moveEvent: MouseEvent) => {
-    const delta = moveEvent.clientX - startX
-    const newWidth = Math.min(400, Math.max(300, startWidth + delta))
-    sidebarPanelSize.value = newWidth
-  }
-
-  const onMouseUp = () => {
-    document.removeEventListener('mousemove', onMouseMove)
-    document.removeEventListener('mouseup', onMouseUp)
-    document.body.style.cursor = ''
-    document.body.style.userSelect = ''
-  }
-
-  document.body.style.cursor = 'col-resize'
-  document.body.style.userSelect = 'none'
-  document.addEventListener('mousemove', onMouseMove)
-  document.addEventListener('mouseup', onMouseUp)
-}
-
-const handleAIAction = (action: string, payload?: any) => {
-  const instance = getEditorInstance()
-  if (!instance) return
-
-  const getText = (): string => {
-    try {
-      return instance.command.getRangeText?.() || ''
-    } catch {
-      return ''
-    }
-  }
-
-  const getFullText = (): string => {
-    try {
-      const result = instance.command.getValue?.()
-      const main = result?.data?.main
-      if (!Array.isArray(main)) return ''
-      return main.map((el: any) => el.value || '').join('')
-    } catch {
-      return ''
-    }
-  }
-
-  if (action === 'quickAction') {
-    const text = getText().trim()
-    if (!text) {
-      message.warning('请先选中文本')
-      return
-    }
-    void executeAIRequest({ action: payload.action, text })
-    return
-  }
-
-  if (action === 'translate') {
-    const text = getText().trim()
-    if (!text) {
-      message.warning('请先选中文本')
-      return
-    }
-    void executeAIRequest({ action: AIAction.TRANSLATE, text, targetLanguage: payload?.targetLanguage })
-    return
-  }
-
-  if (action === 'custom') {
-    const text = getText().trim()
-    if (!text) {
-      message.warning('请先选中文本')
-      return
-    }
-    void executeAIRequest({ action: AIAction.CUSTOM, text, customPrompt: payload?.prompt })
-    return
-  }
-
-  if (action === 'continue') {
-    const text = getText().trim() || getFullText().trim()
-    if (!text) {
-      message.warning('文档为空，无法续写')
-      return
-    }
-    void executeAIRequest({ action: AIAction.CONTINUE, text: text.slice(-500) })
-    return
-  }
-
-  if (action === 'layoutSuggestion' || action === 'docAnalysis' || action === 'docSummarize') {
-    const text = getFullText().trim()
-    if (!text) {
-      message.warning('文档为空')
-      return
-    }
-    const aiAction = action === 'docSummarize' ? AIAction.SUMMARIZE : AIAction.CUSTOM
-    const customPrompt = action === 'layoutSuggestion'
-      ? '请分析以下文档内容，提供排版优化建议，包括段落结构、标题层级、分栏建议等。'
-      : action === 'docAnalysis'
-        ? '请对以下文档进行综合分析，包括内容质量评估、结构建议、语言风格分析。'
-        : undefined
-    void executeAIRequest({
-      action: aiAction,
-      text: text.slice(0, 3000),
-      customPrompt
-    })
-    return
-  }
-
-  if (action === 'applyResult') {
-    const result = payload?.result
-    if (result && instance) {
-      const elementList = result.split('').map((char: string) => ({ value: char }))
-      instance.command.executeInsertElementList(elementList)
-      aiStateStore.resetOperation()
-    }
-    return
-  }
-
-  if (action === 'regenerate') {
-    const opState = aiStateStore.state.operation
-    if (opState.action && opState.inputText) {
-      void executeAIRequest({
-        action: opState.action,
-        text: opState.inputText
-      })
-    }
-    return
-  }
-
-  if (action === 'imageAlt') {
-    message.info('图片描述生成功能即将推出')
-    return
-  }
-}
-
-const handleAIApplyResult = (result: string) => {
-  const instance = getEditorInstance()
-  if (result && instance) {
-    const elementList = result.split('').map((char: string) => ({ value: char }))
-    instance.command.executeInsertElementList(elementList)
-    aiStateStore.resetOperation()
-  }
-}
-
-const handleAIRegenerate = () => {
-  const opState = aiStateStore.state.operation
-  if (opState.action && opState.inputText) {
-    void executeAIRequest({
-      action: opState.action,
-      text: opState.inputText
-    })
-  }
-}
-
-const handleAIResultClose = () => {
-  aiStateStore.setDrawerVisible(false)
-}
-
-const openAccessPermission = () => {
-  emitExternalEvent('statusChange', { command: 'accessPermission', args: [{ meta: { ...documentMeta } }] })
-}
-
-const openFeedback = () => {
-  emitExternalEvent('statusChange', { command: 'feedback', args: [{ meta: { ...documentMeta } }] })
-  message.info('请在系统内提交反馈')
-}
-
-
-const openShortcuts = () => {
-  shortcutsDialogVisible.value = true
-}
-
-
-const handleHyperlinkConfirm = (data: { text: string; url: string }) => {
-  executeCommand('hyperlink', data)
-}
-
-const refreshBookmarks = () => {
-  const instance = getEditorInstance()
-  const bookmarks = instance?.command?.getBookmarks?.()
-  if (!Array.isArray(bookmarks)) {
-    bookmarkList.value = []
-    return
-  }
-  bookmarkList.value = bookmarks.map((b: any) => ({ name: b.name })).sort((a: any, b: any) => a.name.localeCompare(b.name, 'zh-CN'))
-}
-
-const handleAddBookmark = (name: string) => {
-  executeCommand('addBookmark', { name })
-  nextTick(() => refreshBookmarks())
-}
-
-const handleDeleteBookmark = (name: string) => {
-  executeCommand('deleteBookmark', { name })
-  nextTick(() => refreshBookmarks())
-}
-
-const handleGotoBookmark = (name: string) => {
-  executeCommand('gotoBookmark', { name })
-}
-
-const handleLatexConfirm = (latex: string) => {
-  executeCommand('insertLatex', latex)
-}
-
-const handleBarcodeConfirm = (data: { imageDataUrl: string; width: number; height: number }) => {
-  executeCommand('image', {
-    value: data.imageDataUrl,
-    width: data.width,
-    height: data.height
-  })
-}
-
-const handleQrcodeConfirm = (content: string) => {
-  executeCommand('qrcode', content)
-}
-
-const handleSignatureConfirm = (dataUrl: string) => {
-  executeCommand('image', dataUrl)
-}
-
-const handleWatermarkConfirm = (data: any) => {
-  executeCommand('addWatermark', data)
-}
-
-const handlePaperSizeConfirm = (data: { widthPx: number; heightPx: number }) => {
-  executeCommand('paperSize', data.widthPx, data.heightPx)
-}
-
-const handlePageNumberConfirm = (data: any) => {
-  executeCommand('setPageNumber', data)
-}
-
-const handleDateConfirm = (data: { format: string; value: string }) => {
-  executeCommand('insertDate', data)
-}
-
-const handleTocConfirm = (data: any) => {
-  executeCommand('tocInsert', { mode: 'custom', ...data })
-}
-
-
-const handleInsertChartConfirm = (payload: any) => {
-  const p = payload && typeof payload === 'object' ? payload : {}
-  executeCommand('insertChartCore', {
-    chartType: p.chartType,
-    subtype: p.subtype,
-    tableData: p.tableData
-  })
-}
-
-const handleInsertTableDialogConfirm = (payload: { rows: number; cols: number; border?: any }) => {
-  executeCommand('insertTable', { rows: payload.rows, cols: payload.cols })
-  const border = payload.border || {}
-  const opt = String(border.option || '').trim().toLowerCase()
-  const type = opt === 'none' ? 'none' : opt === 'box' ? 'outside' : 'all'
-  executeCommand('tableBorderType', type)
-  if (border.color) executeCommand('tableBorderColor', String(border.color))
-  if (border.width !== undefined) executeCommand('tableBorderWidth', Number(border.width))
-}
-
-const handleTableBordersConfirm = (payload: { type: 'all' | 'outside' | 'none'; color: string; width: number; externalWidth: number }) => {
-  executeCommand('tableBorderType', payload.type)
-  executeCommand('tableBorderColor', payload.color)
-  executeCommand('tableBorderWidth', payload.width)
-  executeCommand('tableBorderExternalWidth', payload.externalWidth)
-}
-
-const renameDoc = async () => {
-  const renameValue = ref(String(documentMeta.name || '').trim() || '新建文档')
-  Modal.confirm({
-    title: '重命名',
-    content: () => h('div', {}, [
-      h('input', {
-        value: renameValue.value,
-        onInput: (e: Event) => { renameValue.value = (e.target as HTMLInputElement).value },
-        style: 'width:100%;padding:4px 8px;border:1px solid #d9d9d9;border-radius:4px;',
-        placeholder: '新建文档'
-      })
-    ]),
-    okText: '确定',
-    cancelText: '取消',
-    onOk: async () => {
-      const next = String(renameValue.value || '').trim()
-      if (!next) return
-      documentMeta.name = next
-      emitMetaChange()
-      if (String(documentMeta.id || '').trim() !== 'local') {
-        await saveNow({ silent: false })
-      }
-    }
-  })
-}
-
-const newDoc = async () => {
-  suppressSaveOnce = true
-  documentMeta.id = 'local'
-  documentMeta.path = ''
-  documentMeta.status = 'edit'
-  documentMeta.name = '新建文档'
-  documentMeta.createdAt = ''
-  documentMeta.submittedAt = ''
-  emitMetaChange()
-  await executeCommand('setValue', { main: [] })
-}
-
-const openProtect = () => {
-  protectDialogMode.value = 'lock'
-  protectDialogVisible.value = true
-}
-
-const openUnprotect = () => {
-  protectDialogMode.value = 'unlock'
-  protectDialogVisible.value = true
-}
-
-const handleProtectConfirm = async (password: string) => {
-  void password
-  const nextStatus = protectDialogMode.value === 'unlock' ? ('edit' as const) : ('lock' as const)
-  documentMeta.status = nextStatus
-  emitMetaChange()
-  protectDialogVisible.value = false
-  emitExternalEvent('statusChange', { command: nextStatus === 'lock' ? 'locked' : 'unlocked', args: [] })
-}
-
-const installCommentCallbacks = (targetInstance: any) => {
-  if (!targetInstance?.command) return
-  const commentComp = getCommentComponent()
-  if (!commentComp) return
-
-  commentComp.install(targetInstance.command, {
-    onSave: () => {
-      collabPlugin?.syncComments()
-    },
-    onDelete: () => {
-      collabPlugin?.syncComments()
-    },
-    onReply: () => {
-      collabPlugin?.syncComments()
-    },
-    onResolve: () => {
-      collabPlugin?.syncComments()
-    },
-    onCancel: () => {
-      collabPlugin?.syncComments()
-    },
-    onRequestSave: () => {
-      if (!suppressSaveOnce) scheduleSave()
-    }
-  })
-
-  collabPlugin?.bindCommentComponent(commentComp)
+const normalizeContent = (content: any): any => {
+  if (Array.isArray(content)) return { main: content }
+  if (Array.isArray(content?.main)) return { main: content.main }
+  if (Array.isArray(content?.data?.main)) return { main: content.data.main }
+  return content
 }
 
 const handleReady = (...args: any[]) => {
@@ -811,13 +353,8 @@ const handleReady = (...args: any[]) => {
   const updateRevisionList = () => {
     const revisionComp = getRevisionComponent()
     if (revisionComp) {
-      const revs = revisionComp.getRevisions()
-      revisionList.value = revs.map((r: any) => ({
-        id: r.id,
-        type: r.type,
-        author: r.author,
-        date: r.date,
-        content: r.content
+      revisionList.value = revisionComp.getRevisions().map((r: any) => ({
+        id: r.id, type: r.type, author: r.author, date: r.date, content: r.content
       }))
     }
   }
@@ -843,43 +380,35 @@ const handleReady = (...args: any[]) => {
       onProgress: () => {},
       onComplete: (success: boolean) => {
         busyState.value = 'idle'
-        if (!success) {
-          message.error('文档加载失败')
-        }
+        if (!success) message.error('文档加载失败')
         nextTick(() => initCollaboration())
       }
     })
     return
   }
 
-  if (content === undefined || content === null) {
+  if (content == null) {
     nextTick(() => initCollaboration())
     return
   }
+
   void (async () => {
     busyState.value = 'loading'
     try {
       suppressSaveOnce = true
-
-      // 提取并恢复批注数据
-      const savedComments = (content as any)?.comments
+      const savedComments = content?.comments
       if (Array.isArray(savedComments) && savedComments.length > 0) {
         getCommentComponent()?.restoreComments(savedComments)
       }
-
-      const normalized =
-        Array.isArray(content)
-          ? { main: content }
-          : Array.isArray((content as any)?.main)
-            ? { main: (content as any).main }
-            : Array.isArray((content as any)?.data?.main)
-              ? { main: (content as any).data.main }
-              : content
-      await executeCommand('setValue', normalized)
-      nextTick(() => executeCommand('forceUpdate', { isSubmitHistory: false, isLazy: false, isPartialRender: true, isCompute: false }))
-      nextTick(() => executeCommand('refreshCatalog'))
-      nextTick(() => getCommentComponent()?.render())
-
+      await executeCommand('setValue', normalizeContent(content))
+      nextTick(() => {
+        executeCommand('forceUpdate', { isSubmitHistory: false, isLazy: false, isPartialRender: false, isCompute: true })
+        executeCommand('refreshCatalog')
+        requestAnimationFrame(() => {
+          getCommentComponent()?.render()
+          getRevisionComponent()?.update()
+        })
+      })
     } finally {
       busyState.value = 'idle'
       nextTick(() => initCollaboration())
@@ -887,608 +416,187 @@ const handleReady = (...args: any[]) => {
   })()
 }
 
-const initCollaboration = () => {
-  // 如果文档状态为 view（只读分享），加载完成后设置编辑器为只读模式
-  if (documentMeta.status === 'view') {
-    nextTick(() => executeCommand('mode', 'readonly'))
-  }
-
-  if (!collaborationConfig || collabPlugin) return
-  const editorInstance = getEditorInstance()
-  if (!editorInstance) return
-
-  collabPlugin = new CollaborationPlugin({
-    collaboration: {
-      serverUrl: collaborationConfig.serverUrl,
-      docId: collaborationConfig.docId,
-      user: collaborationConfig.user,
-      token: collaborationConfig.token
-    }
-  })
-
-  collabPlugin.install(editorInstance)
-  installCommentCallbacks(editorInstance)
-  collabConnectionState.value = collabPlugin.getConnectionState()
-  collabSharedSyncState.value = collabPlugin.getSharedSyncState()
-
-  collabOffFns.push(
-    collabPlugin.on('connectionChange', (state) => {
-      collabConnectionState.value = state
-      emitExternalEvent('collabConnectionChange', { state })
-    }),
-    collabPlugin.on('syncStateChange', (state) => {
-      emitExternalEvent('collabSyncStateChange', { state })
-    }),
-    collabPlugin.on('sharedSyncStateChange', (state) => {
-      collabSharedSyncState.value = state
-      emitExternalEvent('collabSharedSyncStateChange', { state })
-    }),
-    collabPlugin.on('usersChange', (users) => {
-      collabOnlineUsers.value = users
-      emitExternalEvent('collabUsersChange', { users })
-    }),
-    collabPlugin.on('error', (err) => {
-      emitExternalEvent('collabError', err)
-    })
-  )
-
-  collabPlugin.connect().catch(() => {})
-
-  nextTick(() => {
-    const editorEl = editorRef.value?.$el as HTMLElement
-    if (!editorEl) return
-    const editorArea = editorEl.closest('.editor-area') as HTMLElement
-    if (!editorArea) return
-    collabPlugin!.initializeCursorsWithEditor(editorArea)
-  })
-
-  // 浏览器标签页关闭时主动断开 WebSocket，确保后端立即感知用户离开
-  const onBeforeUnload = () => {
-    if (collabPlugin) {
-      collabPlugin.disconnect()
-    }
-  }
-  window.addEventListener('beforeunload', onBeforeUnload)
-  collabOffFns.push(() => window.removeEventListener('beforeunload', onBeforeUnload))
-}
-
 onBeforeUnmount(() => {
   closeLoadingOverlay()
-  collabOffFns.forEach(fn => { try { fn() } catch { void 0 } })
-  collabOffFns.length = 0
-  if (collabPlugin) {
-    collabPlugin.disconnect()
-    collabPlugin.uninstall()
-    collabPlugin = null
-  }
+  cleanupCollaboration()
 })
 
-const handleEditorCommand = (command: string, ...args: any[]) => {
-  if (command === 'catalogChange') {
-    cachedCatalog.value = args[0] ?? []
-    catalogRef.value?.updateCatalog?.(cachedCatalog.value)
-    return
-  }
-  if (command === 'thumbnailsChange') {
-    catalogRef.value?.updateThumbnails?.(args[0] ?? [])
-    return
-  }
-  if (command === 'editorStatus') {
-    const payload = (args[0] ?? {}) as Record<string, any>
-    footerRef.value?.updateEditorStatus?.(payload)
-    if (payload.totalPages !== undefined) documentStats.totalPages = Number(payload.totalPages) || 1
-    if (payload.wordCount !== undefined) documentStats.wordCount = Number(payload.wordCount) || 0
-    if (payload.paragraphCount !== undefined) documentStats.paragraphCount = Number(payload.paragraphCount) || 0
-    if (payload.charCount !== undefined) documentStats.charCount = Number(payload.charCount) || 0
-    if (payload.charCountWithSpaces !== undefined) {
-      documentStats.charCountWithSpaces = Number(payload.charCountWithSpaces) || 0
-    }
-    return
-  }
-  if (command === 'editorAbilityChange') {
-    emitExternalEvent('abilityChange', args[0] ?? null)
-    return
-  }
-  if (command === 'contentChange') {
-    emitExternalEvent('contentChange', args[0] ?? null)
-    nextTick(() => {
-      getCommentComponent()?.render()
-      getRevisionComponent()?.update()
-    })
-    const revisionComp = getRevisionComponent()
-    if (revisionComp) {
-      const revs = revisionComp.getRevisions()
-      revisionList.value = revs.map(r => ({
-        id: r.id,
-        type: r.type,
-        author: r.author,
-        date: r.date,
-        content: r.content
-      }))
-    }
-    if (suppressSaveOnce) {
-      suppressSaveOnce = false
-      return
-    }
-    collabPlugin?.markPositionListDirty()
-    collabPlugin?.refreshCursors()
-    return
-  }
-  if (command === 'commentsLoaded') {
-    const metas: DocxCommentMeta[] = args[0] || []
-    getCommentComponent()?.buildCommentsFromMetas(metas)
-    nextTick(() => getCommentComponent()?.render())
-    return
-  }
-  if (command === 'importFinished') {
-    const payload = (args[0] || {}) as {
-      source?: string
-      comments?: DocxCommentMeta[]
-      onSaveComplete?: () => void
-    }
-    const onSaveComplete = payload.onSaveComplete
-    const importComments = payload.comments
+const { handleEditorCommand, handleEditorSaved } = useEditorCommand({
+  cachedCatalog,
+  catalogRef,
+  footerRef,
+  documentStats,
+  getCommentComponent,
+  getRevisionComponent,
+  revisionList,
+  isSuppressSaveOnce: () => suppressSaveOnce,
+  setSuppressSaveOnce,
+  getCollabPlugin,
+  saveNow,
+  setMeta,
+  importFileName,
+  importFileSize,
+  importParseProgress,
+  setImportModeResolver,
+  showImportNotification
+})
 
-    void (async () => {
-      await nextTick()
 
-      // 先加载批注，使其随内容一起保存
-      if (importComments?.length) {
-        getCommentComponent()?.buildCommentsFromMetas(importComments)
-        nextTick(() => getCommentComponent()?.render())
-      }
-
-      await saveNow({ silent: true })
-
-      onSaveComplete?.()
-    })()
-    return
-  }
-  if (command === 'importNewDoc') {
-    const { fileName } = (args[0] || {}) as { fileName?: string }
-    const hex = () => Math.random().toString(16).slice(2).toUpperCase().padEnd(4, '0').slice(0, 4)
-    const newId = 'DEU' + hex() + hex() + hex() + hex()
-    const now = new Date()
-    const fmt = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`
-    setMeta({ id: newId, name: fileName || '新建文档', createdAt: fmt, submittedAt: '' })
-    return
-  }
-  if (command === 'importConfirm') {
-    const { resolve, fileName, fileSize, parseProgress } = (args[0] || {}) as {
-      resolve?: (v: string) => void
-      fileName?: string
-      fileSize?: string
-      parseProgress?: number
-    }
-    if (!resolve) return
-    importFileName.value = fileName || ''
-    importFileSize.value = fileSize || ''
-    importParseProgress.value = parseProgress
-    importModeResolver = resolve
-    // 使用 notification 在右上角显示通知
-    showImportNotification()
-    return
-  }
-  if (command === 'importParseProgress') {
-    // 更新解析进度（响应式数据会自动更新通知内容）
-    importParseProgress.value = args[0] as number
-    return
-  }
-  if (command === 'importParseComplete') {
-    importParseProgress.value = undefined
-
-    return
-  }
-  emitExternalEvent('statusChange', { command, args })
+const dialogCommands: Record<string, Ref<boolean>> = {
+  hyperlink: hyperlinkDialogVisible,
+  insertTableDialog: insertTableDialogVisible,
+  tableBordersDialog: tableBordersDialogVisible,
+  insertChart: chartDialogVisible,
+  latex: latexDialogVisible,
+  barcode: barcodeDialogVisible,
+  qrcode: qrcodeDialogVisible,
+  signature: signatureDialogVisible,
+  addWatermark: watermarkDialogVisible,
+  customPaperSizeDialog: paperSizeDialogVisible,
+  pageNumberDialog: pageNumberDialogVisible,
+  insertDate: dateDialogVisible,
+  paragraphDialog: paragraphDialogVisible,
+  versionHistory: versionHistoryDialogVisible,
+  aiSettings: aiSettingsDialogVisible,
 }
 
-const handleEditorSaved = (_payload?: any) => {
-  void saveNow({ silent: false })
+const infoMessages: Record<string, string> = {
+  exportPdf: '暂不支持导出 PDF',
+  exportHtml: '暂不支持导出 HTML',
+  footnote: '暂不支持脚注',
+  spellcheck: '暂不支持拼写检查',
+  compare: '暂不支持比较文档',
+  separatorDialog: '分割线颜色暂未接入',
 }
 
-// 显示导入通知（右下角）
-let importNotificationInstance: any = null
-
-const showImportNotification = () => {
-  // 如果通知已存在，不重复创建
-  if (importNotificationInstance) return
-
-  // 使用 Vue 组件创建 VNode，传递响应式数据
-  const content = h(ImportNotification, {
-    fileName: importFileName,
-    fileSize: importFileSize,
-    parseProgress: importParseProgress,
-    onOverwrite: () => handleImportAction('overwrite'),
-    onAppend: () => handleImportAction('append')
-  })
-
-  notification.open({
-    key: 'import-notification',
-    class: 'import-notification',
-    placement: 'topRight',
-    duration: 0,
-    closable: true,
-    onClose: () => {
-      if (importModeResolver) {
-        const resolver = importModeResolver
-        importModeResolver = null
-        resolver('cancel')
-      }
-      importNotificationInstance = null
-    },
-    message: null,
-    description: content,
-    style: {
-      width: '450px',
-      padding: '16px'
-    }
-  })
-  importNotificationInstance = 'import-notification'
-}
-
-const closeImportNotification = () => {
-  if (importNotificationInstance) {
-    notification.close('import-notification')
-    importNotificationInstance = null
-  }
-}
-
-
-const handleImportAction = (mode: 'overwrite' | 'append' | 'cancel') => {
-  const resolver = importModeResolver
-  importModeResolver = null // 先清空，防止 onClose 重复处理
-  if (!resolver) {
-    return
-  }
-
-  // 关闭通知（此时 importModeResolver 已为 null，onClose 不会执行 cancel 逻辑）
-  closeImportNotification()
-
-  if (mode === 'cancel') {
-    resolver('cancel')
-    return
-  }
-  suppressSaveOnce = true
-  resolver(mode)
+const aiCommands: Record<string, { action: string; payload?: any; tab?: AITab }> = {
+  aiPolish: { action: 'quickAction', payload: { action: AIAction.POLISH } },
+  aiSummarize: { action: 'quickAction', payload: { action: AIAction.SUMMARIZE } },
+  aiContinue: { action: 'continue' },
+  aiFixGrammar: { action: 'quickAction', payload: { action: AIAction.FIX_GRAMMAR } },
+  aiDocAnalysis: { action: 'docAnalysis', tab: 'analysis' },
+  aiLayout: { action: 'layoutSuggestion', tab: 'layout' },
 }
 
 const handleCommand = (command: string, ...args: any[]) => {
-
-  if (command === 'new') {
-    void newDoc()
-    return
-  }
-  if (command === 'save') {
-    void saveNow({ silent: false })
-    return
-  }
-  if (command === 'rename') {
-    void renameDoc()
-    return
-  }
-  if (command === 'protect' || command === 'protectDoc') {
-    openProtect()
-    return
-  }
-  if (command === 'unprotect') {
-    openUnprotect()
-    return
-  }
-  if (command === 'accessPermission') {
-    openAccessPermission()
-    return
-  }
-  if (command === 'shortcuts') {
-    openShortcuts()
+  if (dialogCommands[command]) {
+    dialogCommands[command].value = true
+    if (command === 'bookmark') refreshBookmarks()
     return
   }
 
-  if (command === 'openShortcuts') {
-    openShortcuts()
+  if (infoMessages[command]) {
+    message.info(infoMessages[command])
     return
   }
-  if (command === 'help') {
-    openShortcuts()
-    return
-  }
-  if (command === 'feedback') {
-    openFeedback()
-    return
-  }
-  if (command === 'openSearchPanel') {
-    activeDock.value = 'search'
-    return
-  }
-  if (command === 'openAIPanel') {
+
+  if (aiCommands[command]) {
     activeDock.value = 'ai'
     aiStateStore.setVisible(true)
+    const cfg = aiCommands[command]
+    if (cfg.tab) aiStateStore.setActiveTab(cfg.tab)
+    handleAIAction(cfg.action, cfg.payload ?? (command === 'aiTranslate' ? { targetLanguage: args[0] } : undefined))
     return
   }
-  if (command === 'closeAIPanel') {
-    closeAIDock()
-    return
-  }
-  if (command === 'exportPdf') {
-    message.info('暂不支持导出 PDF')
-    return
-  }
-  if (command === 'exportHtml') {
-    message.info('暂不支持导出 HTML')
-    return
-  }
-  if (command === 'rulerVisible') {
-    const visible = !!args[0]
-    const instance = getEditorInstance()
-    instance?.command?.executeUpdateOptions?.({ marginIndicatorDisabled: !visible })
-    return
-  }
-  if (command === 'versionHistory') {
-    versionHistoryDialogVisible.value = true
-    return
-  }
-  if (command === 'footnote') {
-    message.info('暂不支持脚注')
-    return
-  }
-  if (command === 'comment') {
-    nextTick(() => {
-      getCommentComponent()?.render()
-    })
-    return
-  }
-  if (command === 'spellcheck') {
-    message.info('暂不支持拼写检查')
-    return
-  }
-  if (command === 'compare') {
-    message.info('暂不支持比较文档')
-    return
-  }
-  if (command === 'toggleCollaborationCursor') {
-    if (!collabPlugin) return
-    collabPlugin.setSharedSyncState({
-      cursor: !collabSharedSyncState.value.cursor
-    })
-    return
-  }
-  if (command === 'toggleCollaborationSelection') {
-    if (!collabPlugin) return
-    collabPlugin.setSharedSyncState({
-      selection: !collabSharedSyncState.value.selection
-    })
-    return
-  }
-  if (command === 'toggleTrackChanges') {
-    isTrackChanges.value = !!args[0]
-    executeCommand('updateOptions', { trackChanges: isTrackChanges.value })
-    if (isTrackChanges.value) {
-      activeDock.value = 'revision'
-    } else {
-      activeDock.value = 'search'
+
+  switch (command) {
+    case 'new': return void newDoc()
+    case 'save': return void saveNow({ silent: false })
+    case 'rename': return void renameDoc()
+    case 'protect':
+    case 'protectDoc': return openProtect()
+    case 'unprotect': return openUnprotect()
+    case 'accessPermission': return openAccessPermission()
+    case 'shortcuts':
+    case 'openShortcuts':
+    case 'help': return openShortcuts()
+    case 'feedback': return openFeedback()
+    case 'openSearchPanel': activeDock.value = 'search'; return
+    case 'openAIPanel': activeDock.value = 'ai'; aiStateStore.setVisible(true); return
+    case 'closeAIPanel': return closeAIDock()
+    case 'openRevisionPanel': activeDock.value = 'revision'; return
+    case 'rulerVisible': {
+      const instance = getEditorInstance()
+      instance?.command?.executeUpdateOptions?.({ marginIndicatorDisabled: !args[0] })
+      return
     }
-    return
-  }
-  if (command === 'openRevisionPanel') {
-    activeDock.value = 'revision'
-    return
-  }
-  if (command === 'revisionDisplayMode') {
-    const mode = args[0] as string
-    const showComments = mode === 'all' || mode === 'comments'
-    const showRevisions = mode === 'all' || mode === 'revisions'
-    executeCommand('updateOptions', {
-      revisionDisplayMode: mode,
-      showCommentBalloons: showComments,
-      showRevisionBalloons: showRevisions
-    })
-    nextTick(() => {
-      getCommentComponent()?.render()
-      getRevisionComponent()?.update()
-    })
-    return
-  }
-  if (command === 'acceptAllRevisions' || command === 'rejectAllRevisions') {
-    executeCommand(command)
-    return
-  }
-  if (command === 'locateRevision') {
-    activeRevisionId.value = String(args[0] || '')
-    executeCommand('locateRevision', args[0])
-    return
-  }
-  if (command === 'acceptRevisionById' || command === 'rejectRevisionById') {
-    executeCommand(command, args[0])
-    return
-  }
-  // AI 菜单命令
-  if (command === 'aiPolish') {
-    activeDock.value = 'ai'
-    aiStateStore.setVisible(true)
-    handleAIAction('quickAction', { action: AIAction.POLISH })
-    return
-  }
-  if (command === 'aiSummarize') {
-    activeDock.value = 'ai'
-    aiStateStore.setVisible(true)
-    handleAIAction('quickAction', { action: AIAction.SUMMARIZE })
-    return
-  }
-  if (command === 'aiContinue') {
-    activeDock.value = 'ai'
-    aiStateStore.setVisible(true)
-    handleAIAction('continue')
-    return
-  }
-  if (command === 'aiFixGrammar') {
-    activeDock.value = 'ai'
-    aiStateStore.setVisible(true)
-    handleAIAction('quickAction', { action: AIAction.FIX_GRAMMAR })
-    return
-  }
-  if (command === 'aiTranslate') {
-    activeDock.value = 'ai'
-    aiStateStore.setVisible(true)
-    handleAIAction('translate', { targetLanguage: args[0] })
-    return
-  }
-  if (command === 'aiDocAnalysis') {
-    activeDock.value = 'ai'
-    aiStateStore.setVisible(true)
-    aiStateStore.setActiveTab('analysis')
-    handleAIAction('docAnalysis')
-    return
-  }
-  if (command === 'aiLayout') {
-    activeDock.value = 'ai'
-    aiStateStore.setVisible(true)
-    aiStateStore.setActiveTab('layout')
-    handleAIAction('layoutSuggestion')
-    return
-  }
-  if (command === 'aiSettings') {
-    aiSettingsDialogVisible.value = true
-    return
-  }
-  if (command === 'toolbarVisible') {
-    toolbarVisible.value = !!args[0]
-    return
-  }
-  if (command === 'bottomNavVisible') {
-    bottomNavVisible.value = !!args[0]
-    return
-  }
-
-  if (command === 'hyperlink') {
-    hyperlinkDialogVisible.value = true
-    return
-  }
-  if (command === 'bookmark') {
-    bookmarkDialogVisible.value = true
-    refreshBookmarks()
-    return
-  }
-  if (command === 'insertTableDialog') {
-    insertTableDialogVisible.value = true
-    return
-  }
-  if (command === 'tableBordersDialog') {
-    tableBordersDialogVisible.value = true
-    return
-  }
-  if (command === 'insertChart') {
-    chartDialogVisible.value = true
-    return
-  }
-  if (command === 'latex') {
-    latexDialogVisible.value = true
-    return
-  }
-  if (command === 'barcode') {
-    barcodeDialogVisible.value = true
-    return
-  }
-  if (command === 'qrcode') {
-    qrcodeDialogVisible.value = true
-    return
-  }
-  if (command === 'signature') {
-    signatureDialogVisible.value = true
-    return
-  }
-  if (command === 'addWatermark') {
-    watermarkDialogVisible.value = true
-    return
-  }
-  if (command === 'customPaperSizeDialog') {
-    paperSizeDialogVisible.value = true
-    return
-  }
-  if (command === 'pageNumberDialog') {
-    pageNumberDialogVisible.value = true
-    return
-  }
-  if (command === 'insertDate') {
-    dateDialogVisible.value = true
-    return
-  }
-  if (command === 'paragraphDialog') {
-    paragraphDialogVisible.value = true
-    return
-  }
-
-  if (command === 'tocInsert') {
-    const p = args[0] ?? {}
-    executeCommand('tocInsert', p)
-    return
-  }
-  if (command === 'tocRemove') {
-    executeCommand('tocRemove')
-    return
-  }
-  if (command === 'toggleCatalog') {
-    const desired = args.length > 0 && typeof args[0] === 'boolean' ? (args[0] as boolean) : null
-    const opened = activeDock.value === 'catalog' || activeDock.value === 'section'
-    const nextOpen = desired === null ? !opened : desired
-    if (!nextOpen) {
-      closeDock()
-    } else {
-      activeDock.value = 'catalog'
-      void nextTick(() => {
-        catalogRef.value?.switchToCatalogTab?.()
-        if (cachedCatalog.value.length > 0) {
-          catalogRef.value?.updateCatalog?.(cachedCatalog.value)
-        }
+    case 'comment': return executeCommand('comment')
+    case 'toolbarVisible': toolbarVisible.value = !!args[0]; return
+    case 'bottomNavVisible': bottomNavVisible.value = !!args[0]; return
+    case 'tocInsert': return executeCommand('tocInsert', args[0] ?? {})
+    case 'tocRemove': return executeCommand('tocRemove')
+    case 'columns': return executeCommand('columns', args[0])
+    case 'search': activeDock.value = 'search'; break
+    case 'closeSearchPanel':
+      if (activeDock.value === 'search') closeDock()
+      return
+    case 'replaceCurrent': {
+      const navInfo = executeCommand('getSearchNavigateInfo')
+      executeCommand('replace', args[0], { index: navInfo ? navInfo.index - 1 : 0 })
+      return
+    }
+    case 'toggleCollaborationCursor': {
+      const plugin = getCollabPlugin()
+      if (plugin) plugin.setSharedSyncState({ cursor: !collabSharedSyncState.value.cursor })
+      return
+    }
+    case 'toggleCollaborationSelection': {
+      const plugin = getCollabPlugin()
+      if (plugin) plugin.setSharedSyncState({ selection: !collabSharedSyncState.value.selection })
+      return
+    }
+    case 'toggleTrackChanges': {
+      isTrackChanges.value = !!args[0]
+      executeCommand('updateOptions', { trackChanges: isTrackChanges.value })
+      activeDock.value = isTrackChanges.value ? 'revision' : 'search'
+      return
+    }
+    case 'revisionDisplayMode': {
+      const mode = args[0] as string
+      executeCommand('updateOptions', {
+        revisionDisplayMode: mode,
+        showCommentBalloons: mode === 'all' || mode === 'comments',
+        showRevisionBalloons: mode === 'all' || mode === 'revisions'
       })
+      nextTick(() => requestAnimationFrame(() => { getCommentComponent()?.render(); getRevisionComponent()?.update() }))
+      return
     }
-    return
+    case 'acceptAllRevisions':
+    case 'rejectAllRevisions': return executeCommand(command)
+    case 'locateRevision':
+      activeRevisionId.value = String(args[0] || '')
+      return executeCommand('locateRevision', args[0])
+    case 'acceptRevisionById':
+    case 'rejectRevisionById': return executeCommand(command, args[0])
+    case 'toggleCatalog': {
+      const desired = args.length > 0 && typeof args[0] === 'boolean' ? (args[0] as boolean) : null
+      const opened = activeDock.value === 'catalog' || activeDock.value === 'section'
+      if (desired === null ? opened : !desired) {
+        closeDock()
+      } else {
+        activeDock.value = 'catalog'
+        void nextTick(() => {
+          catalogRef.value?.switchToCatalogTab?.()
+          if (cachedCatalog.value.length > 0) catalogRef.value?.updateCatalog?.(cachedCatalog.value)
+        })
+      }
+      return
+    }
+    case 'aiTranslate':
+      activeDock.value = 'ai'
+      aiStateStore.setVisible(true)
+      handleAIAction('translate', { targetLanguage: args[0] })
+      return
   }
 
-  if (command === 'separatorDialog') {
-    message.info('分割线颜色暂未接入')
-    return
-  }
-  if (command === 'columns') {
-    executeCommand('columns', args[0])
-    return
-  }
-  if (command === 'closeSearchPanel') {
-    if (activeDock.value === 'search') closeDock()
-    return
-  }
-  if (command === 'search') {
-    activeDock.value = 'search'
-  }
-  if (command === 'replaceCurrent') {
-    const navigateInfo = executeCommand('getSearchNavigateInfo')
-    const replaceIndex = navigateInfo ? navigateInfo.index - 1 : 0
-    executeCommand('replace', args[0], { index: replaceIndex })
-    return
-  }
   const fn = editorRef.value?.executeCommand
   if (typeof fn === 'function') fn(command, ...args)
 }
 
-const executeCommand = (command: string, ...args: any[]) => {
-  const fn = editorRef.value?.executeCommand
-  if (typeof fn === 'function') return fn(command, ...args)
-}
-
-// ---- 批注功能 ----
-
-
-
 const handleVersionRestore = async (content: any) => {
   if (!content) return
   suppressSaveOnce = true
-  const normalized =
-    Array.isArray(content)
-      ? { main: content }
-      : Array.isArray((content as any)?.main)
-        ? { main: (content as any).main }
-        : Array.isArray((content as any)?.data?.main)
-          ? { main: (content as any).data.main }
-          : content
-  await executeCommand('setValue', normalized)
+  await executeCommand('setValue', normalizeContent(content))
   nextTick(() => executeCommand('refreshCatalog'))
 }
 

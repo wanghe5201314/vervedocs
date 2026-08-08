@@ -30,14 +30,14 @@ const externalEventHandlerWrappers = new Map<ExternalEventName, Map<ExternalEven
 const createDebounced = <T>(fn: (payload: T) => void, debounceMs: number, maxWaitMs?: number) => {
   let timer: number | null = null
   let firstTs: number | null = null
-  let latest: T
+  let latest: T | undefined
   const flush = () => {
     if (timer) {
       clearTimeout(timer)
       timer = null
     }
     firstTs = null
-    fn(latest)
+    if (latest !== undefined) fn(latest)
   }
   return (payload: T) => {
     latest = payload
@@ -54,7 +54,7 @@ const createDebounced = <T>(fn: (payload: T) => void, debounceMs: number, maxWai
 const createThrottled = <T>(fn: (payload: T) => void, throttleMs: number) => {
   let lastTs = 0
   let timer: number | null = null
-  let latest: T
+  let latest: T | undefined
   return (payload: T) => {
     latest = payload
     const now = Date.now()
@@ -68,7 +68,7 @@ const createThrottled = <T>(fn: (payload: T) => void, throttleMs: number) => {
     timer = window.setTimeout(() => {
       timer = null
       lastTs = Date.now()
-      fn(latest)
+      if (latest !== undefined) fn(latest)
     }, remain)
   }
 }

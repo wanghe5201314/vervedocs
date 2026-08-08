@@ -192,7 +192,7 @@
       </a-dropdown>
       <a-divider type="vertical" />
       <button class="tb" @click="emit('cmd', 'openSearchPanel')" title="搜索与替换"><MdiIcon name="magnify" /></button>
-      <button class="tb" @click="emit('cmd', 'comment')" title="新建批注"><MdiIcon name="comment-plus-outline" /></button>
+      <button class="tb" :disabled="!props.hasSelection" @click="emit('cmd', 'comment')" title="新建批注"><MdiIcon name="comment-plus-outline" /></button>
 
       <button class="tb" @click="emit('cmd', 'spellcheck')" title="拼写检查"><MdiIcon name="spellcheck" /></button>
       <a-popover placement="bottom" :overlayStyle="{ width: '280px' }" trigger="click" v-model:open="wordCountVisible">
@@ -254,6 +254,7 @@ const props = defineProps<{
   firstLineIndentChars?: number
   inCanvas?: boolean
   simpleMode?: boolean
+  hasSelection?: boolean
 
   documentStats?: {
     totalPages: number
@@ -392,7 +393,10 @@ const getSeparatorStyle = (sep: any) => {
 :deep(.ant-select .ant-select-selector:hover) { border-color: #1a73e8 !important; }
 
 /* 禁用按钮 */
-.tb.tb-disabled { color: #c0c4cc !important; cursor: not-allowed !important; }
+.tb:disabled,
+.tb.tb-disabled { color: #c0c4cc !important; cursor: not-allowed !important; opacity: 0.6; }
+.tb:disabled:hover,
 .tb.tb-disabled:hover { background: transparent !important; }
+.tb:disabled i,
 .tb.tb-disabled i { color: #c0c4cc !important; }
 </style>

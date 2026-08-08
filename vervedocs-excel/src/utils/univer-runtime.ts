@@ -37,7 +37,7 @@ type ThreadCommentModule = typeof import('@univerjs/thread-comment')
 type ThreadCommentUIModule = typeof import('@univerjs/thread-comment-ui')
 type UIModule = typeof import('@univerjs/ui')
 type AdapterModule = typeof import('./univer-adapter')
-type ExcelLocale = 'zhCN' | 'enUS'
+import type { ExcelLocale } from '@/i18n/types'
 
 export type LoadedUniverRuntime = {
   core: Pick<CoreModule, 'BorderStyleTypes' | 'BorderType' | 'LocaleType' | 'Univer' | 'mergeLocales'>
@@ -81,30 +81,30 @@ export type LoadedUniverRuntime = {
     UniverUIPlugin: UIModule['UniverUIPlugin']
   }
   locales: {
-    conditionalFormattingUI: any
-    crosshairHighlight: any
-    dataValidation: any
-    dataValidationUI: any
-    design: any
-    docsUI: any
-    drawingUI: any
-    findReplace: any
-    sheets: any
-    sheetsFilter: any
-    sheetsFilterUI: any
-    sheetsHyperLink: any
-    sheetsHyperLinkUI: any
-    sheetsFormulaUI: any
-    sheetsNoteUI: any
-    sheetsNumfmtUI: any
-    sheetsSortUI: any
-    sheetsTable: any
-    sheetsTableUI: any
-    sheetsThreadCommentUI: any
-    sheetsUI: any
-    threadCommentUI: any
-    zenEditor: any
-    ui: any
+    conditionalFormattingUI: Record<string, unknown>
+    crosshairHighlight: Record<string, unknown>
+    dataValidation: Record<string, unknown>
+    dataValidationUI: Record<string, unknown>
+    design: Record<string, unknown>
+    docsUI: Record<string, unknown>
+    drawingUI: Record<string, unknown>
+    findReplace: Record<string, unknown>
+    sheets: Record<string, unknown>
+    sheetsFilter: Record<string, unknown>
+    sheetsFilterUI: Record<string, unknown>
+    sheetsHyperLink: Record<string, unknown>
+    sheetsHyperLinkUI: Record<string, unknown>
+    sheetsFormulaUI: Record<string, unknown>
+    sheetsNoteUI: Record<string, unknown>
+    sheetsNumfmtUI: Record<string, unknown>
+    sheetsSortUI: Record<string, unknown>
+    sheetsTable: Record<string, unknown>
+    sheetsTableUI: Record<string, unknown>
+    sheetsThreadCommentUI: Record<string, unknown>
+    sheetsUI: Record<string, unknown>
+    threadCommentUI: Record<string, unknown>
+    zenEditor: Record<string, unknown>
+    ui: Record<string, unknown>
   }
   adapter: Pick<AdapterModule, 'internalWorkbookToUniver' | 'univerWorkbookToInternal'>
 }

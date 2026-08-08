@@ -4,8 +4,8 @@ import './assets/iconfont/iconfont.js'
 import { version } from '../package.json'
 
 // Excel Editor UI - Main Entry
-export { ExcelEditor } from './object/ExcelEditor'
-export type { Options } from './object/ExcelEditor'
+export { ExcelEditor } from './object/excel-editor'
+export type { Options } from './object/excel-editor'
 
 // Version
 export const EXCEL_EDITOR_UI_VERSION = version

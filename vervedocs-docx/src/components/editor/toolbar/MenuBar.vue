@@ -1,6 +1,6 @@
 <template>
   <div class="menu-bar">
-    <a-menu mode="horizontal" class="docx-menu-bar" :selectable="false" triggerSubMenuAction="click" @click="({ key }: any) => handleMenuClick(key)">
+    <a-menu mode="horizontal" class="docx-menu-bar" :selectable="false" triggerSubMenuAction="hover" :subMenuCloseDelay="0.15" @click="({ key }: any) => handleMenuClick(key)">
       <!-- 文件菜单 -->
       <a-sub-menu key="file" popupClassName="gdocs-menu-popper gdocs-start-popper">
         <template #title>文件</template>
@@ -262,7 +262,7 @@
         </a-sub-menu>
         <a-menu-divider />
         <a-menu-item key="footnote"><span class="mi"><MdiIcon name="format-annotation-plus" /><span>脚注</span></span></a-menu-item>
-        <a-menu-item key="comment"><div class="mi-row"><span class="mi"><MdiIcon name="comment-plus-outline" /><span>评论</span></span><span class="shortcut">Ctrl+Alt+M</span></div></a-menu-item>
+        <a-menu-item key="comment" :disabled="!hasSelection"><div class="mi-row"><span class="mi"><MdiIcon name="comment-plus-outline" /><span>评论</span></span><span class="shortcut">Ctrl+Alt+M</span></div></a-menu-item>
         <a-menu-divider />
         <a-sub-menu key="watermark" popupClassName="gdocs-menu-popper gdocs-watermark-popper">
           <template #title><span class="mi"><MdiIcon name="watermark" /><span>水印</span></span></template>
@@ -382,7 +382,7 @@
         <template #title>协同</template>
         <a-menu-item key="toggleCollaborationCursor">
           <div class="mi-row mi-row--toggle">
-            <span class="mi"><MdiIcon name="pencil" /><span>光标协同</span></span>
+            <span class="mi"><MdiIcon name="pencil" /><span>显示他人光标</span></span>
             <span class="menu-toggle-check" aria-hidden="true">
               <MdiIcon v-if="cursorCollaborationEnabled" name="check" />
             </span>
@@ -390,7 +390,7 @@
         </a-menu-item>
         <a-menu-item key="toggleCollaborationSelection">
           <div class="mi-row mi-row--toggle">
-            <span class="mi"><MdiIcon name="select-all" /><span>选区协同</span></span>
+            <span class="mi"><MdiIcon name="select-all" /><span>显示他人选区</span></span>
             <span class="menu-toggle-check" aria-hidden="true">
               <MdiIcon v-if="selectionCollaborationEnabled" name="check" />
             </span>

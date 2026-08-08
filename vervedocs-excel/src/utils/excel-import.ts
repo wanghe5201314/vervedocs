@@ -1,9 +1,5 @@
-import type { Align, ICellMeta, ICellStyle, IUiSheet, IWorkbook, VerticalAlign } from '../types'
+import type { Align, ICellMeta, ICellStyle, IUiSheet, IWorkbook, SheetI18nOptions, VerticalAlign } from '../types'
 import { createExcelJsWorkbook } from './exceljs-loader'
-
-type ImportI18nOptions = {
-  defaultSheetName?: (index: number) => string
-}
 
 function normalizeArgbToHex(argb: unknown): string | undefined {
   const text = String(argb || '').trim()
@@ -216,7 +212,7 @@ function parseMergeAddress(range: string): string | null {
   return `${startCell.r}:${startCell.c}:${endCell.r}:${endCell.c}`
 }
 
-function toUiSheet(worksheet: any, index: number, options?: ImportI18nOptions): IUiSheet {
+function toUiSheet(worksheet: any, index: number, options?: SheetI18nOptions): IUiSheet {
   const cells: Record<string, string> = {}
   const styles: Record<string, ICellStyle> = {}
   const cellMeta: Record<string, ICellMeta> = {}
@@ -304,7 +300,7 @@ function toUiSheet(worksheet: any, index: number, options?: ImportI18nOptions): 
   }
 }
 
-export async function readExcelFileToWorkbook(file: File, options?: ImportI18nOptions): Promise<IWorkbook> {
+export async function readExcelFileToWorkbook(file: File, options?: SheetI18nOptions): Promise<IWorkbook> {
   const workbook = await createExcelJsWorkbook()
   const buffer = await file.arrayBuffer()
   await workbook.xlsx.load(buffer)

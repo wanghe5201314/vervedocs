@@ -11,8 +11,8 @@ export {
   ExcelCollaborationPlugin,
   type ExcelCollaborationPluginConfig,
   type ExcelPluginEvents,
-} from './ExcelCollaborationPlugin'
+} from './plugin'
 
-export { UniverSyncBinding } from './UniverSyncBinding'
+export { UniverSyncBinding } from './binding'
 
-export { ExcelCursorManager } from './ExcelCursorManager'
+export { ExcelCursorManager } from './cursor-manager'

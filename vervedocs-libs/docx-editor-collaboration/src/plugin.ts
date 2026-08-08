@@ -19,21 +19,22 @@ import type {
   CursorPosition,
   SharedSyncState,
   CommentComponentBridge,
-} from '../types'
-import { ConnectionState, SyncState } from '../types'
-import { YjsBinding } from '../binding/YjsBinding'
+} from './types'
+import { ConnectionState, SyncState } from './types'
+import { YjsBinding } from './binding'
 import {
   AwarenessCursorManager,
   type PositionCalculator,
   type SelectionCalculator,
   type SelectionRenderLayout,
-} from '../cursor/AwarenessCursorManager'
+} from './cursor-manager'
 import EventEmitter from 'eventemitter3'
+import { subscribeEventBus } from './event-bus'
 
 const CURSOR_AGENT_OFFSET_HEIGHT = 12
 const DEFAULT_CURSOR_WIDTH = 1
 const DEFAULT_SELECTION_MIN_WIDTH = 4
-const SHARED_SYNC_STATE_KEY = 'sharedSyncState'
+
 const DEFAULT_SHARED_SYNC_STATE: SharedSyncState = {
   cursor: true,
   selection: true,
@@ -47,27 +48,6 @@ interface PageCanvasOffset {
 interface SelectionLayoutDraft extends SelectionRenderLayout {
   pageNo: number
   rowNo: number
-}
-
-function subscribeEventBus(
-  eventBus: EditorInterface['eventBus'],
-  event: string,
-  handler: (...args: unknown[]) => void
-): { unsubscribe: () => void } {
-  if (typeof (eventBus as any).select === 'function') {
-    return (eventBus as any).select(event).subscribe(handler)
-  }
-  if (typeof (eventBus as any).on === 'function') {
-    ;(eventBus as any).on(event, handler)
-    return {
-      unsubscribe: () => {
-        if (typeof (eventBus as any).off === 'function') {
-          ;(eventBus as any).off(event, handler)
-        }
-      }
-    }
-  }
-  return { unsubscribe: () => {} }
 }
 
 /**
@@ -103,8 +83,7 @@ export class CollaborationPlugin {
   private provider: HocuspocusProvider | null = null
   private binding: YjsBinding | null = null
   private cursorManager: AwarenessCursorManager
-  private sharedSyncStateMap: Y.Map<boolean> | null = null
-  private sharedSyncStateObserver: ((event: Y.YMapEvent<boolean>) => void) | null = null
+
   private sharedSyncState: SharedSyncState = { ...DEFAULT_SHARED_SYNC_STATE }
   private commentComponent: CommentComponentBridge | null = null
 
@@ -199,7 +178,7 @@ export class CollaborationPlugin {
           if (!this.binding && this.editor && this.doc) {
             this.binding = new YjsBinding(this.doc, this.editor, this.commentComponent)
           }
-          this.ensureSharedSyncStateDefaults()
+
           this.binding?.bindCommentBridge(this.commentComponent)
         }
       },
@@ -213,7 +192,7 @@ export class CollaborationPlugin {
       this.cursorManager.bindAwareness(this.provider.awareness!, collaboration.user)
       this.setupAwarenessUserTracking()
     }
-    this.setupSharedSyncState()
+
 
     // 5. 监听编辑器光标变化
     this.setupCursorSync()
@@ -223,7 +202,7 @@ export class CollaborationPlugin {
   disconnect(): void {
     this.teardownAwarenessUserTracking()
     this.teardownCursorRefreshBindings()
-    this.teardownSharedSyncState()
+
     this.cursorManager.reset()
     if (this.binding) {
       this.binding.destroy()
@@ -242,8 +221,8 @@ export class CollaborationPlugin {
       this.doc = null
     }
     this.onlineUsers.clear()
-    this._cachedPositionList = null
-    this._positionListDirty = true
+    this.cachedPositionList = null
+    this.positionListDirty = true
     this.applySharedSyncState(DEFAULT_SHARED_SYNC_STATE, true)
     this.setConnectionState(ConnectionState.DISCONNECTED)
   }
@@ -274,14 +253,6 @@ export class CollaborationPlugin {
       ...patch,
     })
 
-    if (this.sharedSyncStateMap && this.doc) {
-      this.doc.transact(() => {
-        this.sharedSyncStateMap!.set('cursor', nextState.cursor)
-        this.sharedSyncStateMap!.set('selection', nextState.selection)
-      })
-      return
-    }
-
     this.applySharedSyncState(nextState)
   }
 
@@ -300,11 +271,11 @@ export class CollaborationPlugin {
     }
   }
 
-  private _positionListDirty = true
-  private _cachedPositionList: any[] | null = null
+  private positionListDirty = true
+  private cachedPositionList: EditorCursorPoint[] | null = null
 
   markPositionListDirty(): void {
-    this._positionListDirty = true
+    this.positionListDirty = true
   }
 
   initializeCursorsWithEditor(container: HTMLElement): void {
@@ -413,50 +384,6 @@ export class CollaborationPlugin {
     this.awarenessUsersHandler = null
   }
 
-  private setupSharedSyncState(): void {
-    if (!this.doc) return
-    this.teardownSharedSyncState()
-
-    const sharedMap = this.doc.getMap<boolean>(SHARED_SYNC_STATE_KEY)
-    this.sharedSyncStateMap = sharedMap
-
-    const applyState = () => {
-      this.applySharedSyncState(this.readSharedSyncState(sharedMap), true)
-    }
-
-    this.sharedSyncStateObserver = () => {
-      applyState()
-    }
-    sharedMap.observe(this.sharedSyncStateObserver)
-    applyState()
-  }
-
-  private teardownSharedSyncState(): void {
-    if (this.sharedSyncStateMap && this.sharedSyncStateObserver) {
-      this.sharedSyncStateMap.unobserve(this.sharedSyncStateObserver)
-    }
-    this.sharedSyncStateMap = null
-    this.sharedSyncStateObserver = null
-  }
-
-  private ensureSharedSyncStateDefaults(): void {
-    if (!this.sharedSyncStateMap || !this.doc) return
-    this.doc.transact(() => {
-      if (!this.sharedSyncStateMap!.has('cursor')) {
-        this.sharedSyncStateMap!.set('cursor', DEFAULT_SHARED_SYNC_STATE.cursor)
-      }
-      if (!this.sharedSyncStateMap!.has('selection')) {
-        this.sharedSyncStateMap!.set('selection', DEFAULT_SHARED_SYNC_STATE.selection)
-      }
-    })
-  }
-
-  private readSharedSyncState(map: Y.Map<boolean>): SharedSyncState {
-    return this.normalizeSharedSyncState({
-      cursor: map.has('cursor') ? map.get('cursor') : DEFAULT_SHARED_SYNC_STATE.cursor,
-      selection: map.has('selection') ? map.get('selection') : DEFAULT_SHARED_SYNC_STATE.selection,
-    })
-  }
 
   private normalizeSharedSyncState(state?: Partial<SharedSyncState>): SharedSyncState {
     return {
@@ -776,11 +703,11 @@ export class CollaborationPlugin {
 
   private getPositionList(): EditorCursorPoint[] | null {
     if (!this.editor) return null
-    if (this._positionListDirty || !this._cachedPositionList) {
-      this._cachedPositionList = this.editor.command.getPositionList?.() || null
-      this._positionListDirty = false
+    if (this.positionListDirty || !this.cachedPositionList) {
+      this.cachedPositionList = this.editor.command.getPositionList?.() || null
+      this.positionListDirty = false
     }
-    return this._cachedPositionList
+    return this.cachedPositionList
   }
 
   private getEditorOptions(): EditorCursorOptions {

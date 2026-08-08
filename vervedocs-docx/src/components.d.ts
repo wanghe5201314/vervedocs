@@ -53,12 +53,10 @@ declare module 'vue' {
     ChartDialog: typeof import('./components/dialog/insert/ChartDialog.vue')['default']
     CollapseAvatarsTooltip: typeof import('./components/common/CollapseAvatarsTooltip.vue')['default']
     CompactToolbar: typeof import('./components/editor/toolbar/CompactToolbar.vue')['default']
-
     DateDialog: typeof import('./components/dialog/document/DateDialog.vue')['default']
     Editor: typeof import('./components/editor/Editor.vue')['default']
     Footer: typeof import('./components/layout/Footer.vue')['default']
     GoogleDocsToolbar: typeof import('./components/editor/toolbar/GoogleDocsToolbar.vue')['default']
-
     HyperlinkDialog: typeof import('./components/dialog/document/HyperlinkDialog.vue')['default']
     ImportNotification: typeof import('./components/common/ImportNotification.vue')['default']
     InsertTableDialog: typeof import('./components/dialog/insert/InsertTableDialog.vue')['default']
@@ -72,7 +70,6 @@ declare module 'vue' {
     ParagraphDialog: typeof import('./components/dialog/document/ParagraphDialog.vue')['default']
     ProtectDialog: typeof import('./components/dialog/document/ProtectDialog.vue')['default']
     QrcodeDialog: typeof import('./components/dialog/insert/QrcodeDialog.vue')['default']
-    RemoteCursorsOverlay: typeof import('./components/common/RemoteCursorsOverlay.vue')['default']
     RevisionPanel: typeof import('./components/sidebars/RevisionPanel.vue')['default']
     SearchLayout: typeof import('./components/sidebars/SearchLayout.vue')['default']
     ShortcutsDialog: typeof import('./components/dialog/app/ShortcutsDialog.vue')['default']

@@ -76,6 +76,8 @@ import {
   mdiCrop,
   mdiArrowRight,
   mdiCheck,
+  mdiAccountGroup,
+  mdiCursorDefaultClick,
 } from '@mdi/js'
 
 const iconMap: Record<string, string> = {
@@ -158,6 +160,8 @@ const iconMap: Record<string, string> = {
   'crop': mdiCrop,
   'arrow-right': mdiArrowRight,
   'check': mdiCheck,
+  'account-group': mdiAccountGroup,
+  'cursor-default': mdiCursorDefaultClick,
 }
 
 export function resolveSheetIcon(name: string): string | undefined {

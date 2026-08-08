@@ -42,12 +42,9 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { getAvatarText } from '@/utils'
+import type { CollabUser } from '@/types/collab'
 
-export interface CollabUser {
-  userId: string
-  userName: string
-  color: string
-}
 
 const props = withDefaults(defineProps<{
   users: CollabUser[]
@@ -61,14 +58,6 @@ const showTooltip = ref(false)
 const visibleUsers = computed(() => props.users.slice(0, props.max))
 const overflowCount = computed(() => Math.max(0, props.users.length - props.max))
 
-const getAvatarText = (name: string) => {
-  const s = String(name || '').trim()
-  if (!s) return '?'
-  if (/[\u4e00-\u9fa5]/.test(s)) return s.slice(-2)
-  const parts = s.split(/[\s_-]+/).filter(Boolean)
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
-  return s.slice(0, 2).toUpperCase()
-}
 </script>
 
 <style scoped>

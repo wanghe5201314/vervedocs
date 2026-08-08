@@ -7,8 +7,9 @@ import type {
   ExcelSelection,
 } from './types'
 import { ConnectionState, SyncState } from './types'
-import { UniverSyncBinding } from './UniverSyncBinding'
-import { ExcelCursorManager } from './ExcelCursorManager'
+import { UniverSyncBinding } from './binding'
+import { ExcelCursorManager } from './cursor-manager'
+import { ExcelFilterSyncManager } from './filter-sync-manager'
 
 export interface ExcelCollaborationPluginConfig {
   collaboration: ExcelCollaborationConfig
@@ -33,12 +34,14 @@ export class ExcelCollaborationPlugin {
   private provider: HocuspocusProvider | null = null
   private binding: UniverSyncBinding | null = null
   private cursorManager: ExcelCursorManager
+  private filterSyncManager: ExcelFilterSyncManager
 
   private connectionState: ConnectionState = ConnectionState.DISCONNECTED
   private syncState: SyncState = SyncState.SYNCING
 
   private selectionThrottleTimer: ReturnType<typeof setTimeout> | null = null
   private selectionChangeHandler: ((event: any) => void) | null = null
+  private selectionContainer: HTMLElement | null = null
 
   private eventEmitter = new EventEmitter<ExcelPluginEvents>()
   private onlineUsers = new Map<string, UserInfo>()
@@ -50,6 +53,7 @@ export class ExcelCollaborationPlugin {
       ...config,
     }
     this.cursorManager = new ExcelCursorManager()
+    this.filterSyncManager = new ExcelFilterSyncManager()
   }
 
   install(univerAPI: any): void {
@@ -111,6 +115,8 @@ export class ExcelCollaborationPlugin {
       this.setupAwarenessUserTracking()
     }
 
+    this.filterSyncManager.bindAwareness(this.provider.awareness!, this.univerAPI)
+
     this.setupSelectionSync()
   }
 
@@ -119,6 +125,7 @@ export class ExcelCollaborationPlugin {
       this.binding.destroy()
       this.binding = null
     }
+    this.filterSyncManager.destroy()
     if (this.selectionThrottleTimer) {
       clearTimeout(this.selectionThrottleTimer)
       this.selectionThrottleTimer = null
@@ -148,9 +155,7 @@ export class ExcelCollaborationPlugin {
   }
 
   setSyncFilter(enabled: boolean): void {
-    if (this.binding) {
-      this.binding.syncFilter = enabled
-    }
+    this.filterSyncManager.setEnabled(enabled)
   }
 
   setSyncSort(enabled: boolean): void {
@@ -159,7 +164,26 @@ export class ExcelCollaborationPlugin {
     }
   }
 
+  setSyncSelection(enabled: boolean): void {
+    this.config.enableRemoteSelections = enabled
+
+    if (enabled) {
+      if (this.provider?.awareness) {
+        this.cursorManager.bindAwareness(this.provider.awareness, this.config.collaboration.user)
+      }
+      if (this.selectionContainer) {
+        this.cursorManager.initializeRendering(this.selectionContainer, this.univerAPI)
+      }
+    } else {
+      if (this.provider?.awareness) {
+        this.provider.awareness.setLocalStateField('selection', null)
+      }
+      this.cursorManager.destroy()
+    }
+  }
+
   initializeSelections(container: HTMLElement): void {
+    this.selectionContainer = container
     if (this.config.enableRemoteSelections) {
       this.cursorManager.initializeRendering(container, this.univerAPI)
     }
@@ -229,6 +253,7 @@ export class ExcelCollaborationPlugin {
     if (!this.univerAPI) return
 
     this.selectionChangeHandler = () => {
+      if (!this.config.enableRemoteSelections) return
       if (this.selectionThrottleTimer) return
       this.selectionThrottleTimer = setTimeout(() => {
         this.selectionThrottleTimer = null

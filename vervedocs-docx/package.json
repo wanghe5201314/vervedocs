@@ -88,7 +88,7 @@
     "x-data-spreadsheet": "^1.1.9"
   },
   "peerDependencies": {
-    "@vervedoc/docx-editor-collaboration": "^1.0.3",
+    "@vervedoc/docx-editor-collaboration": "file:../vervedocs-libs/docx-editor-collaboration",
     "ant-design-vue": "^4.2.6",
     "prismjs": "1.30.0",
     "vue": "^3.5.27"

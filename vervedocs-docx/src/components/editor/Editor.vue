@@ -4,13 +4,24 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import DocxEditor, { ICatalogItem, IElement, PaperDirection, TableBorder, parseDocx } from '@vervedoc/core'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
+import DocxEditor, { ICatalogItem, IElement } from '@vervedoc/core'
 import { debounce } from '@/utils'
-// @ts-ignore
-import { getChartSampleManualData } from '@/utils/chartSampleData'
 import { editorStateStore } from '@/stores/editor-state'
-import { getAuthToken } from '@/api/document.api'
+import { useEditorImport } from '@/composables/use-editor-import'
+import { useEditorMedia } from '@/composables/use-editor-media'
+import { useEditorChart } from '@/composables/use-editor-chart'
+import { useEditorRevisions } from '@/composables/use-editor-revisions'
+import { useEditorHeaderFooter } from '@/composables/use-editor-header-footer'
+import { useEditorBreaks } from '@/composables/use-editor-breaks'
+import { useEditorTable } from '@/composables/use-editor-table'
+import { useEditorSearch } from '@/composables/use-editor-search'
+import { useEditorToc } from '@/composables/use-editor-toc'
+import { useEditorWatermark } from '@/composables/use-editor-watermark'
+import { useEditorLatex } from '@/composables/use-editor-latex'
+import { useEditorBarcode } from '@/composables/use-editor-barcode'
+import { useEditorFormat } from '@/composables/use-editor-format'
+import { useEditorPage } from '@/composables/use-editor-page'
 
 const data: IElement[] = []
 
@@ -48,6 +59,106 @@ const refreshCatalog = async () => {
   return catalog
 }
 
+const {
+  importWord: importWordFn,
+  importWordFromUrl: importWordFromUrlFn,
+  importCanvasFromUrl: importCanvasFromUrlFn,
+} = useEditorImport({
+  emit,
+  getEditorInstance: () => editorInstance,
+  refreshCatalog,
+})
+
+const {
+  image: imageFn,
+  audio: audioFn,
+  video: videoFn,
+} = useEditorMedia({
+  getEditorInstance: () => editorInstance,
+})
+
+const {
+  insertChartCore: insertChartCoreFn,
+  updateChartCore: updateChartCoreFn,
+} = useEditorChart({
+  getEditorInstance: () => editorInstance,
+})
+
+const {
+  acceptAllRevisions, rejectAllRevisions, acceptRevisionById, rejectRevisionById, locateRevision,
+} = useEditorRevisions({ getEditorInstance: () => editorInstance })
+
+const {
+  header: headerFn, footer: footerFn, mainZone: mainZoneFn,
+  clearHeader: clearHeaderFn, clearFooter: clearFooterFn, setPageNumber: setPageNumberFn,
+} = useEditorHeaderFooter({ getEditorInstance: () => editorInstance })
+
+const {
+  pageBreak: pageBreakFn, columnBreak: columnBreakFn, lineBreak: lineBreakFn,
+  sectionBreakNextPage: sectionBreakNextPageFn, sectionBreakContinuous: sectionBreakContinuousFn,
+  sectionBreakEvenPage: sectionBreakEvenPageFn, sectionBreakOddPage: sectionBreakOddPageFn,
+  separator: separatorFn,
+} = useEditorBreaks({ getEditorInstance: () => editorInstance })
+
+const {
+  insertTable: insertTableFn, tableBorderType: tableBorderTypeFn,
+  tableBorderColor: tableBorderColorFn, tableBorderWidth: tableBorderWidthFn,
+  tableBorderExternalWidth: tableBorderExternalWidthFn,
+} = useEditorTable({ getEditorInstance: () => editorInstance })
+
+const {
+  search: searchFn, searchNavigatePre: searchNavigatePreFn,
+  searchNavigateNext: searchNavigateNextFn, replace: replaceFn, replaceAll: replaceAllFn,
+} = useEditorSearch({ getEditorInstance: () => editorInstance })
+
+const {
+  tocInsert: tocInsertFn, tocRemove: tocRemoveFn, locationCatalog: locationCatalogFn,
+} = useEditorToc({ getEditorInstance: () => editorInstance })
+
+const {
+  addWatermark: addWatermarkFn, deleteWatermark: deleteWatermarkFn,
+} = useEditorWatermark({ getEditorInstance: () => editorInstance })
+
+const { insertLatex: insertLatexFn } = useEditorLatex({ getEditorInstance: () => editorInstance })
+
+const { barcode: barcodeFn, qrcode: qrcodeFn } = useEditorBarcode({ getEditorInstance: () => editorInstance })
+
+const {
+  undo: undoFn, redo: redoFn, cut: cutFn, copy: copyFn, paste: pasteFn,
+  pasteNoFormat: pasteNoFormatFn, selectAll: selectAllFn, deleteFn: deleteFnRef,
+  painter: painterFn, format: formatFn,
+  font: fontFn, size: sizeFn, characterScale: characterScaleFn, sizeAdd: sizeAddFn, sizeMinus: sizeMinusFn,
+  bold: boldFn, italic: italicFn, underline: underlineFn, strikeout: strikeoutFn,
+  superscript: superscriptFn, subscript: subscriptFn, color: colorFn, highlight: highlightFn,
+  title: titleFn, rowFlex: rowFlexFn, rowMargin: rowMarginFn, indentStep: indentStepFn,
+  list: listFn, lineHeight: lineHeightFn, firstLineIndent: firstLineIndentFn, getFirstLineIndent: getFirstLineIndentFn,
+} = useEditorFormat({ getEditorInstance: () => editorInstance })
+
+const applyOptionsPatch = (patch: any) => {
+  if (!editorInstance) return
+  const currentOptions = editorInstance.command.getOptions?.()
+  editorInstance.command.executeUpdateOptions({
+    ...(currentOptions || {}),
+    ...(patch || {}),
+    background: { ...(currentOptions?.background || {}), ...(patch?.background || {}) },
+    group: { ...(currentOptions?.group || {}), ...(patch?.group || {}) },
+    lineBreak: { ...(currentOptions?.lineBreak || {}), ...(patch?.lineBreak || {}) }
+  })
+}
+
+const {
+  pageJump: pageJumpFn, pageMode: pageModeFn,
+  pageScale: pageScaleFn, pageScaleRecovery: pageScaleRecoveryFn,
+  pageScaleAdd: pageScaleAddFn, pageScaleMinus: pageScaleMinusFn,
+  paperSize: paperSizeFn, paperDirection: paperDirectionFn,
+  setPaperMargin: setPaperMarginFn, setPaperBackground: setPaperBackgroundFn,
+  columns: columnsFn,
+} = useEditorPage({
+  getEditorInstance: () => editorInstance,
+  getEditorContainer: () => editorContainer.value,
+  applyOptionsPatch,
+})
+
 const subscribeEventBus = (eventBus: any, event: string, handler: (...args: any[]) => void) => {
   if (!eventBus || typeof handler !== 'function') {
     return { unsubscribe: () => {} }
@@ -66,20 +177,6 @@ const subscribeEventBus = (eventBus: any, event: string, handler: (...args: any[
     }
   }
   return { unsubscribe: () => {} }
-}
-
-const resolveFetchInit = (payload: any): RequestInit => {
-  const token = String(getAuthToken() || '').trim()
-  const headers: Record<string, string> = {
-    ...(payload?.headers || {})
-  }
-  if (token && !headers.Authorization) {
-    headers.Authorization = `Bearer ${token}`
-  }
-  return {
-    ...(payload?.fetchInit || {}),
-    headers
-  }
 }
 
 
@@ -298,20 +395,10 @@ const refreshThumbnails = () => {
   updateThumbnails()
 }
 
+
 // 执行命令
 const executeCommand = (command: string, ...args: any[]) => {
   if (!editorInstance) return
-
-  const applyOptionsPatch = (patch: any) => {
-    const currentOptions = editorInstance.command.getOptions?.()
-    editorInstance.command.executeUpdateOptions({
-      ...(currentOptions || {}),
-      ...(patch || {}),
-      background: { ...(currentOptions?.background || {}), ...(patch?.background || {}) },
-      group: { ...(currentOptions?.group || {}), ...(patch?.group || {}) },
-      lineBreak: { ...(currentOptions?.lineBreak || {}), ...(patch?.lineBreak || {}) }
-    })
-  }
 
   const commandMap: Record<string, Function> = {
     updateOptions: (patch: any) => applyOptionsPatch(patch),
@@ -320,118 +407,49 @@ const executeCommand = (command: string, ...args: any[]) => {
     refreshCatalog: async () => refreshCatalog(),
     replaceRange: (range: any) => editorInstance.command.executeReplaceRange(range),
     insertElementList: (elements: any[]) => editorInstance.command.executeInsertElementList(elements),
-    insertChartCore: (data: any) => {
-      const p = data && typeof data === 'object' ? data : {}
-      const chartType = String((p as any).chartType || '').trim() || 'bar'
-      const subtypeRaw = String((p as any).subtype || '').trim()
-      const subtype = subtypeRaw || `${chartType}-basic`
-      const configRaw = (p as any).config && typeof (p as any).config === 'object' ? (p as any).config : {}
-      const config = {
-        title: configRaw.title ?? '示例数据',
-        showLegend: configRaw.showLegend ?? true,
-        ...configRaw
-      }
-      const ds = (p as any).dataSource && typeof (p as any).dataSource === 'object' ? (p as any).dataSource : {}
-
-      const ctx = editorInstance.command.getRangeContext?.()
-      const currentTableId =
-        ctx?.isTable && ctx.tableElement && (ctx.tableElement as any).id
-          ? String((ctx.tableElement as any).id)
-          : ''
-
-      // 优先使用从ChartDialog传递的tableData
-      const tableDataFromDialog = (p as any).tableData
-      const dataSource =
-        tableDataFromDialog
-          ? {
-              type: 'manual',
-              manualData: tableDataFromDialog
-            }
-          : (ds as any).type === 'manual' && (ds as any).manualData
-            ? {
-                type: 'manual',
-                manualData: (ds as any).manualData
-              }
-            : (ds as any).type === 'table' && (ds as any).tableId
-              ? {
-                  type: 'table',
-                  tableId: (ds as any).tableId,
-                  range: (ds as any).range
-                }
-              : currentTableId
-                ? {
-                    type: 'table',
-                    tableId: currentTableId,
-                    range: (ds as any).range
-                  }
-                : {
-                    type: 'manual',
-                    manualData: getChartSampleManualData(chartType, subtype)
-                  }
-      const width = Number.isFinite(Number((p as any).width)) ? Number((p as any).width) : 420
-      const height = Number.isFinite(Number((p as any).height)) ? Number((p as any).height) : 320
-      editorInstance.command.executeInsertChart({
-        ...(p as any),
-        chartType,
-        subtype,
-        dataSource,
-        config,
-        width,
-        height
-      })
-    },
-    updateChartCore: (id: string, patch: any) => editorInstance.command.executeUpdateChart(id, patch),
+    insertChartCore: (data: any) => insertChartCoreFn(data),
+    updateChartCore: (id: string, patch: any) => updateChartCoreFn(id, patch),
     setGroup: () => editorInstance.command.executeSetGroup(),
     deleteGroup: (id: string) => editorInstance.command.executeDeleteGroup(id),
     locationGroup: (id: string) => editorInstance.command.executeLocationGroup(id),
     // 撤销/重做/格式刷/清除格式
-    undo: () => editorInstance.command.executeUndo(),
-    redo: () => editorInstance.command.executeRedo(),
-    cut: () => editorInstance.command.executeCut?.(),
-    copy: () => editorInstance.command.executeCopy?.(),
-    paste: () => editorInstance.command.executePaste?.(),
-    pasteNoFormat: () => (editorInstance.command.executePasteNoFormat ? editorInstance.command.executePasteNoFormat() : editorInstance.command.executePaste?.()),
-    selectAll: () => editorInstance.command.executeSelectAll?.(),
-    delete: () => editorInstance.command.executeBackspace?.(),
-    painter: (args: any) => editorInstance.command.executePainter(args),
-    format: () => editorInstance.command.executeFormat(),
+    undo: undoFn,
+    redo: redoFn,
+    cut: cutFn,
+    copy: copyFn,
+    paste: pasteFn,
+    pasteNoFormat: pasteNoFormatFn,
+    selectAll: selectAllFn,
+    delete: deleteFnRef,
+    painter: painterFn,
+    format: formatFn,
 
     // 字体相关
-    font: (family: string) => editorInstance.command.executeFont(family),
-    size: (size: number) => editorInstance.command.executeSize(size),
-    characterScale: (value: number) =>
-      editorInstance.command.executeCharacterScale(value),
-    sizeAdd: () => editorInstance.command.executeSizeAdd(),
-    sizeMinus: () => editorInstance.command.executeSizeMinus(),
+    font: fontFn,
+    size: sizeFn,
+    characterScale: characterScaleFn,
+    sizeAdd: sizeAddFn,
+    sizeMinus: sizeMinusFn,
 
     // 文本样式
-    bold: () => editorInstance.command.executeBold(),
-    italic: () => editorInstance.command.executeItalic(),
-    underline: (args?: any) => editorInstance.command.executeUnderline(args),
-    strikeout: () => editorInstance.command.executeStrikeout(),
-    superscript: () => editorInstance.command.executeSuperscript(),
-    subscript: () => editorInstance.command.executeSubscript(),
-    color: (color: string) => editorInstance.command.executeColor(color),
-    highlight: (color: string) => editorInstance.command.executeHighlight(color),
+    bold: boldFn,
+    italic: italicFn,
+    underline: underlineFn,
+    strikeout: strikeoutFn,
+    superscript: superscriptFn,
+    subscript: subscriptFn,
+    color: colorFn,
+    highlight: highlightFn,
 
     // 段落样式
-    title: (level: any) => editorInstance.command.executeTitle(level),
-    rowFlex: (flex: any) => editorInstance.command.executeRowFlex(flex),
-    rowMargin: (margin: any) => {
-      const v = Number(margin)
-      if (!Number.isFinite(v)) return
-      editorInstance.command.executeRowMargin(v)
-    },
-    indentStep: (direction: any) => editorInstance.command.execute('indentStep', direction),
-    list: (type: any, style: any) => editorInstance.command.executeList(type, style),
-    lineHeight: (height: number) => editorInstance.command.executeLineHeight(height),
-
-    firstLineIndent: (indentPx: number) => {
-      const v = typeof indentPx === 'number' && Number.isFinite(indentPx) ? indentPx : 0
-      editorInstance.command.executeParagraphFirstLineIndent(v)
-    },
-
-    getFirstLineIndent: () => editorInstance.command.execute('getFirstLineIndent'),
+    title: titleFn,
+    rowFlex: rowFlexFn,
+    rowMargin: rowMarginFn,
+    indentStep: indentStepFn,
+    list: listFn,
+    lineHeight: lineHeightFn,
+    firstLineIndent: firstLineIndentFn,
+    getFirstLineIndent: getFirstLineIndentFn,
 
     // 插入元素
     insertCheckbox: () => editorInstance.command.executeInsertElementList([{
@@ -450,173 +468,26 @@ const executeCommand = (command: string, ...args: any[]) => {
     }]),
 
     // 分隔符
-    pageBreak: () => editorInstance.command.executePageBreak(),
-    columnBreak: () => {
-      // 分栏符：在分栏布局中插入分栏中断
-      // 当前编辑器核心暂不支持，使用换行符替代
-      editorInstance.command.executeInsertElementList([{
-        value: '\n'
-      }])
-    },
-    lineBreak: () => {
-      // 换行符：插入软换行（不产生新段落）
-      editorInstance.command.executeInsertElementList([{
-        value: '\n'
-      }])
-    },
-    sectionBreakNextPage: () => {
-      // 下一页分节符：使下一节从新页面开始
-      editorInstance.command.executePageBreak()
-    },
-    sectionBreakContinuous: () => {
-      // 连续分节符：不换页的分节
-      // 当前编辑器核心暂不支持，插入分隔线作为视觉标记
-      editorInstance.command.executeSeparator([0, 0])
-    },
-    sectionBreakEvenPage: () => {
-      // 偶数页分节符：使下一节从偶数页开始
-      editorInstance.command.executePageBreak()
-    },
-    sectionBreakOddPage: () => {
-      // 奇数页分节符：使下一节从奇数页开始
-      editorInstance.command.executePageBreak()
-    },
+    pageBreak: pageBreakFn,
+    columnBreak: columnBreakFn,
+    lineBreak: lineBreakFn,
+    sectionBreakNextPage: sectionBreakNextPageFn,
+    sectionBreakContinuous: sectionBreakContinuousFn,
+    sectionBreakEvenPage: sectionBreakEvenPageFn,
+    sectionBreakOddPage: sectionBreakOddPageFn,
 
     // 表格
-    insertTable: (payload: {
-      rows: number,
-      cols: number
-    }) => editorInstance.command.executeInsertTable(payload.rows, payload.cols),
-    tableBorderType: (borderType: any) => {
-      const t = String(borderType || '').trim().toLowerCase()
-      const resolved =
-        t === 'none' || t === 'empty' || t === 'no'
-          ? (TableBorder as any).NONE ?? borderType
-          : t === 'outside' || t === 'external' || t === 'box'
-            ? (TableBorder as any).OUTSIDE ?? borderType
-            : (TableBorder as any).ALL ?? borderType
-      editorInstance.command.executeTableBorderType(resolved)
-    },
-    tableBorderColor: (color: string) =>
-      editorInstance.command.executeTableBorderColor(color),
-    tableBorderWidth: (width: number) =>
-      editorInstance.command.executeTableBorderWidth(width),
-    tableBorderExternalWidth: (width: number) =>
-      editorInstance.command.executeTableBorderExternalWidth(width),
+    insertTable: insertTableFn,
+    tableBorderType: tableBorderTypeFn,
+    tableBorderColor: tableBorderColorFn,
+    tableBorderWidth: tableBorderWidthFn,
+    tableBorderExternalWidth: tableBorderExternalWidthFn,
 
-    // 图片
-    image: (args: any) => {
-      if (args) {
-        // 如果是字符串（dataUrl），需要先加载获取尺寸
-        if (typeof args === 'string') {
-          const img = new Image()
-          img.onload = () => {
-            editorInstance.command.executeImage({
-              value: args,
-              width: img.width,
-              height: img.height
-            })
-          }
-          img.src = args
-        } else {
-          editorInstance.command.executeImage(args)
-        }
-      } else {
-        // 弹出文件选择逻辑
-        const input = document.createElement('input')
-        input.type = 'file'
-        input.accept = 'image/*'
-        input.onchange = (e: any) => {
-          const file = e.target.files[0]
-          if (file) {
-            const reader = new FileReader()
-            reader.onload = (evt) => {
-              const dataUrl = evt.target?.result as string
-              const img = new Image()
-              img.onload = () => {
-                editorInstance.command.executeImage({
-                  value: dataUrl,
-                  width: img.width,
-                  height: img.height
-                })
-              }
-              img.src = dataUrl
-            }
-            reader.readAsDataURL(file)
-          }
-        }
-        input.click()
-      }
-    },
+    // 图片/音频/视频
+    image: imageFn,
+    audio: audioFn,
+    video: videoFn,
 
-    // 音频
-    audio: (args?: any) => {
-      if (args && typeof args === 'string') {
-        // 直接提供 URL
-        editorInstance.command.executeInsertAudio(args, {
-          name: '音频文件'
-        })
-      } else if (args && args.src) {
-        // 提供完整配置
-        editorInstance.command.executeInsertAudio(args.src, {
-          name: args.name,
-          width: args.width,
-          height: args.height,
-          poster: args.poster
-        })
-      } else {
-        // 弹出文件选择
-        const input = document.createElement('input')
-        input.type = 'file'
-        input.accept = 'audio/*'
-        input.onchange = (e: any) => {
-          const file = e.target.files[0]
-          if (file) {
-            const reader = new FileReader()
-            reader.onload = (evt) => {
-              const dataUrl = evt.target?.result as string
-              editorInstance.command.executeInsertAudio(dataUrl, {
-                name: file.name
-              })
-            }
-            reader.readAsDataURL(file)
-          }
-        }
-        input.click()
-      }
-    },
-
-    // 视频
-    video: (args?: any) => {
-      if (args && typeof args === 'string') {
-        // 直接提供 URL
-        editorInstance.command.executeInsertVideo(args)
-      } else if (args && args.src) {
-        // 提供完整配置
-        editorInstance.command.executeInsertVideo(args.src, {
-          width: args.width,
-          height: args.height,
-          poster: args.poster
-        })
-      } else {
-        // 弹出文件选择
-        const input = document.createElement('input')
-        input.type = 'file'
-        input.accept = 'video/*'
-        input.onchange = (e: any) => {
-          const file = e.target.files[0]
-          if (file) {
-            const reader = new FileReader()
-            reader.onload = (evt) => {
-              const dataUrl = evt.target?.result as string
-              editorInstance.command.executeInsertVideo(dataUrl)
-            }
-            reader.readAsDataURL(file)
-          }
-        }
-        input.click()
-      }
-    },
 
     // 超链接
     hyperlink: (payload: { text: string, url: string }) => {
@@ -649,67 +520,17 @@ const executeCommand = (command: string, ...args: any[]) => {
     },
 
     // 分隔符
-    separator: (payload: any) => {
-      // 支持多种参数格式
-      // 格式1: [type, width, dashArray] - 从工具栏传递
-      // 格式2: { type, width, dashArray } - 对象格式
-      // 格式3: dashArray - 旧格式兼容
-
-      let separatorOptions: any = {
-        lineType: 'solid',
-        lineWidth: 1,
-        dashArray: [0, 0]
-      }
-
-      if (Array.isArray(payload)) {
-        if (payload.length === 3) {
-          // [type, width, dashArray]
-          separatorOptions.lineType = payload[0]
-          separatorOptions.lineWidth = payload[1]
-          separatorOptions.dashArray = payload[2]
-        } else {
-          // 旧格式：dashArray
-          separatorOptions.dashArray = payload
-        }
-      } else if (typeof payload === 'object' && payload !== null) {
-        // 对象格式
-        separatorOptions.lineType = payload.type || 'solid'
-        separatorOptions.lineWidth = payload.width || 1
-        separatorOptions.dashArray = payload.dashArray || [0, 0]
-      }
-
-      // 调用底层的分割线插入方法
-      // 注意：这里需要根据不同的类型生成不同的分割线
-      editorInstance.command.executeSeparator(separatorOptions)
-    },
+    separator: separatorFn,
 
     // 水印
-    addWatermark: (payload?: any) => {
-      if (payload) {
-        editorInstance.command.executeAddWatermark({
-          data: payload.data || payload.content || '',
-          color: payload.color,
-          opacity: payload.opacity,
-          size: payload.size,
-          font: payload.font,
-          repeat: payload.repeat
-        })
-      }
-    },
-    deleteWatermark: () => editorInstance.command.executeDeleteWatermark(),
+    addWatermark: addWatermarkFn,
+    deleteWatermark: deleteWatermarkFn,
 
     // LaTeX
     latex: () => {
       // 由App.vue处理弹出对话框
     },
-    insertLatex: (latex: string) => {
-      if (latex) {
-        editorInstance.command.executeInsertElementList([{
-          type: 'latex',
-          value: latex
-        }])
-      }
-    },
+    insertLatex: insertLatexFn,
 
     // 日期
     insertDate: (payload: { format: string, value: string }) => {
@@ -729,60 +550,41 @@ const executeCommand = (command: string, ...args: any[]) => {
     },
 
     // 搜索替换
-    search: (text: string | null) => editorInstance.command.executeSearch(text),
-    searchNavigatePre: () => editorInstance.command.executeSearchNavigatePre(),
-    searchNavigateNext: () => editorInstance.command.executeSearchNavigateNext(),
-    replace: (text: string) => editorInstance.command.executeReplace(text),
-    replaceAll: (searchText: string, replaceText: string) => editorInstance.command.executeReplaceAll?.(searchText, replaceText),
+    search: searchFn,
+    searchNavigatePre: searchNavigatePreFn,
+    searchNavigateNext: searchNavigateNextFn,
+    replace: replaceFn,
+    replaceAll: replaceAllFn,
 
-    tocInsert: async (payload: any) => {
-      await editorInstance.command.execute('tocInsert', payload)
-    },
-
-    tocRemove: () => {
-      editorInstance.command.execute('tocRemove')
-    },
+    tocInsert: tocInsertFn,
+    tocRemove: tocRemoveFn,
 
     // 打印
     print: () => editorInstance.command.executePrint(),
 
-    locationCatalog: (id: string) => {
-      editorInstance.command.executeLocationCatalog(id)
-    },
+    locationCatalog: locationCatalogFn,
 
-    pageJump: (index: number) => {
-      const pageHeight = editorInstance.command.getPaperHeight()
-      const options = editorInstance.command.getOptions()
-      const pageGap = options.pageGap * (options.scale || 1)
-      const container = editorContainer.value?.parentElement
-      if (container) {
-        // 加上容器的顶部外边距 (40px)
-        const containerPadding = 40
-        container.scrollTop = index * (pageHeight + pageGap) + containerPadding
-      }
-    },
+    pageJump: pageJumpFn,
 
     // 页面模式
-    pageMode: (mode: string) => editorInstance.command.executePageMode(mode),
+    pageMode: pageModeFn,
 
     // 页面缩放
-    pageScale: (scale: number) => editorInstance.command.executePageScale(scale),
-    pageScaleRecovery: () => editorInstance.command.executePageScaleRecovery(),
-    pageScaleAdd: () => editorInstance.command.executePageScaleAdd(),
-    pageScaleMinus: () => editorInstance.command.executePageScaleMinus(),
+    pageScale: pageScaleFn,
+    pageScaleRecovery: pageScaleRecoveryFn,
+    pageScaleAdd: pageScaleAddFn,
+    pageScaleMinus: pageScaleMinusFn,
 
     // 纸张设置
-    paperSize: (width: number, height: number) => editorInstance.command.executePaperSize(width, height),
-    paperDirection: (direction: string) => editorInstance.command.executePaperDirection(direction),
-    setPaperMargin: (margin: number[]) => editorInstance.command.executeSetPaperMargin(margin),
-    setPaperBackground: (color: string) => {
-      applyOptionsPatch({ background: { color } })
-    },
+    paperSize: paperSizeFn,
+    paperDirection: paperDirectionFn,
+    setPaperMargin: setPaperMarginFn,
+    setPaperBackground: setPaperBackgroundFn,
 
     refreshThumbnails: () => refreshThumbnails(),
     insertBlankPageBefore: (direction?: string) => insertBlankPageBefore(direction),
 
-    columns: (value: any) => editorInstance.command.executeColumns?.(value),
+    columns: columnsFn,
 
     // 模式切换
     mode: (mode: string) => editorInstance.command.executeMode(mode),
@@ -793,13 +595,8 @@ const executeCommand = (command: string, ...args: any[]) => {
     },
 
     // 条形码
-    barcode: (content: string) => {
-      editorInstance.command.execute('barcode', content)
-    },
-
-    qrcode: async (content: string) => {
-      await editorInstance.command.execute('qrcode', content)
-    },
+    barcode: barcodeFn,
+    qrcode: qrcodeFn,
 
     // 插入元素 (形状等)
     insertElement: (payload: any) => {
@@ -811,321 +608,19 @@ const executeCommand = (command: string, ...args: any[]) => {
 
 
     // 页眉页脚
-    header: () => {
-      // 切换到页眉编辑模式
-      editorInstance.command.executeSetZone('header')
-    },
-    footer: () => {
-      // 切换到页脚编辑模式
-      editorInstance.command.executeSetZone('footer')
-    },
-    mainZone: () => {
-      // 切换到主体编辑模式
-      editorInstance.command.executeSetZone('main')
-    },
-    clearHeader: () => {
-      editorInstance.command.executeSetZone('header')
-      editorInstance.command.executeSelectAll()
-      editorInstance.command.executeBackspace()
-      editorInstance.command.executeSetZone('main')
-    },
-    clearFooter: () => {
-      editorInstance.command.executeSetZone('footer')
-      editorInstance.command.executeSelectAll()
-      editorInstance.command.executeBackspace()
-      editorInstance.command.executeSetZone('main')
-    },
+    header: headerFn,
+    footer: footerFn,
+    mainZone: mainZoneFn,
+    clearHeader: clearHeaderFn,
+    clearFooter: clearFooterFn,
 
     // 设置页码
-    setPageNumber: (payload: any) => {
-      const currentOptions = editorInstance.command.getOptions?.() || {}
-      editorInstance.command.executeUpdateOptions({
-        ...currentOptions,
-        pageNumber: {
-          ...(currentOptions.pageNumber || {}),
-          ...payload
-        }
-      })
-    },
+    setPageNumber: setPageNumberFn,
 
     // 导入 Word 文档
-    importWord: async (payload: any) => {
-      // 支持旧的直接传入 File/ArrayBuffer 方式
-      let file: File | ArrayBuffer
-      let onProgress: ((progress: number, status: string) => void) | undefined
-      let onComplete: ((success: boolean, message?: string) => void) | undefined
-
-      if (payload instanceof File || payload instanceof ArrayBuffer) {
-        file = payload
-      } else if (payload && payload.file) {
-        file = payload.file
-        onProgress = payload.onProgress
-        onComplete = payload.onComplete
-      } else {
-        console.error('[Editor] importWord: 无效的参数')
-        onComplete?.(false, '无效的文件')
-        return
-      }
-
-      try {
-
-        // 更新进度: 读取文件
-        onProgress?.(10, '正在读取文件...')
-
-        // 如果是 File，先转换为 ArrayBuffer
-        let arrayBuffer: ArrayBuffer
-        let fileName = ''
-        let fileSize = ''
-        if (file instanceof File) {
-          arrayBuffer = await file.arrayBuffer()
-          fileName = file.name
-          // 格式化文件大小
-          const size = file.size
-          if (size < 1024) {
-            fileSize = size + ' B'
-          } else if (size < 1024 * 1024) {
-            fileSize = (size / 1024).toFixed(1) + ' KB'
-          } else {
-            fileSize = (size / (1024 * 1024)).toFixed(1) + ' MB'
-          }
-        } else {
-          arrayBuffer = file
-        }
-
-        // 立即显示通知，显示解析进度
-        const action = await new Promise<string>((resolve) => {
-          // 发送解析进度 0%
-          emit('command', 'importConfirm', {
-            resolve,
-            fileName,
-            fileSize,
-            parseProgress: 0
-          })
-
-          // 异步执行解析
-          ;(async () => {
-            try {
-              // 更新进度: 解析文档
-              emit('command', 'importParseProgress', 30)
-
-              const editorOptions = editorInstance?.command?.getOptions?.()
-              const margins =
-                editorOptions?.paperDirection === PaperDirection.HORIZONTAL
-                  ? [
-                      editorOptions.margins[1],
-                      editorOptions.margins[2],
-                      editorOptions.margins[3],
-                      editorOptions.margins[0]
-                    ]
-                  : editorOptions?.margins
-              const targetInnerWidth =
-                editorOptions?.width && margins
-                  ? editorOptions.width - margins[1] - margins[3]
-                  : undefined
-
-              emit('command', 'importParseProgress', 50)
-
-              const { EchartsChartRenderer } = await import('@vervedoc/docx-editor-chart')
-              const echartsMod = await import('echarts')
-              const result = await parseDocx(arrayBuffer, {
-                targetInnerWidth,
-                tableWidthMode: 'word',
-                defaultTableRowHeight: editorOptions?.table?.defaultTrHeight,
-                defaultTableTdPadding: editorOptions?.table?.tdPadding,
-                forceDefaultLineHeight: editorOptions?.defaultLineHeight,
-                chartRenderer: new EchartsChartRenderer(echartsMod)
-              })
-
-              emit('command', 'importParseProgress', 90)
-
-              if (!result.success || result.elements.length === 0) {
-                console.error('[Editor] Word 文档解析失败:', result.error)
-                // 解析失败，关闭通知
-                emit('command', 'importParseComplete')
-                onComplete?.(false, result.error || '解析失败')
-                return
-              }
-
-              // 解析完成，更新状态
-              emit('command', 'importParseComplete')
-
-              // 存储解析结果，等待用户选择
-              ;(window as any).__importWordResult = result
-
-            } catch (err) {
-              console.error('[Editor] Word 解析出错:', err)
-              emit('command', 'importParseComplete')
-              onComplete?.(false, '解析失败')
-            }
-          })()
-        })
-
-        if (action === 'cancel') {
-          onComplete?.(false, '已取消导入')
-          return
-        }
-
-
-        // 获取解析结果
-        const result = (window as any).__importWordResult
-        delete (window as any).__importWordResult
-
-        if (!result) {
-          onComplete?.(false, '解析结果丢失')
-          return
-        }
-
-        // 更新进度: 渲染内容
-        onProgress?.(70, '正在渲染内容...')
-
-        // 根据用户选择处理内容
-        if (action === 'append') {
-          // 追加模式：获取当前内容并追加新内容
-          const currentValue = editorInstance.command.getValue()
-          const currentElements = currentValue?.data?.main || []
-          const combinedElements = [...currentElements, ...result.elements]
-          editorInstance.command.executeSetValue({
-            main: combinedElements
-          })
-        } else {
-          // 新文档导入模式：更新文档 meta，然后设置新内容
-          const docName = fileName.replace(/\.docx?$/i, '') || '新建文档'
-          emit('command', 'importNewDoc', { fileName: docName })
-          editorInstance.command.executeSetValue({
-            main: result.elements
-          })
-        }
-
-        // 立即触发保存，并等待保存+重新加载完成
-        onProgress?.(80, '正在保存...')
-        await new Promise<void>((resolve) => {
-          emit('command', 'importFinished', {
-            source: 'word',
-            comments: result.comments,
-            onSaveComplete: resolve
-          })
-        })
-
-        // 导入后触发目录提取，使右侧目录 dialog 显示标题
-        nextTick(() => {
-          void refreshCatalog()
-        })
-
-        // 更新进度: 完成
-        onProgress?.(100, '导入完成!')
-        onComplete?.(true)
-
-      } catch (error) {
-        console.error('[Editor] Word 导入出错:', error)
-        const errorMessage = error instanceof Error ? error.message : '导入失败'
-        onComplete?.(false, errorMessage)
-      }
-    },
-
-    importWordFromUrl: async (payload: any) => {
-      const url = payload?.url
-      const onProgress: ((progress: number, status: string) => void) | undefined = payload?.onProgress
-      const onComplete: ((success: boolean, message?: string) => void) | undefined = payload?.onComplete
-      if (!url || typeof url !== 'string') {
-        onComplete?.(false, '无效的地址')
-        return
-      }
-      try {
-        onProgress?.(10, '正在请求文档...')
-        const resp = await fetch(url, resolveFetchInit(payload))
-        if (!resp.ok) {
-          onComplete?.(false, `请求失败: ${resp.status}`)
-          return
-        }
-        onProgress?.(25, '正在读取内容...')
-        const arrayBuffer = await resp.arrayBuffer()
-        onProgress?.(35, '正在解析文档结构...')
-
-        const editorOptions = editorInstance?.command?.getOptions?.()
-        const margins =
-          editorOptions?.paperDirection === PaperDirection.HORIZONTAL
-            ? [
-                editorOptions.margins[1],
-                editorOptions.margins[2],
-                editorOptions.margins[3],
-                editorOptions.margins[0]
-              ]
-            : editorOptions?.margins
-        const targetInnerWidth =
-          editorOptions?.width && margins
-            ? editorOptions.width - margins[1] - margins[3]
-            : undefined
-
-        const { EchartsChartRenderer } = await import('@vervedoc/docx-editor-chart')
-        const echartsMod = await import('echarts')
-        const result = await parseDocx(arrayBuffer, {
-          targetInnerWidth,
-          tableWidthMode: 'word',
-          defaultTableRowHeight: editorOptions?.table?.defaultTrHeight,
-          defaultTableTdPadding: editorOptions?.table?.tdPadding,
-          forceDefaultLineHeight: editorOptions?.defaultLineHeight,
-          chartRenderer: new EchartsChartRenderer(echartsMod)
-        })
-
-
-        if (!result.success || result.elements.length === 0) {
-          onComplete?.(false, result.error || '解析失败')
-          return
-        }
-
-        onProgress?.(75, '正在渲染内容...')
-        editorInstance.command.executeSetValue({ main: result.elements })
-        // 导入后触发目录提取 + 传递批注数据
-        nextTick(() => {
-          void refreshCatalog()
-          if (result.comments?.length) {
-            emit('command', 'commentsLoaded', result.comments)
-          }
-        })
-        onProgress?.(100, '加载完成!')
-        onComplete?.(true)
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : '加载失败'
-        onComplete?.(false, msg)
-      }
-    },
-
-    importCanvasFromUrl: async (payload: any) => {
-      const url = payload?.url
-      const onProgress: ((progress: number, status: string) => void) | undefined = payload?.onProgress
-      const onComplete: ((success: boolean, message?: string) => void) | undefined = payload?.onComplete
-      if (!url || typeof url !== 'string') {
-        onComplete?.(false, '无效的地址')
-        return
-      }
-      try {
-        onProgress?.(10, '正在请求文档...')
-        const fetchInit = resolveFetchInit(payload)
-        const resp = await fetch(url, { ...fetchInit, cache: 'no-store' })
-        if (!resp.ok) {
-          onComplete?.(false, `请求失败: ${resp.status}`)
-          return
-        }
-        onProgress?.(40, '正在解析数据...')
-        const json = await resp.json()
-        const main = Array.isArray(json) ? json : Array.isArray(json?.main) ? json.main : Array.isArray(json?.data?.main) ? json.data.main : null
-        if (!Array.isArray(main) || main.length === 0) {
-          onComplete?.(false, '数据为空或格式不正确')
-          return
-        }
-        onProgress?.(80, '正在渲染内容...')
-        editorInstance.command.executeSetValue({ main })
-        // 导入后触发目录提取
-        nextTick(() => {
-          void refreshCatalog()
-        })
-        onProgress?.(100, '加载完成!')
-        onComplete?.(true)
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : '加载失败'
-        onComplete?.(false, msg)
-      }
-    },
+    importWord: importWordFn,
+    importWordFromUrl: importWordFromUrlFn,
+    importCanvasFromUrl: importCanvasFromUrlFn,
 
     exportDocx: async (payload: any) => {
       await editorInstance.command.execute('exportDocx', payload)
@@ -1135,38 +630,16 @@ const executeCommand = (command: string, ...args: any[]) => {
       editorInstance.command.execute('previewHtml', payload)
     },
 
-    acceptAllRevisions: () => {
-      const overlay = editorInstance.command.getRevisionOverlay?.()
-      if (overlay) overlay.acceptAllRevisions()
-    },
-    rejectAllRevisions: () => {
-      const overlay = editorInstance.command.getRevisionOverlay?.()
-      if (overlay) overlay.rejectAllRevisions()
-    },
-    acceptRevisionById: (id: string) => {
-      const overlay = editorInstance.command.getRevisionOverlay?.()
-      if (overlay) overlay.acceptRevision(id)
-    },
-    rejectRevisionById: (id: string) => {
-      const overlay = editorInstance.command.getRevisionOverlay?.()
-      if (overlay) overlay.rejectRevision(id)
-    },
-    locateRevision: (id: string) => {
-      const overlay = editorInstance.command.getRevisionOverlay?.()
-      if (overlay) {
-        const _revisions = overlay.getRevisions?.() ?? []
-        const elementList = editorInstance.command.getElementList?.() ?? []
-        let firstIndex = -1
-        for (let i = 0; i < elementList.length; i++) {
-          if (elementList[i].revisionId === id) {
-            firstIndex = i
-            break
-          }
-        }
-        if (firstIndex >= 0) {
-          editorInstance.command.executeSetRange({ startIndex: firstIndex, endIndex: firstIndex })
-        }
-      }
+    acceptAllRevisions,
+    rejectAllRevisions,
+    acceptRevisionById,
+    rejectRevisionById,
+    locateRevision,
+
+    comment: () => {
+      const c = editorInstance.comment
+      c.addComment()
+      c.render()
     }
   }
 

@@ -1,5 +1,5 @@
 import type { Awareness } from 'y-protocols/awareness'
-import type { CursorPosition, RemoteCursor, UserInfo } from '../types'
+import type { CursorPosition, RemoteCursor, UserInfo } from './types'
 
 export interface CursorRenderConfig {
   showLabel: boolean
@@ -22,12 +22,7 @@ export interface CursorRenderLayout {
   height: number
 }
 
-export interface SelectionRenderLayout {
-  x: number
-  y: number
-  width: number
-  height: number
-}
+export type SelectionRenderLayout = CursorRenderLayout
 
 export type PositionCalculator = (
   index: number,
@@ -35,7 +30,7 @@ export type PositionCalculator = (
 
 export type SelectionCalculator = (
   position: CursorPosition,
-) => SelectionRenderLayout[]
+) => CursorRenderLayout[]
 
 interface CursorElement {
   root: HTMLDivElement

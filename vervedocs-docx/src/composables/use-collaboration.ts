@@ -1,6 +1,6 @@
 import { Ref, ref, computed, nextTick } from 'vue'
 import { CollaborationPlugin, ConnectionState } from '@vervedoc/docx-editor-collaboration'
-import type { SharedSyncState } from '@vervedoc/docx-editor-collaboration'
+import type { SharedSyncState, EditorInterface } from '@vervedoc/docx-editor-collaboration'
 import { emitExternalEvent } from '@/composables/use-external-api'
 import type { DocumentMeta } from '@/types/document'
 
@@ -9,10 +9,14 @@ interface EditorInstance {
   listener?: any
   comment?: any
   revision?: any
+  eventBus?: any
 }
 
 interface CommentComponent {
   install: (command: any, callbacks: any) => void
+  getComments: () => any[]
+  setComments: (comments: any[]) => void
+  render: () => void
 }
 
 interface CollabUser {
@@ -67,6 +71,13 @@ export function useCollaboration(options: {
     collabPlugin?.bindCommentComponent(commentComp)
   }
 
+  const checkServerAvailable = (serverUrl: string): Promise<boolean> => {
+    const httpUrl = serverUrl.replace(/^ws/, 'http')
+    return fetch(httpUrl, { method: 'HEAD', mode: 'no-cors' })
+      .then(() => true)
+      .catch(() => false)
+  }
+
   const initCollaboration = () => {
     if (documentMeta.status === 'view') {
       nextTick(() => executeCommand('mode', 'readonly'))
@@ -76,59 +87,67 @@ export function useCollaboration(options: {
     const editorInstance = getEditorInstance()
     if (!editorInstance) return
 
-    collabPlugin = new CollaborationPlugin({
-      collaboration: {
-        serverUrl: collaborationConfig.serverUrl,
-        docId: collaborationConfig.docId,
-        user: collaborationConfig.user,
-        token: collaborationConfig.token
+    void (async () => {
+      const available = await checkServerAvailable(collaborationConfig.serverUrl)
+      if (!available) {
+        console.info('[连接模式]: 单机模式')
+        return
       }
-    })
 
-    collabPlugin.install(editorInstance)
-    installCommentCallbacks(editorInstance)
-    collabConnectionState.value = collabPlugin.getConnectionState()
-    collabSharedSyncState.value = collabPlugin.getSharedSyncState()
-
-    collabOffFns.push(
-      collabPlugin.on('connectionChange', (state: any) => {
-        collabConnectionState.value = state
-        emitExternalEvent('collabConnectionChange', { state })
-      }),
-      collabPlugin.on('syncStateChange', (state: any) => {
-        emitExternalEvent('collabSyncStateChange', { state })
-      }),
-      collabPlugin.on('sharedSyncStateChange', (state: any) => {
-        collabSharedSyncState.value = state
-        emitExternalEvent('collabSharedSyncStateChange', { state })
-      }),
-      collabPlugin.on('usersChange', (users: any) => {
-        collabOnlineUsers.value = users
-        emitExternalEvent('collabUsersChange', { users })
-      }),
-      collabPlugin.on('error', (err: any) => {
-        emitExternalEvent('collabError', err)
+      collabPlugin = new CollaborationPlugin({
+        collaboration: {
+          serverUrl: collaborationConfig.serverUrl,
+          docId: collaborationConfig.docId,
+          user: collaborationConfig.user,
+          token: collaborationConfig.token
+        }
       })
-    )
 
-    collabPlugin.connect().catch(() => {})
+      collabPlugin.install(editorInstance as EditorInterface)
+      installCommentCallbacks(editorInstance)
+      collabConnectionState.value = collabPlugin.getConnectionState()
+      collabSharedSyncState.value = collabPlugin.getSharedSyncState()
 
-    nextTick(() => {
-      const editorEl = editorRef.value?.$el as HTMLElement
-      if (!editorEl) return
-      const editorArea = editorEl.closest('.editor-area') as HTMLElement
-      if (!editorArea) return
-      if (!collabPlugin) return
-      collabPlugin.initializeCursorsWithEditor(editorArea)
-    })
+      collabOffFns.push(
+        collabPlugin.on('connectionChange', (state: any) => {
+          collabConnectionState.value = state
+          emitExternalEvent('collabConnectionChange', { state })
+        }),
+        collabPlugin.on('syncStateChange', (state: any) => {
+          emitExternalEvent('collabSyncStateChange', { state })
+        }),
+        collabPlugin.on('sharedSyncStateChange', (state: any) => {
+          collabSharedSyncState.value = state
+          emitExternalEvent('collabSharedSyncStateChange', { state })
+        }),
+        collabPlugin.on('usersChange', (users: any) => {
+          collabOnlineUsers.value = users
+          emitExternalEvent('collabUsersChange', { users })
+        }),
+        collabPlugin.on('error', (err: any) => {
+          emitExternalEvent('collabError', err)
+        })
+      )
 
-    const onBeforeUnload = () => {
-      if (collabPlugin) {
-        collabPlugin.disconnect()
+      collabPlugin.connect().catch(() => {})
+
+      nextTick(() => {
+        const editorEl = editorRef.value?.$el as HTMLElement
+        if (!editorEl) return
+        const editorArea = editorEl.closest('.editor-area') as HTMLElement
+        if (!editorArea) return
+        if (!collabPlugin) return
+        collabPlugin.initializeCursorsWithEditor(editorArea)
+      })
+
+      const onBeforeUnload = () => {
+        if (collabPlugin) {
+          collabPlugin.disconnect()
+        }
       }
-    }
-    window.addEventListener('beforeunload', onBeforeUnload)
-    collabOffFns.push(() => window.removeEventListener('beforeunload', onBeforeUnload))
+      window.addEventListener('beforeunload', onBeforeUnload)
+      collabOffFns.push(() => window.removeEventListener('beforeunload', onBeforeUnload))
+    })()
   }
 
   const cleanupCollaboration = () => {

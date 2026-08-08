@@ -32,7 +32,7 @@ const resolveTarget = (target: string | HTMLElement): HTMLElement => {
 }
 
 export class WordEditor {
-  private app: App<Element> | null = null
+  private app: App | null = null
   private editorRef: ComponentPublicInstance & WordEditorComponentRef | null = null
   private state: {
     initialDocument?: DocxEditorUiInitialDocument

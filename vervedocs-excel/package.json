@@ -1,6 +1,6 @@
 {
   "name": "@vervedoc/excel",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "VerveDoc Excel 编辑器UI组件",
   "type": "module",
   "main": "./dist/excel-editor-ui.js",

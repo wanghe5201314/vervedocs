@@ -34,11 +34,11 @@
     <div class="import-notification-actions">
       <a-tooltip placement="top" :overlay-style="{ zIndex: 99999 }">
         <template #title>当前文档内容不再修改，会将导入的内容作为新文档保存</template>
-        <a-button type="primary" :disabled="isParsing" @click="handleOverwrite"><MdiIcon name="file-import-outline" /> 新建文档</a-button>
+        <a-button type="primary" :disabled="isParsing" @click="handleOverwrite"><VIcon name="file-import-outline" /> 新建文档</a-button>
       </a-tooltip>
       <a-tooltip placement="top" :overlay-style="{ zIndex: 99999 }">
         <template #title>当前文档内容被替换，根据这个文档的内容全新保存</template>
-        <a-button :disabled="isParsing" @click="handleAppend"><MdiIcon name="content-copy" /> 替换到这个文档</a-button>
+        <a-button :disabled="isParsing" @click="handleAppend"><VIcon name="content-copy" /> 替换到这个文档</a-button>
       </a-tooltip>
     </div>
   </div>
@@ -46,7 +46,7 @@
 
 <script setup lang="ts">
 import { computed, type Ref } from 'vue'
-import MdiIcon from './MdiIcon.vue'
+import { VIcon } from '@vervedoc/icons'
 
 const props = defineProps<{
   fileName: Ref<string>

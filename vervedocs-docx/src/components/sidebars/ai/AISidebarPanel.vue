@@ -24,7 +24,7 @@
                 :disabled="!hasSelection || aiState.operation.loading"
                 @click="handleQuickAction(action.value)"
               >
-                <MdiIcon :name="action.icon" />
+                <VIcon :name="action.icon" />
                 {{ action.label }}
               </a-button>
             </div>
@@ -91,7 +91,7 @@
               :disabled="aiState.operation.loading"
               @click="handleContinueWriting"
             >
-              <MdiIcon name="pen-plus" />
+              <VIcon name="pen-plus" />
               从光标处续写
             </a-button>
           </div>
@@ -110,7 +110,7 @@
               :disabled="aiState.operation.loading"
               @click="handleLayoutSuggestion"
             >
-              <MdiIcon name="auto-fix" />
+              <VIcon name="auto-fix" />
               获取排版建议
             </a-button>
           </div>
@@ -129,7 +129,7 @@
               :disabled="aiState.operation.loading"
               @click="handleDocAnalysis"
             >
-              <MdiIcon name="file-search-outline" />
+              <VIcon name="file-search-outline" />
               开始分析
             </a-button>
           </div>
@@ -143,7 +143,7 @@
               :disabled="aiState.operation.loading"
               @click="handleDocSummarize"
             >
-              <MdiIcon name="text-box-check-outline" />
+              <VIcon name="text-box-check-outline" />
               生成摘要
             </a-button>
           </div>
@@ -162,7 +162,7 @@
               :disabled="aiState.operation.loading"
               @click="handleImageAlt"
             >
-              <MdiIcon name="image-text" />
+              <VIcon name="image-text" />
               生成图片描述
             </a-button>
           </div>
@@ -175,7 +175,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { CloseOutlined, ThunderboltOutlined } from '@ant-design/icons-vue'
-import MdiIcon from '@/components/common/MdiIcon.vue'
+import { VIcon } from '@vervedoc/icons'
 import { AIAction, TranslateLanguage } from '@vervedoc/docx-editor-ai'
 import { aiStateStore } from '@/stores/ai-state'
 import { editorStateStore } from '@/stores/editor-state'

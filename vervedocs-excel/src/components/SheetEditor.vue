@@ -16,33 +16,33 @@
           <template #title>文件</template>
           <a-menu-item key="newWorkbook" :disabled="readOnly" @click="handleCreateNewWorkbook()">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="plus" />新建表格</span>
+              <span class="menu-item-label"><VIcon name="plus" />新建表格</span>
               <span class="menu-item-meta"></span>
             </span>
           </a-menu-item>
           <a-menu-item key="save" @click="emitChange()">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="content-save-outline" />保存</span>
+              <span class="menu-item-label"><VIcon name="content-save-outline" />保存</span>
               <span class="menu-item-meta"><span class="shortcut">Ctrl+S</span></span>
             </span>
           </a-menu-item>
           <a-menu-divider />
           <a-menu-item key="importExcel" :disabled="readOnly" @click="triggerImportExcel()">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="file-excel-box" />导入表格&nbsp;&nbsp;<a-tag color="red">BETA</a-tag></span>
+              <span class="menu-item-label"><VIcon name="file-excel-box" />导入表格&nbsp;&nbsp;<a-tag color="red">BETA</a-tag></span>
               <span class="menu-item-meta"><span class="shortcut">Ctrl+O</span></span>
             </span>
           </a-menu-item>
           <a-menu-item key="exportExcel" @click="handleExportExcel()">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="file-excel-box" />导出 Excel</span>
+              <span class="menu-item-label"><VIcon name="file-excel-box" />导出 Excel</span>
               <span class="menu-item-meta"></span>
             </span>
           </a-menu-item>
           <a-menu-divider />
           <a-menu-item key="print" @click="handlePrint()">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="printer-outline" />打印</span>
+              <span class="menu-item-label"><VIcon name="printer-outline" />打印</span>
               <span class="menu-item-meta"><span class="shortcut">Ctrl+P</span></span>
             </span>
           </a-menu-item>
@@ -52,58 +52,58 @@
           <template #title>编辑</template>
           <a-menu-item key="undo" @click="handleUndo()">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="undo" />撤销</span>
+              <span class="menu-item-label"><VIcon name="undo" />撤销</span>
               <span class="menu-item-meta"><span class="shortcut">Ctrl+Z</span></span>
             </span>
           </a-menu-item>
           <a-menu-item key="redo" @click="handleRedo()">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="redo" />重做</span>
+              <span class="menu-item-label"><VIcon name="redo" />重做</span>
               <span class="menu-item-meta"><span class="shortcut">Ctrl+Y</span></span>
             </span>
           </a-menu-item>
           <a-menu-divider />
           <a-menu-item key="cut" @click="handleCut()">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="content-cut" />剪切</span>
+              <span class="menu-item-label"><VIcon name="content-cut" />剪切</span>
               <span class="menu-item-meta"><span class="shortcut">Ctrl+X</span></span>
             </span>
           </a-menu-item>
           <a-menu-item key="copy" @click="handleCopy()">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="content-copy" />复制</span>
+              <span class="menu-item-label"><VIcon name="content-copy" />复制</span>
               <span class="menu-item-meta"><span class="shortcut">Ctrl+C</span></span>
             </span>
           </a-menu-item>
           <a-menu-item key="paste" @click="handlePaste()">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="content-paste" />粘贴</span>
+              <span class="menu-item-label"><VIcon name="content-paste" />粘贴</span>
               <span class="menu-item-meta"><span class="shortcut">Ctrl+V</span></span>
             </span>
           </a-menu-item>
           <a-menu-divider />
           <a-menu-item key="selectAll" @click="selectAll()">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="select-all" />全选</span>
+              <span class="menu-item-label"><VIcon name="select-all" />全选</span>
               <span class="menu-item-meta"><span class="shortcut">Ctrl+A</span></span>
             </span>
           </a-menu-item>
           <a-menu-item key="deleteContent" @click="deleteSelectedContent()">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="delete-outline" />删除内容</span>
+              <span class="menu-item-label"><VIcon name="delete-outline" />删除内容</span>
               <span class="menu-item-meta"><span class="shortcut">Delete</span></span>
             </span>
           </a-menu-item>
           <a-menu-divider />
           <a-menu-item key="deleteRow" @click="deleteRow()">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="table-row-remove" />删除行</span>
+              <span class="menu-item-label"><VIcon name="table-row-remove" />删除行</span>
               <span class="menu-item-meta"></span>
             </span>
           </a-menu-item>
           <a-menu-item key="deleteCol" @click="deleteCol()">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="table-column-remove" />删除列</span>
+              <span class="menu-item-label"><VIcon name="table-column-remove" />删除列</span>
               <span class="menu-item-meta"></span>
             </span>
           </a-menu-item>
@@ -113,67 +113,67 @@
           <template #title>视图</template>
           <a-menu-item key="showGridlines" @click="toggleGridlines()">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="grid" />{{ showGridlines ? '显示网格线' : '隐藏网格线' }}</span>
-              <span class="menu-item-meta"><SheetIcon v-if="showGridlines" name="check" class="menu-check" /></span>
+              <span class="menu-item-label"><VIcon name="grid" />{{ showGridlines ? '显示网格线' : '隐藏网格线' }}</span>
+              <span class="menu-item-meta"><VIcon v-if="showGridlines" name="check" class="menu-check" /></span>
             </span>
           </a-menu-item>
           <a-menu-item key="showFormulaBar" @click="showFormulaBar = !showFormulaBar">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="function-variant" />{{ showFormulaBar ? '显示编辑栏' : '隐藏编辑栏' }}</span>
-              <span class="menu-item-meta"><SheetIcon v-if="showFormulaBar" name="check" class="menu-check" /></span>
+              <span class="menu-item-label"><VIcon name="function-variant" />{{ showFormulaBar ? '显示编辑栏' : '隐藏编辑栏' }}</span>
+              <span class="menu-item-meta"><VIcon v-if="showFormulaBar" name="check" class="menu-check" /></span>
             </span>
           </a-menu-item>
           <a-menu-divider />
           <a-sub-menu key="zoomMenu" popupClassName="sheet-menu-popper">
-            <template #title><SheetIcon name="magnify" />缩放</template>
+            <template #title><VIcon name="magnify" />缩放</template>
             <a-menu-item key="zoom50" @click="setZoom(50)">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="magnify-minus" />50%</span>
-                <span class="menu-item-meta"><SheetIcon v-if="zoomLevel === 50" name="check" class="menu-check" /></span>
+                <span class="menu-item-label"><VIcon name="magnify-minus" />50%</span>
+                <span class="menu-item-meta"><VIcon v-if="zoomLevel === 50" name="check" class="menu-check" /></span>
               </span>
             </a-menu-item>
             <a-menu-item key="zoom75" @click="setZoom(75)">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="magnify-minus" />75%</span>
-                <span class="menu-item-meta"><SheetIcon v-if="zoomLevel === 75" name="check" class="menu-check" /></span>
+                <span class="menu-item-label"><VIcon name="magnify-minus" />75%</span>
+                <span class="menu-item-meta"><VIcon v-if="zoomLevel === 75" name="check" class="menu-check" /></span>
               </span>
             </a-menu-item>
             <a-menu-item key="zoom100" @click="setZoom(100)">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="magnify" />100%</span>
-                <span class="menu-item-meta"><SheetIcon v-if="zoomLevel === 100" name="check" class="menu-check" /></span>
+                <span class="menu-item-label"><VIcon name="magnify" />100%</span>
+                <span class="menu-item-meta"><VIcon v-if="zoomLevel === 100" name="check" class="menu-check" /></span>
               </span>
             </a-menu-item>
             <a-menu-item key="zoom125" @click="setZoom(125)">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="magnify-plus" />125%</span>
-                <span class="menu-item-meta"><SheetIcon v-if="zoomLevel === 125" name="check" class="menu-check" /></span>
+                <span class="menu-item-label"><VIcon name="magnify-plus" />125%</span>
+                <span class="menu-item-meta"><VIcon v-if="zoomLevel === 125" name="check" class="menu-check" /></span>
               </span>
             </a-menu-item>
             <a-menu-item key="zoom150" @click="setZoom(150)">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="magnify-plus" />150%</span>
-                <span class="menu-item-meta"><SheetIcon v-if="zoomLevel === 150" name="check" class="menu-check" /></span>
+                <span class="menu-item-label"><VIcon name="magnify-plus" />150%</span>
+                <span class="menu-item-meta"><VIcon v-if="zoomLevel === 150" name="check" class="menu-check" /></span>
               </span>
             </a-menu-item>
             <a-menu-item key="zoom200" @click="setZoom(200)">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="magnify-plus" />200%</span>
-                <span class="menu-item-meta"><SheetIcon v-if="zoomLevel === 200" name="check" class="menu-check" /></span>
+                <span class="menu-item-label"><VIcon name="magnify-plus" />200%</span>
+                <span class="menu-item-meta"><VIcon v-if="zoomLevel === 200" name="check" class="menu-check" /></span>
               </span>
             </a-menu-item>
           </a-sub-menu>
           <a-menu-divider />
           <a-menu-item key="freezeRow" @click="toggleFreezeRow()">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="snowflake" />{{ frozenRows > 0 ? '取消冻结行' : '冻结第一行' }}</span>
-              <span class="menu-item-meta"><SheetIcon v-if="frozenRows > 0" name="check" class="menu-check" /></span>
+              <span class="menu-item-label"><VIcon name="snowflake" />{{ frozenRows > 0 ? '取消冻结行' : '冻结第一行' }}</span>
+              <span class="menu-item-meta"><VIcon v-if="frozenRows > 0" name="check" class="menu-check" /></span>
             </span>
           </a-menu-item>
           <a-menu-item key="freezeCol" @click="toggleFreezeCol()">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="snowflake" />{{ frozenCols > 0 ? '取消冻结列' : '冻结第一列' }}</span>
-              <span class="menu-item-meta"><SheetIcon v-if="frozenCols > 0" name="check" class="menu-check" /></span>
+              <span class="menu-item-label"><VIcon name="snowflake" />{{ frozenCols > 0 ? '取消冻结列' : '冻结第一列' }}</span>
+              <span class="menu-item-meta"><VIcon v-if="frozenCols > 0" name="check" class="menu-check" /></span>
             </span>
           </a-menu-item>
 
@@ -184,26 +184,26 @@
           <template #title>插入</template>
           <a-menu-item key="insertRowAbove" @click="insertRow('above')">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="table-row-plus-before" />在上方插入行</span>
+              <span class="menu-item-label"><VIcon name="table-row-plus-before" />在上方插入行</span>
               <span class="menu-item-meta"></span>
             </span>
           </a-menu-item>
           <a-menu-item key="insertRowBelow" @click="insertRow('below')">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="table-row-plus-after" />在下方插入行</span>
+              <span class="menu-item-label"><VIcon name="table-row-plus-after" />在下方插入行</span>
               <span class="menu-item-meta"></span>
             </span>
           </a-menu-item>
           <a-menu-divider />
           <a-menu-item key="insertColLeft" @click="insertCol('left')">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="table-column-plus-before" />在左侧插入列</span>
+              <span class="menu-item-label"><VIcon name="table-column-plus-before" />在左侧插入列</span>
               <span class="menu-item-meta"></span>
             </span>
           </a-menu-item>
           <a-menu-item key="insertColRight" @click="insertCol('right')">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="table-column-plus-after" />在右侧插入列</span>
+              <span class="menu-item-label"><VIcon name="table-column-plus-after" />在右侧插入列</span>
               <span class="menu-item-meta"></span>
             </span>
           </a-menu-item>
@@ -215,146 +215,146 @@
         <a-sub-menu key="format" popupClassName="sheet-menu-popper">
           <template #title>格式</template>
           <a-sub-menu key="textFormat" popupClassName="sheet-menu-popper">
-            <template #title><SheetIcon name="format-text" />文本</template>
+            <template #title><VIcon name="format-text" />文本</template>
             <a-menu-item key="fBold" @click="toggleStyle('bold')">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="format-bold" />粗体</span>
-                <span class="menu-item-meta"><span class="shortcut">Ctrl+B</span><SheetIcon v-if="toolbarState.bold" name="check" class="menu-check" /></span>
+                <span class="menu-item-label"><VIcon name="format-bold" />粗体</span>
+                <span class="menu-item-meta"><span class="shortcut">Ctrl+B</span><VIcon v-if="toolbarState.bold" name="check" class="menu-check" /></span>
               </span>
             </a-menu-item>
             <a-menu-item key="fItalic" @click="toggleStyle('italic')">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="format-italic" />斜体</span>
-                <span class="menu-item-meta"><span class="shortcut">Ctrl+I</span><SheetIcon v-if="toolbarState.italic" name="check" class="menu-check" /></span>
+                <span class="menu-item-label"><VIcon name="format-italic" />斜体</span>
+                <span class="menu-item-meta"><span class="shortcut">Ctrl+I</span><VIcon v-if="toolbarState.italic" name="check" class="menu-check" /></span>
               </span>
             </a-menu-item>
             <a-menu-item key="fUnderline" @click="toggleStyle('underline')">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="format-underline" />下划线</span>
-                <span class="menu-item-meta"><span class="shortcut">Ctrl+U</span><SheetIcon v-if="toolbarState.underline" name="check" class="menu-check" /></span>
+                <span class="menu-item-label"><VIcon name="format-underline" />下划线</span>
+                <span class="menu-item-meta"><span class="shortcut">Ctrl+U</span><VIcon v-if="toolbarState.underline" name="check" class="menu-check" /></span>
               </span>
             </a-menu-item>
             <a-menu-item key="fStrikethrough" @click="toggleStyle('strikethrough')">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="format-strikethrough" />删除线</span>
-                <span class="menu-item-meta"><SheetIcon v-if="toolbarState.strikethrough" name="check" class="menu-check" /></span>
+                <span class="menu-item-label"><VIcon name="format-strikethrough" />删除线</span>
+                <span class="menu-item-meta"><VIcon v-if="toolbarState.strikethrough" name="check" class="menu-check" /></span>
               </span>
             </a-menu-item>
           </a-sub-menu>
           <a-sub-menu key="alignFormat" popupClassName="sheet-menu-popper">
-            <template #title><SheetIcon name="format-align-left" />对齐方式</template>
+            <template #title><VIcon name="format-align-left" />对齐方式</template>
             <a-menu-item key="aLeft" @click="setAlign('left')">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="format-align-left" />左对齐</span>
-                <span class="menu-item-meta"><SheetIcon v-if="toolbarState.align === 'left'" name="check" class="menu-check" /></span>
+                <span class="menu-item-label"><VIcon name="format-align-left" />左对齐</span>
+                <span class="menu-item-meta"><VIcon v-if="toolbarState.align === 'left'" name="check" class="menu-check" /></span>
               </span>
             </a-menu-item>
             <a-menu-item key="aCenter" @click="setAlign('center')">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="format-align-center" />居中对齐</span>
-                <span class="menu-item-meta"><SheetIcon v-if="toolbarState.align === 'center'" name="check" class="menu-check" /></span>
+                <span class="menu-item-label"><VIcon name="format-align-center" />居中对齐</span>
+                <span class="menu-item-meta"><VIcon v-if="toolbarState.align === 'center'" name="check" class="menu-check" /></span>
               </span>
             </a-menu-item>
             <a-menu-item key="aRight" @click="setAlign('right')">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="format-align-right" />右对齐</span>
-                <span class="menu-item-meta"><SheetIcon v-if="toolbarState.align === 'right'" name="check" class="menu-check" /></span>
+                <span class="menu-item-label"><VIcon name="format-align-right" />右对齐</span>
+                <span class="menu-item-meta"><VIcon v-if="toolbarState.align === 'right'" name="check" class="menu-check" /></span>
               </span>
             </a-menu-item>
             <a-menu-divider />
             <a-menu-item key="vaTop" @click="setVerticalAlign('top')">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="format-vertical-align-top" />顶部对齐</span>
-                <span class="menu-item-meta"><SheetIcon v-if="toolbarState.verticalAlign === 'top'" name="check" class="menu-check" /></span>
+                <span class="menu-item-label"><VIcon name="format-vertical-align-top" />顶部对齐</span>
+                <span class="menu-item-meta"><VIcon v-if="toolbarState.verticalAlign === 'top'" name="check" class="menu-check" /></span>
               </span>
             </a-menu-item>
             <a-menu-item key="vaMiddle" @click="setVerticalAlign('middle')">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="format-vertical-align-center" />垂直居中</span>
-                <span class="menu-item-meta"><SheetIcon v-if="toolbarState.verticalAlign === 'middle'" name="check" class="menu-check" /></span>
+                <span class="menu-item-label"><VIcon name="format-vertical-align-center" />垂直居中</span>
+                <span class="menu-item-meta"><VIcon v-if="toolbarState.verticalAlign === 'middle'" name="check" class="menu-check" /></span>
               </span>
             </a-menu-item>
             <a-menu-item key="vaBottom" @click="setVerticalAlign('bottom')">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="format-vertical-align-bottom" />底部对齐</span>
-                <span class="menu-item-meta"><SheetIcon v-if="toolbarState.verticalAlign === 'bottom'" name="check" class="menu-check" /></span>
+                <span class="menu-item-label"><VIcon name="format-vertical-align-bottom" />底部对齐</span>
+                <span class="menu-item-meta"><VIcon v-if="toolbarState.verticalAlign === 'bottom'" name="check" class="menu-check" /></span>
               </span>
             </a-menu-item>
           </a-sub-menu>
           <a-sub-menu key="wrapFormat" popupClassName="sheet-menu-popper">
-            <template #title><SheetIcon name="text-wrap" />文本换行</template>
+            <template #title><VIcon name="text-wrap" />文本换行</template>
             <a-menu-item key="wrapClip" @click="setWrap('clip')">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="crop" />裁剪</span>
-                <span class="menu-item-meta"><SheetIcon v-if="toolbarState.wrap === 'clip'" name="check" class="menu-check" /></span>
+                <span class="menu-item-label"><VIcon name="crop" />裁剪</span>
+                <span class="menu-item-meta"><VIcon v-if="toolbarState.wrap === 'clip'" name="check" class="menu-check" /></span>
               </span>
             </a-menu-item>
             <a-menu-item key="wrapOverflow" @click="setWrap('overflow')">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="arrow-right" />溢出</span>
-                <span class="menu-item-meta"><SheetIcon v-if="toolbarState.wrap === 'overflow'" name="check" class="menu-check" /></span>
+                <span class="menu-item-label"><VIcon name="arrow-right" />溢出</span>
+                <span class="menu-item-meta"><VIcon v-if="toolbarState.wrap === 'overflow'" name="check" class="menu-check" /></span>
               </span>
             </a-menu-item>
             <a-menu-item key="wrapWrap" @click="setWrap('wrap')">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="text-wrap" />自动换行</span>
-                <span class="menu-item-meta"><SheetIcon v-if="toolbarState.wrap === 'wrap'" name="check" class="menu-check" /></span>
+                <span class="menu-item-label"><VIcon name="text-wrap" />自动换行</span>
+                <span class="menu-item-meta"><VIcon v-if="toolbarState.wrap === 'wrap'" name="check" class="menu-check" /></span>
               </span>
             </a-menu-item>
           </a-sub-menu>
           <a-menu-divider />
           <a-sub-menu key="rowFormat" popupClassName="sheet-menu-popper">
-            <template #title><SheetIcon name="table-row" />行</template>
+            <template #title><VIcon name="table-row" />行</template>
             <a-menu-item key="rowHeight" @click="showRowHeightDialog = true">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="arrow-expand-vertical" />行高</span>
+                <span class="menu-item-label"><VIcon name="arrow-expand-vertical" />行高</span>
                 <span class="menu-item-meta"></span>
               </span>
             </a-menu-item>
             <a-menu-item key="autoRowHeight" @click="autoFitRowHeight()">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="arrow-fit-vertical" />自动调整行高</span>
+                <span class="menu-item-label"><VIcon name="arrow-fit-vertical" />自动调整行高</span>
                 <span class="menu-item-meta"></span>
               </span>
             </a-menu-item>
             <a-menu-divider />
             <a-menu-item key="hideRow" @click="hideRow()">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="eye-off-outline" />隐藏行</span>
+                <span class="menu-item-label"><VIcon name="eye-off-outline" />隐藏行</span>
                 <span class="menu-item-meta"></span>
               </span>
             </a-menu-item>
             <a-menu-item key="unhideRow" @click="unhideRow()">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="eye-outline" />取消隐藏行</span>
+                <span class="menu-item-label"><VIcon name="eye-outline" />取消隐藏行</span>
                 <span class="menu-item-meta"></span>
               </span>
             </a-menu-item>
           </a-sub-menu>
           <a-sub-menu key="colFormat" popupClassName="sheet-menu-popper">
-            <template #title><SheetIcon name="table-column" />列</template>
+            <template #title><VIcon name="table-column" />列</template>
             <a-menu-item key="colWidth" @click="showColWidthDialog = true">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="arrow-expand-horizontal" />列宽</span>
+                <span class="menu-item-label"><VIcon name="arrow-expand-horizontal" />列宽</span>
                 <span class="menu-item-meta"></span>
               </span>
             </a-menu-item>
             <a-menu-item key="autoColWidth" @click="autoFitColWidth()">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="arrow-fit-horizontal" />自动调整列宽</span>
+                <span class="menu-item-label"><VIcon name="arrow-fit-horizontal" />自动调整列宽</span>
                 <span class="menu-item-meta"></span>
               </span>
             </a-menu-item>
             <a-menu-divider />
             <a-menu-item key="hideCol" @click="hideCol()">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="eye-off-outline" />隐藏列</span>
+                <span class="menu-item-label"><VIcon name="eye-off-outline" />隐藏列</span>
                 <span class="menu-item-meta"></span>
               </span>
             </a-menu-item>
             <a-menu-item key="unhideCol" @click="unhideCol()">
               <span class="menu-item-content">
-                <span class="menu-item-label"><SheetIcon name="eye-outline" />取消隐藏列</span>
+                <span class="menu-item-label"><VIcon name="eye-outline" />取消隐藏列</span>
                 <span class="menu-item-meta"></span>
               </span>
             </a-menu-item>
@@ -362,20 +362,20 @@
           <a-menu-divider />
           <a-menu-item key="mergeCells" @click="handleMergeCells()">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="table-merge-cells" />合并单元格</span>
+              <span class="menu-item-label"><VIcon name="table-merge-cells" />合并单元格</span>
               <span class="menu-item-meta"></span>
             </span>
           </a-menu-item>
           <a-menu-item key="unmergeCells" @click="handleUnmergeCells()">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="table-split-cell" />取消合并</span>
+              <span class="menu-item-label"><VIcon name="table-split-cell" />取消合并</span>
               <span class="menu-item-meta"></span>
             </span>
           </a-menu-item>
           <a-menu-divider />
           <a-menu-item key="clearFormat" @click="clearSelectedFormat()">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="format-clear" />清除格式</span>
+              <span class="menu-item-label"><VIcon name="format-clear" />清除格式</span>
               <span class="menu-item-meta"></span>
             </span>
           </a-menu-item>
@@ -385,26 +385,26 @@
           <template #title>数据</template>
           <a-menu-item key="sortAsc" @click="openUniverSort('asc')">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="sort-ascending" />按列升序排序</span>
+              <span class="menu-item-label"><VIcon name="sort-ascending" />按列升序排序</span>
               <span class="menu-item-meta"></span>
             </span>
           </a-menu-item>
           <a-menu-item key="sortDesc" @click="openUniverSort('desc')">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="sort-descending" />按列降序排序</span>
+              <span class="menu-item-label"><VIcon name="sort-descending" />按列降序排序</span>
               <span class="menu-item-meta"></span>
             </span>
           </a-menu-item>
           <a-menu-divider />
           <a-menu-item key="dataValidation" @click="openUniverDataValidation()">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="check-circle-outline" />数据验证</span>
+              <span class="menu-item-label"><VIcon name="check-circle-outline" />数据验证</span>
               <span class="menu-item-meta"></span>
             </span>
           </a-menu-item>
           <a-menu-item key="removeDuplicates" @click="removeDuplicates()">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="table-minus" />删除重复值</span>
+              <span class="menu-item-label"><VIcon name="table-minus" />删除重复值</span>
               <span class="menu-item-meta"></span>
             </span>
           </a-menu-item>
@@ -415,20 +415,20 @@
           <template #title>协同</template>
           <a-menu-item key="syncSelection" @click="toggleSyncSelection()">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="cursor-default" />显示他人选区</span>
-              <span class="menu-item-meta"><SheetIcon v-if="syncSelectionEnabled" name="check" class="menu-check" /></span>
+              <span class="menu-item-label"><VIcon name="cursor-default" />显示他人选区</span>
+              <span class="menu-item-meta"><VIcon v-if="syncSelectionEnabled" name="check" class="menu-check" /></span>
             </span>
           </a-menu-item>
           <a-menu-item key="syncFilter" @click="toggleSyncFilter()">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="filter-outline" />显示他人筛选</span>
-              <span class="menu-item-meta"><SheetIcon v-if="syncFilterEnabled" name="check" class="menu-check" /></span>
+              <span class="menu-item-label"><VIcon name="filter-outline" />显示他人筛选</span>
+              <span class="menu-item-meta"><VIcon v-if="syncFilterEnabled" name="check" class="menu-check" /></span>
             </span>
           </a-menu-item>
           <a-menu-item key="syncSort" @click="toggleSyncSort()">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="sort-ascending" />显示他人排序</span>
-              <span class="menu-item-meta"><SheetIcon v-if="syncSortEnabled" name="check" class="menu-check" /></span>
+              <span class="menu-item-label"><VIcon name="sort-ascending" />显示他人排序</span>
+              <span class="menu-item-meta"><VIcon v-if="syncSortEnabled" name="check" class="menu-check" /></span>
             </span>
           </a-menu-item>
         </a-sub-menu>
@@ -437,7 +437,7 @@
           <template #title>帮助</template>
           <a-menu-item key="shortcuts" @click="showShortcutsDialog = true">
             <span class="menu-item-content">
-              <span class="menu-item-label"><SheetIcon name="keyboard-outline" />键盘快捷键</span>
+              <span class="menu-item-label"><VIcon name="keyboard-outline" />键盘快捷键</span>
               <span class="menu-item-meta"></span>
             </span>
           </a-menu-item>
@@ -450,28 +450,28 @@
     <div class="toolbar">
       <!-- 撤销/重做/格式刷 -->
       <button class="tb" :disabled="readOnly || undoStack.length === 0" @click="handleUndo()" title="撤销 (Ctrl+Z)">
-        <SheetIcon name="undo" />
+        <VIcon name="undo" />
       </button>
       <button class="tb" :disabled="readOnly || redoStack.length === 0" @click="handleRedo()" title="重做 (Ctrl+Y)">
-        <SheetIcon name="redo" />
+        <VIcon name="redo" />
       </button>
       <button class="tb" :disabled="readOnly" @click="handleFormatPainter()" :class="{ active: formatPainterActive }" title="格式刷">
-        <SheetIcon name="format-color-fill" />
+        <VIcon name="format-paint" />
       </button>
       <span class="toolbar-divider" />
 
       <!-- 货币/百分比/小数位快捷按钮 -->
       <button class="tb" :disabled="readOnly" @click="quickFormat('currency')" title="货币格式 (¥)">
-        <SheetIcon name="currency-usd" />
+        <VIcon name="currency-usd" />
       </button>
       <button class="tb" :disabled="readOnly" @click="quickFormat('percent')" title="百分比格式 (%)">
-        <SheetIcon name="percent" />
+        <VIcon name="percent" />
       </button>
       <button class="tb" :disabled="readOnly" @click="changeDecimal(-1)" title="减少小数位">
-        <SheetIcon name="decimal-decrease" />
+        <VIcon name="decimal-decrease" />
       </button>
       <button class="tb" :disabled="readOnly" @click="changeDecimal(1)" title="增加小数位">
-        <SheetIcon name="decimal-increase" />
+        <VIcon name="decimal-increase" />
       </button>
       <!-- 数字格式下拉 -->
       <a-select v-model:value="toolbarState.numberFormat" size="small" class="toolbar-select" style="width: 80px" :disabled="readOnly" @change="updateCellStyle()">
@@ -496,25 +496,25 @@
         <a-select-option v-for="s in sizeOptions" :key="s.value + '-' + s.label" :label="s.label" :value="s.value" />
       </a-select>
       <button class="tb" :disabled="readOnly" @click="changeFontSize(1)" title="增大字号">
-        <SheetIcon name="plus" />
+        <VIcon name="plus" />
       </button>
       <button class="tb" :disabled="readOnly" @click="changeFontSize(-1)" title="减小字号">
-        <SheetIcon name="minus" />
+        <VIcon name="minus" />
       </button>
       <span class="toolbar-divider" />
 
       <!-- 文字样式 -->
       <button class="tb" :disabled="readOnly" :class="{ active: toolbarState.bold }" @click="toggleStyle('bold')" title="粗体 (Ctrl+B)">
-        <SheetIcon name="format-bold" />
+        <VIcon name="format-bold" />
       </button>
       <button class="tb" :disabled="readOnly" :class="{ active: toolbarState.italic }" @click="toggleStyle('italic')" title="斜体 (Ctrl+I)">
-        <SheetIcon name="format-italic" />
+        <VIcon name="format-italic" />
       </button>
       <button class="tb" :disabled="readOnly" :class="{ active: toolbarState.strikethrough }" @click="toggleStyle('strikethrough')" title="删除线">
-        <SheetIcon name="format-strikethrough" />
+        <VIcon name="format-strikethrough" />
       </button>
       <button class="tb" :disabled="readOnly" :class="{ active: toolbarState.underline }" @click="toggleStyle('underline')" title="下划线 (Ctrl+U)">
-        <SheetIcon name="format-underline" />
+        <VIcon name="format-underline" />
       </button>
       <span class="toolbar-divider" />
 
@@ -529,7 +529,7 @@
         </template>
         <template #default>
           <button class="tb color-btn" :disabled="readOnly" title="字体颜色">
-            <SheetIcon name="format-text" />
+            <VIcon name="format-color-text" />
             <span class="color-bar" :style="{ backgroundColor: toolbarState.fontColor || '#000000' }"></span>
           </button>
         </template>
@@ -549,7 +549,7 @@
         </template>
         <template #default>
           <button class="tb color-btn" :disabled="readOnly" title="填充颜色">
-            <SheetIcon name="format-color-fill" />
+            <VIcon name="format-color-fill" />
             <span class="color-bar" :style="{ backgroundColor: toolbarState.bgColor || '#ffffff' }"></span>
           </button>
         </template>
@@ -587,15 +587,15 @@
         </template>
         <template #default>
           <button class="tb" :disabled="readOnly" title="边框">
-            <SheetIcon name="grid" />
-            <SheetIcon name="chevron-down" size="12" />
+            <VIcon name="grid" />
+            <VIcon name="chevron-down" size="12" />
           </button>
         </template>
       </a-popover>
 
       <!-- 合并单元格 -->
       <button class="tb" :disabled="readOnly" @click="handleMergeCells()" title="合并单元格">
-        <SheetIcon name="table-merge-cells" />
+        <VIcon name="table-merge-cells" />
       </button>
       <span class="toolbar-divider" />
 
@@ -604,43 +604,43 @@
         <template #content>
           <div class="align-panel">
             <div class="align-group-label">水平对齐</div>
-            <button class="align-btn" :class="{ active: toolbarState.align === 'left' }" @click="setAlign('left')"><SheetIcon name="format-align-left" /><span>左对齐</span></button>
-            <button class="align-btn" :class="{ active: toolbarState.align === 'center' }" @click="setAlign('center')"><SheetIcon name="format-align-center" /><span>居中</span></button>
-            <button class="align-btn" :class="{ active: toolbarState.align === 'right' }" @click="setAlign('right')"><SheetIcon name="format-align-right" /><span>右对齐</span></button>
+            <button class="align-btn" :class="{ active: toolbarState.align === 'left' }" @click="setAlign('left')"><VIcon name="format-align-left" /><span>左对齐</span></button>
+            <button class="align-btn" :class="{ active: toolbarState.align === 'center' }" @click="setAlign('center')"><VIcon name="format-align-center" /><span>居中</span></button>
+            <button class="align-btn" :class="{ active: toolbarState.align === 'right' }" @click="setAlign('right')"><VIcon name="format-align-right" /><span>右对齐</span></button>
             <div class="align-group-divider"></div>
             <div class="align-group-label">垂直对齐</div>
-            <button class="align-btn" :class="{ active: toolbarState.verticalAlign === 'top' }" @click="setVerticalAlign('top')"><SheetIcon name="format-vertical-align-top" /><span>顶部</span></button>
-            <button class="align-btn" :class="{ active: toolbarState.verticalAlign === 'middle' }" @click="setVerticalAlign('middle')"><SheetIcon name="format-vertical-align-center" /><span>居中</span></button>
-            <button class="align-btn" :class="{ active: toolbarState.verticalAlign === 'bottom' }" @click="setVerticalAlign('bottom')"><SheetIcon name="format-vertical-align-bottom" /><span>底部</span></button>
+            <button class="align-btn" :class="{ active: toolbarState.verticalAlign === 'top' }" @click="setVerticalAlign('top')"><VIcon name="format-vertical-align-top" /><span>顶部</span></button>
+            <button class="align-btn" :class="{ active: toolbarState.verticalAlign === 'middle' }" @click="setVerticalAlign('middle')"><VIcon name="format-vertical-align-center" /><span>居中</span></button>
+            <button class="align-btn" :class="{ active: toolbarState.verticalAlign === 'bottom' }" @click="setVerticalAlign('bottom')"><VIcon name="format-vertical-align-bottom" /><span>底部</span></button>
           </div>
         </template>
         <template #default>
           <button class="tb" :disabled="readOnly" title="对齐方式">
-            <SheetIcon :name="'format-align-' + (toolbarState.align || 'left')" />
-            <SheetIcon name="chevron-down" size="12" />
+            <VIcon :name="'format-align-' + (toolbarState.align || 'left')" />
+            <VIcon name="chevron-down" size="12" />
           </button>
         </template>
       </a-popover>
 
       <!-- 文本换行 -->
       <button class="tb" :disabled="readOnly" :class="{ active: toolbarState.wrap === 'wrap' }" @click="toggleWrap()" title="自动换行">
-        <SheetIcon name="text-wrap" />
+        <VIcon name="text-wrap" />
       </button>
 
       <!-- 文字旋转 -->
       <a-popover placement="bottom" :width="140" trigger="click">
         <template #content>
           <div class="align-panel">
-            <button class="align-btn" :class="{ active: toolbarState.rotation === 0 }" @click="setRotation(0)"><SheetIcon name="format-text-rotation-none" /><span>无旋转</span></button>
-            <button class="align-btn" :class="{ active: toolbarState.rotation === 45 }" @click="setRotation(45)"><SheetIcon name="format-text-rotation-up" /><span>向上倾斜</span></button>
-            <button class="align-btn" :class="{ active: toolbarState.rotation === -45 }" @click="setRotation(-45)"><SheetIcon name="format-text-rotation-down" /><span>向下倾斜</span></button>
-            <button class="align-btn" :class="{ active: toolbarState.rotation === 90 }" @click="setRotation(90)"><SheetIcon name="format-text-rotation-vertical" /><span>竖排文字</span></button>
+            <button class="align-btn" :class="{ active: toolbarState.rotation === 0 }" @click="setRotation(0)"><VIcon name="format-text-rotation-none" /><span>无旋转</span></button>
+            <button class="align-btn" :class="{ active: toolbarState.rotation === 45 }" @click="setRotation(45)"><VIcon name="format-text-rotation-up" /><span>向上倾斜</span></button>
+            <button class="align-btn" :class="{ active: toolbarState.rotation === -45 }" @click="setRotation(-45)"><VIcon name="format-text-rotation-down" /><span>向下倾斜</span></button>
+            <button class="align-btn" :class="{ active: toolbarState.rotation === 90 }" @click="setRotation(90)"><VIcon name="format-text-rotation-vertical" /><span>竖排文字</span></button>
           </div>
         </template>
         <template #default>
           <button class="tb" :disabled="readOnly" title="文字旋转">
-            <SheetIcon name="format-text-rotation-none" />
-            <SheetIcon name="chevron-down" size="12" />
+            <VIcon name="format-text-rotation-none" />
+            <VIcon name="chevron-down" size="12" />
           </button>
         </template>
       </a-popover>
@@ -648,29 +648,29 @@
 
       <!-- 冻结 -->
       <button class="tb" :class="{ active: frozenRows > 0 || frozenCols > 0 }" @click="toggleFreezeRow()" title="冻结首行">
-        <SheetIcon name="snowflake" />
+        <VIcon name="snowflake" />
       </button>
       <!-- 筛选排序 -->
       <button class="tb" :disabled="readOnly" @click="toggleUniverFilter()" title="筛选">
-        <SheetIcon name="filter-outline" />
+        <VIcon name="filter-outline" />
       </button>
       <span class="toolbar-divider" />
 
       <!-- 超链接 -->
       <button class="tb" :disabled="readOnly" @click="openUniverHyperlink()" title="插入链接">
-        <SheetIcon name="link-variant" />
+        <VIcon name="link-variant" />
       </button>
       <!-- 插入图片 -->
       <button class="tb" :disabled="readOnly" @click="insertImage()" title="插入图片">
-        <SheetIcon name="image-outline" />
+        <VIcon name="image-outline" />
       </button>
       <!-- 便签 -->
       <button class="tb" :disabled="readOnly" @click="openUniverNote()" title="便签">
-        <SheetIcon name="note-text-outline" />
+        <VIcon name="note-text-outline" />
       </button>
       <!-- 评论 -->
       <button class="tb" :disabled="readOnly" @click="openUniverThreadComment()" title="评论">
-        <SheetIcon name="comment-plus-outline" />
+        <VIcon name="comment-plus-outline" />
       </button>
       <span class="toolbar-divider" />
 
@@ -687,8 +687,8 @@
         </template>
         <template #default>
           <button class="tb" :disabled="readOnly" title="函数">
-            <SheetIcon name="sigma" />
-            <SheetIcon name="chevron-down" size="12" />
+            <VIcon name="sigma" />
+            <VIcon name="chevron-down" size="12" />
           </button>
         </template>
       </a-popover>
@@ -696,15 +696,15 @@
 
       <!-- 清除格式 -->
       <button class="tb" :disabled="readOnly" @click="clearSelectedFormat()" title="清除格式">
-        <SheetIcon name="format-clear" />
+        <VIcon name="format-clear" />
       </button>
       <!-- 打印 -->
       <button class="tb" @click="handlePrint()" title="打印 (Ctrl+P)">
-        <SheetIcon name="printer" />
+        <VIcon name="printer" />
       </button>
       <!-- 查找替换 -->
       <button class="tb" @click="openUniverReplaceDialog()" title="查找和替换 (Ctrl+H)">
-        <SheetIcon name="find-replace" />
+        <VIcon name="magnify" />
       </button>
     </div>
     </div>
@@ -821,7 +821,7 @@ import {
 } from '@univerjs/sheets'
 import { SetNumfmtCommand } from '@univerjs/sheets-numfmt'
 import type { FRange, FWorkbook, FWorksheet } from '@univerjs/sheets/facade'
-import SheetIcon from './SheetIcon.vue'
+import { VIcon } from '@vervedoc/icons'
 import UnifiedTopHeader from './UnifiedTopHeader.vue'
 import type { Align, VerticalAlign, WrapMode, ICellStyle, IUiSheet, IWorkbook, UndoEntry } from '../types'
 
@@ -893,43 +893,29 @@ const fontOptions = [
   { label: 'Courier New', value: 'Courier New, monospace' },
 ]
 const sizeOptions = [
-  { label: '初号', value: 42 },
-  { label: '小初', value: 36 },
-  { label: '一号', value: 26 },
-  { label: '小一', value: 24 },
-  { label: '二号', value: 22 },
-  { label: '小二', value: 18 },
-  { label: '三号', value: 16 },
-  { label: '小三', value: 15 },
-  { label: '四号', value: 14 },
-  { label: '小四', value: 12 },
-  { label: '五号', value: 10.5 },
-  { label: '小五', value: 9 },
-  { label: '六号', value: 7.5 },
-  { label: '小六', value: 6.5 },
-  { label: '七号', value: 5.5 },
   { label: '八号', value: 5 },
-  { label: '5', value: 5 },
-  { label: '5.5', value: 5.5 },
+  { label: '七号', value: 5.5 },
   { label: '6', value: 6 },
-  { label: '6.5', value: 6.5 },
+  { label: '小六', value: 6.5 },
   { label: '7', value: 7 },
-  { label: '7.5', value: 7.5 },
+  { label: '六号', value: 7.5 },
   { label: '8', value: 8 },
-  { label: '9', value: 9 },
+  { label: '小五', value: 9 },
   { label: '10', value: 10 },
-  { label: '10.5', value: 10.5 },
+  { label: '五号', value: 10.5 },
   { label: '11', value: 11 },
-  { label: '12', value: 12 },
-  { label: '14', value: 14 },
-  { label: '16', value: 16 },
-  { label: '18', value: 18 },
+  { label: '小四', value: 12 },
+  { label: '四号', value: 14 },
+  { label: '小三', value: 15 },
+  { label: '三号', value: 16 },
+  { label: '小二', value: 18 },
   { label: '20', value: 20 },
-  { label: '22', value: 22 },
-  { label: '24', value: 24 },
-  { label: '26', value: 26 },
+  { label: '二号', value: 22 },
+  { label: '小一', value: 24 },
+  { label: '一号', value: 26 },
   { label: '28', value: 28 },
-  { label: '36', value: 36 },
+  { label: '小初', value: 36 },
+  { label: '初号', value: 42 },
   { label: '48', value: 48 },
   { label: '72', value: 72 },
 ]
@@ -2756,17 +2742,18 @@ function emitChange(source: 'internal' | 'univer' = 'internal') {
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 6px 12px;
+  gap: 3px;
+  padding: 4px 12px;
   border-bottom: 1px solid #e2e6ed;
   background: #fff;
   flex-wrap: wrap;
+  font-size: 14px;
 }
 
 .toolbar-divider {
   display: inline-block;
   width: 1px;
-  height: 18px;
+  height: 20px;
   background: #dadce0;
   margin: 0 4px;
   flex-shrink: 0;
@@ -2784,34 +2771,47 @@ function emitChange(source: 'internal' | 'univer' = 'internal') {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 26px;
-  height: 26px;
-  padding: 0 5px;
-  border: none;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid transparent;
   background: transparent;
-  border-radius: 4px;
+  border-radius: 3px;
   cursor: pointer;
-  color: #5f6368;
-  transition: background 0.15s;
+  color: #3c4043;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
   flex-shrink: 0;
 }
 
 .tb:hover:not(:disabled) {
-  background: #f1f3f4;
+  background: #e8eaed;
+  border-color: transparent;
+  color: #202124;
+}
+
+.tb:active:not(:disabled) {
+  background: #d3e3fd;
 }
 
 .tb.active {
-  background: #e8f0fe;
+  background: #d3e3fd;
   color: #1a73e8;
+  border-color: transparent;
 }
 
 .tb:disabled {
-  opacity: 0.4;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
-.tb svg {
+.tb .v-icon {
   flex-shrink: 0;
+}
+
+.tb > .v-icon + .v-icon {
+  font-size: 12px;
+  color: #80868b;
+  margin-left: -2px;
 }
 
 
@@ -2936,7 +2936,7 @@ function emitChange(source: 'internal' | 'univer' = 'internal') {
   color: #1a73e8;
 }
 
-.align-btn .mdi-icon {
+.align-btn .v-icon {
   flex-shrink: 0;
 }
 
@@ -3146,9 +3146,9 @@ function emitChange(source: 'internal' | 'univer' = 'internal') {
 /* ===== Ant Design Vue 覆盖 ===== */
 :deep(.ant-select .ant-select-selector) {
   border: 1px solid #dadce0 !important;
-  border-radius: 4px !important;
-  height: 26px !important;
-  min-height: 26px !important;
+  border-radius: 3px !important;
+  height: 28px !important;
+  min-height: 28px !important;
 }
 
 :deep(.ant-select .ant-select-selector:hover) {
@@ -3222,7 +3222,7 @@ function emitChange(source: 'internal' | 'univer' = 'internal') {
   background: #f1f3f4 !important;
 }
 
-.sheet-menu-popper .ant-menu-item .menu-item-label .mdi-icon {
+.sheet-menu-popper .ant-menu-item .menu-item-label .v-icon {
   margin-right: 12px;
   color: #5f6368;
   flex-shrink: 0;
@@ -3284,7 +3284,7 @@ function emitChange(source: 'internal' | 'univer' = 'internal') {
   background: #f1f3f4 !important;
 }
 
-.sheet-menu-popper .ant-menu-submenu-title .mdi-icon {
+.sheet-menu-popper .ant-menu-submenu-title .v-icon {
   margin-right: 12px;
   color: #5f6368;
   flex-shrink: 0;

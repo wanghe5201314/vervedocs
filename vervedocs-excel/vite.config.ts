@@ -2,6 +2,9 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import dts from 'vite-plugin-dts'
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js'
+import AutoImport from 'unplugin-auto-import/vite'
+import Components from 'unplugin-vue-components/vite'
+import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
 import { resolve } from 'path'
 import { existsSync } from 'node:fs'
 
@@ -11,7 +14,7 @@ export default defineConfig(({ mode }) => {
     ? resolve(__dirname, '../vervedocs-libs/docx-editor-collaboration/node_modules')
     : resolve(__dirname, 'node_modules')
   const isExternal = (id: string) => {
-    if (['vue', 'ant-design-vue', '@mdi/js'].includes(id)) {
+    if (['vue', '@mdi/js'].includes(id)) {
       return true
     }
     if (id.startsWith('@univerjs/')) {
@@ -20,12 +23,36 @@ export default defineConfig(({ mode }) => {
     if (id === '@vervedoc/docx-editor-collaboration' || id.startsWith('@vervedoc/docx-editor-collaboration/')) {
       return true
     }
+    if (id === '@vervedoc/icons' || id.startsWith('@vervedoc/icons/')) {
+      return true
+    }
     return false
   }
+
+  const autoImportPlugins = [
+    AutoImport({
+      imports: ['vue'],
+      resolvers: [
+        AntDesignVueResolver({
+          importStyle: false,
+        }),
+      ],
+      dts: false,
+    }),
+    Components({
+      resolvers: [
+        AntDesignVueResolver({
+          importStyle: false,
+        }),
+      ],
+      dts: false,
+    }),
+  ]
 
   return {
     plugins: [
       vue(),
+      ...autoImportPlugins,
       isLib ? cssInjectedByJsPlugin() : null,
       isLib ? dts({
         include: ['src/**/*.ts', 'src/**/*.vue'],
@@ -45,6 +72,9 @@ export default defineConfig(({ mode }) => {
       }
     },
     base: isLib ? undefined : './',
+    server: {
+      port: 5174,
+    },
     build: isLib ? {
       lib: {
         entry: resolve(__dirname, 'src/index.ts'),
@@ -58,12 +88,15 @@ export default defineConfig(({ mode }) => {
           if (warning.code === 'MODULE_LEVEL_DIRECTIVE' && warning.message.includes('"use client"')) {
             return
           }
+          if (warning.code === 'UNUSED_EXTERNAL_IMPORT' && warning.message.includes('resolveComponent')) {
+            return
+          }
           warn(warning)
         },
         output: {
           globals: {
             vue: 'Vue',
-            'ant-design-vue': 'antd',
+
             '@mdi/js': 'MdiJs',
             '@vervedoc/docx-editor-collaboration': 'DocxEditorCollaboration',
           },

@@ -1,7 +1,7 @@
 import { createApp, defineAsyncComponent, defineComponent, h, reactive, type App, type ComponentPublicInstance } from 'vue'
-import Antd from 'ant-design-vue'
 import 'ant-design-vue/dist/reset.css'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
+import { ConfigProvider } from 'ant-design-vue'
 import '@/assets/iconfont/iconfont.css'
 import '@/assets/iconfont/iconfont.js'
 import type { ExcelLocale, ExcelI18nMessages } from '@/i18n'
@@ -137,7 +137,7 @@ export class ExcelEditor {
       onCollabError: (payload: any) => this.options.onCollabError?.(payload)
     }))
     this.app = createApp(root)
-    this.app.use(Antd, { locale: zhCN } as never)
+    this.app.use(ConfigProvider, { locale: zhCN })
     this.app.mount(host)
   }
 

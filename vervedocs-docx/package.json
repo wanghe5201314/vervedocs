@@ -2,7 +2,7 @@
   "name": "@vervedoc/docx",
   "author": "wanghe",
   "license": "MIT",
-  "version": "1.2.16",
+  "version": "1.2.19",
   "description": "玉衡云文档 完整版UI",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
@@ -16,13 +16,12 @@
     "package.json"
   ],
   "types": "./dist/src/editor/index.d.ts",
-  "main": "./dist/docx.umd.cjs",
+  "main": "./dist/docx.js",
   "module": "./dist/docx.js",
   "exports": {
     ".": {
       "types": "./dist/src/editor/index.d.ts",
-      "import": "./dist/docx.js",
-      "require": "./dist/docx.umd.cjs"
+      "import": "./dist/docx.js"
     },
     "./style.css": "./dist/docx.css"
   },
@@ -46,7 +45,6 @@
     "lint": "eslint ."
   },
   "devDependencies": {
-    "@esbuild/win32-x64": "^0.28.0",
     "@eslint/js": "^9.15.0",
     "@rollup/plugin-typescript": "^10.0.1",
     "@types/node": "^18.19.0",
@@ -54,6 +52,7 @@
     "@typescript-eslint/eslint-plugin": "^8.16.0",
     "@typescript-eslint/parser": "^8.16.0",
     "@vitejs/plugin-vue": "^6.0.7",
+    "@vervedoc/icons": "file:../vervedoc-icons",
     "@vue/language-core": "^3.1.8",
     "esbuild": "^0.28.0",
     "eslint": "^9.15.0",
@@ -88,8 +87,9 @@
     "x-data-spreadsheet": "^1.1.9"
   },
   "peerDependencies": {
-    "@vervedoc/docx-editor-collaboration": "file:../vervedocs-libs/docx-editor-collaboration",
-    "ant-design-vue": "^4.2.6",
+    "@vervedoc/docx-editor-collaboration": "^1.0.4",
+    "@vervedoc/icons": "^1.0.0",
+
     "prismjs": "1.30.0",
     "vue": "^3.5.27"
   },

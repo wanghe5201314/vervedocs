@@ -20,7 +20,7 @@
       <a-tooltip placement="top">
         <template #title><span style="font-size: 11px">切换纸张方向</span></template>
         <div class="footer-item" @click="handleTogglePaperDirection">
-          <MdiIcon name="page-layout-header-footer" />
+          <VIcon name="page-layout-header-footer" />
           {{ selectedPaperDirectionName }}
         </div>
       </a-tooltip>
@@ -29,7 +29,7 @@
       <div class="footer-item">
         <a-dropdown :trigger="['click']">
           <span class="dropdown-link">
-             <MdiIcon name="crop-portrait" />
+             <VIcon name="crop-portrait" />
             {{ selectedPaperName }}
           </span>
           <template #overlay>
@@ -51,7 +51,7 @@
     <div class="editor-mode footer-item" :class="{ disabled: isModeLocked }" :title="currentModeTitle">
       <a-dropdown :trigger="['click']" :disabled="isModeLocked">
         <span class="dropdown-link">
-          <MdiIcon :name="currentModeIcon" />
+          <VIcon :name="currentModeIcon" />
           {{ currentMode }}
         </span>
         <template #overlay>
@@ -62,7 +62,7 @@
               :disabled="currentModeValue === mode.value"
             >
               <div class="mode-item-content" :title="mode.title">
-                <MdiIcon :name="mode.icon" class="mode-icon" />
+                <VIcon :name="mode.icon" class="mode-icon" />
                 <span>{{ mode.label }}</span>
               </div>
             </a-menu-item>
@@ -110,7 +110,7 @@ import { ref, computed } from 'vue'
 
 import { Modal } from 'ant-design-vue'
 import type { DocumentMeta } from '@/types/document'
-import MdiIcon from '@/components/common/MdiIcon.vue'
+import { VIcon } from '@vervedoc/icons'
 
 const props = defineProps<{
   documentMeta: DocumentMeta

@@ -1,0 +1,51 @@
+{
+  "name": "@vervedoc/icons",
+  "version": "1.0.0",
+  "description": "VerveDoc 统一图标库 - 基于 Material Icons 字体",
+  "author": "wanghe",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/vervedoc-icons.js",
+  "module": "./dist/vervedoc-icons.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/vervedoc-icons.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "vervedoc-icons",
+    "material-icons",
+    "icon",
+    "vue"
+  ],
+  "files": [
+    "dist",
+    "package.json"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "clean": "node -e \"const fs = require('fs'); if(fs.existsSync('dist')) fs.rmSync('dist', {recursive: true})\"",
+    "lib": "npm run clean && vite build",
+    "type:check": "vue-tsc --noEmit"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.7",
+    "typescript": "~5.6.2",
+    "vite": "^6.4.3",
+    "vite-plugin-css-injected-by-js": "^2.4.0",
+    "vite-plugin-dts": "^4.0.0",
+    "vue": "^3.5.12",
+    "vue-tsc": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

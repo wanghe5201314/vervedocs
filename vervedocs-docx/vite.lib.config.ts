@@ -36,6 +36,9 @@ const autoImportPlugins = [
 ]
 
 export default defineConfig({
+  esbuild: {
+    drop: ['console', 'debugger'],
+  },
   plugins: [
     vue({
       isProduction: true,
@@ -63,17 +66,18 @@ export default defineConfig({
   build: {
     sourcemap: false,
     target: 'esnext',
+    minify: 'esbuild',
+    chunkSizeWarningLimit: 1000,
     lib: {
       name,
       fileName: name,
+      formats: ['es'],
       entry: path.resolve(currentDir, 'src/editor/index.ts')
     },
     rollupOptions: {
       external: [
         'vue',
-        'ant-design-vue',
-        /^ant-design-vue\//,
-        '@ant-design/icons-vue',
+
         '@mdi/js',
         'echarts',
         /^echarts\//,
@@ -87,14 +91,16 @@ export default defineConfig({
         /^@vervedoc\/docx-editor-collaboration\//,
         /^@vervedoc\/docx-editor/,
         /^@vervedoc\/core/,
+        '@vervedoc/icons',
+        /^@vervedoc\/icons\//,
       ],
       output: {
+        dir: 'dist',
+        chunkFileNames: 'chunks/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash][extname]',
         globals: {
           vue: 'Vue',
-          'ant-design-vue': 'antd',
-          'ant-design-vue/es': 'antd',
-          'ant-design-vue/es/locale/zh_CN': 'zhCN',
-          '@ant-design/icons-vue': 'iconsVue',
+
           '@mdi/js': 'mdiJs',
           echarts: 'echarts',
           docx: 'docx',
@@ -114,7 +120,13 @@ export default defineConfig({
           '@vervedoc/docx-editor-chart': 'DocxEditorChart',
           '@vervedoc/docx-editor-collaboration': 'DocxEditorCollaboration',
           '@vervedoc/docx-editor-comment': 'DocxEditorComment',
-        }
+        },
+        manualChunks(id) {
+          if (id.includes('/src/views/')) return 'editor-view'
+          if (id.includes('/src/components/')) return 'components'
+          if (id.includes('/src/ui/')) return 'ui'
+          return undefined
+        },
       },
       onwarn(warning, warn) {
         if (warning.code === 'UNUSED_EXTERNAL_IMPORT' && warning.message.includes('resolveComponent')) {

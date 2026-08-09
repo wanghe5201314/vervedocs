@@ -10,7 +10,7 @@
           aria-label="搜索"
           @click="emit('select', 'search')"
         >
-          <MdiIcon name="magnify" :size="18" />
+          <VIcon name="magnify" :size="18" />
         </button>
       </a-tooltip>
 
@@ -23,7 +23,7 @@
           aria-label="目录"
           @click="emit('select', 'catalog')"
         >
-          <MdiIcon name="table-of-contents" :size="18" />
+          <VIcon name="table-of-contents" :size="18" />
         </button>
       </a-tooltip>
 
@@ -36,7 +36,7 @@
           aria-label="章节"
           @click="emit('select', 'section')"
         >
-          <MdiIcon name="format-section" :size="18" />
+          <VIcon name="format-section" :size="18" />
         </button>
       </a-tooltip>
 
@@ -49,7 +49,7 @@
           aria-label="AI 助手"
           @click="emit('select', 'ai')"
         >
-          <MdiIcon name="robot-outline" :size="18" />
+          <VIcon name="robot-outline" :size="18" />
         </button>
       </a-tooltip>
 
@@ -62,7 +62,7 @@
           aria-label="修订"
           @click="emit('select', 'revision')"
         >
-          <MdiIcon name="pencil-plus" :size="18" />
+          <VIcon name="pencil-plus" :size="18" />
         </button>
       </a-tooltip>
 
@@ -71,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import MdiIcon from '@/components/common/MdiIcon.vue'
+import { VIcon } from '@vervedoc/icons'
 
 type DockKey = 'search' | 'catalog' | 'section' | 'ai' | 'revision' | ''
 

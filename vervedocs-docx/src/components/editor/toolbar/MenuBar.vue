@@ -4,60 +4,60 @@
       <!-- 文件菜单 -->
       <a-sub-menu key="file" popupClassName="gdocs-menu-popper gdocs-start-popper">
         <template #title>文件</template>
-        <a-menu-item key="new"><span class="mi"><MdiIcon name="file-plus-outline" /><span>新建文档</span></span></a-menu-item>
-        <a-menu-item key="import"><div class="mi-row"><span class="mi"><MdiIcon name="file-import-outline" /><span>
+        <a-menu-item key="new"><span class="mi"><VIcon name="file-plus-outline" /><span>新建文档</span></span></a-menu-item>
+        <a-menu-item key="import"><div class="mi-row"><span class="mi"><VIcon name="file-import-outline" /><span>
           {{ isImporting ? '导入中...' : '导入文档' }}&nbsp;&nbsp;&nbsp;
           </span></span><span class="shortcut">Ctrl+Alt+O</span>
           <a-tag color="error" size="small">1.0.1-beta.20260412</a-tag></div>
         </a-menu-item>
         <a-menu-divider />
-        <a-menu-item key="save"><div class="mi-row"><span class="mi"><MdiIcon name="content-save-outline" /><span>保存</span></span><span class="shortcut">Ctrl+S</span></div></a-menu-item>
+        <a-menu-item key="save"><div class="mi-row"><span class="mi"><VIcon name="content-save-outline" /><span>保存</span></span><span class="shortcut">Ctrl+S</span></div></a-menu-item>
         <a-sub-menu key="download" popupClassName="gdocs-menu-popper">
-          <template #title><span class="mi"><MdiIcon name="download-outline" /><span>下载为</span></span></template>
-          <a-menu-item key="downloadDocx"><span class="mi"><MdiIcon name="file-word-outline" /><span>Word文件 (*.docx)</span></span></a-menu-item>
+          <template #title><span class="mi"><VIcon name="download-outline" /><span>下载为</span></span></template>
+          <a-menu-item key="downloadDocx"><span class="mi"><VIcon name="file-word-outline" /><span>Word文件 (*.docx)</span></span></a-menu-item>
         </a-sub-menu>
-        <a-menu-item key="print"><div class="mi-row"><span class="mi"><MdiIcon name="printer-outline" /><span>打印</span></span><span class="shortcut">Ctrl+P</span></div></a-menu-item>
-        <a-menu-item key="preview"><span class="mi"><MdiIcon name="eye-outline" /><span>预览</span></span></a-menu-item>
-        <a-menu-item key="rename"><span class="mi"><MdiIcon name="rename-box" /><span>重命名</span></span></a-menu-item>
+        <a-menu-item key="print"><div class="mi-row"><span class="mi"><VIcon name="printer-outline" /><span>打印</span></span><span class="shortcut">Ctrl+P</span></div></a-menu-item>
+        <a-menu-item key="preview"><span class="mi"><VIcon name="eye-outline" /><span>预览</span></span></a-menu-item>
+        <a-menu-item key="rename"><span class="mi"><VIcon name="rename-box" /><span>重命名</span></span></a-menu-item>
         <a-menu-divider />
-        <a-menu-item key="protectEncrypt"><span class="mi"><MdiIcon name="lock-outline" /><span>加密文档</span></span></a-menu-item>
-        <a-menu-item key="protectDoc"><span class="mi"><MdiIcon name="shield-lock-outline" /><span>保护文档</span></span></a-menu-item>
-        <a-menu-item key="unprotect"><span class="mi"><MdiIcon name="lock-open-outline" /><span>解除保护</span></span></a-menu-item>
+        <a-menu-item key="protectEncrypt"><span class="mi"><VIcon name="lock-outline" /><span>加密文档</span></span></a-menu-item>
+        <a-menu-item key="protectDoc"><span class="mi"><VIcon name="shield-lock-outline" /><span>保护文档</span></span></a-menu-item>
+        <a-menu-item key="unprotect"><span class="mi"><VIcon name="lock-open-outline" /><span>解除保护</span></span></a-menu-item>
         <a-menu-divider />
-        <a-menu-item key="versionHistory"><span class="mi"><MdiIcon name="history" /><span>版本历史</span></span></a-menu-item>
-        <a-menu-item key="accessPermission"><span class="mi"><MdiIcon name="account-multiple-outline" /><span>访问权限</span></span></a-menu-item>
+        <a-menu-item key="versionHistory"><span class="mi"><VIcon name="history" /><span>版本历史</span></span></a-menu-item>
+        <a-menu-item key="accessPermission"><span class="mi"><VIcon name="account-multiple-outline" /><span>访问权限</span></span></a-menu-item>
         <a-menu-divider />
-        <a-menu-item key="feedback"><span class="mi"><MdiIcon name="message-outline" /><span>提出功能建议</span></span></a-menu-item>
+        <a-menu-item key="feedback"><span class="mi"><VIcon name="message-outline" /><span>提出功能建议</span></span></a-menu-item>
       </a-sub-menu>
 
       <!-- 编辑菜单 -->
       <a-sub-menu key="edit" popupClassName="gdocs-menu-popper">
         <template #title>编辑</template>
-        <a-menu-item key="undo"><div class="mi-row"><span class="mi"><MdiIcon name="undo" /><span>撤销</span></span><span class="shortcut">Ctrl+Z</span></div></a-menu-item>
-        <a-menu-item key="redo"><div class="mi-row"><span class="mi"><MdiIcon name="redo" /><span>重做</span></span><span class="shortcut">Ctrl+Y</span></div></a-menu-item>
+        <a-menu-item key="undo"><div class="mi-row"><span class="mi"><VIcon name="undo" /><span>撤销</span></span><span class="shortcut">Ctrl+Z</span></div></a-menu-item>
+        <a-menu-item key="redo"><div class="mi-row"><span class="mi"><VIcon name="redo" /><span>重做</span></span><span class="shortcut">Ctrl+Y</span></div></a-menu-item>
         <a-menu-divider />
-        <a-menu-item key="cut" :class="{ disabled: !hasSelection }"><div class="mi-row"><span class="mi"><MdiIcon name="content-cut" /><span>剪切</span></span><span class="shortcut">Ctrl+X</span></div></a-menu-item>
-        <a-menu-item key="copy" :class="{ disabled: !hasSelection }"><div class="mi-row"><span class="mi"><MdiIcon name="content-copy" /><span>复制</span></span><span class="shortcut">Ctrl+C</span></div></a-menu-item>
-        <a-menu-item key="paste"><div class="mi-row"><span class="mi"><MdiIcon name="content-paste" /><span>粘贴</span></span><span class="shortcut">Ctrl+V</span></div></a-menu-item>
-        <a-menu-item key="pasteNoFormat"><div class="mi-row"><span class="mi"><MdiIcon name="clipboard-text-outline" /><span>无格式粘贴</span></span><span class="shortcut">Ctrl+Shift+V</span></div></a-menu-item>
+        <a-menu-item key="cut" :class="{ disabled: !hasSelection }"><div class="mi-row"><span class="mi"><VIcon name="content-cut" /><span>剪切</span></span><span class="shortcut">Ctrl+X</span></div></a-menu-item>
+        <a-menu-item key="copy" :class="{ disabled: !hasSelection }"><div class="mi-row"><span class="mi"><VIcon name="content-copy" /><span>复制</span></span><span class="shortcut">Ctrl+C</span></div></a-menu-item>
+        <a-menu-item key="paste"><div class="mi-row"><span class="mi"><VIcon name="content-paste" /><span>粘贴</span></span><span class="shortcut">Ctrl+V</span></div></a-menu-item>
+        <a-menu-item key="pasteNoFormat"><div class="mi-row"><span class="mi"><VIcon name="clipboard-text-outline" /><span>无格式粘贴</span></span><span class="shortcut">Ctrl+Shift+V</span></div></a-menu-item>
         <a-menu-divider />
-        <a-menu-item key="selectAll"><div class="mi-row"><span class="mi"><MdiIcon name="select-all" /><span>全选</span></span><span class="shortcut">Ctrl+A</span></div></a-menu-item>
-        <a-menu-item key="delete" :class="{ disabled: !hasSelection }"><span class="mi"><MdiIcon name="delete-outline" /><span>删除</span></span></a-menu-item>
+        <a-menu-item key="selectAll"><div class="mi-row"><span class="mi"><VIcon name="select-all" /><span>全选</span></span><span class="shortcut">Ctrl+A</span></div></a-menu-item>
+        <a-menu-item key="delete" :class="{ disabled: !hasSelection }"><span class="mi"><VIcon name="delete-outline" /><span>删除</span></span></a-menu-item>
         <a-menu-divider />
-        <a-menu-item key="search"><div class="mi-row"><span class="mi"><MdiIcon name="magnify" /><span>查找</span></span><span class="shortcut">Ctrl+F</span></div></a-menu-item>
+        <a-menu-item key="search"><div class="mi-row"><span class="mi"><VIcon name="magnify" /><span>查找</span></span><span class="shortcut">Ctrl+F</span></div></a-menu-item>
       </a-sub-menu>
 
       <!-- 格式菜单 -->
       <a-sub-menu key="format" popupClassName="gdocs-menu-popper">
         <template #title>格式</template>
         <a-sub-menu key="textStyle" popupClassName="gdocs-menu-popper">
-          <template #title><span class="mi"><MdiIcon name="format-text" /><span>文本</span></span></template>
-          <a-menu-item key="bold"><div class="mi-row"><span class="mi"><MdiIcon name="format-bold" /><span>粗体</span></span><span class="shortcut">Ctrl+B</span></div></a-menu-item>
-          <a-menu-item key="italic"><div class="mi-row"><span class="mi"><MdiIcon name="format-italic" /><span>斜体</span></span><span class="shortcut">Ctrl+I</span></div></a-menu-item>
-          <a-menu-item key="underline"><div class="mi-row"><span class="mi"><MdiIcon name="format-underline" /><span>下划线</span></span><span class="shortcut">Ctrl+U</span></div></a-menu-item>
-          <a-menu-item key="strikeout"><span class="mi"><MdiIcon name="format-strikethrough" /><span>删除线</span></span></a-menu-item>
-          <a-menu-item key="superscript"><span class="mi"><MdiIcon name="format-superscript" /><span>上标</span></span></a-menu-item>
-          <a-menu-item key="subscript"><span class="mi"><MdiIcon name="format-subscript" /><span>下标</span></span></a-menu-item>
+          <template #title><span class="mi"><VIcon name="format-text" /><span>文本</span></span></template>
+          <a-menu-item key="bold"><div class="mi-row"><span class="mi"><VIcon name="format-bold" /><span>粗体</span></span><span class="shortcut">Ctrl+B</span></div></a-menu-item>
+          <a-menu-item key="italic"><div class="mi-row"><span class="mi"><VIcon name="format-italic" /><span>斜体</span></span><span class="shortcut">Ctrl+I</span></div></a-menu-item>
+          <a-menu-item key="underline"><div class="mi-row"><span class="mi"><VIcon name="format-underline" /><span>下划线</span></span><span class="shortcut">Ctrl+U</span></div></a-menu-item>
+          <a-menu-item key="strikeout"><span class="mi"><VIcon name="format-strikethrough" /><span>删除线</span></span></a-menu-item>
+          <a-menu-item key="superscript"><span class="mi"><VIcon name="format-superscript" /><span>上标</span></span></a-menu-item>
+          <a-menu-item key="subscript"><span class="mi"><VIcon name="format-subscript" /><span>下标</span></span></a-menu-item>
         </a-sub-menu>
         <a-sub-menu
           key="characterScale"
@@ -66,7 +66,7 @@
           :class="{ 'submenu-disabled': !hasSelection }"
         >
           <template #title>
-            <span class="mi"><MdiIcon name="format-letter-case" />              <span>字符缩放</span></span>
+            <span class="mi"><VIcon name="format-letter-case" />              <span>字符缩放</span></span>
           </template>
           <a-menu-item
             v-for="scale in characterScaleOptions"
@@ -87,16 +87,16 @@
           </a-menu-item>
         </a-sub-menu>
         <a-sub-menu key="paragraphStyle" popupClassName="gdocs-menu-popper">
-          <template #title><span class="mi"><MdiIcon name="format-paragraph" /><span>段落</span></span></template>
+          <template #title><span class="mi"><VIcon name="format-paragraph" /><span>段落</span></span></template>
           <a-sub-menu key="alignment" popupClassName="gdocs-menu-popper">
-            <template #title><span class="mi"><MdiIcon name="format-align-left" /><span>对齐方式</span></span></template>
-            <a-menu-item key="alignLeft"><span class="mi"><MdiIcon name="format-align-left" /><span>左对齐</span></span></a-menu-item>
-            <a-menu-item key="alignCenter"><span class="mi"><MdiIcon name="format-align-center" /><span>居中对齐</span></span></a-menu-item>
-            <a-menu-item key="alignRight"><span class="mi"><MdiIcon name="format-align-right" /><span>右对齐</span></span></a-menu-item>
-            <a-menu-item key="alignJustify"><span class="mi"><MdiIcon name="format-align-justify" /><span>两端对齐</span></span></a-menu-item>
+            <template #title><span class="mi"><VIcon name="format-align-left" /><span>对齐方式</span></span></template>
+            <a-menu-item key="alignLeft"><span class="mi"><VIcon name="format-align-left" /><span>左对齐</span></span></a-menu-item>
+            <a-menu-item key="alignCenter"><span class="mi"><VIcon name="format-align-center" /><span>居中对齐</span></span></a-menu-item>
+            <a-menu-item key="alignRight"><span class="mi"><VIcon name="format-align-right" /><span>右对齐</span></span></a-menu-item>
+            <a-menu-item key="alignJustify"><span class="mi"><VIcon name="format-align-justify" /><span>两端对齐</span></span></a-menu-item>
           </a-sub-menu>
           <a-sub-menu key="lineSpacing" popupClassName="gdocs-menu-popper">
-            <template #title><span class="mi"><MdiIcon name="format-line-spacing" /><span>行距</span></span></template>
+            <template #title><span class="mi"><VIcon name="format-line-spacing" /><span>行距</span></span></template>
             <a-menu-item key="lineHeight1">单倍行距</a-menu-item>
             <a-menu-item key="lineHeight1.15">1.15 倍行距</a-menu-item>
             <a-menu-item key="lineHeight1.5">1.5 倍行距</a-menu-item>
@@ -107,30 +107,30 @@
             <a-menu-item key="lineHeightCustom">自定义行距...</a-menu-item>
           </a-sub-menu>
           <a-menu-divider />
-          <a-menu-item key="indentIncrease"><span class="mi"><MdiIcon name="format-indent-increase" /><span>增加缩进</span></span></a-menu-item>
-          <a-menu-item key="indentDecrease"><span class="mi"><MdiIcon name="format-indent-decrease" /><span>减少缩进</span></span></a-menu-item>
-          <a-menu-item key="firstLineIndent"><span class="mi"><MdiIcon name="format-textdirection-l-to-r" /><span>首行缩进</span></span></a-menu-item>
+          <a-menu-item key="indentIncrease"><span class="mi"><VIcon name="format-indent-increase" /><span>增加缩进</span></span></a-menu-item>
+          <a-menu-item key="indentDecrease"><span class="mi"><VIcon name="format-indent-decrease" /><span>减少缩进</span></span></a-menu-item>
+          <a-menu-item key="firstLineIndent"><span class="mi"><VIcon name="format-textdirection-l-to-r" /><span>首行缩进</span></span></a-menu-item>
         </a-sub-menu>
         <a-sub-menu key="listStyle" popupClassName="gdocs-menu-popper">
-          <template #title><span class="mi"><MdiIcon name="format-list-bulleted" /><span>项目符号和编号</span></span></template>
-          <a-menu-item key="bulletList"><span class="mi"><MdiIcon name="format-list-bulleted" /><span>项目符号列表</span></span></a-menu-item>
-          <a-menu-item key="numberList"><span class="mi"><MdiIcon name="format-list-numbered" /><span>编号列表</span></span></a-menu-item>
-          <a-menu-item key="checkList"><span class="mi"><MdiIcon name="format-list-checks" /><span>清单</span></span></a-menu-item>
+          <template #title><span class="mi"><VIcon name="format-list-bulleted" /><span>项目符号和编号</span></span></template>
+          <a-menu-item key="bulletList"><span class="mi"><VIcon name="format-list-bulleted" /><span>项目符号列表</span></span></a-menu-item>
+          <a-menu-item key="numberList"><span class="mi"><VIcon name="format-list-numbered" /><span>编号列表</span></span></a-menu-item>
+          <a-menu-item key="checkList"><span class="mi"><VIcon name="format-list-checks" /><span>清单</span></span></a-menu-item>
         </a-sub-menu>
         <a-menu-divider />
         <a-sub-menu key="columns" popupClassName="gdocs-menu-popper">
-          <template #title><span class="mi"><MdiIcon name="view-column-outline" /><span>分栏</span></span></template>
-          <a-menu-item key="columns1"><span class="mi"><MdiIcon name="view-column-outline" /><span>一栏</span></span></a-menu-item>
-          <a-menu-item key="columns2"><span class="mi"><MdiIcon name="view-column-outline" /><span>两栏</span></span></a-menu-item>
-          <a-menu-item key="columns3"><span class="mi"><MdiIcon name="view-column-outline" /><span>三栏</span></span></a-menu-item>
+          <template #title><span class="mi"><VIcon name="view-column-outline" /><span>分栏</span></span></template>
+          <a-menu-item key="columns1"><span class="mi"><VIcon name="view-column-outline" /><span>一栏</span></span></a-menu-item>
+          <a-menu-item key="columns2"><span class="mi"><VIcon name="view-column-outline" /><span>两栏</span></span></a-menu-item>
+          <a-menu-item key="columns3"><span class="mi"><VIcon name="view-column-outline" /><span>三栏</span></span></a-menu-item>
           <a-menu-divider />
-          <a-menu-item key="columnsMore"><span class="mi"><MdiIcon name="cog-outline" /><span>更多选项...</span></span></a-menu-item>
+          <a-menu-item key="columnsMore"><span class="mi"><VIcon name="cog-outline" /><span>更多选项...</span></span></a-menu-item>
         </a-sub-menu>
         <a-menu-divider />
-        <a-menu-item key="clearFormat"><div class="mi-row"><span class="mi"><MdiIcon name="format-clear" /><span>清除格式</span></span><span class="shortcut">Ctrl+\</span></div></a-menu-item>
+        <a-menu-item key="clearFormat"><div class="mi-row"><span class="mi"><VIcon name="format-clear" /><span>清除格式</span></span><span class="shortcut">Ctrl+\</span></div></a-menu-item>
         <a-menu-divider />
         <a-sub-menu key="direction" popupClassName="gdocs-menu-popper gdocs-direction-popper">
-          <template #title><span class="mi"><MdiIcon name="crop-portrait" /><span>纸张方向</span></span></template>
+          <template #title><span class="mi"><VIcon name="crop-portrait" /><span>纸张方向</span></span></template>
           <div class="direction-panel">
             <div class="direction-item" @click="emit('layout', 'paperVertical')">
               <div class="direction-icon vertical-icon"></div>
@@ -143,7 +143,7 @@
           </div>
         </a-sub-menu>
         <a-sub-menu key="size" popupClassName="gdocs-menu-popper gdocs-size-popper">
-          <template #title><span class="mi"><MdiIcon name="file-outline" /><span>纸张大小</span></span></template>
+          <template #title><span class="mi"><VIcon name="file-outline" /><span>纸张大小</span></span></template>
           <div class="size-panel">
             <div class="size-item" :class="{ 'size-active': currentPaperSizeName === size.name }" v-for="size in paperSizes" :key="size.name" @click="emit('paperSize', size)">
               <div class="size-icon"></div>
@@ -154,10 +154,10 @@
             </div>
           </div>
           <a-menu-divider />
-          <a-menu-item key="customPaperSize"><span class="mi"><MdiIcon name="cog-outline" /><span>其它页面大小...</span></span></a-menu-item>
+          <a-menu-item key="customPaperSize"><span class="mi"><VIcon name="cog-outline" /><span>其它页面大小...</span></span></a-menu-item>
         </a-sub-menu>
         <a-sub-menu key="margin" popupClassName="gdocs-menu-popper gdocs-margin-popper">
-          <template #title><span class="mi"><MdiIcon name="format-textbox" /><span>页边距</span></span></template>
+          <template #title><span class="mi"><VIcon name="format-textbox" /><span>页边距</span></span></template>
           <div class="margin-presets">
             <div class="preset-item" v-for="preset in marginPresets" :key="preset.name" @click="emit('margin', preset)">
               <div class="page-icon"><div class="page-content" :style="preset.style"></div></div>
@@ -170,10 +170,10 @@
           </div>
         </a-sub-menu>
         <a-sub-menu key="bgColor" popupClassName="gdocs-menu-popper gdocs-bg-popper">
-          <template #title><span class="mi"><MdiIcon name="format-color-fill" /><span>页面颜色</span></span></template>
+          <template #title><span class="mi"><VIcon name="format-color-fill" /><span>页面颜色</span></span></template>
           <div class="bg-menu">
             <div class="bg-item" @click="emit('bgColor', '#FFFFFF')">
-              <span class="bg-check"><MdiIcon v-if="selectedBgColor === '#FFFFFF'" name="check" /></span>
+              <span class="bg-check"><VIcon v-if="selectedBgColor === '#FFFFFF'" name="check" /></span>
               <span class="bg-item-text">无填充</span>
             </div>
             <div class="bg-divider"></div>
@@ -188,21 +188,21 @@
       <!-- 插入菜单 -->
       <a-sub-menu key="insert" popupClassName="gdocs-menu-popper">
         <template #title>插入</template>
-        <a-menu-item key="insertBlankPage"><span class="mi"><MdiIcon name="file-plus-outline" /><span>空白页</span></span></a-menu-item>
+        <a-menu-item key="insertBlankPage"><span class="mi"><VIcon name="file-plus-outline" /><span>空白页</span></span></a-menu-item>
         <a-sub-menu key="breaks" popupClassName="gdocs-menu-popper">
-          <template #title><span class="mi"><MdiIcon name="format-page-break" /><span>分隔符</span></span></template>
-          <a-menu-item key="pageBreak"><div class="mi-row"><span class="mi"><MdiIcon name="format-page-break" /><span>分页符(P)</span></span><span class="shortcut">Ctrl+Enter</span></div></a-menu-item>
-          <a-menu-item key="columnBreak"><span class="mi"><MdiIcon name="format-columns" /><span>分栏符(C)</span></span></a-menu-item>
-          <a-menu-item key="lineBreak"><div class="mi-row"><span class="mi"><MdiIcon name="keyboard-return" /><span>换行符(W)</span></span><span class="shortcut">Shift+Enter</span></div></a-menu-item>
+          <template #title><span class="mi"><VIcon name="format-page-break" /><span>分隔符</span></span></template>
+          <a-menu-item key="pageBreak"><div class="mi-row"><span class="mi"><VIcon name="format-page-break" /><span>分页符(P)</span></span><span class="shortcut">Ctrl+Enter</span></div></a-menu-item>
+          <a-menu-item key="columnBreak"><span class="mi"><VIcon name="format-columns" /><span>分栏符(C)</span></span></a-menu-item>
+          <a-menu-item key="lineBreak"><div class="mi-row"><span class="mi"><VIcon name="keyboard-return" /><span>换行符(W)</span></span><span class="shortcut">Shift+Enter</span></div></a-menu-item>
           <a-menu-divider />
-          <a-menu-item key="sectionBreakNextPage"><span class="mi"><MdiIcon name="file-document-outline" /><span>下一页分节符(N)</span></span></a-menu-item>
-          <a-menu-item key="sectionBreakContinuous"><span class="mi"><MdiIcon name="format-section" /><span>连续分节符(T)</span></span></a-menu-item>
-          <a-menu-item key="sectionBreakEvenPage"><span class="mi"><MdiIcon name="numeric-2-box-outline" /><span>偶数页分节符(E)</span></span></a-menu-item>
-          <a-menu-item key="sectionBreakOddPage"><span class="mi"><MdiIcon name="numeric-1-box-outline" /><span>奇数页分节符(O)</span></span></a-menu-item>
+          <a-menu-item key="sectionBreakNextPage"><span class="mi"><VIcon name="file-document-outline" /><span>下一页分节符(N)</span></span></a-menu-item>
+          <a-menu-item key="sectionBreakContinuous"><span class="mi"><VIcon name="format-section" /><span>连续分节符(T)</span></span></a-menu-item>
+          <a-menu-item key="sectionBreakEvenPage"><span class="mi"><VIcon name="numeric-2-box-outline" /><span>偶数页分节符(E)</span></span></a-menu-item>
+          <a-menu-item key="sectionBreakOddPage"><span class="mi"><VIcon name="numeric-1-box-outline" /><span>奇数页分节符(O)</span></span></a-menu-item>
         </a-sub-menu>
         <a-menu-divider />
         <a-sub-menu key="insertTable" popupClassName="gdocs-menu-popper gdocs-table-popper">
-          <template #title><span class="mi"><MdiIcon name="table" /><span>表格</span></span></template>
+          <template #title><span class="mi"><VIcon name="table" /><span>表格</span></span></template>
           <a-card size="small" title="插入表格" :bordered="true" class="table-selector">
             <div class="table-grid" @mouseleave="hoverCell = { r: -1, c: -1 }">
               <div v-for="r in 10" :key="r" class="tgrid-row">
@@ -212,25 +212,25 @@
             <div class="table-info">{{ hoverCell.r >= 0 ? `${hoverCell.r + 1} × ${hoverCell.c + 1}` : '选择大小' }}</div>
           </a-card>
           <a-menu-divider />
-          <a-menu-item key="insertTableDialog"><span class="mi"><MdiIcon name="cog-outline" /><span>更多选项...</span></span></a-menu-item>
+          <a-menu-item key="insertTableDialog"><span class="mi"><VIcon name="cog-outline" /><span>更多选项...</span></span></a-menu-item>
         </a-sub-menu>
-        <a-menu-item key="image"><span class="mi"><MdiIcon name="image-outline" /><span>图片</span></span></a-menu-item>
+        <a-menu-item key="image"><span class="mi"><VIcon name="image-outline" /><span>图片</span></span></a-menu-item>
         <a-sub-menu key="av" popupClassName="gdocs-menu-popper">
-          <template #title><span class="mi"><MdiIcon name="video-outline" /><span>音视频</span></span></template>
-          <a-menu-item key="audio"><span class="mi"><MdiIcon name="music-note" /><span>音频</span></span></a-menu-item>
-          <a-menu-item key="video"><span class="mi"><MdiIcon name="video-outline" /><span>视频</span></span></a-menu-item>
+          <template #title><span class="mi"><VIcon name="video-outline" /><span>音视频</span></span></template>
+          <a-menu-item key="audio"><span class="mi"><VIcon name="music-note" /><span>音频</span></span></a-menu-item>
+          <a-menu-item key="video"><span class="mi"><VIcon name="video-outline" /><span>视频</span></span></a-menu-item>
         </a-sub-menu>
-        <a-menu-item key="insertChart"><span class="mi"><MdiIcon name="chart-bar" /><span>图表</span></span></a-menu-item>
+        <a-menu-item key="insertChart"><span class="mi"><VIcon name="chart-bar" /><span>图表</span></span></a-menu-item>
 
         <a-menu-divider />
-        <a-menu-item key="hyperlink"><span class="mi"><MdiIcon name="link-variant" /><span>超链接</span></span></a-menu-item>
-        <a-menu-item key="bookmark"><span class="mi"><MdiIcon name="bookmark-outline" /><span>书签</span></span></a-menu-item>
+        <a-menu-item key="hyperlink"><span class="mi"><VIcon name="link-variant" /><span>超链接</span></span></a-menu-item>
+        <a-menu-item key="bookmark"><span class="mi"><VIcon name="bookmark-outline" /><span>书签</span></span></a-menu-item>
         <a-menu-divider />
         <a-sub-menu key="formula" popupClassName="gdocs-menu-popper gdocs-formula-popper">
-          <template #title><span class="mi"><MdiIcon name="function-variant" /><span>公式</span></span></template>
-          <a-menu-item key="latex"><span class="mi"><MdiIcon name="function-variant" /><span>插入LaTeX公式</span></span></a-menu-item>
+          <template #title><span class="mi"><VIcon name="function-variant" /><span>公式</span></span></template>
+          <a-menu-item key="latex"><span class="mi"><VIcon name="function-variant" /><span>插入LaTeX公式</span></span></a-menu-item>
           <a-sub-menu v-for="cat in formulaCategories" :key="'formula-' + cat.name" popupClassName="gdocs-menu-popper gdocs-third-popper">
-            <template #title><span class="mi"><MdiIcon :name="cat.icon" /><span>{{ cat.name }}</span></span></template>
+            <template #title><span class="mi"><VIcon :name="cat.icon" /><span>{{ cat.name }}</span></span></template>
             <a-menu-item v-for="f in cat.formulas" :key="'f-' + f.name" @click.stop="emit('formula', f.latex)">
               <div class="formula-item-content">
                 <div class="formula-name">{{ f.name }}</div>
@@ -241,7 +241,7 @@
         </a-sub-menu>
 
         <a-sub-menu key="separator" popupClassName="gdocs-menu-popper gdocs-separator-popper">
-          <template #title><span class="mi"><MdiIcon name="minus" /><span>分割线</span></span></template>
+          <template #title><span class="mi"><VIcon name="minus" /><span>分割线</span></span></template>
           <a-card size="small" title="分割线类型" :bordered="true" class="separator-card">
             <div class="separator-list">
               <div
@@ -258,19 +258,19 @@
             </div>
           </a-card>
           <a-menu-divider />
-          <a-menu-item key="separatorDialog"><span class="mi"><MdiIcon name="palette-outline" /><span>分割线颜色</span></span></a-menu-item>
+          <a-menu-item key="separatorDialog"><span class="mi"><VIcon name="palette-outline" /><span>分割线颜色</span></span></a-menu-item>
         </a-sub-menu>
         <a-menu-divider />
-        <a-menu-item key="footnote"><span class="mi"><MdiIcon name="format-annotation-plus" /><span>脚注</span></span></a-menu-item>
-        <a-menu-item key="comment" :disabled="!hasSelection"><div class="mi-row"><span class="mi"><MdiIcon name="comment-plus-outline" /><span>评论</span></span><span class="shortcut">Ctrl+Alt+M</span></div></a-menu-item>
+        <a-menu-item key="footnote"><span class="mi"><VIcon name="format-annotation-plus" /><span>脚注</span></span></a-menu-item>
+        <a-menu-item key="comment" :disabled="!hasSelection"><div class="mi-row"><span class="mi"><VIcon name="comment-plus-outline" /><span>评论</span></span><span class="shortcut">Ctrl+Alt+M</span></div></a-menu-item>
         <a-menu-divider />
         <a-sub-menu key="watermark" popupClassName="gdocs-menu-popper gdocs-watermark-popper">
-          <template #title><span class="mi"><MdiIcon name="watermark" /><span>水印</span></span></template>
+          <template #title><span class="mi"><VIcon name="watermark" /><span>水印</span></span></template>
           <a-card size="small" title="水印" :bordered="true" class="wm-card">
             <div class="wm-section">
               <div class="wm-section-title">自定义水印</div>
               <div class="wm-custom-add" @click="emit('cmd', 'addWatermark')">
-                <MdiIcon name="plus" />
+                <VIcon name="plus" />
                 <span>点击添加</span>
               </div>
             </div>
@@ -285,10 +285,10 @@
             </div>
           </a-card>
           <a-menu-divider />
-          <a-menu-item key="deleteWatermark"><span class="mi"><MdiIcon name="delete-outline" /><span>删除水印</span></span></a-menu-item>
+          <a-menu-item key="deleteWatermark"><span class="mi"><VIcon name="delete-outline" /><span>删除水印</span></span></a-menu-item>
         </a-sub-menu>
         <a-sub-menu key="hf" popupClassName="gdocs-menu-popper">
-          <template #title><span class="mi"><MdiIcon name="page-layout-header-footer" /><span>页眉和页脚</span></span></template>
+          <template #title><span class="mi"><VIcon name="page-layout-header-footer" /><span>页眉和页脚</span></span></template>
           <a-menu-item key="header">编辑页眉</a-menu-item>
           <a-menu-item key="footer">编辑页脚</a-menu-item>
           <a-menu-item key="pageNumber">插入页码</a-menu-item>
@@ -302,25 +302,25 @@
       <a-sub-menu key="view" popupClassName="gdocs-menu-popper">
         <template #title>视图</template>
         <a-sub-menu key="zoom" popupClassName="gdocs-menu-popper">
-          <template #title><span class="mi"><MdiIcon name="magnify-plus-outline" /><span>缩放</span></span></template>
+          <template #title><span class="mi"><VIcon name="magnify-plus-outline" /><span>缩放</span></span></template>
           <a-menu-item v-for="z in zoomLevels" :key="'zoom' + z">
-            <span class="zoom-check"><MdiIcon v-if="zoomPercent === z" name="check" /></span>{{ z }}%
+            <span class="zoom-check"><VIcon v-if="zoomPercent === z" name="check" /></span>{{ z }}%
           </a-menu-item>
         </a-sub-menu>
-        <a-menu-item key="fitPage"><span class="mi"><MdiIcon name="fit-to-page-outline" /><span>适应页面</span></span></a-menu-item>
-        <a-menu-item key="fitWidth"><span class="mi"><MdiIcon name="arrow-expand-horizontal" /><span>适应宽度</span></span></a-menu-item>
+        <a-menu-item key="fitPage"><span class="mi"><VIcon name="fit-to-page-outline" /><span>适应页面</span></span></a-menu-item>
+        <a-menu-item key="fitWidth"><span class="mi"><VIcon name="arrow-expand-horizontal" /><span>适应宽度</span></span></a-menu-item>
         <a-menu-divider />
 
-        <a-menu-item key="toggleToolbar"><span class="mi"><MdiIcon name="view-headline" /><span>显示/隐藏工具栏</span></span></a-menu-item>
-        <a-menu-item key="toggleLeftPanel"><span class="mi"><MdiIcon name="page-layout-sidebar-left" /><span>显示/隐藏左侧面板</span></span></a-menu-item>
-        <a-menu-item key="toggleBottomNav"><span class="mi"><MdiIcon name="dock-bottom" /><span>显示/隐藏状态栏</span></span></a-menu-item>
-        <a-menu-item key="toggleRuler"><span class="mi"><MdiIcon name="ruler" /><span>显示/隐藏标尺</span></span></a-menu-item>
-        <a-menu-item key="toggleLineBreak"><span class="mi"><MdiIcon :name="showLineBreak ? 'checkbox-marked-outline' : 'checkbox-blank-outline'" /><span>显示换行符</span></span></a-menu-item>
+        <a-menu-item key="toggleToolbar"><span class="mi"><VIcon name="view-headline" /><span>显示/隐藏工具栏</span></span></a-menu-item>
+        <a-menu-item key="toggleLeftPanel"><span class="mi"><VIcon name="page-layout-sidebar-left" /><span>显示/隐藏左侧面板</span></span></a-menu-item>
+        <a-menu-item key="toggleBottomNav"><span class="mi"><VIcon name="dock-bottom" /><span>显示/隐藏状态栏</span></span></a-menu-item>
+        <a-menu-item key="toggleRuler"><span class="mi"><VIcon name="ruler" /><span>显示/隐藏标尺</span></span></a-menu-item>
+        <a-menu-item key="toggleLineBreak"><span class="mi"><VIcon :name="showLineBreak ? 'checkbox-marked-outline' : 'checkbox-blank-outline'" /><span>显示换行符</span></span></a-menu-item>
         <a-menu-divider />
-        <a-menu-item key="toggleEyeCare"><span class="mi"><MdiIcon name="eye-outline" /><span>护眼模式</span></span></a-menu-item>
+        <a-menu-item key="toggleEyeCare"><span class="mi"><VIcon name="eye-outline" /><span>护眼模式</span></span></a-menu-item>
         <a-menu-divider />
         <a-sub-menu key="toc" popupClassName="gdocs-menu-popper gdocs-toc-popper">
-          <template #title><span class="mi"><MdiIcon name="table-of-contents" /><span>目录</span></span></template>
+          <template #title><span class="mi"><VIcon name="table-of-contents" /><span>目录</span></span></template>
           <a-card size="small" title="自动目录" :bordered="true" class="toc-card-panel">
             <div class="toc-card-list">
               <div class="toc-card" @click="emit('view', 'tocInsert1')">
@@ -350,8 +350,8 @@
             </div>
           </a-card>
           <a-menu-divider />
-          <a-menu-item key="tocCustom"><span class="mi"><MdiIcon name="cog-outline" /><span>自定义目录(C)...</span></span></a-menu-item>
-          <a-menu-item key="tocRemove"><span class="mi"><MdiIcon name="delete-outline" /><span>删除目录(R)</span></span></a-menu-item>
+          <a-menu-item key="tocCustom"><span class="mi"><VIcon name="cog-outline" /><span>自定义目录(C)...</span></span></a-menu-item>
+          <a-menu-item key="tocRemove"><span class="mi"><VIcon name="delete-outline" /><span>删除目录(R)</span></span></a-menu-item>
         </a-sub-menu>
       </a-sub-menu>
 
@@ -359,19 +359,19 @@
       <a-sub-menu key="review" popupClassName="gdocs-menu-popper">
         <template #title>审阅</template>
         <a-sub-menu key="revisionDisplay" popupClassName="gdocs-menu-popper">
-          <template #title><span class="mi"><MdiIcon name="eye-outline" /><span>显示标记选项</span></span></template>
+          <template #title><span class="mi"><VIcon name="eye-outline" /><span>显示标记选项</span></span></template>
           <a-menu-item key="showAllMarks" title="同时显示批注卡片和修订卡片">
-            <span class="mi"><MdiIcon :name="revisionDisplayMode === 'all' ? 'checkbox-marked-outline' : 'checkbox-blank-outline'" /><span>显示所有批注和修订</span></span>
+            <span class="mi"><VIcon :name="revisionDisplayMode === 'all' ? 'checkbox-marked-outline' : 'checkbox-blank-outline'" /><span>显示所有批注和修订</span></span>
           </a-menu-item>
           <a-menu-item key="showComments" title="仅显示批注卡片，隐藏修订卡片">
-            <span class="mi"><MdiIcon :name="revisionDisplayMode === 'comments' ? 'checkbox-marked-outline' : 'checkbox-blank-outline'" /><span>仅显示批注</span></span>
+            <span class="mi"><VIcon :name="revisionDisplayMode === 'comments' ? 'checkbox-marked-outline' : 'checkbox-blank-outline'" /><span>仅显示批注</span></span>
           </a-menu-item>
           <a-menu-item key="showRevisions" title="仅显示修订卡片，隐藏批注卡片">
-            <span class="mi"><MdiIcon :name="revisionDisplayMode === 'revisions' ? 'checkbox-marked-outline' : 'checkbox-blank-outline'" /><span>仅显示修订</span></span>
+            <span class="mi"><VIcon :name="revisionDisplayMode === 'revisions' ? 'checkbox-marked-outline' : 'checkbox-blank-outline'" /><span>仅显示修订</span></span>
           </a-menu-item>
         </a-sub-menu>
         <a-menu-divider />
-        <a-menu-item key="revisionPanel"><span class="mi"><MdiIcon name="dock-right" /><span>修订面板</span></span></a-menu-item>
+        <a-menu-item key="revisionPanel"><span class="mi"><VIcon name="dock-right" /><span>修订面板</span></span></a-menu-item>
       </a-sub-menu>
 
       <a-sub-menu
@@ -382,17 +382,17 @@
         <template #title>协同</template>
         <a-menu-item key="toggleCollaborationCursor">
           <div class="mi-row mi-row--toggle">
-            <span class="mi"><MdiIcon name="pencil" /><span>显示他人光标</span></span>
+            <span class="mi"><VIcon name="pencil" /><span>显示他人光标</span></span>
             <span class="menu-toggle-check" aria-hidden="true">
-              <MdiIcon v-if="cursorCollaborationEnabled" name="check" />
+              <VIcon v-if="cursorCollaborationEnabled" name="check" />
             </span>
           </div>
         </a-menu-item>
         <a-menu-item key="toggleCollaborationSelection">
           <div class="mi-row mi-row--toggle">
-            <span class="mi"><MdiIcon name="select-all" /><span>显示他人选区</span></span>
+            <span class="mi"><VIcon name="select-all" /><span>显示他人选区</span></span>
             <span class="menu-toggle-check" aria-hidden="true">
-              <MdiIcon v-if="selectionCollaborationEnabled" name="check" />
+              <VIcon v-if="selectionCollaborationEnabled" name="check" />
             </span>
           </div>
         </a-menu-item>
@@ -401,17 +401,17 @@
       <!-- 工具菜单 -->
       <a-sub-menu key="tools" popupClassName="gdocs-menu-popper">
         <template #title>工具</template>
-        <a-menu-item key="barcode"><span class="mi"><MdiIcon name="barcode" /><span>条形码</span></span></a-menu-item>
-        <a-menu-item key="qrcode"><span class="mi"><MdiIcon name="qrcode" /><span>二维码</span></span></a-menu-item>
+        <a-menu-item key="barcode"><span class="mi"><VIcon name="barcode" /><span>条形码</span></span></a-menu-item>
+        <a-menu-item key="qrcode"><span class="mi"><VIcon name="qrcode" /><span>二维码</span></span></a-menu-item>
         <a-menu-divider />
-        <a-menu-item key="insertDate"><span class="mi"><MdiIcon name="calendar-clock" /><span>日期和时间</span></span></a-menu-item>
-        <a-menu-item key="signature"><span class="mi"><MdiIcon name="draw" /><span>电子签名</span></span></a-menu-item>
+        <a-menu-item key="insertDate"><span class="mi"><VIcon name="calendar-clock" /><span>日期和时间</span></span></a-menu-item>
+        <a-menu-item key="signature"><span class="mi"><VIcon name="draw" /><span>电子签名</span></span></a-menu-item>
         <a-menu-divider />
         <a-sub-menu key="spellcheckSub" popupClassName="gdocs-menu-popper gdocs-spellcheck-popper">
-          <template #title><span class="mi"><MdiIcon name="spellcheck" /><span>拼写检查</span></span></template>
+          <template #title><span class="mi"><VIcon name="spellcheck" /><span>拼写检查</span></span></template>
           <a-card size="small" title="拼写检查" :bordered="true" class="spellcheck-panel">
             <div class="sp-status">
-              <MdiIcon name="check-circle" class="sp-ok" />
+              <VIcon name="check-circle" class="sp-ok" />
               <span>未发现拼写错误</span>
             </div>
             <div class="sp-actions">
@@ -421,7 +421,7 @@
           </a-card>
         </a-sub-menu>
         <a-sub-menu key="wordCountSub" popupClassName="gdocs-menu-popper gdocs-wordcount-popper">
-          <template #title><span class="mi"><MdiIcon name="counter" /><span>字数统计</span></span></template>
+          <template #title><span class="mi"><VIcon name="counter" /><span>字数统计</span></span></template>
           <a-card size="small" title="字数统计" :bordered="true" class="wordcount-panel">
             <div class="wc-grid">
               <div class="wc-row"><span class="wc-label">页数</span><span class="wc-value">{{ documentStats?.totalPages || 0 }}</span></div>
@@ -434,29 +434,29 @@
           </a-card>
         </a-sub-menu>
         <a-menu-divider />
-        <a-menu-item key="compare"><span class="mi"><MdiIcon name="compare" /><span>比较文档</span></span></a-menu-item>
+        <a-menu-item key="compare"><span class="mi"><VIcon name="compare" /><span>比较文档</span></span></a-menu-item>
         <a-menu-divider />
         <a-sub-menu key="aiTools" popupClassName="gdocs-menu-popper">
-          <template #title><span class="mi"><MdiIcon name="robot-outline" /><span>AI 助手</span></span></template>
-          <a-menu-item key="aiPanel"><span class="mi"><MdiIcon name="dock-right" /><span>打开 AI 面板</span></span></a-menu-item>
+          <template #title><span class="mi"><VIcon name="robot-outline" /><span>AI 助手</span></span></template>
+          <a-menu-item key="aiPanel"><span class="mi"><VIcon name="dock-right" /><span>打开 AI 面板</span></span></a-menu-item>
           <a-menu-divider />
-          <a-menu-item key="aiPolish" :disabled="!hasSelection"><span class="mi"><MdiIcon name="auto-fix" /><span>AI 润色</span></span></a-menu-item>
-          <a-menu-item key="aiSummarize" :disabled="!hasSelection"><span class="mi"><MdiIcon name="text-box-check-outline" /><span>AI 总结</span></span></a-menu-item>
-          <a-menu-item key="aiContinue"><span class="mi"><MdiIcon name="pen-plus" /><span>AI 续写</span></span></a-menu-item>
-          <a-menu-item key="aiFixGrammar" :disabled="!hasSelection"><span class="mi"><MdiIcon name="spellcheck" /><span>修正语法</span></span></a-menu-item>
+          <a-menu-item key="aiPolish" :disabled="!hasSelection"><span class="mi"><VIcon name="auto-fix" /><span>AI 润色</span></span></a-menu-item>
+          <a-menu-item key="aiSummarize" :disabled="!hasSelection"><span class="mi"><VIcon name="text-box-check-outline" /><span>AI 总结</span></span></a-menu-item>
+          <a-menu-item key="aiContinue"><span class="mi"><VIcon name="pen-plus" /><span>AI 续写</span></span></a-menu-item>
+          <a-menu-item key="aiFixGrammar" :disabled="!hasSelection"><span class="mi"><VIcon name="spellcheck" /><span>修正语法</span></span></a-menu-item>
           <a-menu-divider />
           <a-sub-menu key="aiTranslate" popupClassName="gdocs-menu-popper">
-            <template #title><span class="mi"><MdiIcon name="translate" /><span>AI 翻译</span></span></template>
+            <template #title><span class="mi"><VIcon name="translate" /><span>AI 翻译</span></span></template>
             <a-menu-item key="aiTranslateEn" :disabled="!hasSelection">翻译为英文</a-menu-item>
             <a-menu-item key="aiTranslateZh" :disabled="!hasSelection">翻译为中文</a-menu-item>
             <a-menu-item key="aiTranslateJa" :disabled="!hasSelection">翻译为日文</a-menu-item>
             <a-menu-item key="aiTranslateKo" :disabled="!hasSelection">翻译为韩文</a-menu-item>
           </a-sub-menu>
           <a-menu-divider />
-          <a-menu-item key="aiDocAnalysis"><span class="mi"><MdiIcon name="file-search-outline" /><span>全文分析</span></span></a-menu-item>
-          <a-menu-item key="aiLayout"><span class="mi"><MdiIcon name="page-layout-body" /><span>排版建议</span></span></a-menu-item>
+          <a-menu-item key="aiDocAnalysis"><span class="mi"><VIcon name="file-search-outline" /><span>全文分析</span></span></a-menu-item>
+          <a-menu-item key="aiLayout"><span class="mi"><VIcon name="page-layout-body" /><span>排版建议</span></span></a-menu-item>
           <a-menu-divider />
-          <a-menu-item key="aiSettings"><span class="mi"><MdiIcon name="cog-outline" /><span>AI 设置...</span></span></a-menu-item>
+          <a-menu-item key="aiSettings"><span class="mi"><VIcon name="cog-outline" /><span>AI 设置...</span></span></a-menu-item>
         </a-sub-menu>
       </a-sub-menu>
 
@@ -464,7 +464,7 @@
       <a-sub-menu key="help" popupClassName="gdocs-menu-popper">
         <template #title>帮助</template>
         <a-menu-item key="helpShortcuts"><div class="mi-row">
-          <span class="mi"><MdiIcon name="keyboard-outline" /><span>键盘快捷键</span></span>
+          <span class="mi"><VIcon name="keyboard-outline" /><span>键盘快捷键</span></span>
           <span class="shortcut">Ctrl+/</span></div>
         </a-menu-item>
       </a-sub-menu>
@@ -473,15 +473,15 @@
     <!-- 工具栏切换下拉菜单 -->
     <a-dropdown :trigger="['click']" class="toolbar-dropdown">
       <div class="toolbar-switch">
-        <MdiIcon name="chevron-down" />
+        <VIcon name="chevron-down" />
       </div>
       <template #overlay>
         <a-menu @click="({ key }: any) => handleToolbarSwitch(key)">
           <a-menu-item key="professional" :class="{ 'is-active': toolbarMode === 'professional' }">
-            <span class="mi"><MdiIcon name="view-headline" /><span>专业工具栏</span></span>
+            <span class="mi"><VIcon name="view-headline" /><span>专业工具栏</span></span>
           </a-menu-item>
           <a-menu-item key="simple" :class="{ 'is-active': toolbarMode === 'simple' }">
-            <span class="mi"><MdiIcon name="view-column-outline" /><span>简约工具栏</span></span>
+            <span class="mi"><VIcon name="view-column-outline" /><span>简约工具栏</span></span>
           </a-menu-item>
         </a-menu>
       </template>
@@ -491,7 +491,7 @@
 
 <script setup lang="ts">
 import { computed, ref, toRefs } from 'vue'
-import MdiIcon from '@/components/common/MdiIcon.vue'
+import { VIcon } from '@vervedoc/icons'
 import {
   marginPresets, paperSizes, bgColorPalette, watermarkPresets,
   separatorStyles, formulaCategories, zoomLevels

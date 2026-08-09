@@ -2,24 +2,24 @@
   <div class="revision-panel" editor-component="revision-panel">
     <div class="revision-header">
       <div class="revision-title">
-        <MdiIcon name="pencil-plus" />
+        <VIcon name="pencil-plus" />
         <span>修订记录</span>
       </div>
       <div class="revision-header-right">
         <span v-if="revisions.length > 0" class="rev-count">共 {{ revisions.length }} 处修订</span>
         <div class="revision-close" @click="emit('close')" title="关闭">
-          <MdiIcon name="close" />
+          <VIcon name="close" />
         </div>
       </div>
     </div>
 
     <div class="revision-toolbar">
       <button class="rev-btn accept" @click="emit('command', 'acceptAllRevisions')" title="接受所有修订">
-        <MdiIcon name="check-all" />
+        <VIcon name="check-all" />
         <span>接受所有修订</span>
       </button>
       <button class="rev-btn reject" @click="emit('command', 'rejectAllRevisions')" title="拒绝所有修订">
-        <MdiIcon name="close-box-multiple-outline" />
+        <VIcon name="close-box-multiple-outline" />
         <span>拒绝所有修订</span>
       </button>
     </div>
@@ -48,10 +48,10 @@
           </div>
           <div class="rev-item-actions">
             <button class="rev-action-btn accept" @click.stop="emit('command', 'acceptRevisionById', rev.id)" title="接受">
-              <MdiIcon name="check" />
+              <VIcon name="check" />
             </button>
             <button class="rev-action-btn reject" @click.stop="emit('command', 'rejectRevisionById', rev.id)" title="拒绝">
-              <MdiIcon name="close" />
+              <VIcon name="close" />
             </button>
           </div>
         </div>
@@ -63,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import MdiIcon from '@/components/common/MdiIcon.vue'
+import { VIcon } from '@vervedoc/icons'
 
 export interface RevisionItem {
   id: string

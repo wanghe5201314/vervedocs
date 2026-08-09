@@ -18,17 +18,17 @@ const sizeStyle = computed(() => {
 </script>
 
 <template>
-  <i class="material-icons" :class="{ 'mdi-icon-auto': !props.size }" :style="sizeStyle">{{ iconName }}</i>
+  <i class="material-icons v-icon" :class="{ 'v-icon-auto': !props.size }" :style="sizeStyle">{{ iconName }}</i>
 </template>
 
 <style scoped>
-.material-icons {
+.v-icon {
   display: inline-block;
   vertical-align: middle;
   line-height: 1;
 }
 
-.mdi-icon-auto {
+.v-icon-auto {
   font-size: 1.2em;
 }
 </style>

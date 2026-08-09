@@ -59,6 +59,12 @@ export default defineConfig({
         'animate.css',
         'svg-pathdata',
         'svg-arc-to-cubic-bezier',
+c-to-cubic-bezier',
+
+        /^@univerjs\/.*/,
+        'react',
+        'react-dom',
+        'rxjs',
       ],
       output: {
           globals: {

@@ -78,6 +78,7 @@
     "@types/node": "catalog:",
     "@vervedoc/docx-editor-collaboration": "workspace:^",
     "@vervedoc/icons": "workspace:^",
+    "@ant-design/icons-vue": "^7.0.1",
     "@vitejs/plugin-vue": "catalog:",
     "ant-design-vue": "^4.2.6",
     "eslint": "catalog:",

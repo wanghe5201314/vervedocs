@@ -1,0 +1,63 @@
+{
+  "name": "@vervedoc/docx-editor-transform",
+  "version": "1.0.8",
+  "description": "DocxEditor 变换层 - 文档变换操作",
+  "author": "wanghe",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/docx-editor-transform.umd.cjs",
+    "module": "./dist/docx-editor-transform.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/docx-editor-transform.js",
+        "require": "./dist/docx-editor-transform.umd.cjs"
+      }
+    }
+  },
+  "keywords": [
+    "docx-editor-transform",
+    "editor",
+    "docx-editor"
+  ],
+  "files": [
+    "dist",
+    "README.md",
+    "package.json"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "clean": "node -e \"const fs = require('fs'); if(fs.existsSync('dist')) fs.rmSync('dist', {recursive: true})\"",
+    "build": "pnpm run clean && tsc && vite build",
+    "preview": "vite preview",
+    "type:check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@vervedoc/docx-editor-schema": "workspace:^",
+    "@vervedoc/docx-editor-state": "workspace:^"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "eslint": "catalog:",
+    "eslint-plugin-unused-imports": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vite": "catalog:",
+    "vite-plugin-dts": "catalog:"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "name": "@vervedoc/docx",
+  "author": "wanghe",
+  "license": "MIT",
+  "version": "1.2.19",
+  "description": "玉衡云文档 完整版UI",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "package.json"
+  ],
+  "types": "./dist/src/editor/index.d.ts",
+  "main": "./dist/docx.js",
+  "module": "./dist/docx.js",
+  "exports": {
+    ".": {
+      "types": "./dist/src/editor/index.d.ts",
+      "import": "./dist/docx.js"
+    },
+    "./style.css": "./dist/docx.css"
+  },
+  "homepage": "https://gitee.com/wanghe520/vervedocs",
+  "repository": {
+    "type": "git",
+    "url": "https://gitee.com/wanghe520/vervedocs"
+  },
+  "keywords": [
+    "vervedoc-docx",
+    "editor",
+    "docx"
+  ],
+  "engines": {
+    "node": ">=16.9.1"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "vite --config vite.config.ts",
+    "lib": "eslint . && vite build --config vite.lib.config.ts",
+    "build": "pnpm run lib",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@rollup/plugin-typescript": "^10.0.1",
+    "@types/node": "catalog:",
+    "@types/prismjs": "^1.26.0",
+    "@typescript-eslint/eslint-plugin": "^8.16.0",
+    "@typescript-eslint/parser": "^8.16.0",
+    "@vitejs/plugin-vue": "catalog:",
+    "@vervedoc/icons": "workspace:^",
+    "@vue/language-core": "^3.1.8",
+    "esbuild": "^0.28.0",
+    "eslint": "catalog:",
+    "eslint-plugin-unused-imports": "catalog:",
+    "less": "^4.6.4",
+    "rollup-plugin-visualizer": "^7.0.1",
+    "typescript": "catalog:",
+    "unplugin-auto-import": "^21.0.0",
+    "unplugin-vue-components": "^32.1.0",
+    "vite": "catalog:",
+    "vite-plugin-css-injected-by-js": "^2.1.1",
+    "vite-plugin-dts": "catalog:",
+    "vue": "^3.5.27",
+    "vue-eslint-parser": "^10.4.0"
+  },
+  "dependencies": {
+    "@ant-design/icons-vue": "^7.0.1",
+    "@vervedoc/core": "workspace:^",
+    "@vervedoc/docx-editor-ai": "workspace:^",
+    "@vervedoc/docx-editor-chart": "workspace:^",
+    "ant-design-vue": "^4.2.6",
+    "cypress": "^15.15.0",
+    "docx": "^9.5.1",
+    "echarts": "^6.1.0",
+    "esbuild": "^0.28.1",
+    "jsbarcode": "^3.12.3",
+    "jszip": "^3.10.1",
+    "@lucide/vue": "^1.24.0",
+    "plyr": "^3.7.8",
+    "prismjs": "1.30.0",
+    "qrcode": "^1.5.4",
+    "x-data-spreadsheet": "^1.1.9"
+  },
+  "peerDependencies": {
+    "@vervedoc/docx-editor-collaboration": "workspace:^",
+    "@vervedoc/icons": "workspace:^",
+    "prismjs": "1.30.0",
+    "vue": "^3.5.27"
+  },
+  "overrides": {
+    "minimist": "^1.2.6",
+    "node-fetch": "^2.6.7",
+    "tmp": "^0.2.6",
+    "core-js": "^3.49.0"
+  }
+}

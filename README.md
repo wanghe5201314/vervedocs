@@ -26,24 +26,31 @@
 
 ```
 vervedocs/
-├── vervedocs-core/              # 核心编辑器库
-├── vervedocs-docx/              # Word 文档编辑器完整版 UI
-├── vervedocs-docx-lite/         # Word 文档编辑器轻量版
-├── vervedocs-excel/             # Excel 表格编辑器
-├── vervedocs-ppt/               # PPT 演示文稿编辑器
-├── vervedocs-collaboration-server/  # 协作服务器
-└── vervedocs-libs/              # 编辑器扩展库
-    ├── docx-editor-ai/          # AI 辅助功能
-    ├── docx-editor-chart/       # 图表插件
-    ├── docx-editor-collaboration/  # 协作功能
-    ├── docx-editor-commands/    # 命令系统
-    ├── docx-editor-comment/     # 批注功能
-    ├── docx-editor-history/     # 历史记录
-    ├── docx-editor-keymap/      # 快捷键映射
-    ├── docx-editor-schema/      # 文档模式定义
-    ├── docx-editor-state/       # 状态管理
-    ├── docx-editor-transform/   # 文档转换
-    └── docx-editor-view/        # 视图层
+├── packages/
+│   ├── core/                    # 核心编辑器库
+│   ├── docx/                    # Word 文档编辑器完整版 UI
+│   ├── docx-lite/               # Word 文档编辑器轻量版
+│   ├── excel/                   # Excel 表格编辑器
+│   ├── ppt/                     # PPT 演示文稿编辑器
+│   └── icons/                   # 图标库
+├── plugins/                     # 编辑器扩展库
+│   ├── docx-editor-ai/          # AI 辅助功能
+│   ├── docx-editor-chart/       # 图表插件
+│   ├── docx-editor-collaboration/  # 协作功能
+│   ├── docx-editor-commands/    # 命令系统
+│   ├── docx-editor-comment/     # 批注功能
+│   ├── docx-editor-history/     # 历史记录
+│   ├── docx-editor-keymap/      # 快捷键映射
+│   ├── docx-editor-schema/      # 文档模式定义
+│   ├── docx-editor-state/       # 状态管理
+│   ├── docx-editor-transform/   # 文档转换
+│   └── docx-editor-view/        # 视图层
+├── apps/
+│   ├── collaboration-server/    # 协作服务器
+│   └── collaboration-server-monitor/  # 协作服务器监控
+├── package.json
+├── pnpm-workspace.yaml
+└── pnpm-lock.yaml
 ```
 
 ## 模块介绍
@@ -132,43 +139,38 @@ editor.command.executeUndo()  // 撤销
 
 ### 环境要求
 
-- Node.js >= 16.0.0
-- npm >= 7.0.0
+- Node.js >= 18.0.0
+- pnpm >= 9.0.0
 
 ### 本地开发
 
 ```bash
 # 克隆项目
-git clone https://gitee.com/wanghe520/docx-editor.git
+git clone https://gitee.com/wanghe520/vervedocs.git
+cd vervedocs
 
-# 安装依赖
-cd vervedocs-core
-npm install
+# 安装全部依赖
+pnpm install
 
-# 启动开发服务器
-npm run dev
+# 启动各包开发服务器
+pnpm dev:core
+pnpm dev:docx
+pnpm dev:docx-lite
+pnpm dev:excel
+pnpm dev:ppt
 
-# 构建生产版本
-npm run build
+# 构建全部包（按 workspace 依赖拓扑顺序）
+pnpm build
 
 # 类型检查
-npm run type:check
+pnpm typecheck
 ```
 
-### 构建所有模块
+也可以用 filter 操作单个包：
 
 ```bash
-# 构建核心库
-cd vervedocs-core && npm run build
-
-# 构建 Word 编辑器
-cd vervedocs-docx && npm run lib
-
-# 构建 Excel 编辑器
-cd vervedocs-excel && npm run build
-
-# 构建 PPT 编辑器
-cd vervedocs-ppt && npm run build
+pnpm --filter @vervedoc/core dev
+pnpm --filter @vervedoc/core build
 ```
 
 ## 浏览器兼容性

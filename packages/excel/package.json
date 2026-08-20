@@ -1,0 +1,106 @@
+{
+  "name": "@vervedoc/excel",
+  "version": "1.0.8",
+  "description": "VerveDoc Excel 编辑器UI组件",
+  "type": "module",
+  "main": "./dist/excel-editor-ui.js",
+  "module": "./dist/excel-editor-ui.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/excel-editor-ui.js",
+      "types": "./dist/src/index.d.ts"
+    },
+    "./utils": {
+      "import": "./dist/excel-editor-ui.js",
+      "types": "./dist/src/utils/index.d.ts"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "lib": "vite build --mode lib --config vite.config.ts",
+    "dev": "vite --config vite.config.ts",
+    "build": "vue-tsc -b && vite build --mode lib --config vite.config.ts",
+    "build:ui": "vue-tsc -b && vite build --config vite.config.ts",
+    "preview:ui": "vite preview --config vite.config.ts"
+  },
+  "peerDependencies": {
+    "@mdi/js": "^7.4.0",
+    "@univerjs/core": "^0.25.1",
+    "@univerjs/design": "^0.25.1",
+    "@univerjs/docs": "^0.25.1",
+    "@univerjs/docs-ui": "^0.25.1",
+    "@univerjs/engine-formula": "^0.25.1",
+    "@univerjs/engine-render": "^0.25.1",
+    "@univerjs/find-replace": "^0.25.1",
+    "@univerjs/sheets": "^0.25.1",
+    "@univerjs/sheets-conditional-formatting": "^0.25.1",
+    "@univerjs/sheets-conditional-formatting-ui": "^0.25.1",
+    "@univerjs/sheets-crosshair-highlight": "^0.25.1",
+    "@univerjs/sheets-data-validation": "^0.25.1",
+    "@univerjs/sheets-data-validation-ui": "^0.25.1",
+    "@univerjs/sheets-drawing": "^0.25.1",
+    "@univerjs/sheets-drawing-ui": "^0.25.1",
+    "@univerjs/sheets-filter": "^0.25.1",
+    "@univerjs/sheets-filter-ui": "^0.25.1",
+    "@univerjs/sheets-find-replace": "^0.25.1",
+    "@univerjs/sheets-formula": "^0.25.1",
+    "@univerjs/sheets-formula-ui": "^0.25.1",
+    "@univerjs/sheets-graphics": "^0.25.1",
+    "@univerjs/sheets-hyper-link": "^0.25.1",
+    "@univerjs/sheets-hyper-link-ui": "^0.25.1",
+    "@univerjs/sheets-note": "^0.25.1",
+    "@univerjs/sheets-note-ui": "^0.25.1",
+    "@univerjs/sheets-numfmt": "^0.25.1",
+    "@univerjs/sheets-numfmt-ui": "^0.25.1",
+    "@univerjs/sheets-sort": "^0.25.1",
+    "@univerjs/sheets-sort-ui": "^0.25.1",
+    "@univerjs/sheets-table": "^0.25.1",
+    "@univerjs/sheets-table-ui": "^0.25.1",
+    "@univerjs/sheets-thread-comment": "^0.25.1",
+    "@univerjs/sheets-thread-comment-ui": "^0.25.1",
+    "@univerjs/sheets-ui": "^0.25.1",
+    "@univerjs/sheets-zen-editor": "^0.25.1",
+    "@univerjs/thread-comment": "^0.25.1",
+    "@univerjs/thread-comment-ui": "^0.25.1",
+    "@univerjs/ui": "^0.25.1",
+    "@vervedoc/icons": "workspace:^",
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@mdi/js": "^7.4.47",
+    "@types/node": "catalog:",
+    "@vervedoc/docx-editor-collaboration": "workspace:^",
+    "@vervedoc/icons": "workspace:^",
+    "@vitejs/plugin-vue": "catalog:",
+    "ant-design-vue": "^4.2.6",
+    "eslint": "catalog:",
+    "eslint-plugin-unused-imports": "catalog:",
+    "exceljs": "^4.4.0",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "unplugin-auto-import": "^21.1.0",
+    "unplugin-vue-components": "^32.1.0",
+    "vite": "catalog:",
+    "vite-plugin-css-injected-by-js": "^2.4.0",
+    "vite-plugin-dts": "catalog:",
+    "vue": "^3.5.12",
+    "vue-eslint-parser": "^10.4.0",
+    "vue-tsc": "catalog:"
+  },
+  "keywords": [
+    "vervedoc-excel",
+    "excel",
+    "spreadsheet",
+    "vue",
+    "editor"
+  ],
+  "author": "wanghe1995",
+  "license": "MIT"
+}

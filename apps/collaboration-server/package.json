@@ -1,0 +1,28 @@
+{
+  "name": "@vervedoc/collaboration-server",
+  "version": "1.0.0",
+  "description": "VerveDoc 协作服务器 - 基于 Hocuspocus",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "vervedocs-collaboration-server:dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "pack": "pnpm run build && npm prune --production"
+  },
+  "dependencies": {
+    "@hocuspocus/extension-redis": "^4.4.0",
+    "@hocuspocus/server": "^4.4.0",
+    "dotenv": "^16.4.7",
+    "mongodb": "^6.12.0",
+    "yjs": "^13.6.20"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsx": "^4.19.0",
+    "typescript": "catalog:"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

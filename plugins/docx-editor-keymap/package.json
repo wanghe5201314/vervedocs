@@ -1,0 +1,63 @@
+{
+  "name": "@vervedoc/docx-editor-keymap",
+  "version": "1.0.5",
+  "description": "DocxEditor 快捷键插件 - 键盘快捷键映射",
+  "author": "wanghe",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/docx-editor-keymap.umd.cjs",
+    "module": "./dist/docx-editor-keymap.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/docx-editor-keymap.js",
+        "require": "./dist/docx-editor-keymap.umd.cjs"
+      }
+    }
+  },
+  "keywords": [
+    "docx-editor-keymap",
+    "editor",
+    "docx-editor"
+  ],
+  "files": [
+    "dist",
+    "README.md",
+    "package.json"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "clean": "node -e \"const fs = require('fs'); if(fs.existsSync('dist')) fs.rmSync('dist', {recursive: true})\"",
+    "build": "pnpm run clean && tsc && vite build",
+    "preview": "vite preview",
+    "type:check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@vervedoc/docx-editor-schema": "workspace:^",
+    "@vervedoc/docx-editor-transform": "workspace:^"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "eslint": "catalog:",
+    "eslint-plugin-unused-imports": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vite": "catalog:",
+    "vite-plugin-dts": "catalog:"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

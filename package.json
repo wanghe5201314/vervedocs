@@ -1,0 +1,41 @@
+{
+  "name": "vervedocs",
+  "private": true,
+  "version": "0.0.0",
+  "description": "VerveDocs monorepo",
+  "author": "wanghe",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@10.0.0",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "preinstall": "npx only-allow pnpm",
+    "dev:core": "pnpm --filter @vervedoc/core dev",
+    "dev:docx": "pnpm --filter @vervedoc/docx dev",
+    "dev:docx-lite": "pnpm --filter @vervedoc/docx-lite dev",
+    "dev:excel": "pnpm --filter @vervedoc/excel dev",
+    "dev:ppt": "pnpm --filter @vervedoc/ppt dev",
+    "dev:icons": "pnpm --filter @vervedoc/icons dev",
+    "dev:server": "pnpm --filter @vervedoc/collaboration-server vervedocs-collaboration-server:dev",
+    "dev:monitor": "pnpm --filter @vervedoc/monitor-server vervedocs-collaboration-server-monitor:dev",
+    "build": "pnpm -r --if-present build",
+    "typecheck": "pnpm -r --if-present type:check",
+    "lint": "pnpm -r --if-present lint",
+    "clean": "pnpm -r --if-present clean"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@types/node": "catalog:",
+    "@vitejs/plugin-vue": "catalog:",
+    "eslint": "catalog:",
+    "eslint-plugin-unused-imports": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vite": "catalog:",
+    "vite-plugin-dts": "catalog:",
+    "vue-tsc": "catalog:"
+  }
+}

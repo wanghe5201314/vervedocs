@@ -1,0 +1,62 @@
+{
+  "name": "@vervedoc/docx-lite",
+  "version": "1.0.8",
+  "description": "玉衡云文档 轻量版UI",
+  "author": "wanghe",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/docx-lite.umd.cjs",
+  "module": "./dist/docx-lite.js",
+  "browser": "./dist/docx-lite.browser.js",
+  "types": "./dist/editor/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/editor/index.d.ts",
+      "import": "./dist/docx-lite.js",
+      "require": "./dist/docx-lite.umd.cjs"
+    },
+    "./browser": "./dist/docx-lite.browser.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "static",
+    "fonts",
+    "README.md",
+    "package.json"
+  ],
+  "scripts": {
+    "dev": "vite --config vite.config.ts",
+    "clean": "node -e \"const fs = require('fs'); if(fs.existsSync('dist')) fs.rmSync('dist', {recursive: true})\"",
+    "build": "pnpm run clean && vite build --config vite.lib.config.ts && vite build --config vite.browser.config.ts",
+    "lint": "eslint .",
+    "type:check": "vue-tsc --noEmit"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "@types/node": "catalog:",
+    "@vitejs/plugin-vue": "catalog:",
+    "eslint": "catalog:",
+    "eslint-plugin-unused-imports": "catalog:",
+    "tslib": "^2.8.1",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vite": "catalog:",
+    "vite-plugin-css-injected-by-js": "^2.4.0",
+    "vite-plugin-dts": "catalog:",
+    "vue-tsc": "catalog:"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "dependencies": {
+    "@vervedoc/core": "workspace:^",
+    "vue": "^3.4.0"
+  },
+  "peerDependencies": {
+    "vue": "^3.4.0"
+  }
+}

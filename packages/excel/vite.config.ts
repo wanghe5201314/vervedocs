@@ -67,7 +67,6 @@ export default defineConfig(({ mode }) => {
         'yjs': resolve(collabNodeModules, 'yjs'),
         'y-protocols': resolve(collabNodeModules, 'y-protocols'),
         '@hocuspocus/provider': resolve(collabNodeModules, '@hocuspocus/provider'),
-        'lib0': resolve(collabNodeModules, 'lib0'),
         'eventemitter3': resolve(collabNodeModules, 'eventemitter3'),
       }
     },

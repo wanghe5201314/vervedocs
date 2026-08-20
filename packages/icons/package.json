@@ -44,7 +44,7 @@
     "type:check": "vue-tsc --noEmit"
   },
   "peerDependencies": {
-    "vue": "^3.5.0"
+    "vue": "catalog:"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "catalog:",
@@ -52,7 +52,7 @@
     "vite": "catalog:",
     "vite-plugin-css-injected-by-js": "^2.4.0",
     "vite-plugin-dts": "catalog:",
-    "vue": "^3.5.12",
+    "vue": "catalog:",
     "vue-tsc": "catalog:"
   },
   "engines": {

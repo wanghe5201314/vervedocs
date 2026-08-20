@@ -36,12 +36,10 @@
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
-    "@rollup/plugin-typescript": "^11.1.6",
     "@types/node": "catalog:",
     "@vitejs/plugin-vue": "catalog:",
     "eslint": "catalog:",
     "eslint-plugin-unused-imports": "catalog:",
-    "tslib": "^2.8.1",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
     "vite": "catalog:",
@@ -54,9 +52,9 @@
   },
   "dependencies": {
     "@vervedoc/core": "workspace:^",
-    "vue": "^3.4.0"
+    "vue": "catalog:"
   },
   "peerDependencies": {
-    "vue": "^3.4.0"
+    "vue": "catalog:"
   }
 }

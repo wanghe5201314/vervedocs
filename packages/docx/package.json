@@ -47,7 +47,6 @@
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
-    "@rollup/plugin-typescript": "^10.0.1",
     "@types/node": "catalog:",
     "@types/prismjs": "^1.26.0",
     "@typescript-eslint/eslint-plugin": "^8.16.0",
@@ -66,15 +65,15 @@
     "vite": "catalog:",
     "vite-plugin-css-injected-by-js": "^2.1.1",
     "vite-plugin-dts": "catalog:",
-    "vue": "^3.5.27",
+    "vue": "catalog:",
     "vue-eslint-parser": "^10.4.0"
   },
   "dependencies": {
-    "@ant-design/icons-vue": "^7.0.1",
+    "@ant-design/icons-vue": "catalog:",
     "@vervedoc/core": "workspace:^",
     "@vervedoc/docx-editor-ai": "workspace:^",
     "@vervedoc/docx-editor-chart": "workspace:^",
-    "ant-design-vue": "^4.2.6",
+    "ant-design-vue": "catalog:",
     "cypress": "^15.15.0",
     "docx": "^9.5.1",
     "echarts": "^6.1.0",
@@ -91,7 +90,7 @@
     "@vervedoc/docx-editor-collaboration": "workspace:^",
     "@vervedoc/icons": "workspace:^",
     "prismjs": "1.30.0",
-    "vue": "^3.5.27"
+    "vue": "catalog:"
   },
   "overrides": {
     "minimist": "^1.2.6",

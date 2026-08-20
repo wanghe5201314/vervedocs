@@ -1,0 +1,68 @@
+{
+  "name": "@vervedoc/docx-editor-view",
+  "version": "1.0.5",
+  "description": "DocxEditor 视图层 - 渲染与绘制",
+  "author": "wanghe",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/docx-editor-view.umd.cjs",
+    "module": "./dist/docx-editor-view.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/docx-editor-view.js",
+        "require": "./dist/docx-editor-view.umd.cjs"
+      }
+    }
+  },
+  "keywords": [
+    "docx-editor-view",
+    "editor",
+    "docx-editor"
+  ],
+  "files": [
+    "dist",
+    "README.md",
+    "package.json"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "clean": "node -e \"const fs = require('fs'); if(fs.existsSync('dist')) fs.rmSync('dist', {recursive: true})\"",
+    "build": "pnpm run clean && tsc && vite build",
+    "preview": "vite preview",
+    "type:check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@vervedoc/docx-editor-schema": "workspace:^",
+    "@vervedoc/docx-editor-state": "workspace:^",
+    "@vervedoc/docx-editor-transform": "workspace:^",
+    "eventemitter3": "^5.0.4",
+    "just-debounce-it": "^3.2.0",
+    "just-throttle": "^4.2.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "eslint": "catalog:",
+    "eslint-plugin-unused-imports": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vite": "catalog:",
+    "vite-plugin-css-injected-by-js": "^3.0.0",
+    "vite-plugin-dts": "catalog:"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

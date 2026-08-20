@@ -30,7 +30,7 @@
     "preview:ui": "vite preview --config vite.config.ts"
   },
   "peerDependencies": {
-    "@mdi/js": "^7.4.0",
+    "@mdi/js": "catalog:",
     "@univerjs/core": "^0.25.1",
     "@univerjs/design": "^0.25.1",
     "@univerjs/docs": "^0.25.1",
@@ -70,17 +70,17 @@
     "@univerjs/thread-comment-ui": "^0.25.1",
     "@univerjs/ui": "^0.25.1",
     "@vervedoc/icons": "workspace:^",
-    "vue": "^3.5.0"
+    "vue": "catalog:"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
-    "@mdi/js": "^7.4.47",
+    "@mdi/js": "catalog:",
     "@types/node": "catalog:",
     "@vervedoc/docx-editor-collaboration": "workspace:^",
     "@vervedoc/icons": "workspace:^",
-    "@ant-design/icons-vue": "^7.0.1",
+    "@ant-design/icons-vue": "catalog:",
     "@vitejs/plugin-vue": "catalog:",
-    "ant-design-vue": "^4.2.6",
+    "ant-design-vue": "catalog:",
     "eslint": "catalog:",
     "eslint-plugin-unused-imports": "catalog:",
     "exceljs": "^4.4.0",
@@ -91,7 +91,7 @@
     "vite": "catalog:",
     "vite-plugin-css-injected-by-js": "^2.4.0",
     "vite-plugin-dts": "catalog:",
-    "vue": "^3.5.12",
+    "vue": "catalog:",
     "vue-eslint-parser": "^10.4.0",
     "vue-tsc": "catalog:"
   },

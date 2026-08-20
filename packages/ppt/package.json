@@ -25,12 +25,12 @@
     "build:ui": "vue-tsc -b && vite build"
   },
   "peerDependencies": {
-    "@mdi/js": "^7.4.0",
-    "ant-design-vue": "^4.2.0",
-    "vue": "^3.5.0"
+    "@mdi/js": "catalog:",
+    "ant-design-vue": "catalog:",
+    "vue": "catalog:"
   },
   "dependencies": {
-    "@ant-design/icons-vue": "^7.0.1",
+    "@ant-design/icons-vue": "catalog:",
     "@icon-park/vue-next": "^1.4.0",
     "animate.css": "^4.1.1",
     "chartist": "^0.11.4",
@@ -64,20 +64,19 @@
   },
   "devDependencies": {
     "@types/chartist": "^0.11.0",
-    "@types/clipboard": "^2.0.1",
     "@types/crypto-js": "^4.0.1",
     "@types/file-saver": "^2.0.1",
     "@types/lodash": "^4.14.181",
     "@types/node": "catalog:",
     "@types/tinycolor2": "^1.4.2",
     "@vitejs/plugin-vue": "catalog:",
-    "ant-design-vue": "^4.2.6",
+    "ant-design-vue": "catalog:",
     "sass-embedded": "^1.99.0",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vite-plugin-css-injected-by-js": "^2.4.0",
     "vite-plugin-dts": "catalog:",
-    "vue": "^3.5.12",
+    "vue": "catalog:",
     "vue-tsc": "catalog:"
   },
   "keywords": [

@@ -9,7 +9,7 @@ import {
   splitText
 } from '.'
 const IFRAME_SANDBOX = ['allow-scripts', 'allow-same-origin']
-import { NON_BREAKING_SPACE, ZERO } from '../constants/Common'
+import { NON_BREAKING_SPACE, ZERO } from '../constants/common'
 import {
   AREA_CONTEXT_ATTR,
   BLOCK_ELEMENT_TYPE,
@@ -22,34 +22,34 @@ import {
   TABLE_TD_ZIP_ATTR,
   TEXTLIKE_ELEMENT_TYPE,
   TITLE_CONTEXT_ATTR
-} from '../constants/Element'
+} from '../constants/element'
 import {
   listStyleCSSMapping,
   listTypeElementMapping,
   ulStyleMapping
-} from '../constants/List'
-import { START_LINE_BREAK_REG } from '../constants/Regular'
+} from '../constants/list'
+import { START_LINE_BREAK_REG } from '../constants/regular'
 import {
   titleNodeNameMapping,
   titleOrderNumberMapping,
   titleSizeMapping
-} from '../constants/Title'
-import { BlockType } from '../enum/Block'
-import { ImageDisplay, LocationPosition } from '../enum/Common'
-import { ControlComponent, ControlType } from '../enum/Control'
-import { EditorMode } from '../enum/Editor'
-import { ElementType } from '../enum/Element'
-import { ListStyle, ListType, UlStyle } from '../enum/List'
-import { RowFlex } from '../enum/Row'
-import { TableBorder, TdBorder } from '../enum/table/Table'
-import { DeepRequired } from '../interface/Common'
-import type { ICatalog, ICatalogItem } from '../interface/Catalog'
-import { IControlSelect } from '../interface/Control'
-import { IEditorOption } from '../interface/Editor'
-import { IElement } from '../interface/Element'
-import { IRowElement } from '../interface/Row'
-import { ITd } from '../interface/table/Td'
-import { ITr } from '../interface/table/Tr'
+} from '../constants/title'
+import { BlockType } from '../enum/block'
+import { ImageDisplay, LocationPosition } from '../enum/common'
+import { ControlComponent, ControlType } from '../enum/control'
+import { EditorMode } from '../enum/editor'
+import { ElementType } from '../enum/element'
+import { ListStyle, ListType, UlStyle } from '../enum/list'
+import { RowFlex } from '../enum/row'
+import { TableBorder, TdBorder } from '../enum/table/table'
+import { DeepRequired } from '../interface/common'
+import type { ICatalog, ICatalogItem } from '../interface/catalog'
+import { IControlSelect } from '../interface/control'
+import { IEditorOption } from '../interface/editor'
+import { IElement } from '../interface/element'
+import { IRowElement } from '../interface/row'
+import { ITd } from '../interface/table/td'
+import { ITr } from '../interface/table/tr'
 import { mergeOption } from './option'
 
 export function unzipElementList(elementList: IElement[]): IElement[] {

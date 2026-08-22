@@ -2,18 +2,6 @@ import { Ref, nextTick } from 'vue'
 import { emitExternalEvent } from '@/composables/use-external-api'
 import type { DocumentStats } from '@/types/document'
 
-function generateDocId(): string {
-  const hex = () =>
-    Math.random().toString(16).slice(2).toUpperCase().padEnd(4, '0').slice(0, 4)
-  return 'DEU' + hex() + hex() + hex() + hex()
-}
-
-function formatNow(): string {
-  const now = new Date()
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`
-}
-
 function renderCommentsLater(getCommentComponent: () => any): void {
   nextTick(() => requestAnimationFrame(() => getCommentComponent()?.render()))
 }
@@ -30,12 +18,6 @@ export function useEditorCommand(options: {
   setSuppressSaveOnce: (value: boolean) => void
   getCollabPlugin: () => any
   saveNow: (opts?: { silent?: boolean }) => Promise<void>
-  setMeta: (patch: any) => void
-  importFileName: Ref<string>
-  importFileSize: Ref<string>
-  importParseProgress: Ref<number | undefined>
-  setImportModeResolver: (resolver: ((value: string) => void) | null) => void
-  showImportNotification: () => void
 }) {
   const {
     cachedCatalog,
@@ -49,12 +31,6 @@ export function useEditorCommand(options: {
     setSuppressSaveOnce,
     getCollabPlugin,
     saveNow,
-    setMeta,
-    importFileName,
-    importFileSize,
-    importParseProgress,
-    setImportModeResolver,
-    showImportNotification
   } = options
 
   const syncRevisionList = () => {
@@ -117,54 +93,6 @@ export function useEditorCommand(options: {
       getCommentComponent()?.buildCommentsFromMetas(metas)
       renderCommentsLater(getCommentComponent)
     },
-    importFinished: args => {
-      const payload = (args[0] || {}) as {
-        source?: string
-        comments?: any[]
-        onSaveComplete?: () => void
-      }
-      const { onSaveComplete, comments: importComments } = payload
-
-      void (async () => {
-        await nextTick()
-        if (importComments?.length) {
-          getCommentComponent()?.buildCommentsFromMetas(importComments)
-          renderCommentsLater(getCommentComponent)
-        }
-        await saveNow({ silent: true })
-        onSaveComplete?.()
-      })()
-    },
-    importNewDoc: args => {
-      const { fileName } = (args[0] || {}) as { fileName?: string }
-      setMeta({
-        id: generateDocId(),
-        name: fileName || '新建文档',
-        createdAt: formatNow(),
-        submittedAt: ''
-      })
-    },
-    importConfirm: args => {
-      const { resolve, fileName, fileSize, parseProgress } = (args[0] ||
-        {}) as {
-        resolve?: (v: string) => void
-        fileName?: string
-        fileSize?: string
-        parseProgress?: number
-      }
-      if (!resolve) return
-      importFileName.value = fileName || ''
-      importFileSize.value = fileSize || ''
-      importParseProgress.value = parseProgress
-      setImportModeResolver(resolve)
-      showImportNotification()
-    },
-    importParseProgress: args => {
-      importParseProgress.value = args[0] as number
-    },
-    importParseComplete: () => {
-      importParseProgress.value = undefined
-    }
   }
 
   const handleEditorCommand = (command: string, ...args: any[]) => {

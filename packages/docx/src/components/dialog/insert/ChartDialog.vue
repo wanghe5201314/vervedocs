@@ -378,12 +378,10 @@ const getTableData = (): ITableData => {
 
   for (let row = 1; row <= 100; row++) {
     const rowData: string[] = []
-    let hasData = false
 
     const categoryCell = spreadsheetInstance.cell(row, 0)
     if (categoryCell && categoryCell.text) {
       rowData.push(categoryCell.text)
-      hasData = true
     } else {
       break
     }
@@ -392,15 +390,13 @@ const getTableData = (): ITableData => {
       const cell = spreadsheetInstance.cell(row, col)
       if (cell && cell.text) {
         rowData.push(cell.text)
-        hasData = true
       } else {
         rowData.push('0')
       }
     }
 
-    if (hasData) {
-      rows.push(rowData)
-    }
+    rows.push(rowData)
+
   }
 
   return { headers, rows }

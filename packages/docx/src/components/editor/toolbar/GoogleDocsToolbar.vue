@@ -17,6 +17,8 @@
       :selection-collaboration-enabled="selectionCollaborationEnabled"
 
       :revision-display-mode="revisionDisplayMode"
+      :current-editor-mode="currentEditorMode"
+      :is-mode-locked="isLocked"
       @cmd="doMenuCmd"
       @import="handleImportClick"
       @preview="handlePreview"
@@ -73,7 +75,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
-import { downloadFile } from '@vervedoc/core'
+
 import { editorStateStore } from '@/stores/editor-state'
 
 const INDENT_PX_PER_CHAR = 14
@@ -123,6 +125,7 @@ const showRuler = ref(false)
 const eyeCareMode = ref(false)
 const showLineBreak = ref(false)
 const isTrackChanges = ref(false)
+const currentEditorMode = ref('edit')
 const revisionDisplayMode = ref<'all' | 'comments' | 'revisions'>('all')
 let toolbarOverlayObserver: MutationObserver | null = null
 
@@ -220,8 +223,14 @@ const doMenuCmd = (cmd: string, args?: any) => {
     return
   }
   if (cmd === 'toggleTrackChanges') {
-    isTrackChanges.value = !isTrackChanges.value
+    isTrackChanges.value = args !== undefined ? args : !isTrackChanges.value
+    if (isTrackChanges.value) currentEditorMode.value = 'revision'
     emit('command', 'toggleTrackChanges', isTrackChanges.value)
+    return
+  }
+  if (cmd === 'mode') {
+    currentEditorMode.value = args
+    args !== undefined ? emit('command', cmd, args) : emit('command', cmd)
     return
   }
   if (cmd === 'revisionDisplayMode') {
@@ -248,47 +257,18 @@ const handleToolbarCmd = (cmd: string, ...args: any[]) => {
 
 // 导入文档
 const handleImportClick = () => {
-  if (isImporting.value) return
-  const input = document.createElement('input')
-  input.type = 'file'
-  input.accept = '.docx'
-  input.onchange = (e: Event) => handleWordFileChange(e)
-  input.click()
+  emit('command', 'import')
 }
 
-const handleWordFileChange = async (e: Event) => {
-  const file = (e.target as HTMLInputElement).files?.[0]
-  if (!file) return
-  isImporting.value = true
-  emit('command', 'importWord', {
-    file,
-    onProgress: () => {},
-    onComplete: (success: boolean, message?: string) => {
-      isImporting.value = false
-      if (!success) {
-        console.error('导入失败:', message || '未知错误')
-      }
-    }
-  })
-}
 
 // 预览
 const handlePreview = () => {
-  emit('command', 'exportDocx', {
-    callback: async (blob: Blob) => {
-      const url = URL.createObjectURL(blob)
-      window.open(url, '_blank')
-      setTimeout(() => URL.revokeObjectURL(url), 60000)
-    }
-  })
+  emit('command', 'preview')
 }
 
 // 下载
 const handleDownload = (format: string) => {
-  if (format === 'docx') {
-    emit('command', 'exportDocx', { callback: async (blob: Blob) => { const url = URL.createObjectURL(blob); downloadFile(url, `${String(props.documentName || '').trim() || '文档'}.docx`); setTimeout(() => URL.revokeObjectURL(url), 1000) } })
-  } else if (format === 'pdf') { emit('command', 'exportPdf') }
-  else if (format === 'html') { emit('command', 'exportHtml') }
+  emit('command', 'export', format)
 }
 
 // 事件处理

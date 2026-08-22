@@ -1,6 +1,6 @@
-import { WordEditor, type WordEditorOptions } from '../object/WordEditor'
+import { WordEditor, type WordEditorOptions } from '../object/word-editor'
 
-export type { SaveSnapshot, WordEditorOptions } from '../object/WordEditor'
+export type { SaveSnapshot, WordEditorOptions } from '../object/word-editor'
 
 export const version = String(__APP_VERSION__ || '')
 

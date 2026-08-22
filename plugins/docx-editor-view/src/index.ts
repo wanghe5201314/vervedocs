@@ -1,94 +1,94 @@
 // Draw 引擎
-export { Draw } from './draw/Draw'
-export type { Draw as DocumentRenderer } from './draw/Draw'
+export { Draw } from './renders/engine'
+export type { Draw as DocumentRenderer } from './renders/engine'
 
 // 光标
-export { Cursor } from './cursor/Cursor'
-export type { Cursor as TextCursor } from './cursor/Cursor'
-export { CursorAgent } from './cursor/CursorAgent'
+export { Cursor } from './renders/cursor'
+export type { Cursor as TextCursor } from './renders/cursor'
+export { CursorAgent } from './renders/cursor-handler'
 
 // 位置计算
-export { Position } from './position/Position'
-export type { Position as PositionCalculator } from './position/Position'
+export { Position } from './position'
+export type { Position as PositionCalculator } from './position'
 
 // 事件处理
-export { CanvasEvent } from './event/CanvasEvent'
-export { GlobalEvent } from './event/GlobalEvent'
-export { pasteByApi } from './event/handlers/paste'
+export { CanvasEvent } from './events/canvas-event'
+export { GlobalEvent } from './events/global-event'
+export { pasteByApi } from './events/handlers/paste'
 
 // 观察者
-export { ImageObserver } from './observer/ImageObserver'
-export { MouseObserver } from './observer/MouseObserver'
-export { ScrollObserver } from './observer/ScrollObserver'
-export { SelectionObserver } from './observer/SelectionObserver'
+export { ImageObserver } from './events/image-observer'
+export { MouseObserver } from './events/mouse-observer'
+export { ScrollObserver } from './events/scroll-observer'
+export { SelectionObserver } from './events/selection-observer'
 
 // 核心粒子渲染器
-export { TextParticle } from './particle/TextParticle'
-export { ImageParticle } from './particle/ImageParticle'
-export { HyperlinkParticle } from './particle/HyperlinkParticle'
-export { SeparatorParticle } from './particle/SeparatorParticle'
-export { PageBreakParticle } from './particle/PageBreakParticle'
-export { ListParticle } from './particle/ListParticle'
-export { SuperscriptParticle } from './particle/SuperscriptParticle'
-export { SubscriptParticle } from './particle/SubscriptParticle'
-export { LineBreakParticle } from './particle/LineBreakParticle'
-export { CheckboxParticle } from './particle/CheckboxParticle'
-export { RadioParticle } from './particle/RadioParticle'
+export { TextParticle } from './renderers/text'
+export { ImageParticle } from './renderers/image'
+export { HyperlinkParticle } from './renderers/hyperlink'
+export { SeparatorParticle } from './renderers/separator'
+export { PageBreakParticle } from './renderers/page-break'
+export { ListParticle } from './renderers/list'
+export { SuperscriptParticle } from './renderers/superscript'
+export { SubscriptParticle } from './renderers/subscript'
+export { LineBreakParticle } from './renderers/line-break'
+export { CheckboxParticle } from './renderers/checkbox'
+export { RadioParticle } from './renderers/radio'
 
 // 表格粒子
-export { TableParticle } from './particle/table/TableParticle'
-export { TableOperate } from './particle/table/TableOperate'
-export { TableTool } from './particle/table/TableTool'
+export { TableParticle } from './renderers/table'
+export { TableOperate } from './renderers/table-ops'
+export { TableTool } from './renderers/table-tool'
 
 // 预览器
-export { Previewer } from './particle/previewer/Previewer'
+export { Previewer } from './renderers/previewer'
 
 // 页面框架
-export { Background } from './frame/Background'
-export { Badge } from './frame/Badge'
-export { Footer } from './frame/Footer'
-export { Header } from './frame/Header'
-export { LineNumber } from './frame/LineNumber'
-export { Margin } from './frame/Margin'
-export { PageBorder } from './frame/PageBorder'
-export { PageNumber } from './frame/PageNumber'
-export { Placeholder } from './frame/Placeholder'
-export { Watermark } from './frame/Watermark'
+export { Background } from './layouts/background'
+export { Badge } from './layouts/badge'
+export { Footer } from './layouts/footer'
+export { Header } from './layouts/header'
+export { LineNumber } from './layouts/line-number'
+export { Margin } from './layouts/margin'
+export { PageBorder } from './layouts/page-border'
+export { PageNumber } from './layouts/page-number'
+export { Placeholder } from './layouts/placeholder'
+export { Watermark } from './layouts/watermark'
 
 // 富文本装饰
-export { AbstractRichText } from './richtext/AbstractRichText'
-export { Highlight } from './richtext/Highlight'
-export { ParagraphColor } from './richtext/ParagraphColor'
-export { Strikeout } from './richtext/Strikeout'
-export { Underline } from './richtext/Underline'
+export { AbstractRichText } from './richtexts/abstract-rich-text'
+export { Highlight } from './richtexts/highlight'
+export { ParagraphColor } from './richtexts/paragraph-color'
+export { Strikeout } from './richtexts/strikeout'
+export { Underline } from './richtexts/underline'
 
 // 交互组件
-export { Area } from './interactive/Area'
-export { Group } from './interactive/Group'
-export { Search } from './interactive/Search'
-export type { INavigateInfo } from './interactive/Search'
-export { FloatingBar } from './interactive/FloatingBar'
+export { Area } from './layouts/area'
+export { Group } from './layouts/group'
+export { Search } from './layouts/search'
+export type { INavigateInfo } from './layouts/search'
+export { FloatingBar } from './layouts/floating-bar'
 
 // 控件
-export { Control } from './control/Control'
-export { CheckboxControl } from './control/CheckboxControl'
-export { RadioControl } from './control/radio/RadioControl'
-export { TextControl } from './control/TextControl'
-export { SelectControl } from './control/SelectControl'
-export { DateControl } from './control/date/DateControl'
-export { NumberControl } from './control/NumberControl'
-export { ControlSearch } from './control/ControlSearch'
-export { ControlBorder } from './control/Border'
+export { Control } from './widgets/control'
+export { CheckboxControl } from './widgets/checkbox'
+export { RadioControl } from './widgets/radio'
+export { TextControl } from './widgets/text'
+export { SelectControl } from './widgets/select'
+export { DateControl } from './widgets/date'
+export { NumberControl } from './widgets/number'
+export { ControlSearch } from './widgets/search'
+export { ControlBorder } from './widgets/border'
 
 // 区域
-export { Zone } from './zone/Zone'
-export { ZoneTip } from './zone/ZoneTip'
+export { Zone } from './layouts/region'
+export { ZoneTip } from './layouts/region-tooltip'
 
 // 插件
-export { Plugin } from './plugin/Plugin'
-export type { Editor } from './plugin/Plugin'
-export { Override } from './plugin/override/Override'
-export { Register } from './plugin/register/Register'
+export { Plugin } from './plugins/core'
+export type { Editor } from './plugins/core'
+export { Override } from './plugins/override'
+export { Register } from './plugins/register'
 
 // 快捷键 - 由 @vervedoc/docx-editor-keymap 模块提供
 

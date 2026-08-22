@@ -1,2 +1,2 @@
-export { HistoryManager } from './HistoryManager'
-export { HistoryComponent } from './HistoryComponent'
+export { HistoryManager } from './history-manager'
+export { HistoryComponent } from './history-component'

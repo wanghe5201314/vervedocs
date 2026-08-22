@@ -70,6 +70,7 @@ declare module 'vue' {
     ProtectDialog: typeof import('./components/dialog/document/ProtectDialog.vue')['default']
     QrcodeDialog: typeof import('./components/dialog/insert/QrcodeDialog.vue')['default']
     RevisionPanel: typeof import('./components/sidebars/RevisionPanel.vue')['default']
+    Ruler: typeof import('./components/layout/Ruler.vue')['default']
     SearchLayout: typeof import('./components/sidebars/SearchLayout.vue')['default']
     ShortcutsDialog: typeof import('./components/dialog/app/ShortcutsDialog.vue')['default']
     SignatureDialog: typeof import('./components/dialog/insert/SignatureDialog.vue')['default']

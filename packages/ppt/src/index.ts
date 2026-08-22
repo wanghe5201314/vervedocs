@@ -1,6 +1,6 @@
 // PPT Editor UI - Main Entry
-export { PptEditor } from './object/PptEditor'
-export type { Options } from './object/PptEditor'
+export { PptEditor } from './object/pptEditor'
+export type { Options } from './object/pptEditor'
 export { createPptI18n, registerLangMap, zhCN, enUS } from './i18n'
 
 // Types

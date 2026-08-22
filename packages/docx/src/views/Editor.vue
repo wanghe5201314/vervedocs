@@ -76,7 +76,7 @@
     />
 
     <ShortcutsDialog v-model="shortcutsDialogVisible" />
-    <ProtectDialog v-model="protectDialogVisible" :mode="protectDialogMode" @confirm="handleProtectConfirm" />
+
 
     <HyperlinkDialog v-model="hyperlinkDialogVisible" @confirm="handleHyperlinkConfirm" />
     <BookmarkDialog
@@ -111,14 +111,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onBeforeUnmount, ref, nextTick, type Ref } from 'vue'
+import { inject, onBeforeUnmount, ref, nextTick, watch, type Ref } from 'vue'
 import { message } from 'ant-design-vue'
 import type { InitialDocument } from '@/utils/resolve-app'
 import { emitExternalEvent, externalApi } from '@/composables/use-external-api'
 import { aiStateStore } from '@/stores/ai-state'
 import type { AITab } from '@/stores/ai-state'
 import { AIAction } from '@vervedoc/docx-editor-ai'
-import { ShortcutsDialog, ProtectDialog, HyperlinkDialog, BookmarkDialog, InsertTableDialog, ChartDialog, LaTeXDialog, BarcodeDialog, QrcodeDialog, SignatureDialog, WatermarkDialog, PaperSizeDialog, PageNumberDialog, DateDialog, ParagraphDialog, TocDialog, TableBordersDialog, AISettingsDialog, VersionHistoryDialog } from '@/components/dialog'
+import { ShortcutsDialog, HyperlinkDialog, BookmarkDialog, InsertTableDialog, ChartDialog, LaTeXDialog, BarcodeDialog, QrcodeDialog, SignatureDialog, WatermarkDialog, PaperSizeDialog, PageNumberDialog, DateDialog, ParagraphDialog, TocDialog, TableBordersDialog, AISettingsDialog, VersionHistoryDialog } from '@/components/dialog'
 
 import Menu from '@/components/layout/Menu.vue'
 import LeftDockBar from '@/components/layout/LeftDockBar.vue'
@@ -138,10 +138,10 @@ import type { CollaborationOptions } from '@/ui/index'
 import { useDocumentMeta } from '@/composables/use-document-meta'
 import { useDock } from '@/composables/use-dock'
 import { useDialogs } from '@/composables/use-dialogs'
-import { useLoadingOverlay } from '@/composables/use-loading-overlay'
+
 import { useAIActions } from '@/composables/use-ai-actions'
 import { useBookmarks } from '@/composables/use-bookmarks'
-import { useImportNotification } from '@/composables/use-import-notification'
+
 import { useEditorSave } from '@/composables/use-editor-save'
 import { useCollaboration } from '@/composables/use-collaboration'
 import { useDocumentActions } from '@/composables/use-document-actions'
@@ -167,11 +167,14 @@ const {
 } = useDocumentMeta({ initialDocument })
 
 const busyState = ref<'idle' | 'loading' | 'saving'>('idle')
-const busy = computed(() => busyState.value !== 'idle')
-const busyText = computed(() => {
-  if (busyState.value === 'loading') return '正在加载...'
-  if (busyState.value === 'saving') return '正在保存...'
-  return ''
+watch(busyState, (state) => {
+  const inst = getEditorInstance()
+  if (!inst) return
+  if (state === 'idle') {
+    inst.setLoading(false)
+  } else {
+    inst.setLoading(true, state === 'loading' ? '正在加载...' : '正在保存...')
+  }
 })
 
 const getEditorInstance = () => editorRef.value?.getEditorInstance?.() ?? null
@@ -199,8 +202,7 @@ const {
 
 const {
   shortcutsDialogVisible,
-  protectDialogVisible,
-  protectDialogMode,
+
   hyperlinkDialogVisible,
   bookmarkDialogVisible,
   insertTableDialogVisible,
@@ -219,9 +221,7 @@ const {
   aiSettingsDialogVisible,
   versionHistoryDialogVisible,
   openShortcuts,
-  openProtect,
-  openUnprotect,
-  handleProtectConfirm,
+
   handleHyperlinkConfirm,
   handleLatexConfirm,
   handleBarcodeConfirm,
@@ -237,7 +237,6 @@ const {
   handleTableBordersConfirm
 } = useDialogs({ executeCommand, documentMeta, emitMetaChange })
 
-const { closeLoadingOverlay } = useLoadingOverlay({ busy, busyText, editorAppRef })
 
 const {
   handleAIAction,
@@ -254,13 +253,6 @@ const {
   handleGotoBookmark
 } = useBookmarks({ getEditorInstance, executeCommand })
 
-const {
-  importFileName,
-  importFileSize,
-  importParseProgress,
-  showImportNotification,
-  setImportModeResolver
-} = useImportNotification({ setSuppressSaveOnce })
 
 const toolbarVisible = ref(true)
 const bottomNavVisible = ref(true)
@@ -370,25 +362,17 @@ const handleReady = (...args: any[]) => {
   installCommentCallbacks(instance)
 
   const content = (initialDocument as any)?.content
-  const docUrl = (initialDocument as any)?.url
-  const docFormat = (initialDocument as any)?.format
 
-  if (docFormat === 'word' && docUrl && typeof docUrl === 'string') {
+
+  if (content == null) {
     busyState.value = 'loading'
-    executeCommand('importWordFromUrl', {
-      url: docUrl,
-      onProgress: () => {},
+    executeCommand('importJsonFile', {
       onComplete: (success: boolean) => {
         busyState.value = 'idle'
-        if (!success) message.error('文档加载失败')
+        if (!success) console.warn('[Editor] test-output.json 加载失败')
         nextTick(() => initCollaboration())
       }
     })
-    return
-  }
-
-  if (content == null) {
-    nextTick(() => initCollaboration())
     return
   }
 
@@ -417,7 +401,7 @@ const handleReady = (...args: any[]) => {
 }
 
 onBeforeUnmount(() => {
-  closeLoadingOverlay()
+  getEditorInstance()?.setLoading(false)
   cleanupCollaboration()
 })
 
@@ -433,12 +417,7 @@ const { handleEditorCommand, handleEditorSaved } = useEditorCommand({
   setSuppressSaveOnce,
   getCollabPlugin,
   saveNow,
-  setMeta,
-  importFileName,
-  importFileSize,
-  importParseProgress,
-  setImportModeResolver,
-  showImportNotification
+
 })
 
 
@@ -503,9 +482,12 @@ const handleCommand = (command: string, ...args: any[]) => {
     case 'new': return void newDoc()
     case 'save': return void saveNow({ silent: false })
     case 'rename': return void renameDoc()
+    case 'import': return emitExternalEvent('statusChange', { command: 'import', args: [] })
+    case 'export': return emitExternalEvent('statusChange', { command: 'export', args: [{ format: args[0] }] })
+    case 'preview': return emitExternalEvent('statusChange', { command: 'preview', args: [] })
     case 'protect':
-    case 'protectDoc': return openProtect()
-    case 'unprotect': return openUnprotect()
+    case 'protectDoc': return emitExternalEvent('statusChange', { command, args: [{ meta: { ...documentMeta } }] })
+    case 'unprotect': return emitExternalEvent('statusChange', { command: 'unprotect', args: [{ meta: { ...documentMeta } }] })
     case 'accessPermission': return openAccessPermission()
     case 'shortcuts':
     case 'openShortcuts':
@@ -727,46 +709,4 @@ defineExpose({
   color: #606266 !important;
 }
 
-.app-loading-overlay .app-loading-spin {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
-
-.app-loading-overlay .ant-spin-dot {
-  font-size: 32px;
-}
-
-.app-loading-overlay .ant-spin-dot-item {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #4f87ff;
-  display: block;
-  position: absolute;
-  animation: antSpinDot 1.2s infinite ease-in-out;
-}
-
-.app-loading-overlay .ant-spin-dot-spin {
-  width: 32px;
-  height: 32px;
-  position: relative;
-  display: inline-block;
-}
-
-.app-loading-overlay .ant-spin-dot-item:nth-child(1) { top: 0; left: 50%; transform: translateX(-50%); animation-delay: 0s; }
-.app-loading-overlay .ant-spin-dot-item:nth-child(2) { top: 50%; right: 0; transform: translateY(-50%); animation-delay: 0.3s; }
-.app-loading-overlay .ant-spin-dot-item:nth-child(3) { bottom: 0; left: 50%; transform: translateX(-50%); animation-delay: 0.6s; }
-.app-loading-overlay .ant-spin-dot-item:nth-child(4) { top: 50%; left: 0; transform: translateY(-50%); animation-delay: 0.9s; }
-
-@keyframes antSpinDot {
-  0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
-  40% { transform: scale(1); opacity: 1; }
-}
-
-.app-loading-overlay .app-loading-text {
-  color: #333;
-  font-size: 14px;
-}
 </style>

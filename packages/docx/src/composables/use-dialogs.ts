@@ -1,5 +1,4 @@
 import { ref } from 'vue'
-import { emitExternalEvent } from '@/composables/use-external-api'
 import type { DocumentMeta } from '@/types/document'
 
 export function useDialogs(options: {
@@ -7,11 +6,9 @@ export function useDialogs(options: {
   documentMeta: DocumentMeta
   emitMetaChange: () => void
 }) {
-  const { executeCommand, documentMeta, emitMetaChange } = options
+  const { executeCommand } = options
 
   const shortcutsDialogVisible = ref(false)
-  const protectDialogVisible = ref(false)
-  const protectDialogMode = ref<'lock' | 'unlock'>('lock')
   const hyperlinkDialogVisible = ref(false)
   const bookmarkDialogVisible = ref(false)
   const insertTableDialogVisible = ref(false)
@@ -34,24 +31,6 @@ export function useDialogs(options: {
     shortcutsDialogVisible.value = true
   }
 
-  const openProtect = () => {
-    protectDialogMode.value = 'lock'
-    protectDialogVisible.value = true
-  }
-
-  const openUnprotect = () => {
-    protectDialogMode.value = 'unlock'
-    protectDialogVisible.value = true
-  }
-
-  const handleProtectConfirm = async (password: string) => {
-    void password
-    const nextStatus = protectDialogMode.value === 'unlock' ? ('edit' as const) : ('lock' as const)
-    documentMeta.status = nextStatus
-    emitMetaChange()
-    protectDialogVisible.value = false
-    emitExternalEvent('statusChange', { command: nextStatus === 'lock' ? 'locked' : 'unlocked', args: [] })
-  }
 
   const handleHyperlinkConfirm = (data: { text: string; url: string }) => {
     executeCommand('hyperlink', data)
@@ -125,8 +104,7 @@ export function useDialogs(options: {
 
   return {
     shortcutsDialogVisible,
-    protectDialogVisible,
-    protectDialogMode,
+
     hyperlinkDialogVisible,
     bookmarkDialogVisible,
     insertTableDialogVisible,
@@ -145,9 +123,7 @@ export function useDialogs(options: {
     aiSettingsDialogVisible,
     versionHistoryDialogVisible,
     openShortcuts,
-    openProtect,
-    openUnprotect,
-    handleProtectConfirm,
+
     handleHyperlinkConfirm,
     handleLatexConfirm,
     handleBarcodeConfirm,

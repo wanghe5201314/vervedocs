@@ -20,15 +20,15 @@
  */
 
 // 插件
-export { createAIPlugin, AIPlugin } from './plugin/AIPlugin'
+export { createAIPlugin, AIPlugin } from './plugin/ai-plugin'
 
 // 核心服务
-export { AIService } from './core/AIService'
-export { buildPrompt, PROMPT_TEMPLATES } from './core/PromptTemplates'
+export { AIService } from './core/ai-service'
+export { buildPrompt, PROMPT_TEMPLATES } from './core/prompt-templates'
 
 // UI 组件（高级用法）
-export { FloatingToolbar } from './ui/FloatingToolbar'
-export { ResultPanel } from './ui/ResultPanel'
+export { FloatingToolbar } from './ui/floating-toolbar'
+export { ResultPanel } from './ui/result-panel'
 
 // 类型导出
 export {
@@ -50,5 +50,5 @@ export {
 } from './types'
 
 // UI 类型
-export type { FloatingToolbarConfig, FloatingToolbarCallbacks } from './ui/FloatingToolbar'
-export type { ResultPanelConfig, ResultPanelCallbacks } from './ui/ResultPanel'
+export type { FloatingToolbarConfig, FloatingToolbarCallbacks } from './ui/floating-toolbar'
+export type { ResultPanelConfig, ResultPanelCallbacks } from './ui/result-panel'

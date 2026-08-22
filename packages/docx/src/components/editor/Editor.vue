@@ -60,9 +60,8 @@ const refreshCatalog = async () => {
 }
 
 const {
-  importWord: importWordFn,
-  importWordFromUrl: importWordFromUrlFn,
-  importCanvasFromUrl: importCanvasFromUrlFn,
+
+  importJsonFile: importJsonFileFn,
 } = useEditorImport({
   emit,
   getEditorInstance: () => editorInstance,
@@ -617,10 +616,8 @@ const executeCommand = (command: string, ...args: any[]) => {
     // 设置页码
     setPageNumber: setPageNumberFn,
 
-    // 导入 Word 文档
-    importWord: importWordFn,
-    importWordFromUrl: importWordFromUrlFn,
-    importCanvasFromUrl: importCanvasFromUrlFn,
+    // 导入 JSON
+    importJsonFile: importJsonFileFn,
 
     exportDocx: async (payload: any) => {
       await editorInstance.command.execute('exportDocx', payload)
@@ -753,7 +750,7 @@ defineExpose({
 }
 
 :deep(.ce-container) {
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+
   margin: 40px 0;
 }
 </style>

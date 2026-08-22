@@ -1,20 +1,20 @@
 // 枚举
-export { AreaMode } from './enum/Area'
-export { BackgroundRepeat, BackgroundSize } from './enum/Background'
-export { BlockType } from './enum/Block'
+export { AreaMode } from './enum/area'
+export { BackgroundRepeat, BackgroundSize } from './enum/background'
+export { BlockType } from './enum/block'
 export {
   MaxHeightRatio,
   NumberType,
   ImageDisplay,
   LocationPosition,
   FlexDirection
-} from './enum/Common'
+} from './enum/common'
 export {
   ControlType,
   ControlComponent,
   ControlIndentation,
   ControlState
-} from './enum/Control'
+} from './enum/control'
 export {
   EditorComponent,
   EditorContext,
@@ -24,45 +24,45 @@ export {
   PaperDirection,
   WordBreak,
   RenderMode
-} from './enum/Editor'
-export { ElementType } from './enum/Element'
-export { ElementStyleKey } from './enum/ElementStyle'
-export { MouseEventButton } from './enum/Event'
-export { KeyMap } from './enum/KeyMap'
-export { LineNumberType } from './enum/LineNumber'
-export { ListType, UlStyle, OlStyle, ListStyle } from './enum/List'
-export { MoveDirection } from './enum/Observer'
-export { RowFlex } from './enum/Row'
-export { TextDecorationStyle, DashType } from './enum/Text'
-export { TitleLevel } from './enum/Title'
-export { VerticalAlign } from './enum/VerticalAlign'
-export { WatermarkType } from './enum/Watermark'
-export { TableBorder, TdBorder, TdSlash } from './enum/table/Table'
-export { TableOrder } from './enum/table/TableTool'
+} from './enum/editor'
+export { ElementType } from './enum/element'
+export { ElementStyleKey } from './enum/element-style'
+export { MouseEventButton } from './enum/event'
+export { KeyMap } from './enum/key-map'
+export { LineNumberType } from './enum/line-number'
+export { ListType, UlStyle, OlStyle, ListStyle } from './enum/list'
+export { MoveDirection } from './enum/observer'
+export { RowFlex } from './enum/row'
+export { TextDecorationStyle, DashType } from './enum/text'
+export { TitleLevel } from './enum/title'
+export { VerticalAlign } from './enum/vertical-align'
+export { WatermarkType } from './enum/watermark'
+export { TableBorder, TdBorder, TdSlash } from './enum/table/table'
+export { TableOrder } from './enum/table/table-tool'
 export { DOCX_EDITOR_DATA_VERSION, DOCX_EDITOR_SCHEMA_VERSION } from './constants/version'
 
 // 接口
-export type { IArea, IAreaInfo } from './interface/Area'
-export type { IInsertAreaOption, ISetAreaPropertiesOption, IGetAreaValueOption, IGetAreaValueResult, ILocationAreaOption } from './interface/Area'
-export type { IBackgroundOption } from './interface/Background'
-export type { IBadge, IBadgeOption, IAreaBadge } from './interface/Badge'
+export type { IArea, IAreaInfo } from './interface/area'
+export type { IInsertAreaOption, ISetAreaPropertiesOption, IGetAreaValueOption, IGetAreaValueResult, ILocationAreaOption } from './interface/area'
+export type { IBackgroundOption } from './interface/background'
+export type { IBadge, IBadgeOption, IAreaBadge } from './interface/badge'
 export type {
   IIFrameBlock,
   IVideoBlock,
   IAudioBlock,
   IChartBlock,
   IBlock
-} from './interface/Block'
-export type { ICatalogItem, ICatalog } from './interface/Catalog'
+} from './interface/block'
+export type { ICatalogItem, ICatalog } from './interface/catalog'
 export type {
   IChartRenderer,
   IChartTableData,
   IChartDataRange,
   IChartConfig
-} from './interface/ChartRenderer'
-export type { ICheckboxOption } from './interface/Checkbox'
-export type { IRichtextOption } from './interface/Command'
-export type { DeepRequired, DeepPartial, IPadding } from './interface/Common'
+} from './interface/chart-renderer'
+export type { ICheckboxOption } from './interface/checkbox'
+export type { IRichtextOption } from './interface/command'
+export type { DeepRequired, DeepPartial, IPadding } from './interface/common'
 export type {
   IControl,
   IControlOption,
@@ -90,9 +90,9 @@ export type {
   ISetControlProperties,
   IRemoveControlOption,
   ILocationControlOption
-} from './interface/Control'
-export type { ICursorOption } from './interface/Cursor'
-export type { IEditorData, IFloatingBarOption, IEditorOption, IEditorResult, IEditorHTML, IEditorText, IUpdateOption, ISetValueOption, IFocusOption, IModeRule } from './interface/Editor'
+} from './interface/control'
+export type { ICursorOption } from './interface/cursor'
+export type { IEditorData, IFloatingBarOption, IEditorOption, IEditorResult, IEditorHTML, IEditorText, IUpdateOption, ISetValueOption, IFocusOption, IModeRule } from './interface/editor'
 export type {
   IElementBasic,
   IElementStyle,
@@ -128,21 +128,21 @@ export type {
   IGetElementByIdOption,
   IInsertElementListOption,
   ISpliceElementListOption
-} from './interface/Element'
-export type { IPasteOption, ICopyOption, ITableInfoByEvent, IPositionContextByEventOption, IPositionContextByEventResult } from './interface/Event'
-export type { ICommentCreate, ICommentDelete, IHyperlinkMenuClick, EventBusMap } from './interface/EventBus'
-export type { IComment } from './interface/Comment'
-export type { IFooter } from './interface/Footer'
-export type { IGroup } from './interface/Group'
-export type { IHeader } from './interface/Header'
-export type { ILineBreakOption } from './interface/LineBreak'
-export type { ILineNumberOption } from './interface/LineNumber'
-export type { IMargin } from './interface/Margin'
-export type { IPageBorderOption } from './interface/PageBorder'
-export type { IPageBreak } from './interface/PageBreak'
-export type { IPageNumber } from './interface/PageNumber'
-export type { IPlaceholder } from './interface/Placeholder'
-export type { PluginFunction, UsePlugin } from './interface/Plugin'
+} from './interface/element'
+export type { IPasteOption, ICopyOption, ITableInfoByEvent, IPositionContextByEventOption, IPositionContextByEventResult } from './interface/event'
+export type { ICommentCreate, ICommentDelete, IHyperlinkMenuClick, EventBusMap } from './interface/event-bus'
+export type { IComment } from './interface/comment'
+export type { IFooter } from './interface/footer'
+export type { IGroup } from './interface/group'
+export type { IHeader } from './interface/header'
+export type { ILineBreakOption } from './interface/line-break'
+export type { ILineNumberOption } from './interface/line-number'
+export type { IMargin } from './interface/margin'
+export type { IPageBorderOption } from './interface/page-border'
+export type { IPageBreak } from './interface/page-break'
+export type { IPageNumber } from './interface/page-number'
+export type { IPlaceholder } from './interface/placeholder'
+export type { PluginFunction, UsePlugin } from './interface/plugin'
 export type {
   ICurrentPosition,
   IGetPositionByXYPayload,
@@ -154,16 +154,16 @@ export type {
   IFloatPosition,
   ILocationPosition,
   ISetSurroundPositionPayload
-} from './interface/Position'
-export type { IPreviewerCreateResult, IPreviewerDrawOption } from './interface/Previewer'
-export type { IRadioOption } from './interface/Radio'
-export type { ISearchResultBasic, ISearchResultRestArgs, ISearchResult, ISearchResultContext, IReplaceOption } from './interface/Search'
-export type { ISeparatorOption, ISeparatorPayload, SeparatorType } from './interface/Separator'
-export type { ITextMetrics, ITextDecoration } from './interface/Text'
-export type { ITitleOption, ITitleSizeOption, IGetTitleValueOption, IGetTitleValueResult } from './interface/Title'
-export type { IWatermark } from './interface/Watermark'
-export type { IZoneOption } from './interface/Zone'
-export type { IRowElement, IRow } from './interface/Row'
+} from './interface/position'
+export type { IPreviewerCreateResult, IPreviewerDrawOption } from './interface/previewer'
+export type { IRadioOption } from './interface/radio'
+export type { ISearchResultBasic, ISearchResultRestArgs, ISearchResult, ISearchResultContext, IReplaceOption } from './interface/search'
+export type { ISeparatorOption, ISeparatorPayload, SeparatorType } from './interface/separator'
+export type { ITextMetrics, ITextDecoration } from './interface/text'
+export type { ITitleOption, ITitleSizeOption, IGetTitleValueOption, IGetTitleValueResult } from './interface/title'
+export type { IWatermark } from './interface/watermark'
+export type { IZoneOption } from './interface/zone'
+export type { IRowElement, IRow } from './interface/row'
 export type {
   IDrawOption,
   IForceUpdateOption,
@@ -177,8 +177,8 @@ export type {
   IGetOriginValueOption,
   IAppendElementListOption,
   IGetImageOption
-} from './interface/Draw'
-export type { IRange, RangeRowArray, RangeRowMap, RangeRect, RangeContext, IRangeParagraphInfo, IRangeElementStyle } from './interface/Range'
+} from './interface/draw'
+export type { IRange, RangeRowArray, RangeRowMap, RangeRect, RangeContext, IRangeParagraphInfo, IRangeElementStyle } from './interface/range'
 export type {
   IRangeStyle,
   IRangeStyleChange,
@@ -199,45 +199,45 @@ export type {
   IImageSizeChange,
   IImageMousedown,
   ICatalogChange
-} from './interface/Listener'
-export type { ILang } from './interface/i18n/I18n'
-export type { IRegisterShortcut } from './interface/shortcut/Shortcut'
-export type { IColgroup } from './interface/table/Colgroup'
-export type { ITableOption } from './interface/table/Table'
-export type { ITd } from './interface/table/Td'
-export type { ITr } from './interface/table/Tr'
+} from './interface/listener'
+export type { ILang } from './interface/i18n/i18n'
+export type { IRegisterShortcut } from './interface/shortcut/shortcut'
+export type { IColgroup } from './interface/table/colgroup'
+export type { ITableOption } from './interface/table/table'
+export type { ITd } from './interface/table/td'
+export type { ITr } from './interface/table/tr'
 
 // 常量
-export { EDITOR_COMPONENT, EDITOR_PREFIX, EDITOR_CLIPBOARD, defaultModeRuleOption } from './constants/Editor'
-export { ZERO, WRAP, HORIZON_TAB, NBSP, NON_BREAKING_SPACE, LETTER_CLASS, PUNCTUATION_LIST, maxHeightRadioMapping, METRICS_BASIS_TEXT } from './constants/Common'
-export { TEXTLIKE_ELEMENT_TYPE, IMAGE_ELEMENT_TYPE, BLOCK_ELEMENT_TYPE, VIRTUAL_ELEMENT_TYPE, INLINE_NODE_NAME, EDITOR_ELEMENT_STYLE_ATTR, EDITOR_ELEMENT_COPY_ATTR, EDITOR_ELEMENT_ZIP_ATTR, EDITOR_ROW_ATTR, TABLE_TD_ZIP_ATTR, TABLE_CONTEXT_ATTR, LIST_CONTEXT_ATTR, AREA_CONTEXT_ATTR, TITLE_CONTEXT_ATTR, CONTROL_CONTEXT_ATTR, CONTROL_STYLE_ATTR, EDITOR_ELEMENT_CONTEXT_ATTR } from './constants/Element'
-export { CURSOR_AGENT_OFFSET_HEIGHT } from './constants/Cursor'
-export { INTERNAL_SHORTCUT_KEY } from './constants/Shortcut'
-export { PAGE_NUMBER_STYLES, FORMAT_PLACEHOLDER } from './constants/PageNumber'
-export { EDITOR_FONT_OPTIONS } from './constants/Font'
-export { EDITOR_SIZE_OPTIONS } from './constants/Size'
-export { NUMBER_LIKE_REG, PUNCTUATION_REG, UNICODE_SYMBOL_REG, START_LINE_BREAK_REG } from './constants/Regular'
-export { defaultWatermarkOption } from './constants/Watermark'
-export { titleSizeMapping, titleOrderNumberMapping, titleNodeNameMapping, defaultTitleOption } from './constants/Title'
-export { ulStyleMapping, listStyleCSSMapping, listTypeElementMapping } from './constants/List'
-export { defaultPlaceholderOption } from './constants/Placeholder'
-export { defaultBackground } from './constants/Background'
-export { defaultBadgeOption } from './constants/Badge'
-export { defaultCheckboxOption } from './constants/Checkbox'
-export { defaultControlOption } from './constants/Control'
-export { defaultCursorOption } from './constants/Cursor'
-export { defaultFooterOption } from './constants/Footer'
-export { defaultGroupOption } from './constants/Group'
-export { defaultHeaderOption } from './constants/Header'
-export { defaultLineBreak } from './constants/LineBreak'
-export { defaultPageBorderOption } from './constants/PageBorder'
-export { defaultPageBreakOption } from './constants/PageBreak'
-export { defaultPageNumberOption } from './constants/PageNumber'
-export { defaultRadioOption } from './constants/Radio'
-export { defaultSeparatorOption } from './constants/Separator'
-export { defaultTableOption } from './constants/Table'
-export { defaultLineNumberOption } from './constants/LineNumber'
-export { defaultZoneOption } from './constants/Zone'
+export { EDITOR_COMPONENT, EDITOR_PREFIX, EDITOR_CLIPBOARD, defaultModeRuleOption } from './constants/editor'
+export { ZERO, WRAP, HORIZON_TAB, NBSP, NON_BREAKING_SPACE, LETTER_CLASS, PUNCTUATION_LIST, maxHeightRadioMapping, METRICS_BASIS_TEXT } from './constants/common'
+export { TEXTLIKE_ELEMENT_TYPE, IMAGE_ELEMENT_TYPE, BLOCK_ELEMENT_TYPE, VIRTUAL_ELEMENT_TYPE, INLINE_NODE_NAME, EDITOR_ELEMENT_STYLE_ATTR, EDITOR_ELEMENT_COPY_ATTR, EDITOR_ELEMENT_ZIP_ATTR, EDITOR_ROW_ATTR, TABLE_TD_ZIP_ATTR, TABLE_CONTEXT_ATTR, LIST_CONTEXT_ATTR, AREA_CONTEXT_ATTR, TITLE_CONTEXT_ATTR, CONTROL_CONTEXT_ATTR, CONTROL_STYLE_ATTR, EDITOR_ELEMENT_CONTEXT_ATTR } from './constants/element'
+export { CURSOR_AGENT_OFFSET_HEIGHT } from './constants/cursor'
+export { INTERNAL_SHORTCUT_KEY } from './constants/shortcut'
+export { PAGE_NUMBER_STYLES, FORMAT_PLACEHOLDER } from './constants/page-number'
+export { EDITOR_FONT_OPTIONS } from './constants/font'
+export { EDITOR_SIZE_OPTIONS } from './constants/size'
+export { NUMBER_LIKE_REG, PUNCTUATION_REG, UNICODE_SYMBOL_REG, START_LINE_BREAK_REG } from './constants/regular'
+export { defaultWatermarkOption } from './constants/watermark'
+export { titleSizeMapping, titleOrderNumberMapping, titleNodeNameMapping, defaultTitleOption } from './constants/title'
+export { ulStyleMapping, listStyleCSSMapping, listTypeElementMapping } from './constants/list'
+export { defaultPlaceholderOption } from './constants/placeholder'
+export { defaultBackground } from './constants/background'
+export { defaultBadgeOption } from './constants/badge'
+export { defaultCheckboxOption } from './constants/checkbox'
+export { defaultControlOption } from './constants/control'
+export { defaultCursorOption } from './constants/cursor'
+export { defaultFooterOption } from './constants/footer'
+export { defaultGroupOption } from './constants/group'
+export { defaultHeaderOption } from './constants/header'
+export { defaultLineBreak } from './constants/line-break'
+export { defaultPageBorderOption } from './constants/page-border'
+export { defaultPageBreakOption } from './constants/page-break'
+export { defaultPageNumberOption } from './constants/page-number'
+export { defaultRadioOption } from './constants/radio'
+export { defaultSeparatorOption } from './constants/separator'
+export { defaultTableOption } from './constants/table'
+export { defaultLineNumberOption } from './constants/line-number'
+export { defaultZoneOption } from './constants/zone'
 
 // 工具函数
 export {

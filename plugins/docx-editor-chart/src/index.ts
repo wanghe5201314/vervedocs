@@ -8,12 +8,12 @@ import type {
   IChartDataRange,
   PluginFunction
 } from '@vervedoc/docx-editor-schema'
-import { renderChartToDataUrl } from './chartRenderer'
-import { extractTableData, generateChartOption } from './chartDataExtractor'
-import type { IChartConfig } from './chartDataExtractor'
+import { renderChartToDataUrl } from './chart-renderer'
+import { extractTableData, generateChartOption } from './chart-data-extractor'
+import type { IChartConfig } from './chart-data-extractor'
 
 // 确保 ECharts 图表类型注册（导入时立即执行）
-import './chartRenderer'
+import './chart-renderer'
 
 /**
  * ECharts 图表渲染器实现

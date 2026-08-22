@@ -1,6 +1,6 @@
-export { Listener } from './listener/Listener'
-export { RangeManager } from './range/RangeManager'
-export { EventBus } from './eventbus/EventBus'
+export { Listener } from './listener/listener'
+export { RangeManager } from './range/range-manager'
+export { EventBus } from './eventbus/event-bus'
 
 export type {
   ICatalogChange,

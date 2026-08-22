@@ -1,4 +1,4 @@
-import DocxEditor from './DocxEditor'
+import DocxEditor from './docx-editor'
 
 export default DocxEditor
 
@@ -112,12 +112,12 @@ export {
 } from '@vervedoc/docx-editor-commands'
 
 // core 独有模块 - 真实实现替代 view 中的 stub
-export { WorkerManager } from './worker/WorkerManager'
-export { WorkerComponent } from './worker/WorkerComponent'
-export { I18n } from './i18n/I18n'
-export { Actuator } from './actuator/Actuator'
-export type { AutoSaveOptions } from './actuator/Actuator'
-export { ExportComponent } from './export/ExportComponent'
+export { WorkerManager } from './worker/worker-manager'
+export { WorkerComponent } from './worker/worker-component'
+export { I18n } from './i18n/i18n'
+export { Actuator } from './actuator/actuator'
+export type { AutoSaveOptions } from './actuator/actuator'
+export { ExportComponent } from './export/export-component'
 export { CommentComponent, RevisionComponent } from '@vervedoc/docx-editor-comment'
 export type { DocxCommentMeta, RevisionCallbacks } from '@vervedoc/docx-editor-comment'
 export { getClipboardData, getIsClipboardContainFile, removeClipboardData } from './utils/clipboard'
@@ -130,4 +130,4 @@ export { DocxParser, createDocxParser, parseDocx } from './docxParser/index'
 export type { IDocxParseResult, IDocxParseOptions, IChartRenderer } from './docxParser/types'
 
 // DocxEditor 别名
-export { default as Editor } from './DocxEditor'
+export { default as Editor } from './docx-editor'

@@ -76,20 +76,20 @@ function focusEditorAgent() {
   } catch (e) { /* ignore */ }
 }
 
-window.setRowFlex = (flex) => { editor.command.executeRowFlex(RowFlex[flex]) }
+window.setRowFlex = (flex) => { editor.command.executeSetAlignment(RowFlex[flex]) }
 window.setTitle = (level) => {
-  if (!level) { editor.command.executeTitle(null); return }
+  if (!level) { editor.command.executeSetTitle(null); return }
   const levels = {
     '1': TitleLevel.FIRST, '2': TitleLevel.SECOND, '3': TitleLevel.THIRD,
     '4': TitleLevel.FOURTH, '5': TitleLevel.FIFTH, '6': TitleLevel.SIXTH
   }
-  editor.command.executeTitle(levels[level])
+  editor.command.executeSetTitle(levels[level])
 }
 window.setList = (type) => {
-  if (type === 'OL') { editor.command.executeList(ListType.OL, ListStyle.DECIMAL) }
-  else { editor.command.executeList(ListType.UL, ListStyle.DISC) }
+  if (type === 'OL') { editor.command.executeSetList(ListType.OL, ListStyle.DECIMAL) }
+  else { editor.command.executeSetList(ListType.UL, ListStyle.DISC) }
 }
-window.setLineHeight = (value) => { editor.command.executeLineHeight(parseFloat(value)) }
+window.setLineHeight = (value) => { editor.command.executeSetLineHeight(parseFloat(value)) }
 
 window.showPopup = (id) => { document.getElementById('popup-overlay').classList.add('show'); document.getElementById(id).classList.add('show') }
 window.closePopup = () => { document.getElementById('popup-overlay').classList.remove('show'); document.querySelectorAll('.popup-panel').forEach(p => p.classList.remove('show')) }
@@ -182,9 +182,9 @@ document.addEventListener('keydown', (e) => {
   if (ctrl && !shift && key === 'z') { e.preventDefault(); execCmd('executeUndo'); return }
   if (ctrl && shift && key === 'z') { e.preventDefault(); execCmd('executeRedo'); return }
   if (ctrl && key === 'y') { e.preventDefault(); execCmd('executeRedo'); return }
-  if (ctrl && key === 'b') { e.preventDefault(); execCmd('executeBold'); return }
-  if (ctrl && key === 'i') { e.preventDefault(); execCmd('executeItalic'); return }
-  if (ctrl && key === 'u') { e.preventDefault(); execCmd('executeUnderline'); return }
+  if (ctrl && key === 'b') { e.preventDefault(); execCmd('executeToggleBold'); return }
+  if (ctrl && key === 'i') { e.preventDefault(); execCmd('executeToggleItalic'); return }
+  if (ctrl && key === 'u') { e.preventDefault(); execCmd('executeToggleUnderline'); return }
   if (ctrl && key === 'k') { e.preventDefault(); insertHyperlink(); return }
   if (ctrl && key === '\\') { e.preventDefault(); execCmd('executeFormat'); return }
   if (ctrl && key === 'enter') { e.preventDefault(); execCmd('executePageBreak'); return }

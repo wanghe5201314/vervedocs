@@ -47,29 +47,6 @@
       </div>
     </div>
 
-    <!-- 编辑模式（居中） -->
-    <div class="editor-mode footer-item" :class="{ disabled: isModeLocked }" :title="currentModeTitle">
-      <a-dropdown :trigger="['click']" :disabled="isModeLocked">
-        <span class="dropdown-link">
-          <VIcon :name="currentModeIcon" />
-          {{ currentMode }}
-        </span>
-        <template #overlay>
-          <a-menu @click="({ key }: any) => handleModeSelect(key as string)">
-            <a-menu-item
-              v-for="mode in modeList"
-              :key="mode.value"
-              :disabled="currentModeValue === mode.value"
-            >
-              <div class="mode-item-content" :title="mode.title">
-                <VIcon :name="mode.icon" class="mode-icon" />
-                <span>{{ mode.label }}</span>
-              </div>
-            </a-menu-item>
-          </a-menu>
-        </template>
-      </a-dropdown>
-    </div>
 
     <div class="footer-right">
       <div class="footer-info">
@@ -108,7 +85,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 
-import { Modal } from 'ant-design-vue'
+
 import type { DocumentMeta } from '@/types/document'
 import { VIcon } from '@vervedoc/icons'
 
@@ -121,7 +98,7 @@ const emit = defineEmits(['command'])
 
 const catalogVisible = ref(false)
 const isContinuityMode = ref(false)
-const isTrackChanges = ref(false)
+
 
 // 纸张方向
 const selectedPaperDirection = ref('vertical')
@@ -209,70 +186,6 @@ const handleToggleFullscreen = () => {
 }
 
 
-// 模式列表
-const modeList = [
-  { value: 'edit', label: '常规模式', icon: 'pencil', title: '常规编辑模式，可自由编辑文档内容' },
-  { value: 'revision', label: '修订模式', icon: 'pencil-plus', title: '修订模式，所有编辑操作将记录为修订' },
-  { value: 'readonly', label: '只读模式', icon: 'eye-outline', title: '只读模式，仅可查看文档不可编辑' },
-  { value: 'clean', label: '清洁模式', icon: 'eye-off-outline', title: '清洁模式，隐藏所有标记和批注' },
-  { value: 'form', label: '表单模式', icon: 'form-select', title: '表单模式，仅可编辑表单域' }
-]
-const currentModeValue = ref(props.documentMeta?.status === 'view' ? 'readonly' : 'edit')
-
-const currentModeIcon = computed(() => {
-  const mode = modeList.find(m => m.value === currentModeValue.value)
-  return mode?.icon || 'pencil'
-})
-
-const currentModeTitle = computed(() => {
-  const mode = modeList.find(m => m.value === currentModeValue.value)
-  return mode?.title || ''
-})
-
-const isModeLocked = computed(() => {
-  return props.documentMeta?.status === 'lock' || props.documentMeta?.status === 'view'
-})
-
-// 处理模式切换
-const handleModeSelect = async (modeValue: string) => {
-
-  if (isModeLocked.value) return
-
-  // 如果当前是修订模式，切换到其他模式时需要确认
-  if (currentModeValue.value === 'revision' && modeValue !== 'revision') {
-    const targetMode = modeList.find(m => m.value === modeValue)
-    try {
-      await new Promise<void>((resolve, reject) => {
-        Modal.confirm({
-          title: '提示',
-          content: `当前是修订模式，是否切换为${targetMode?.label}？`,
-          okText: '确定',
-          cancelText: '取消',
-          onOk: () => resolve(),
-          onCancel: () => reject()
-        })
-      })
-    } catch {
-      return
-    }
-  }
-
-  const newMode = modeList.find(m => m.value === modeValue)
-  if (!newMode) return
-
-  currentModeValue.value = modeValue
-  currentMode.value = newMode.label
-
-  if (modeValue === 'revision') {
-    isTrackChanges.value = true
-    emit('command', 'toggleTrackChanges', true)
-  } else {
-    isTrackChanges.value = false
-
-    emit('command', 'toggleTrackChanges', false)
-  }
-  emit('command', 'mode', modeValue === 'revision' ? 'edit' : modeValue)
-}
 
 // 处理缩放减少
 const handleScaleMinus = () => {
@@ -346,43 +259,6 @@ defineExpose({
   position: relative;
 }
 
-.footer-item.editor-mode {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  white-space: nowrap;
-}
-
-.footer-item.editor-mode .dropdown-link {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #606266;
-  font-size: 12px;
-  outline: none;
-}
-
-.footer-item.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
-.dropdown-link {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: #606266;
-  font-size: 12px;
-  outline: none;
-}
-
-.paper-size-dropdown {
-  max-height: 300px;
-  overflow-y: auto;
-}
 
 .footer-item:hover {
   background-color: #e2e6ed;
@@ -492,15 +368,5 @@ defineExpose({
   font-weight: bold;
 }
 
-.mode-item-content {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.mode-icon {
-  font-size: 16px;
-  flex-shrink: 0;
-}
 
 </style>

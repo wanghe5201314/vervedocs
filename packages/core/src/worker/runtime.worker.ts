@@ -1,7 +1,7 @@
 import { getTextFromElementList, zipElementList } from '@vervedoc/docx-editor-schema'
 import type { IEditorResult, IElement } from '@vervedoc/docx-editor-schema'
 import { ElementType } from '@vervedoc/docx-editor-schema'
-import type { IWorkerRequest, IWorkerResponse } from './WorkerMessage'
+import type { IWorkerRequest, IWorkerResponse } from './worker-message'
 
 function collectGroupIds(elementList: IElement[], groupIdSet = new Set<string>(), result: string[] = []) {
   for (const element of elementList) {

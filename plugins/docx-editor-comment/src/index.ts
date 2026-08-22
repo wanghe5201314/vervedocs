@@ -1,4 +1,4 @@
-export { CommentComponent } from './comment/CommentComponent'
-export type { DocxCommentMeta } from './comment/CommentComponent'
-export { RevisionComponent } from './comment/RevisionComponent'
-export type { RevisionCallbacks } from './comment/RevisionComponent'
+export { CommentComponent } from './comment/comment-component'
+export type { DocxCommentMeta } from './comment/comment-component'
+export { RevisionComponent } from './comment/revision-component'
+export type { RevisionCallbacks } from './comment/revision-component'

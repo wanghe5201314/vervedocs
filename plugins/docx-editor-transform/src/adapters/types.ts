@@ -5,7 +5,7 @@ import type {
   IInsertElementListOption
 } from '@vervedoc/docx-editor-schema'
 import type { RangeManager } from '@vervedoc/docx-editor-state'
-import type { IDrawContext } from '../IDrawContext'
+import type { IDrawContext } from '../i-draw-context'
 import { deepClone, formatElementContext } from '@vervedoc/docx-editor-schema'
 
 // TODO: 以下类型在 view 层或插件层实现，暂用 any 占位

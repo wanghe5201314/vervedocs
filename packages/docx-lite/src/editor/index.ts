@@ -1,4 +1,4 @@
 export * from '@vervedoc/core'
 
-export { WordEditor } from '../object/WordEditor'
-export type { WordEditorOptions } from '../object/WordEditor'
+export { WordEditor } from '../object/word-editor'
+export type { WordEditorOptions } from '../object/word-editor'

@@ -310,6 +310,23 @@
         <a-menu-item key="fitPage"><span class="mi"><VIcon name="fit-to-page-outline" /><span>适应页面</span></span></a-menu-item>
         <a-menu-item key="fitWidth"><span class="mi"><VIcon name="arrow-expand-horizontal" /><span>适应宽度</span></span></a-menu-item>
         <a-menu-divider />
+        <a-sub-menu key="editorMode" popupClassName="gdocs-menu-popper">
+          <template #title><span class="mi"><VIcon name="pencil" /><span>编辑模式</span></span></template>
+          <a-menu-item
+            v-for="mode in editorModeList"
+            :key="'mode_' + mode.value"
+            :disabled="isModeLocked"
+            :title="mode.title"
+          >
+            <div class="mi-row mi-row--toggle">
+              <span class="mi"><VIcon :name="mode.icon" /><span>{{ mode.label }}</span></span>
+              <span class="menu-toggle-check" aria-hidden="true">
+                <VIcon v-if="currentEditorMode === mode.value" name="check" />
+              </span>
+            </div>
+          </a-menu-item>
+        </a-sub-menu>
+        <a-menu-divider />
 
         <a-menu-item key="toggleToolbar"><span class="mi"><VIcon name="view-headline" /><span>显示/隐藏工具栏</span></span></a-menu-item>
         <a-menu-item key="toggleLeftPanel"><span class="mi"><VIcon name="page-layout-sidebar-left" /><span>显示/隐藏左侧面板</span></span></a-menu-item>
@@ -491,6 +508,7 @@
 
 <script setup lang="ts">
 import { computed, ref, toRefs } from 'vue'
+import { Modal } from 'ant-design-vue'
 import { VIcon } from '@vervedoc/icons'
 import {
   marginPresets, paperSizes, bgColorPalette, watermarkPresets,
@@ -534,6 +552,8 @@ const props = defineProps<{
   selectionCollaborationEnabled?: boolean
 
   revisionDisplayMode?: 'all' | 'comments' | 'revisions'
+  currentEditorMode?: string
+  isModeLocked?: boolean
   documentStats?: {
     totalPages: number
     wordCount: number
@@ -545,6 +565,41 @@ const props = defineProps<{
 
 const { hasSelection } = toRefs(props)
 const characterScaleOptions = [200, 150, 100, 90, 80, 66, 50, 33]
+
+const editorModeList = [
+  { value: 'edit', label: '常规模式', icon: 'pencil', title: '常规编辑模式，可自由编辑文档内容' },
+  { value: 'revision', label: '修订模式', icon: 'pencil-plus', title: '修订模式，所有编辑操作将记录为修订' },
+  { value: 'readonly', label: '只读模式', icon: 'eye-outline', title: '只读模式，仅可查看文档不可编辑' },
+  { value: 'clean', label: '清洁模式', icon: 'eye-off-outline', title: '清洁模式，隐藏所有标记和批注' },
+  { value: 'form', label: '表单模式', icon: 'form-select', title: '表单模式，仅可编辑表单域' }
+]
+
+const handleModeSelect = async (modeValue: string) => {
+  if (props.isModeLocked) return
+  if (props.currentEditorMode === 'revision' && modeValue !== 'revision') {
+    const targetMode = editorModeList.find(m => m.value === modeValue)
+    try {
+      await new Promise<void>((resolve, reject) => {
+        Modal.confirm({
+          title: '提示',
+          content: `当前是修订模式，是否切换为${targetMode?.label}？`,
+          okText: '确定',
+          cancelText: '取消',
+          onOk: () => resolve(),
+          onCancel: () => reject()
+        })
+      })
+    } catch {
+      return
+    }
+  }
+  if (modeValue === 'revision') {
+    emit('cmd', 'toggleTrackChanges', true)
+  } else {
+    emit('cmd', 'toggleTrackChanges', false)
+  }
+  emit('cmd', 'mode', modeValue === 'revision' ? 'edit' : modeValue)
+}
 const normalizedCharacterScale = computed(() => {
   const value = Number(props.currentCharacterScale ?? 100)
   return Number.isFinite(value) ? Math.round(value) : 100
@@ -654,6 +709,11 @@ const handleMenuClick = (key: string) => {
     toggleRuler: () => emit('view', 'toggleRuler'),
     toggleLineBreak: () => emit('view', 'toggleLineBreak'),
     toggleEyeCare: () => emit('view', 'toggleEyeCare'),
+    mode_edit: () => handleModeSelect('edit'),
+    mode_revision: () => handleModeSelect('revision'),
+    mode_readonly: () => handleModeSelect('readonly'),
+    mode_clean: () => handleModeSelect('clean'),
+    mode_form: () => handleModeSelect('form'),
     tocCustom: () => emit('view', 'tocCustom'),
     tocRemove: () => emit('view', 'tocRemove'),
     revisionPanel: () => emit('cmd', 'openRevisionPanel'),

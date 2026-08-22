@@ -12,12 +12,10 @@ import { Redis } from '@hocuspocus/extension-redis'
 import { config } from './config.js'
 import { MongoDBExtension } from './extensions/mongodb.js'
 import { AuthExtension } from './extensions/auth.js'
-import { InternalApiExtension } from './internal-api/index.js'
 
 const extensions: any[] = [
   new MongoDBExtension(),
   new AuthExtension(),
-  new InternalApiExtension(),
 ]
 
 if (config.redisUri) {

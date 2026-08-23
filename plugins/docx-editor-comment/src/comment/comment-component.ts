@@ -1,9 +1,14 @@
-import type { IComment } from '@vervedoc/docx-editor-schema'
+import type { IComment, IGroupColor } from '@vervedoc/docx-editor-schema'
 
 
 type Command = any
 
-const USER_COLORS = ['#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#909399', '#00BCD4', '#9C27B0']
+const USER_COLORS = [
+  '#409EFF', '#67C23A', '#E6A23C', '#F56C6C',
+  '#909399', '#00BCD4', '#9C27B0', '#3F51B5',
+  '#FF9800', '#4CAF50', '#009688', '#795548',
+  '#FF5722', '#C2185B', '#FFC107', '#607D8B'
+]
 const PREFIX = 'ce'
 
 function getAvatarColor(name: string): string {
@@ -63,6 +68,24 @@ export class CommentComponent {
     return this._command?.getOptions?.()?.annotationColor || '#409eff'
   }
 
+  private _syncGroupColors(): void {
+    if (!this._command) return
+    const currentOptions = this._command.getOptions?.() || {}
+    const currentGroup = currentOptions.group || {}
+    const groupColors: Record<string, IGroupColor> = {}
+    for (const c of this._comments) {
+      if (!c.groupId) continue
+      groupColors[c.groupId] = {
+        color: c.avatarColor || getAvatarColor(c.userName),
+        status: c.status ?? 1
+      }
+    }
+    this._command.executeUpdateOptions?.({
+      ...currentOptions,
+      group: { ...currentGroup, groupColors }
+    })
+  }
+
   public install(command: Command, callbacks?: CommentCallbacks): this {
     this._command = command
     if (callbacks) this._callbacks = callbacks
@@ -75,6 +98,7 @@ export class CommentComponent {
 
   public setComments(comments: IComment[]): void {
     this._comments = comments
+    this._syncGroupColors()
   }
 
   public addComment(userName: string = '当前用户'): IComment | null {
@@ -91,6 +115,7 @@ export class CommentComponent {
       isEditing: true
     }
     this._comments.push(newComment)
+    this._syncGroupColors()
     return newComment
   }
 
@@ -101,6 +126,7 @@ export class CommentComponent {
       this._comments.splice(idx, 1)
       this._command?.executeDeleteGroup?.(comment.groupId)
       this._callbacks.onDelete?.(id)
+      this._syncGroupColors()
     }
   }
 
@@ -113,6 +139,7 @@ export class CommentComponent {
     const idx = this._comments.findIndex(c => c.id === comment.id)
     if (idx !== -1) {
       this._comments[idx] = { ...comment, isEditing: false }
+      this._syncGroupColors()
     }
   }
 
@@ -126,6 +153,7 @@ export class CommentComponent {
     } else {
       comment.isEditing = false
     }
+    this._syncGroupColors()
   }
 
   public replyToComment(id: string, content: string, userName: string = '当前用户'): void {
@@ -145,7 +173,10 @@ export class CommentComponent {
 
   public resolveComment(id: string, resolved: boolean): void {
     const comment = this._comments.find(c => c.id === id)
-    if (comment) comment.status = resolved ? 2 : 1
+    if (comment) {
+      comment.status = resolved ? 2 : 1
+      this._syncGroupColors()
+    }
   }
 
   public serializeComments(): Array<Record<string, unknown>> {
@@ -189,6 +220,7 @@ export class CommentComponent {
       })
     }
     this._comments = restored
+    this._syncGroupColors()
   }
 
   public buildCommentsFromMetas(metas: DocxCommentMeta[]): void {
@@ -206,6 +238,7 @@ export class CommentComponent {
       })
     }
     this._comments = newComments
+    this._syncGroupColors()
   }
 
   private _getPageOffsetY(pageNo: number): number {
@@ -787,7 +820,7 @@ export class CommentComponent {
     const tooltip = document.createElement('div')
     tooltip.style.cssText = `position:fixed;left:${clientX + 12}px;top:${clientY + 12}px;max-width:280px;padding:8px 12px;background:#fff;border:1px solid #e8e8e8;border-radius:0;box-shadow:0 2px 12px rgba(0,0,0,0.12);font-size:13px;color:#444;line-height:1.5;z-index:9999;pointer-events:none;animation:ce-tooltip-fade 0.2s ease;`
     const author = document.createElement('div')
-    author.style.cssText = `font-weight:600;font-size:12px;color:${this._annotationColor};margin-bottom:4px;`
+    author.style.cssText = `font-weight:600;font-size:12px;color:${comment.avatarColor || getAvatarColor(comment.userName)};margin-bottom:4px;`
     author.textContent = comment.userName
     const content = document.createElement('div')
     content.style.cssText = 'word-break:break-word;'

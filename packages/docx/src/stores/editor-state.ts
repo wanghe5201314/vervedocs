@@ -31,6 +31,7 @@ export interface IEditorStyleState {
   rowFlex: string | null
   rowMargin: number
   lineHeight: number
+  lineHeightRule?: 'auto' | 'exact' | 'atLeast'
   paragraphFirstLineIndent: number
   // 列表
   listType: string | null
@@ -73,6 +74,7 @@ const defaultState: IEditorStyleState = {
   rowFlex: null,
   rowMargin: 1,
   lineHeight: 1.5,
+  lineHeightRule: 'auto',
   paragraphFirstLineIndent: 0,
   listType: null,
   listStyle: null,
@@ -138,6 +140,7 @@ function createEditorStateStore() {
       rowFlex: rangeStyle.rowFlex ?? null,
       rowMargin: rangeStyle.rowMargin ?? 1,
       lineHeight: rangeStyle.lineHeight ?? 1.5,
+      lineHeightRule: rangeStyle.lineHeightRule ?? 'auto',
       paragraphFirstLineIndent: rangeStyle.paragraphFirstLineIndent ?? 0,
       listType: rangeStyle.listType ?? null,
       listStyle: rangeStyle.listStyle ?? null,

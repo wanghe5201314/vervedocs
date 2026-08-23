@@ -7,12 +7,15 @@ import { onBeforeUnmount, provide, ref, watch } from 'vue'
 import Editor from '@/views/Editor.vue'
 import { applyUiConstants } from '@/config/ui-constants'
 import { uiThemeStore } from '@/stores/ui-theme'
-import { externalApi, onExternalEvent, type ExternalEventName } from '@/composables/use-external-api'
+import { externalApi, onExternalEvent, type ExternalEventName } from '@/composables/use-external-events'
 import type { CollaborationOptions, DocxEditorUiInitialDocument } from './index'
+import type { DocxImportCallback, DocxExportCallback } from '@vervedoc/core'
 
 const props = defineProps<{
   initialDocument?: DocxEditorUiInitialDocument | null
   collaboration?: CollaborationOptions | null
+  importCallback?: DocxImportCallback
+  exportCallback?: DocxExportCallback
 }>()
 
 const emit = defineEmits<{
@@ -73,6 +76,8 @@ watch(() => [props.collaboration, props.initialDocument?.meta?.id] as const, ([c
 
 provide('docx-editor-ui:initDocument', initDocument.value)
 provide('docx-editor-ui:collaboration', collaboration.value)
+provide('docx-editor-ui:importCallback', props.importCallback)
+provide('docx-editor-ui:exportCallback', props.exportCallback)
 
 const events: ExternalEventName[] = [
   'ready',

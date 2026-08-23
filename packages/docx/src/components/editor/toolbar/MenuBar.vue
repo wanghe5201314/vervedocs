@@ -20,9 +20,9 @@
         <a-menu-item key="preview"><span class="mi"><VIcon name="eye-outline" /><span>预览</span></span></a-menu-item>
         <a-menu-item key="rename"><span class="mi"><VIcon name="rename-box" /><span>重命名</span></span></a-menu-item>
         <a-menu-divider />
-        <a-menu-item key="protectEncrypt"><span class="mi"><VIcon name="lock-outline" /><span>加密文档</span></span></a-menu-item>
+
         <a-menu-item key="protectDoc"><span class="mi"><VIcon name="shield-lock-outline" /><span>保护文档</span></span></a-menu-item>
-        <a-menu-item key="unprotect"><span class="mi"><VIcon name="lock-open-outline" /><span>解除保护</span></span></a-menu-item>
+
         <a-menu-divider />
         <a-menu-item key="versionHistory"><span class="mi"><VIcon name="history" /><span>版本历史</span></span></a-menu-item>
         <a-menu-item key="accessPermission"><span class="mi"><VIcon name="account-multiple-outline" /><span>访问权限</span></span></a-menu-item>
@@ -328,7 +328,7 @@
         </a-sub-menu>
         <a-menu-divider />
 
-        <a-menu-item key="toggleToolbar"><span class="mi"><VIcon name="view-headline" /><span>显示/隐藏工具栏</span></span></a-menu-item>
+
         <a-menu-item key="toggleLeftPanel"><span class="mi"><VIcon name="page-layout-sidebar-left" /><span>显示/隐藏左侧面板</span></span></a-menu-item>
         <a-menu-item key="toggleBottomNav"><span class="mi"><VIcon name="dock-bottom" /><span>显示/隐藏状态栏</span></span></a-menu-item>
         <a-menu-item key="toggleRuler"><span class="mi"><VIcon name="ruler" /><span>显示/隐藏标尺</span></span></a-menu-item>
@@ -631,9 +631,9 @@ const handleMenuClick = (key: string) => {
     print: () => emit('cmd', 'print'),
     preview: () => emit('preview'),
     rename: () => emit('cmd', 'rename'),
-    protectEncrypt: () => emit('cmd', 'protect'),
+
     protectDoc: () => emit('cmd', 'protectDoc'),
-    unprotect: () => emit('cmd', 'unprotect'),
+
     versionHistory: () => emit('cmd', 'versionHistory'),
     accessPermission: () => emit('cmd', 'accessPermission'),
     feedback: () => emit('cmd', 'feedback'),
@@ -703,7 +703,7 @@ const handleMenuClick = (key: string) => {
     clearFooter: () => emit('cmd', 'clearFooter'),
     fitPage: () => emit('view', 'fitPage'),
     fitWidth: () => emit('view', 'fitWidth'),
-    toggleToolbar: () => emit('view', 'toggleToolbar'),
+
     toggleLeftPanel: () => emit('view', 'toggleLeftPanel'),
     toggleBottomNav: () => emit('view', 'toggleBottomNav'),
     toggleRuler: () => emit('view', 'toggleRuler'),

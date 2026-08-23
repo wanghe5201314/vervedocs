@@ -1,22 +1,42 @@
 import { Ref, nextTick } from 'vue'
-import { emitExternalEvent } from '@/composables/use-external-api'
+import { emitExternalEvent } from '@/composables/use-external-events'
 import type { DocumentStats } from '@/types/document'
 
+/**
+ * 在下一帧延迟渲染评论
+ * @param getCommentComponent 获取评论组件的函数
+ */
 function renderCommentsLater(getCommentComponent: () => any): void {
   nextTick(() => requestAnimationFrame(() => getCommentComponent()?.render()))
 }
 
+/**
+ * 编辑器命令分发 composable
+ * @param options 配置项
+ * @returns 编辑器命令处理函数
+ */
 export function useEditorCommand(options: {
+  /** 缓存的目录数据 */
   cachedCatalog: Ref<any[]>
+  /** 目录组件引用 */
   catalogRef: Ref<any>
+  /** 页脚组件引用 */
   footerRef: Ref<any>
+  /** 文档统计信息 */
   documentStats: DocumentStats
+  /** 获取评论组件 */
   getCommentComponent: () => any
+  /** 获取修订组件 */
   getRevisionComponent: () => any
+  /** 修订列表 */
   revisionList: Ref<any[]>
+  /** 判断本次是否需要抑制一次保存 */
   isSuppressSaveOnce: () => boolean
+  /** 设置是否抑制一次保存 */
   setSuppressSaveOnce: (value: boolean) => void
+  /** 获取协作插件实例 */
   getCollabPlugin: () => any
+  /** 立即保存 */
   saveNow: (opts?: { silent?: boolean }) => Promise<void>
 }) {
   const {
@@ -33,6 +53,9 @@ export function useEditorCommand(options: {
     saveNow,
   } = options
 
+  /**
+   * 同步修订列表到响应式数据
+   */
   const syncRevisionList = () => {
     const revisionComp = getRevisionComponent()
     if (!revisionComp) return
@@ -95,6 +118,11 @@ export function useEditorCommand(options: {
     },
   }
 
+  /**
+   * 处理编辑器命令，分发到对应处理器或转发为外部事件
+   * @param command 命令名称
+   * @param args 命令参数
+   */
   const handleEditorCommand = (command: string, ...args: any[]) => {
     const handler = commandHandlers[command]
     if (handler) {
@@ -104,6 +132,10 @@ export function useEditorCommand(options: {
     emitExternalEvent('statusChange', { command, args })
   }
 
+  /**
+   * 处理编辑器保存事件，触发立即保存
+   * @param _payload 保存事件载荷（未使用）
+   */
   const handleEditorSaved = (_payload?: any) => {
     void saveNow({ silent: false })
   }

@@ -1,4 +1,6 @@
 import DocxEditor from './docx-editor'
+import type { IElement, IEditorData } from '@vervedoc/docx-editor-schema'
+import type { DocxCommentMeta } from '@vervedoc/docx-editor-comment'
 
 export default DocxEditor
 
@@ -125,9 +127,51 @@ export { getClipboardData, getIsClipboardContainFile, removeClipboardData } from
 // version
 export { version } from '../package.json'
 
-// DocxParser - DOCX 文件解析
-export { DocxParser, createDocxParser, parseDocx } from './docxParser/index'
-export type { IDocxParseResult, IDocxParseOptions, IChartRenderer } from './docxParser/types'
+// DocxParser - DOCX 解析类型与回调契约（实现由外部宿主注入）
+export interface IDocxImportResult {
+  success: boolean
+  elements: IElement[]
+  comments?: DocxCommentMeta[]
+  html?: string
+  error?: string
+}
+
+export interface IChartRenderer {
+  renderToDataUrl(option: unknown, width: number, height: number, pixelRatio?: number): string
+}
+
+export interface IDocxImportOptions {
+  preserveStyles?: boolean
+  defaultFont?: string
+  defaultSize?: number
+  targetInnerWidth?: number
+  tableWidthMode?: 'fit' | 'word'
+  defaultTableRowHeight?: number
+  defaultTableTdPadding?: [number, number, number, number]
+  forceDefaultLineHeight?: number
+  chartRenderer?: IChartRenderer
+}
+
+export type DocxImportCallback = (
+  data: ArrayBuffer | File,
+  options?: IDocxImportOptions
+) => Promise<IDocxImportResult>
+
+export interface IDocxExportResult {
+  success: boolean
+  data?: ArrayBuffer
+  error?: string
+}
+
+export interface IDocxExportOptions {
+  defaultFont?: string
+  defaultSize?: number
+}
+
+export type DocxExportCallback = (
+  data: IEditorData | IElement[],
+  options?: IDocxExportOptions
+) => Promise<IDocxExportResult>
 
 // DocxEditor 别名
 export { default as Editor } from './docx-editor'

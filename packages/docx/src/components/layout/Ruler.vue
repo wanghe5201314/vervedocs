@@ -125,10 +125,10 @@ const drawHRuler = () => {
   ctx.font = '9px Arial'
   ctx.textBaseline = 'top'
 
-  const ox = originX.value
-  const totalCm = pageWidthPx / PX_PER_CM
+  const startX = leftMarkerPx.value
+  const totalCm = (width - startX) / PX_PER_CM
   for (let i = 0; i <= totalCm; i++) {
-    const x = ox + i * PX_PER_CM
+    const x = startX + i * PX_PER_CM
     if (x > width) break
     if (x < 0) continue
     ctx.beginPath()
@@ -140,7 +140,7 @@ const drawHRuler = () => {
     }
   }
   for (let i = 0; i <= totalCm * 2; i++) {
-    const x = ox + (i * PX_PER_CM) / 2
+    const x = startX + (i * PX_PER_CM) / 2
     if (x > width) break
     if (x < 0) continue
     ctx.beginPath()
@@ -172,9 +172,10 @@ const drawVRuler = () => {
   ctx.font = '9px Arial'
   ctx.textBaseline = 'top'
 
-  const totalCm = height / PX_PER_CM
+  const startY = topMarkerPx.value
+  const totalCm = (height - startY) / PX_PER_CM
   for (let i = 0; i <= totalCm; i++) {
-    const y = i * PX_PER_CM
+    const y = startY + i * PX_PER_CM
     if (y > height) break
     ctx.beginPath()
     ctx.moveTo(RULER_THICKNESS - (i % 5 === 0 ? 10 : 6), y)

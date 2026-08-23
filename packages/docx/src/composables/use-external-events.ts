@@ -3,6 +3,9 @@
  * 用于与外部系统集成的事件订阅/发布机制
  */
 
+/**
+ * 外部事件名称
+ */
 export type ExternalEventName =
   | 'ready'
   | 'metaChange'
@@ -16,17 +19,33 @@ export type ExternalEventName =
   | 'collabUsersChange'
   | 'collabError'
 
+/**
+ * 外部事件处理函数
+ */
 export type ExternalEventHandler<T = unknown> = (payload: T) => void
 
+/**
+ * 外部事件订阅选项
+ */
 export type ExternalEventSubscribeOptions = {
+  /** 防抖毫秒数 */
   debounceMs?: number
+  /** 防抖最大等待毫秒数 */
   maxWaitMs?: number
+  /** 节流毫秒数 */
   throttleMs?: number
 }
 
 const externalEventHandlers = new Map<ExternalEventName, Set<ExternalEventHandler>>()
 const externalEventHandlerWrappers = new Map<ExternalEventName, Map<ExternalEventHandler, ExternalEventHandler>>()
 
+/**
+ * 创建防抖函数，支持最大等待时间
+ * @param fn 原始处理函数
+ * @param debounceMs 防抖毫秒数
+ * @param maxWaitMs 最大等待毫秒数
+ * @returns 防抖后的函数
+ */
 const createDebounced = <T>(fn: (payload: T) => void, debounceMs: number, maxWaitMs?: number) => {
   let timer: number | null = null
   let firstTs: number | null = null
@@ -51,6 +70,12 @@ const createDebounced = <T>(fn: (payload: T) => void, debounceMs: number, maxWai
   }
 }
 
+/**
+ * 创建节流函数
+ * @param fn 原始处理函数
+ * @param throttleMs 节流毫秒数
+ * @returns 节流后的函数
+ */
 const createThrottled = <T>(fn: (payload: T) => void, throttleMs: number) => {
   let lastTs = 0
   let timer: number | null = null
@@ -73,6 +98,13 @@ const createThrottled = <T>(fn: (payload: T) => void, throttleMs: number) => {
   }
 }
 
+/**
+ * 订阅外部事件
+ * @param event 事件名称
+ * @param handler 事件处理函数
+ * @param options 订阅选项（防抖/节流）
+ * @returns 取消订阅函数
+ */
 export const onExternalEvent = <T = unknown>(
   event: ExternalEventName,
   handler: ExternalEventHandler<T>,
@@ -95,6 +127,11 @@ export const onExternalEvent = <T = unknown>(
   return () => offExternalEvent(event, handler)
 }
 
+/**
+ * 取消订阅外部事件
+ * @param event 事件名称
+ * @param handler 事件处理函数
+ */
 export const offExternalEvent = <T = unknown>(event: ExternalEventName, handler: ExternalEventHandler<T>) => {
   const set = externalEventHandlers.get(event)
   if (!set) return
@@ -106,6 +143,11 @@ export const offExternalEvent = <T = unknown>(event: ExternalEventName, handler:
   if (set.size === 0) externalEventHandlers.delete(event)
 }
 
+/**
+ * 触发外部事件
+ * @param event 事件名称
+ * @param payload 事件载荷
+ */
 export const emitExternalEvent = <T = unknown>(event: ExternalEventName, payload: T) => {
   const set = externalEventHandlers.get(event)
   if (!set || set.size === 0) return
@@ -118,6 +160,9 @@ export const emitExternalEvent = <T = unknown>(event: ExternalEventName, payload
   }
 }
 
+/**
+ * 外部 API 对象（事件订阅/发布）
+ */
 export const externalApi = {
   on: onExternalEvent,
   off: offExternalEvent,
@@ -127,14 +172,17 @@ export const externalApi = {
   }
 }
 
-// 注册到全局
 if (typeof window !== 'undefined') {
   const w = window as any
   w.docxEditorUI = externalApi
   w.docxEditorAppApi = externalApi
 }
 
-export function useExternalApi() {
+/**
+ * 外部事件 composable 入口
+ * @returns 事件订阅/发布相关方法
+ */
+export function useExternalEvents() {
   return {
     onExternalEvent,
     offExternalEvent,

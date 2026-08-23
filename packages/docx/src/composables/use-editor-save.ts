@@ -1,25 +1,45 @@
 import { Ref } from 'vue'
-import { emitExternalEvent } from '@/composables/use-external-api'
+import { emitExternalEvent } from '@/composables/use-external-events'
 import { appConfig } from '@/config/app-config'
 import type { DocumentMeta } from '@/types/document'
 
+/**
+ * 编辑器实例接口（保存所需的最小能力）
+ */
 interface EditorInstance {
   command?: {
+    /** 获取当前文档值 */
     getValue?: () => any
+    /** 获取修订列表 */
     getRevisions?: () => any[]
   }
 }
 
+/**
+ * 评论组件接口（保存所需的最小能力）
+ */
 interface CommentComponent {
+  /** 获取所有评论 */
   getComments: () => any[]
+  /** 序列化评论为可保存结构 */
   serializeComments: () => any
 }
 
+/**
+ * 文档保存 composable
+ * @param options 配置项
+ * @returns 快照获取、立即保存、延迟保存方法
+ */
 export function useEditorSave(options: {
+  /** 获取编辑器实例 */
   getEditorInstance: () => EditorInstance | null
+  /** 获取评论组件 */
   getCommentComponent: () => CommentComponent | null
+  /** 文档元数据 */
   documentMeta: DocumentMeta
+  /** 忙碌状态（idle/loading/saving） */
   busyState: Ref<'idle' | 'loading' | 'saving'>
+  /** 触发元数据变更事件 */
   emitMetaChange: () => void
 }) {
   const { getEditorInstance, getCommentComponent, documentMeta, busyState, emitMetaChange } = options
@@ -28,6 +48,10 @@ export function useEditorSave(options: {
   let saving = false
   let pendingSave = false
 
+  /**
+   * 获取当前文档快照，包含元数据、内容及评论和修订等附加信息
+   * @returns 文档快照对象
+   */
   const getSnapshot = () => {
     const instance = getEditorInstance()
     const content = instance?.command?.getValue?.() ?? null
@@ -51,6 +75,10 @@ export function useEditorSave(options: {
     return { meta: { ...documentMeta }, content: contentWithExtras }
   }
 
+  /**
+   * 立即保存文档，若正在保存则标记待保存，完成后触发相应事件
+   * @param saveOptions 保存选项（是否静默保存）
+   */
   const saveNow = async (saveOptions?: { silent?: boolean }) => {
     if (saving) {
       pendingSave = true
@@ -82,6 +110,9 @@ export function useEditorSave(options: {
     }
   }
 
+  /**
+   * 延迟保存文档，在 800 毫秒后触发静默保存
+   */
   const scheduleSave = () => {
     if (!appConfig['auto-save']) return
     if (documentMeta.status === 'view') return

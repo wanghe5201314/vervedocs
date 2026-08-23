@@ -1,21 +1,41 @@
 // @ts-ignore
 import { getChartSampleManualData } from '@/utils/chartSampleData'
 
+/**
+ * 编辑器命令接口（图表相关能力）
+ */
 interface EditorCommand {
+  /** 获取选区上下文 */
   getRangeContext?: () => any
+  /** 插入图表 */
   executeInsertChart: (payload: any) => void
+  /** 更新指定图表 */
   executeUpdateChart: (id: string, patch: any) => void
 }
 
+/**
+ * 编辑器实例接口
+ */
 interface EditorInstance {
+  /** 编辑器命令对象 */
   command: EditorCommand
 }
 
+/**
+ * 图表 composable
+ * @param options 配置项
+ * @returns 图表插入与更新方法
+ */
 export function useEditorChart(options: {
+  /** 获取编辑器实例 */
   getEditorInstance: () => EditorInstance | null
 }) {
   const { getEditorInstance } = options
 
+  /**
+   * 插入图表核心逻辑
+   * @param data 图表配置数据
+   */
   function insertChartCore(data: any) {
     const instance = getEditorInstance()
     if (!instance) return
@@ -61,6 +81,11 @@ export function useEditorChart(options: {
     })
   }
 
+  /**
+   * 更新指定图表
+   * @param id 图表标识
+   * @param patch 图表属性补丁
+   */
   function updateChartCore(id: string, patch: any) {
     const instance = getEditorInstance()
     if (!instance) return

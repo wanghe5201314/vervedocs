@@ -321,7 +321,7 @@ const doViewCmd = (cmd: string) => {
     case 'toggleLeftPanel': showLeftPanel.value = !showLeftPanel.value; emit('command', 'toggleCatalog', showLeftPanel.value); break
     case 'toggleBottomNav': showBottomNav.value = !showBottomNav.value; emit('command', 'bottomNavVisible', showBottomNav.value); break
     case 'toggleRuler': showRuler.value = !showRuler.value; emit('command', 'rulerVisible', showRuler.value); break
-    case 'toggleEyeCare': eyeCareMode.value = !eyeCareMode.value; eyeCareMode.value ? document.body.classList.add('eye-care-mode') : document.body.classList.remove('eye-care-mode'); break
+    case 'toggleEyeCare': eyeCareMode.value = !eyeCareMode.value; eyeCareMode.value ? document.body.classList.add('eye-care-mode') : document.body.classList.remove('eye-care-mode'); emit('command', 'eyeCareChange', eyeCareMode.value); break
     case 'toggleLineBreak': showLineBreak.value = !showLineBreak.value; emit('command', 'updateOptions', { lineBreak: { disabled: !showLineBreak.value } }); break
     case 'tocInsert1': emit('command', 'tocInsert', { mode: 'auto', maxLevel: 1 }); break
     case 'tocInsert2': emit('command', 'tocInsert', { mode: 'auto', maxLevel: 2 }); break

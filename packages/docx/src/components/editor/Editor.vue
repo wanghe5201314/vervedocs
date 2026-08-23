@@ -38,7 +38,7 @@ const options = {
   showRevisionBalloons: true,
   revisionDisplayMode: 'all' as const,
   lineBreak: {
-    disabled: false,
+    disabled: true,
     color: '#4A9EFF'
   }
 }

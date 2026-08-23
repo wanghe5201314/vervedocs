@@ -39,7 +39,7 @@ import { Position } from '../position'
 import { RangeManager } from '@vervedoc/docx-editor-state'
 import { Background } from '../layouts/background'
 import { getSeparatorRenderHeight } from '../separator'
-import { Highlight } from '../richtexts/highlight'
+
 import { ParagraphColor } from '../richtexts/paragraph-color'
 import { Margin } from '../layouts/margin'
 import { Search } from '../layouts/search'
@@ -150,7 +150,7 @@ export class Draw {
   private area: Area
   private underline: Underline
   private strikeout: Strikeout
-  private highlight: Highlight
+
   private paragraphColor: ParagraphColor
   private historyManager: HistoryManager
   private previewer: Previewer
@@ -242,7 +242,7 @@ export class Draw {
     this.area = new Area(this)
     this.underline = new Underline(this)
     this.strikeout = new Strikeout(this)
-    this.highlight = new Highlight(this)
+
     this.paragraphColor = new ParagraphColor()
     this.previewer = new Previewer(this)
     this.imageParticle = new ImageParticle(this)
@@ -521,9 +521,6 @@ export class Draw {
     return this.options.defaultBasicRowMarginHeight * this.options.scale
   }
 
-  public getHighlightMarginHeight(): number {
-    return this.options.highlightMarginHeight * this.options.scale
-  }
 
   public getTdPadding(): IPadding {
     const {
@@ -1715,12 +1712,9 @@ export class Draw {
       if (element.paragraphIndentLeft !== undefined) {
         paragraphIndentLeft = element.paragraphIndentLeft
       }
-      const paragraphSpacingBefore = (element.paragraphSpacingBefore || 0) * scale
-      const paragraphSpacingAfter = (element.paragraphSpacingAfter || 0) * scale
-      const rowMargin =
-        defaultBasicRowMarginHeight * (element.rowMargin ?? defaultRowMargin)
-      const rowMarginTop = rowMargin + paragraphSpacingBefore
-      const rowMarginBottom = rowMargin + paragraphSpacingAfter
+      const rowMargin = defaultBasicRowMarginHeight * defaultRowMargin
+      const rowMarginTop = rowMargin
+      const rowMarginBottom = rowMargin
       const metrics: IElementMetrics = {
         width: 0,
         height: 0,
@@ -2142,7 +2136,7 @@ export class Draw {
           metrics.boundingBoxDescent += metrics.height / 2
         }
       }
-      const lineHeight = element.lineHeight ?? this.options.defaultLineHeight
+      const lineHeight = this.options.defaultLineHeight
       const ascent =
         isImageElement(element) ||
         element.type === ElementType.LATEX
@@ -2627,72 +2621,11 @@ export class Draw {
     return groupIds.some(id => id in groupColors)
   }
 
-  private _drawHighlight(
-    ctx: CanvasRenderingContext2D,
-    payload: IDrawRowPayload
-  ) {
-    const { rowList, positionList, elementList } = payload
-    const highlightMarginHeight = this.getHighlightMarginHeight()
-    for (let i = 0; i < rowList.length; i++) {
-      const curRow = rowList[i]
-      for (let j = 0; j < curRow.elementList.length; j++) {
-        const element = curRow.elementList[j]
-        const preElement = curRow.elementList[j - 1]
-        // 高亮配置：元素 > 控件配置
-        const highlight =
-          element.highlight ||
-          this.control.getControlHighlight(elementList, curRow.startIndex + j)
-        if (highlight) {
-          // 高亮元素相连需立即绘制，并记录下一元素坐标
-          if (
-            preElement &&
-            preElement.highlight &&
-            preElement.highlight !== element.highlight
-          ) {
-            this.highlight.render(ctx)
-          }
-          // 批注显示态且元素属于带 avatarColor 的批注时，跳过文本高亮（由批注背景色覆盖）
-          if (!this._isCommentBgActive(element)) {
-            // 当前元素位置信息记录
-            const {
-              ascent: offsetY,
-              metrics,
-              coordinate: {
-                leftTop: [x, y]
-              }
-            } = positionList[curRow.startIndex + j]
-            // 元素向左偏移量
-            const offsetX = element.left || 0
-            const glyphTop = y + offsetY - metrics.boundingBoxAscent
-            const glyphBottom = y + offsetY + metrics.boundingBoxDescent
-            const rectTop = Math.max(y, glyphTop - highlightMarginHeight)
-            const rectBottom = Math.min(
-              y + curRow.height,
-              glyphBottom + highlightMarginHeight
-            )
-            this.highlight.recordFillInfo(
-              ctx,
-              x - offsetX,
-              rectTop,
-              element.metrics.width + offsetX,
-              Math.max(0, rectBottom - rectTop),
-              highlight
-            )
-          }
-        } else if (preElement?.highlight) {
-          // 之前是高亮元素，当前不是需立即绘制
-          this.highlight.render(ctx)
-        }
-      }
-      this.highlight.render(ctx)
-    }
-  }
 
   public drawRow(ctx: CanvasRenderingContext2D, payload: IDrawRowPayload) {
     // 优先绘制段落背景色（最底层）
     this._drawParagraphColor(ctx, payload)
-    // 绘制高亮元素
-    this._drawHighlight(ctx, payload)
+
     // 绘制元素、下划线、删除线、选区
     const {
       scale,
@@ -3228,10 +3161,7 @@ export class Draw {
       pageNo,
       imgDisplays: [ImageDisplay.FLOAT_BOTTOM]
     })
-    // 控件高亮
-    if (!isPrintMode) {
-      this.control.renderHighlightList(ctx, pageNo)
-    }
+
     // 渲染元素
     const index = rowList[0]?.startIndex
     this.drawRow(ctx, {
@@ -3422,8 +3352,7 @@ export class Draw {
         if (searchKeyword) {
           this.search.compute(searchKeyword)
         }
-        // 控件关键词高亮
-        this.control.computeHighlightList()
+
       }
     }
     // 清除光标等副作用

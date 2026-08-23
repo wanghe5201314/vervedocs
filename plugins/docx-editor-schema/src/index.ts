@@ -133,7 +133,7 @@ export type { IPasteOption, ICopyOption, ITableInfoByEvent, IPositionContextByEv
 export type { ICommentCreate, ICommentDelete, IHyperlinkMenuClick, EventBusMap } from './interface/event-bus'
 export type { IComment } from './interface/comment'
 export type { IFooter } from './interface/footer'
-export type { IGroup } from './interface/group'
+export type { IGroup, IGroupColor } from './interface/group'
 export type { IHeader } from './interface/header'
 export type { ILineBreakOption } from './interface/line-break'
 export type { ILineNumberOption } from './interface/line-number'

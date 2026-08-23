@@ -199,7 +199,7 @@ export class Group {
     const elementList = this.draw.getElementList()
     const anchorGroupIds = elementList[range.endIndex]?.groupIds
     const {
-      group: { backgroundColor, opacity, activeOpacity, activeBackgroundColor }
+      group: { backgroundColor, opacity, activeOpacity, activeBackgroundColor, groupColors, resolvedOpacity }
     } = this.options
 
     ctx.save()
@@ -207,8 +207,12 @@ export class Group {
     this.fillRectMap.forEach((fillRect, groupId) => {
       const { lineRanges } = fillRect
       const isActive = anchorGroupIds?.includes(groupId)
+      const groupColor = groupColors?.[groupId]
       
-      if (isActive) {
+      if (groupColor) {
+        ctx.fillStyle = groupColor.color
+        ctx.globalAlpha = groupColor.status === 2 ? resolvedOpacity : (isActive ? activeOpacity : opacity)
+      } else if (isActive) {
         ctx.globalAlpha = activeOpacity
         ctx.fillStyle = activeBackgroundColor
       } else {

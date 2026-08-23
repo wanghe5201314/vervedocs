@@ -56,6 +56,7 @@ declare module 'vue' {
     DateDialog: typeof import('./components/dialog/document/DateDialog.vue')['default']
     Editor: typeof import('./components/editor/Editor.vue')['default']
     Footer: typeof import('./components/layout/Footer.vue')['default']
+    FootnoteDialog: typeof import('./components/dialog/insert/FootnoteDialog.vue')['default']
     GoogleDocsToolbar: typeof import('./components/editor/toolbar/GoogleDocsToolbar.vue')['default']
     HyperlinkDialog: typeof import('./components/dialog/document/HyperlinkDialog.vue')['default']
     ImportNotification: typeof import('./components/common/ImportNotification.vue')['default']

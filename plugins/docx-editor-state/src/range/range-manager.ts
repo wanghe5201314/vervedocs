@@ -506,6 +506,7 @@ export class RangeManager {
     const rowFlex = curElement.rowFlex || null
     const rowMargin = curElement.rowMargin ?? this.options.defaultRowMargin
     const lineHeight = curElement.lineHeight ?? this.options.defaultLineHeight
+    const lineHeightRule = curElement.lineHeightRule ?? 'auto'
     const dashArray = curElement.dashArray || []
     const separatorType = curElement.separatorType || null
     const separatorLineWidth = curElement.separatorLineWidth ?? null
@@ -550,6 +551,7 @@ export class RangeManager {
       rowFlex,
       rowMargin,
       lineHeight,
+      lineHeightRule,
       dashArray,
       separatorType,
       separatorLineWidth,
@@ -578,6 +580,7 @@ export class RangeManager {
     const size = this.options.defaultSize
     const rowMargin = this.options.defaultRowMargin
     const lineHeight = this.options.defaultLineHeight
+    const lineHeightRule = 'auto'
     const painter = !!this.draw.getPainterStyle()
     const undo = this.historyManager.isCanUndo()
     const redo = this.historyManager.isCanRedo()
@@ -600,6 +603,7 @@ export class RangeManager {
       rowFlex: null,
       rowMargin,
       lineHeight,
+      lineHeightRule,
       dashArray: [],
       separatorType: null,
       separatorLineWidth: null,

@@ -5,7 +5,11 @@ import { ConfigProvider } from 'ant-design-vue'
 import '@/ui'
 import WordEditorComponent from '@/ui/WordEditor.vue'
 import type { CollaborationOptions, DocxEditorUiInitialDocument } from '@/ui'
-import type { DocxImportCallback, DocxExportCallback } from '@vervedoc/core'
+import type { 
+  DocxImportCallback, 
+  DocxExportCallback,
+  WasmInjectionConfig
+} from '@vervedoc/core'
 
 interface WordEditorComponentRef {
   executeCommand?: (command: string, ...args: unknown[]) => unknown
@@ -18,6 +22,7 @@ interface WordEditorComponentRef {
  * 用于 `new WordEditor(options)` 创建编辑器实例，包含：
  * - 挂载容器与初始文档
  * - 协作配置（多人协同编辑）
+ * - WASM 注入配置（浏览器端 DOCX 解析/生成）
  * - 生命周期与状态变更回调
  */
 export interface Options {
@@ -27,6 +32,15 @@ export interface Options {
   initialDocument?: DocxEditorUiInitialDocument
   /** 多人协作配置（WebSocket 地址、用户信息、权限等） */
   collaboration?: CollaborationOptions
+  /**
+   * WASM 注入配置（可选）
+   * 
+   * <p>注入 WASM 模块后，编辑器将使用浏览器端的 DOCX 解析和生成能力，
+   * 无需依赖后端 API。</p>
+   * 
+   * <p>未注入时，将使用后端 API 或 Worker 进行文档处理。</p>
+   */
+  wasm?: WasmInjectionConfig
   /**
    * 文档导入回调（.docx → JSON）
    *
@@ -92,6 +106,7 @@ export class WordEditor {
       },
       initialDocument: this.state.initialDocument,
       collaboration: this.state.collaboration,
+      wasm: this.options.wasm,
       importCallback: this.options.importCallback,
       exportCallback: this.options.exportCallback,
       onReady: (payload: any) => this.options.onReady?.(payload),

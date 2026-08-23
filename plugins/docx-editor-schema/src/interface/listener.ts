@@ -30,6 +30,7 @@ export interface IRangeStyle {
   rowFlex: RowFlex | null
   rowMargin: number
   lineHeight: number
+  lineHeightRule?: 'auto' | 'exact' | 'atLeast'
   dashArray: number[]
   separatorType: SeparatorType | null
   separatorLineWidth: number | null

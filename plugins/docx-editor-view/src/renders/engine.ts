@@ -112,7 +112,7 @@ import { LineBreakParticle } from '../renderers/line-break'
 import { MouseObserver } from '../events/mouse-observer'
 import { LineNumber } from '../layouts/line-number'
 import { PageBorder } from '../layouts/page-border'
-import { ITd } from '@vervedoc/docx-editor-schema'
+import { ITd, ITr } from '@vervedoc/docx-editor-schema'
 import { Actuator } from '../plugin-stubs'
 import { TableOperate } from '../renderers/table-ops'
 import { Area } from '../layouts/area'
@@ -2005,14 +2005,6 @@ export class Draw {
                   curPagePreHeight + rowMarginHeight + preTrHeight + trHeight >
                   height
                 ) {
-                  // 当前行存在跨行中断-暂时忽略分页
-                  const rowColCount = tr.tdList.reduce(
-                    (pre, cur) => pre + cur.colspan,
-                    0
-                  )
-                  if (element.colgroup?.length !== rowColCount) {
-                    deleteCount = 0
-                  }
                   break
                 } else {
                   deleteStart = r + 1
@@ -2022,31 +2014,17 @@ export class Draw {
               }
             }
             if (deleteCount) {
-              const cloneTrList = trList.splice(deleteStart, deleteCount)
-              const cloneTrHeight = cloneTrList.reduce(
-                (pre, cur) => pre + cur.height,
-                0
-              )
-              const cloneTrRealHeight = cloneTrHeight * scale
               const pagingId = element.pagingId || getUUID()
-              element.pagingId = pagingId
-              element.height -= cloneTrHeight
-              metrics.height -= cloneTrRealHeight
-              metrics.boundingBoxDescent -= cloneTrRealHeight
-              // 追加拆分表格
-              const cloneElement = deepClone(element)
-              cloneElement.pagingId = pagingId
-              cloneElement.pagingIndex = element.pagingIndex! + 1
-              // 处理分页重复表头
-              const repeatTrList = trList.filter(tr => tr.pagingRepeat)
-              if (repeatTrList.length) {
-                const cloneRepeatTrList = deepClone(repeatTrList)
-                cloneRepeatTrList.forEach(tr => (tr.id = getUUID()))
-                cloneTrList.unshift(...cloneRepeatTrList)
+              const cloneElement = this._splitTableForPaging(element, deleteStart)
+              if (cloneElement) {
+                element.pagingId = pagingId
+                cloneElement.pagingId = pagingId
+                cloneElement.pagingIndex = element.pagingIndex! + 1
+                cloneElement.id = getUUID()
+                this._refreshTableLayoutMetrics(element, metrics)
+                this._refreshTableLayoutMetrics(cloneElement)
+                this.spliceElementList(elementList, i + 1, 0, [cloneElement])
               }
-              cloneElement.trList = cloneTrList
-              cloneElement.id = getUUID()
-              this.spliceElementList(elementList, i + 1, 0, [cloneElement])
             }
           }
           // 表格经过分页处理-需要处理上下文
@@ -2165,26 +2143,19 @@ export class Draw {
         }
       }
       const lineHeight = element.lineHeight ?? this.options.defaultLineHeight
-      const lineHeightRule = element.lineHeightRule ?? 'auto'
-      const naturalHeight = metrics.boundingBoxAscent + metrics.boundingBoxDescent
-      let ascent: number
-      let height: number
-      if (isImageElement(element) || element.type === ElementType.LATEX) {
-        ascent = metrics.height + rowMarginTop
-        height = rowMarginTop + naturalHeight * lineHeight + rowMarginBottom
-      } else if (lineHeightRule === 'exact') {
-        const extraSpace = Math.max(0, lineHeight - naturalHeight)
-        ascent = metrics.boundingBoxAscent + rowMarginTop + extraSpace / 2
-        height = rowMarginTop + lineHeight + rowMarginBottom
-      } else if (lineHeightRule === 'atLeast') {
-        const actualHeight = Math.max(lineHeight, naturalHeight)
-        const extraSpace = actualHeight - naturalHeight
-        ascent = metrics.boundingBoxAscent + rowMarginTop + extraSpace / 2
-        height = rowMarginTop + actualHeight + rowMarginBottom
-      } else {
-        ascent = metrics.boundingBoxAscent + rowMarginTop + (naturalHeight * (lineHeight - 1)) / 2
-        height = rowMarginTop + naturalHeight * lineHeight + rowMarginBottom
-      }
+      const ascent =
+        isImageElement(element) ||
+        element.type === ElementType.LATEX
+          ? metrics.height + rowMarginTop
+          : metrics.boundingBoxAscent +
+            rowMarginTop +
+            ((metrics.boundingBoxAscent + metrics.boundingBoxDescent) *
+              (lineHeight - 1)) /
+              2
+      const height =
+        rowMarginTop +
+        (metrics.boundingBoxAscent + metrics.boundingBoxDescent) * lineHeight +
+        rowMarginBottom
       const rowElement: IRowElement = Object.assign(element, {
         metrics,
         left: 0,
@@ -2470,6 +2441,154 @@ export class Draw {
     return pageRowList
   }
 
+  private _insertTableTdByColIndex(
+    tdList: ITd[],
+    td: ITd,
+    targetColIndex: number
+  ) {
+    let insertIndex = tdList.length
+    for (let i = 0; i < tdList.length; i++) {
+      const curColIndex = tdList[i].colIndex ?? Number.MAX_SAFE_INTEGER
+      if (curColIndex > targetColIndex) {
+        insertIndex = i
+        break
+      }
+    }
+    tdList.splice(insertIndex, 0, td)
+  }
+
+  private _resetTableTdLayoutState(td: ITd) {
+    delete td.x
+    delete td.y
+    delete td.width
+    delete td.height
+    delete td.trIndex
+    delete td.tdIndex
+    delete td.rowIndex
+    delete td.colIndex
+    delete td.isLastRowTd
+    delete td.isLastColTd
+    delete td.isLastTd
+    delete td.mainHeight
+    delete td.realHeight
+    delete td.realMinHeight
+  }
+
+  private _refreshTableLayoutMetrics(element: IElement, metrics?: IElementMetrics) {
+    this.tableParticle.computeRowColInfo(element)
+    const tableHeight = this.tableParticle.getTableHeight(element)
+    const tableWidth = this.tableParticle.getTableWidth(element)
+    element.width = tableWidth
+    element.height = tableHeight
+    if (!metrics) return
+    const elementWidth = tableWidth * this.options.scale
+    const elementHeight = tableHeight * this.options.scale
+    metrics.width = elementWidth
+    metrics.height = elementHeight
+    metrics.boundingBoxDescent = elementHeight
+  }
+
+  private _createTablePagingContinuationTd(
+    sourceTd: ITd,
+    targetColIndex: number,
+    targetTrId: string | undefined,
+    targetTableId: string | undefined,
+    rowspan: number
+  ): ITd {
+    const continuationTd = deepClone(sourceTd)
+    const tdId = getUUID()
+    continuationTd.id = tdId
+    continuationTd.rowspan = Math.max(1, rowspan)
+    continuationTd.value = [
+      {
+        value: ZERO,
+        size: this.options.defaultSize,
+        tableId: targetTableId,
+        trId: targetTrId,
+        tdId
+      }
+    ]
+    continuationTd.colIndex = targetColIndex
+    this._resetTableTdLayoutState(continuationTd)
+    return continuationTd
+  }
+
+  private _splitTableForPaging(element: IElement, deleteStart: number): IElement | null {
+    const trList = element.trList
+    if (!trList?.length || deleteStart <= 0 || deleteStart >= trList.length) {
+      return null
+    }
+
+    const splitRowIndex = deleteStart
+    const sourceTableId = element.id
+    const carryMergeList: Array<{
+      colIndex: number
+      td: ITd
+      remainingRowspan: number
+    }> = []
+
+    for (let r = 0; r < splitRowIndex; r++) {
+      const tr = trList[r]
+      for (let d = 0; d < tr.tdList.length; d++) {
+        const td = tr.tdList[d]
+        const tdStart = td.rowIndex ?? r
+        const tdRowspan = Math.max(1, td.rowspan || 1)
+        const tdEnd = tdStart + tdRowspan
+        if (tdStart < splitRowIndex && tdEnd > splitRowIndex) {
+          const colIndex = td.colIndex ?? 0
+          const visibleRowspan = splitRowIndex - tdStart
+          const remainingRowspan = tdEnd - splitRowIndex
+          if (visibleRowspan > 0 && remainingRowspan > 0) {
+            td.rowspan = visibleRowspan
+            this._resetTableTdLayoutState(td)
+            carryMergeList.push({
+              colIndex,
+              td,
+              remainingRowspan
+            })
+          }
+        }
+      }
+    }
+
+    const splitTrList = trList.splice(deleteStart, trList.length - deleteStart)
+    if (!splitTrList.length) return null
+
+    const cloneElement = deepClone(element)
+    const repeatTrList = trList.filter(tr => tr.pagingRepeat)
+    let cloneTrList: ITr[] = splitTrList
+    let carryTargetIndex = 0
+    if (repeatTrList.length) {
+      const cloneRepeatTrList = deepClone(repeatTrList)
+      cloneRepeatTrList.forEach(tr => (tr.id = getUUID()))
+      cloneTrList = [...cloneRepeatTrList, ...cloneTrList]
+      carryTargetIndex = cloneRepeatTrList.length
+    }
+
+    const carryTargetTr = cloneTrList[carryTargetIndex]
+    if (carryTargetTr && carryMergeList.length) {
+      carryMergeList
+        .sort((a, b) => a.colIndex - b.colIndex)
+        .forEach(({ td, colIndex, remainingRowspan }) => {
+          const continuationTd = this._createTablePagingContinuationTd(
+            td,
+            colIndex,
+            carryTargetTr.id,
+            sourceTableId,
+            remainingRowspan
+          )
+          this._insertTableTdByColIndex(
+            carryTargetTr.tdList,
+            continuationTd,
+            colIndex
+          )
+        })
+    }
+
+    cloneElement.trList = cloneTrList
+    return cloneElement
+  }
+
   private _drawParagraphColor(
     ctx: CanvasRenderingContext2D,
     payload: IDrawRowPayload
@@ -2499,12 +2618,20 @@ export class Draw {
     }
   }
 
+  private _isCommentBgActive(element: IElement): boolean {
+    if (this.options.showCommentBalloons === false) return false
+    const groupIds = element.groupIds
+    if (!groupIds?.length) return false
+    const groupColors = this.options.group.groupColors
+    if (!groupColors) return false
+    return groupIds.some(id => id in groupColors)
+  }
+
   private _drawHighlight(
     ctx: CanvasRenderingContext2D,
     payload: IDrawRowPayload
   ) {
     const { rowList, positionList, elementList } = payload
-    const marginHeight = this.getDefaultBasicRowMarginHeight()
     const highlightMarginHeight = this.getHighlightMarginHeight()
     for (let i = 0; i < rowList.length; i++) {
       const curRow = rowList[i]
@@ -2524,22 +2651,34 @@ export class Draw {
           ) {
             this.highlight.render(ctx)
           }
-          // 当前元素位置信息记录
-          const {
-            coordinate: {
-              leftTop: [x, y]
-            }
-          } = positionList[curRow.startIndex + j]
-          // 元素向左偏移量
-          const offsetX = element.left || 0
-          this.highlight.recordFillInfo(
-            ctx,
-            x - offsetX,
-            y + marginHeight - highlightMarginHeight, // 先减去行margin，再加上高亮margin
-            element.metrics.width + offsetX,
-            curRow.height - 2 * marginHeight + 2 * highlightMarginHeight,
-            highlight
-          )
+          // 批注显示态且元素属于带 avatarColor 的批注时，跳过文本高亮（由批注背景色覆盖）
+          if (!this._isCommentBgActive(element)) {
+            // 当前元素位置信息记录
+            const {
+              ascent: offsetY,
+              metrics,
+              coordinate: {
+                leftTop: [x, y]
+              }
+            } = positionList[curRow.startIndex + j]
+            // 元素向左偏移量
+            const offsetX = element.left || 0
+            const glyphTop = y + offsetY - metrics.boundingBoxAscent
+            const glyphBottom = y + offsetY + metrics.boundingBoxDescent
+            const rectTop = Math.max(y, glyphTop - highlightMarginHeight)
+            const rectBottom = Math.min(
+              y + curRow.height,
+              glyphBottom + highlightMarginHeight
+            )
+            this.highlight.recordFillInfo(
+              ctx,
+              x - offsetX,
+              rectTop,
+              element.metrics.width + offsetX,
+              Math.max(0, rectBottom - rectTop),
+              highlight
+            )
+          }
         } else if (preElement?.highlight) {
           // 之前是高亮元素，当前不是需立即绘制
           this.highlight.render(ctx)
@@ -2941,8 +3080,14 @@ export class Draw {
           }
         }
         // 组信息记录
-        if (!group.disabled && element.groupIds) {
-          this.group.recordFillInfo(element, x, y, metrics.width, curRow.height)
+        if (!group.disabled && element.groupIds && this.options.showCommentBalloons !== false) {
+          this.group.recordFillInfo(
+            element,
+            x,
+            y,
+            metrics.width,
+            curRow.height
+          )
         }
 
         index++

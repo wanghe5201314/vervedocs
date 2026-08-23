@@ -124,6 +124,73 @@ export { CommentComponent, RevisionComponent } from '@vervedoc/docx-editor-comme
 export type { DocxCommentMeta, RevisionCallbacks } from '@vervedoc/docx-editor-comment'
 export { getClipboardData, getIsClipboardContainFile, removeClipboardData } from './utils/clipboard'
 
+/**
+ * WASM 模块接口
+ */
+export interface WasmModule {
+  /**
+   * 初始化 WASM 模块
+   */
+  init(): Promise<WasmModule>
+  
+  /**
+   * 解析 DOCX 文件为 JSON
+   * @param data DOCX 文件的 ArrayBuffer
+   * @returns JSON 字符串（DocxParseResult 序列化）
+   */
+  parseDocx(data: ArrayBuffer): string
+  
+  /**
+   * 生成 DOCX 文件
+   * @param json JSON 字符串（IElement 列表）
+   * @returns DOCX 文件的 ArrayBuffer
+   */
+  writeDocx(json: string): ArrayBuffer
+  
+  /**
+   * 检查 WASM 是否可用
+   */
+  isSupported(): boolean
+  
+  /**
+   * 获取版本号
+   */
+  getVersion(): string
+}
+
+/**
+ * WASM 注入配置
+ * 
+ * <p>外部宿主可以通过此配置注入 WASM 模块，实现浏览器端的 DOCX 解析和生成。</p>
+ * 
+ * <h3>使用示例:</h3>
+ * <pre>{@code
+ * import { loadWasmModule } from '@vervedoc/core'
+ * 
+ * const wasm = await loadWasmModule()
+ * }</pre>
+ */
+export interface WasmInjectionConfig {
+  /**
+   * WASM 模块实例
+   * 如果未提供，将使用默认的 WASM 加载器
+   */
+  wasmModule?: WasmModule
+  
+  /**
+   * WASM 加载选项
+   */
+  wasmOptions?: {
+    wasmUrl?: string
+    enabled?: boolean
+    timeout?: number
+  }
+}
+
+// 导出 WASM 加载器
+export { loadWasmModule, isWasmSupported, getDefaultWasmUrl } from './wasm/wasm-loader'
+export type { WasmLoadOptions } from './wasm/wasm-loader'
+
 // version
 export { version } from '../package.json'
 

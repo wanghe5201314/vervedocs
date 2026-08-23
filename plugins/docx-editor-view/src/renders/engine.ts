@@ -40,6 +40,7 @@ import { RangeManager } from '@vervedoc/docx-editor-state'
 import { Background } from '../layouts/background'
 import { getSeparatorRenderHeight } from '../separator'
 
+import { Highlight } from '../richtexts/highlight'
 import { ParagraphColor } from '../richtexts/paragraph-color'
 import { Margin } from '../layouts/margin'
 import { Search } from '../layouts/search'
@@ -150,6 +151,7 @@ export class Draw {
   private area: Area
   private underline: Underline
   private strikeout: Strikeout
+  private highlight: Highlight
 
   private paragraphColor: ParagraphColor
   private historyManager: HistoryManager
@@ -242,6 +244,7 @@ export class Draw {
     this.area = new Area(this)
     this.underline = new Underline(this)
     this.strikeout = new Strikeout(this)
+    this.highlight = new Highlight(this)
 
     this.paragraphColor = new ParagraphColor()
     this.previewer = new Previewer(this)
@@ -1712,9 +1715,17 @@ export class Draw {
       if (element.paragraphIndentLeft !== undefined) {
         paragraphIndentLeft = element.paragraphIndentLeft
       }
+      const isNonZeroSpacing = element.value !== ZERO
+      const paragraphSpacingBefore = isNonZeroSpacing
+        ? (element.paragraphSpacingBefore || 0) * scale
+        : 0
+      const paragraphSpacingAfter = isNonZeroSpacing
+        ? (element.paragraphSpacingAfter || 0) * scale
+        : 0
+
       const rowMargin = defaultBasicRowMarginHeight * defaultRowMargin
-      const rowMarginTop = rowMargin
-      const rowMarginBottom = rowMargin
+      const rowMarginTop = rowMargin + paragraphSpacingBefore
+      const rowMarginBottom = rowMargin + paragraphSpacingAfter
       const metrics: IElementMetrics = {
         width: 0,
         height: 0,
@@ -2379,6 +2390,7 @@ export class Draw {
         x += metrics.width
       }
     }
+
     return rowList
   }
 
@@ -2583,6 +2595,17 @@ export class Draw {
     return cloneElement
   }
 
+  private _getRowSpacing(row: IRow): { before: number; after: number } {
+    let before = 0
+    let after = 0
+    for (const el of row.elementList) {
+      if (el.value === ZERO) continue
+      before = Math.max(before, el.paragraphSpacingBefore ?? 0)
+      after = Math.max(after, el.paragraphSpacingAfter ?? 0)
+    }
+    return { before, after }
+  }
+
   private _drawParagraphColor(
     ctx: CanvasRenderingContext2D,
     payload: IDrawRowPayload
@@ -2612,19 +2635,50 @@ export class Draw {
     }
   }
 
-  private _isCommentBgActive(element: IElement): boolean {
-    if (this.options.showCommentBalloons === false) return false
-    const groupIds = element.groupIds
-    if (!groupIds?.length) return false
-    const groupColors = this.options.group.groupColors
-    if (!groupColors) return false
-    return groupIds.some(id => id in groupColors)
-  }
 
+  private _drawHighlight(ctx: CanvasRenderingContext2D, payload: IDrawRowPayload) {
+    const { rowList, positionList } = payload
+    const {
+      scale,
+      group: { disabled: groupDisabled },
+      showCommentBalloons
+    } = this.options
+    for (let i = 0; i < rowList.length; i++) {
+      const curRow = rowList[i]
+      const { before: spacingBefore, after: spacingAfter } = this._getRowSpacing(curRow)
+      const spacingBeforeScaled = spacingBefore * scale
+      const spacingAfterScaled = spacingAfter * scale
+      const highlightHeight = curRow.height - spacingBeforeScaled - spacingAfterScaled
+      for (let j = 0; j < curRow.elementList.length; j++) {
+        const element = curRow.elementList[j]
+        if (!element.highlight) continue
+        // 批注背景色优先：有批注时跳过高亮，避免颜色叠加
+        if (
+          !groupDisabled &&
+          element.groupIds?.length &&
+          showCommentBalloons !== false
+        )
+          continue
+        const {
+          coordinate: { leftTop: [x, y] }
+        } = positionList[curRow.startIndex + j]
+        this.highlight.recordFillInfo(
+          x,
+          y + spacingBeforeScaled,
+          element.metrics.width,
+          highlightHeight,
+          element.highlight
+        )
+      }
+    }
+    this.highlight.render(ctx)
+  }
 
   public drawRow(ctx: CanvasRenderingContext2D, payload: IDrawRowPayload) {
     // 优先绘制段落背景色（最底层）
     this._drawParagraphColor(ctx, payload)
+    // 绘制高亮（文本之下）
+    this._drawHighlight(ctx, payload)
 
     // 绘制元素、下划线、删除线、选区
     const {
@@ -3014,12 +3068,13 @@ export class Draw {
         }
         // 组信息记录
         if (!group.disabled && element.groupIds && this.options.showCommentBalloons !== false) {
+          const { before: gSpacingBefore, after: gSpacingAfter } = this._getRowSpacing(curRow)
           this.group.recordFillInfo(
             element,
             x,
-            y,
+            y + gSpacingBefore * scale,
             metrics.width,
-            curRow.height
+            curRow.height - (gSpacingBefore + gSpacingAfter) * scale
           )
         }
 
@@ -3053,6 +3108,7 @@ export class Draw {
           positionList[curRow.startIndex]
         )
       }
+
       // 绘制文字、边框、下划线、删除线
       this.textParticle.complete()
       this.control.drawBorder(ctx)

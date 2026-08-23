@@ -66,6 +66,10 @@ const defaultState: IAIState = {
   history: []
 }
 
+/**
+ * 创建 AI 状态存储
+ * @returns AI 状态存储实例，包含只读 state 及一系列操作方法
+ */
 function createAIStateStore() {
   const state = reactive<IAIState>({
     ...defaultState,
@@ -74,14 +78,27 @@ function createAIStateStore() {
     history: []
   })
 
+  /**
+   * 设置侧边栏可见性
+   * @param visible 是否可见
+   */
   function setVisible(visible: boolean) {
     state.visible = visible
   }
 
+  /**
+   * 设置当前活动标签
+   * @param tab 标签类型
+   */
   function setActiveTab(tab: AITab) {
     state.activeTab = tab
   }
 
+  /**
+   * 开始一次 AI 操作，重置操作状态并打开结果抽屉
+   * @param action 操作类型
+   * @param inputText 输入文本
+   */
   function startOperation(action: AIAction, inputText: string) {
     state.operation.loading = true
     state.operation.action = action
@@ -92,10 +109,18 @@ function createAIStateStore() {
     state.drawerVisible = true
   }
 
+  /**
+   * 追加流式响应内容到当前操作
+   * @param chunk 流式响应片段
+   */
   function appendStreamContent(chunk: string) {
     state.operation.streamContent += chunk
   }
 
+  /**
+   * 完成 AI 操作，记录结果并写入历史（最多保留 50 条）
+   * @param result 最终结果文本
+   */
   function completeOperation(result: string) {
     state.operation.loading = false
     state.operation.result = result
@@ -116,25 +141,42 @@ function createAIStateStore() {
     }
   }
 
+  /**
+   * 标记当前操作失败并记录错误信息
+   * @param error 错误信息
+   */
   function failOperation(error: string) {
     state.operation.loading = false
     state.operation.error = error
     state.operation.streamContent = ''
   }
 
+  /**
+   * 设置结果抽屉可见性
+   * @param visible 是否可见
+   */
   function setDrawerVisible(visible: boolean) {
     state.drawerVisible = visible
   }
 
+  /**
+   * 重置操作状态并关闭结果抽屉
+   */
   function resetOperation() {
     Object.assign(state.operation, defaultOperationState)
     state.drawerVisible = false
   }
 
+  /**
+   * 清空历史记录
+   */
   function clearHistory() {
     state.history.length = 0
   }
 
+  /**
+   * 重置整个 AI 状态到默认值
+   */
   function reset() {
     state.visible = false
     state.activeTab = 'writing'
@@ -158,5 +200,11 @@ function createAIStateStore() {
   }
 }
 
+/**
+ * AI 状态存储实例
+ */
 export const aiStateStore = createAIStateStore()
+/**
+ * AI 状态存储类型
+ */
 export type AIStateStore = ReturnType<typeof createAIStateStore>

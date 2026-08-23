@@ -67,6 +67,8 @@ declare module 'vue' {
     PageNumberDialog: typeof import('./components/dialog/page/PageNumberDialog.vue')['default']
     PaperSizeDialog: typeof import('./components/dialog/page/PaperSizeDialog.vue')['default']
     ParagraphDialog: typeof import('./components/dialog/document/ParagraphDialog.vue')['default']
+    PasswordCard: typeof import('./components/editor/PasswordCard.vue')['default']
+    PasswordModal: typeof import('./components/editor/PasswordModal.vue')['default']
     ProtectDialog: typeof import('./components/dialog/document/ProtectDialog.vue')['default']
     QrcodeDialog: typeof import('./components/dialog/insert/QrcodeDialog.vue')['default']
     RevisionPanel: typeof import('./components/sidebars/RevisionPanel.vue')['default']

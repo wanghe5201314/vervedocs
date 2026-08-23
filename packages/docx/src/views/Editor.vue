@@ -51,10 +51,15 @@
             @mousedown="handleResizeStart"
           ></div>
           <div class="split-right">
-            <div class="editor-area">
-              <Editor ref="editorRef" @command="handleEditorCommand" @ready="handleReady" @saved="handleEditorSaved" />
-
-
+            <div class="editor-area" ref="editorAreaRef">
+              <Ruler
+                v-if="rulerVisible && isContentVisible"
+                :visible="rulerVisible"
+                :get-page-metrics="getPageMetrics"
+                :set-margins="setMargins"
+                :container-el="editorAreaRef"
+              />
+              <Editor v-if="isContentVisible" ref="editorRef" @command="handleEditorCommand" @ready="handleReady" @saved="handleEditorSaved" />
             </div>
           </div>
         </div>
@@ -107,6 +112,20 @@
       :doc-id="documentMeta.id"
       @restore="handleVersionRestore"
     />
+    <PasswordCard
+      :visible="passwordModalVisible"
+      :mode="passwordModalMode"
+      :loading="passwordModalLoading"
+      :error="passwordError"
+      @confirm="handlePasswordConfirm"
+      @cancel="handlePasswordCancel"
+    />
+    <div v-if="!isContentVisible" class="editor-protect-overlay">
+      <div class="protect-overlay-content">
+        <span class="material-icons" style="font-size: 48px">lock</span>
+        <p>文档已保护，请解除保护后查看</p>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -114,7 +133,8 @@
 import { inject, onBeforeUnmount, ref, nextTick, watch, type Ref } from 'vue'
 import { message } from 'ant-design-vue'
 import type { InitialDocument } from '@/utils/resolve-app'
-import { emitExternalEvent, externalApi } from '@/composables/use-external-api'
+import type { DocxImportCallback, DocxExportCallback } from '@vervedoc/core'
+import { emitExternalEvent, externalApi } from '@/composables/use-external-events'
 import { aiStateStore } from '@/stores/ai-state'
 import type { AITab } from '@/stores/ai-state'
 import { AIAction } from '@vervedoc/docx-editor-ai'
@@ -130,6 +150,8 @@ import AIResultPanel from '@/components/sidebars/ai/AIResultPanel.vue'
 import RevisionPanel from '@/components/sidebars/RevisionPanel.vue'
 import type { RevisionItem } from '@/components/sidebars/RevisionPanel.vue'
 import Editor from '@/components/editor/Editor.vue'
+import PasswordCard from '@/components/editor/PasswordCard.vue'
+import Ruler from '@/components/layout/Ruler.vue'
 
 import UnifiedTopHeader from '@/components/layout/UnifiedTopHeader.vue'
 
@@ -149,8 +171,35 @@ import { useEditorCommand } from '@/composables/use-editor-command'
 
 const initialDocument = inject<InitialDocument | null>('docx-editor-ui:initDocument', null)
 const collaborationConfig = inject<CollaborationOptions | null>('docx-editor-ui:collaboration', null)
+const importCallback = inject<DocxImportCallback | undefined>('docx-editor-ui:importCallback', undefined)
+const exportCallback = inject<DocxExportCallback | undefined>('docx-editor-ui:exportCallback', undefined)
+
+const isContentVisible = ref(true)
+const protectPasswordHash = ref<string | null>(null)
+const passwordModalVisible = ref(false)
+const passwordModalMode = ref<'protect' | 'unprotect'>('protect')
+const passwordModalLoading = ref(false)
+const passwordError = ref('')
+
+const PROTECT_HASH_KEY = 'docx-editor:protect-hash'
+
+const sha256 = async (text: string): Promise<string> => {
+  const data = new TextEncoder().encode(text)
+  const hash = await globalThis.crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+const storedHash = localStorage.getItem(PROTECT_HASH_KEY)
+if (storedHash) {
+  protectPasswordHash.value = storedHash
+  isContentVisible.value = false
+  passwordModalMode.value = 'unprotect'
+  passwordModalVisible.value = true
+}
 
 const editorAppRef = ref<HTMLElement | null>(null)
+const editorAreaRef = ref<HTMLElement | null>(null)
+const rulerVisible = ref(false)
 const catalogRef = ref<any>(null)
 const editorRef = ref<any>(null)
 const footerRef = ref<any>(null)
@@ -180,6 +229,29 @@ watch(busyState, (state) => {
 const getEditorInstance = () => editorRef.value?.getEditorInstance?.() ?? null
 const getCommentComponent = () => getEditorInstance()?.comment ?? null
 const getRevisionComponent = () => getEditorInstance()?.revision ?? null
+
+const getPageMetrics = () => {
+  const instance = getEditorInstance()
+  if (!instance) return null
+  const options = instance.command?.getOptions?.() ?? {}
+  const margins = options.margins ?? [113, 79, 113, 79]
+  const paperDirection = options.paperDirection ?? 'vertical'
+  const scale = options.scale ?? 1
+  const width = paperDirection === 'horizontal' ? 1123 : 794
+  const height = paperDirection === 'horizontal' ? 794 : 1123
+  let pageOffsetLeft = 0
+  const areaEl = editorAreaRef.value
+  const pageEl = areaEl?.querySelector('.ce-page-container') as HTMLElement | null
+  if (pageEl && areaEl) {
+    pageOffsetLeft = pageEl.getBoundingClientRect().left - areaEl.getBoundingClientRect().left
+  }
+  return { width, height, margins, scale, paperDirection, pageOffsetLeft }
+}
+
+const setMargins = (margins: number[]) => {
+  const instance = getEditorInstance()
+  instance?.command?.executeUpdateOptions?.({ margins })
+}
 
 const executeCommand = (command: string, ...args: any[]) => {
   const fn = editorRef.value?.executeCommand
@@ -457,6 +529,104 @@ const aiCommands: Record<string, { action: string; payload?: any; tab?: AITab }>
   aiLayout: { action: 'layoutSuggestion', tab: 'layout' },
 }
 
+const handleImportDoc = () => {
+  if (!importCallback) {
+    message.warning('未配置导入回调，导入功能不可用')
+    return
+  }
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = '.doc,.docx'
+  input.onchange = async () => {
+    const file = input.files?.[0]
+    if (!file) return
+    try {
+      const arrayBuffer = await file.arrayBuffer()
+      const result = await importCallback(arrayBuffer)
+      if (!result.success || !result.elements?.length) {
+        message.error(`文档解析失败: ${result.error || '未知错误'}`)
+        return
+      }
+      executeCommand('executeSetValue', { main: result.elements })
+    } catch (e) {
+      message.error(`导入失败: ${(e as Error)?.message || '未知错误'}`)
+    }
+  }
+  input.click()
+}
+
+const handleExportDoc = () => {
+  if (!exportCallback) {
+    message.warning('未配置导出回调，导出功能不可用')
+    return
+  }
+  const instance = getEditorInstance()
+  const value = instance?.command?.getValue?.()
+  const json = value?.data ?? value
+  exportCallback(json).then(result => {
+    if (!result.success || !result.data) {
+      message.error(`导出失败: ${result.error || '未知错误'}`)
+      return
+    }
+    const blob = new Blob([result.data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${documentMeta.name || '文档'}.docx`
+    a.click()
+    URL.revokeObjectURL(url)
+  }).catch(e => {
+    message.error(`导出失败: ${(e as Error)?.message || '未知错误'}`)
+  })
+}
+
+const handleProtectDoc = () => {
+  passwordModalMode.value = 'protect'
+  isContentVisible.value = false
+  passwordModalVisible.value = true
+}
+
+const handleUnprotectDoc = () => {
+  if (!protectPasswordHash.value) {
+    message.warning('文档未受保护')
+    return
+  }
+  passwordModalMode.value = 'unprotect'
+  passwordModalVisible.value = true
+}
+
+const handlePasswordConfirm = async (password: string) => {
+  passwordModalLoading.value = true
+  passwordError.value = ''
+  try {
+    const hash = await sha256(password)
+    if (passwordModalMode.value === 'protect') {
+      protectPasswordHash.value = hash
+      localStorage.setItem(PROTECT_HASH_KEY, hash)
+      passwordModalMode.value = 'unprotect'
+    } else {
+      if (hash === protectPasswordHash.value) {
+        isContentVisible.value = true
+        protectPasswordHash.value = null
+        localStorage.removeItem(PROTECT_HASH_KEY)
+        passwordModalVisible.value = false
+      } else {
+        passwordError.value = '密码不正确'
+      }
+    }
+  } finally {
+    passwordModalLoading.value = false
+  }
+}
+
+const handlePasswordCancel = () => {
+  if (passwordModalMode.value === 'protect' && !protectPasswordHash.value) {
+    isContentVisible.value = true
+  }
+  passwordError.value = ''
+  passwordModalVisible.value = false
+}
+
 const handleCommand = (command: string, ...args: any[]) => {
   if (dialogCommands[command]) {
     dialogCommands[command].value = true
@@ -482,12 +652,17 @@ const handleCommand = (command: string, ...args: any[]) => {
     case 'new': return void newDoc()
     case 'save': return void saveNow({ silent: false })
     case 'rename': return void renameDoc()
-    case 'import': return emitExternalEvent('statusChange', { command: 'import', args: [] })
-    case 'export': return emitExternalEvent('statusChange', { command: 'export', args: [{ format: args[0] }] })
+    case 'import': return handleImportDoc()
+    case 'export': return handleExportDoc()
     case 'preview': return emitExternalEvent('statusChange', { command: 'preview', args: [] })
     case 'protect':
-    case 'protectDoc': return emitExternalEvent('statusChange', { command, args: [{ meta: { ...documentMeta } }] })
-    case 'unprotect': return emitExternalEvent('statusChange', { command: 'unprotect', args: [{ meta: { ...documentMeta } }] })
+    case 'protectDoc': return handleProtectDoc()
+    case 'unprotect': return handleUnprotectDoc()
+    case 'eyeCareChange': {
+      const instance = getEditorInstance()
+      instance?.command?.executeUpdateOptions?.({ background: { color: args[0] ? '#C7EDCC' : '#FFFFFF' } })
+      return
+    }
     case 'accessPermission': return openAccessPermission()
     case 'shortcuts':
     case 'openShortcuts':
@@ -498,6 +673,7 @@ const handleCommand = (command: string, ...args: any[]) => {
     case 'closeAIPanel': return closeAIDock()
     case 'openRevisionPanel': activeDock.value = 'revision'; return
     case 'rulerVisible': {
+      rulerVisible.value = !!args[0]
       const instance = getEditorInstance()
       instance?.command?.executeUpdateOptions?.({ marginIndicatorDisabled: !args[0] })
       return
@@ -664,6 +840,29 @@ defineExpose({
   overflow: auto;
   background: #f5f7fa;
   position: relative;
+}
+
+.editor-protect-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f7fa;
+  z-index: 9999;
+}
+
+.protect-overlay-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: #999;
+}
+
+.protect-overlay-content p {
+  margin: 0;
+  font-size: 14px;
 }
 
 

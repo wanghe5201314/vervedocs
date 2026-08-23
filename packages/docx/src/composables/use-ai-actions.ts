@@ -3,6 +3,9 @@ import { executeAIRequest } from '@/composables/use-ai'
 import { aiStateStore } from '@/stores/ai-state'
 import { AIAction } from '@vervedoc/docx-editor-ai'
 
+/**
+ * 编辑器实例接口（AI 操作所需的最小能力）
+ */
 interface EditorInstance {
   command?: {
     getRangeText?: () => string
@@ -11,15 +14,27 @@ interface EditorInstance {
   }
 }
 
+/**
+ * AI 操作集合 composable
+ * @param options 配置项
+ * @returns AI 操作处理函数集合
+ */
 export function useAIActions(options: {
+  /** 获取编辑器实例 */
   getEditorInstance: () => EditorInstance | null
 }) {
   const { getEditorInstance } = options
 
+  /**
+   * 处理 AI 操作分发
+   * @param action 操作类型
+   * @param payload 操作参数
+   */
   function handleAIAction(action: string, payload?: any) {
     const instance = getEditorInstance()
     if (!instance) return
 
+    /** 获取当前选中的文本内容 */
     const getText = (): string => {
       try {
         return instance.command!.getRangeText?.() || ''
@@ -28,6 +43,7 @@ export function useAIActions(options: {
       }
     }
 
+    /** 获取文档全文内容 */
     const getFullText = (): string => {
       try {
         const result = instance.command!.getValue?.()
@@ -126,6 +142,10 @@ export function useAIActions(options: {
     }
   }
 
+  /**
+   * 将 AI 结果插入编辑器
+   * @param result AI 返回的文本结果
+   */
   function handleAIApplyResult(result: string) {
     const instance = getEditorInstance()
     if (result && instance) {
@@ -135,6 +155,7 @@ export function useAIActions(options: {
     }
   }
 
+  /** 重新生成上一次 AI 操作的结果 */
   function handleAIRegenerate() {
     const opState = aiStateStore.state.operation
     if (opState.action && opState.inputText) {
@@ -145,6 +166,7 @@ export function useAIActions(options: {
     }
   }
 
+  /** 关闭 AI 结果抽屉 */
   function handleAIResultClose() {
     aiStateStore.setDrawerVisible(false)
   }

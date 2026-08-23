@@ -1,23 +1,44 @@
 import { nextTick } from 'vue'
 import { PaperDirection } from '@vervedoc/core'
 
+/**
+ * 事件发射函数类型
+ */
 type EmitFn = (event: string, ...args: any[]) => void
 
+/**
+ * 编辑器实例接口（导入所需的最小能力）
+ */
 interface EditorInstance {
   command: {
+    /** 获取编辑器选项 */
     getOptions?: () => any
+    /** 获取当前文档值 */
     getValue: () => { data?: { main?: any[] } }
+    /** 设置文档值 */
     executeSetValue: (value: { main: any[] }) => void
   }
 }
 
+/**
+ * 文档导入 composable
+ * @param options 配置项
+ * @returns JSON 文件导入方法
+ */
 export function useEditorImport(options: {
+  /** 事件发射函数 */
   emit: EmitFn
+  /** 获取编辑器实例 */
   getEditorInstance: () => EditorInstance | null
+  /** 刷新目录 */
   refreshCatalog: () => Promise<void>
 }) {
   const { emit, getEditorInstance, refreshCatalog } = options
 
+  /**
+   * 导入 JSON 文件并加载到编辑器，支持进度回调与完成回调
+   * @param payload 导入参数，可包含 url、onProgress、onComplete
+   */
   async function importJsonFile(payload?: any) {
     const url = payload?.url || '/test-output.json'
     const onProgress: ((progress: number, status: string) => void) | undefined = payload?.onProgress

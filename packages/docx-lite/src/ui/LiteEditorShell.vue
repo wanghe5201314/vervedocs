@@ -185,7 +185,7 @@
 
 <script setup lang="ts">
 import type {IEditorData, IEditorOption, IElement} from '@vervedoc/core'
-import DocxEditor, {parseDocx, TitleLevel} from '@vervedoc/core'
+import DocxEditor, {TitleLevel} from '@vervedoc/core'
 import {computed, onBeforeUnmount, onMounted, reactive, ref} from 'vue'
 import type {ImportMode, LiteEditorShellExposed, SaveSnapshot, WordEditorOptions} from '../object/word-editor.types'
 import {useResponsive} from '../composables/useResponsive'
@@ -617,7 +617,11 @@ const handleImportDoc = () => {
         try {
           const arrayBuffer = loadEvent.target?.result
           if (!(arrayBuffer instanceof ArrayBuffer)) return
-          const result = await parseDocx(arrayBuffer)
+          if (!props.importCallback) {
+            alert('未注入文档导入回调 importCallback，无法导入 .docx 文件')
+            return
+          }
+          const result = await props.importCallback(arrayBuffer)
           if (!result.success || !result.elements?.length) {
             alert(`文档解析失败: ${result.error || '未知错误'}`)
             return

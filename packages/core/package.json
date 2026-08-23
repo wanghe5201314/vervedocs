@@ -62,8 +62,7 @@
     "@vervedoc/docx-editor-state": "workspace:^",
     "@vervedoc/docx-editor-transform": "workspace:^",
     "@vervedoc/docx-editor-view": "workspace:^",
-    "docx": "^9.1.0",
-    "jszip": "^3.10.1",
+
     "vanilla-picker": "^2.12.3"
   }
 }

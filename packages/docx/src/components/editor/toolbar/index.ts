@@ -1,6 +1,6 @@
-// 工具栏数据定义
-
-// 颜色调色板 - 扩展版（10列×8行，含完整明度渐变）
+/**
+ * 颜色调色板 - 扩展版（10列×8行，含完整明度渐变）
+ */
 export const colorPalette = [
   // 灰度系列
   '#000000', '#434343', '#666666', '#999999', '#b7b7b7', '#cccccc', '#d9d9d9', '#efefef', '#f3f3f3', '#ffffff',
@@ -20,7 +20,9 @@ export const colorPalette = [
   '#5b0f00', '#660000', '#783f04', '#7f6000', '#274e13', '#0c343d', '#1c4587', '#073763', '#20124d', '#4c1130'
 ]
 
-// 项目符号样式 - WPS风格
+/**
+ * 项目符号样式 - WPS风格
+ */
 export const bulletStyles = [
   { style: 'disc', icon: '●', label: '实心圆点' },
   { style: 'square', icon: '■', label: '实心方块' },
@@ -32,7 +34,9 @@ export const bulletStyles = [
   { style: 'hollow-square', icon: '□', label: '空心方块' }
 ]
 
-// 编号样式 - WPS风格
+/**
+ * 编号样式 - WPS风格
+ */
 export const numberStyles = [
   { style: 'chinese', samples: ['一、', '二、', '三、'], label: '中文数字' },
   { style: 'chinese-bracket', samples: ['（一）', '（二）', '（三）'], label: '中文括号' },
@@ -44,7 +48,9 @@ export const numberStyles = [
   { style: 'lower-alpha-dot', samples: ['a.', 'b.', 'c.'], label: '小写字母' }
 ]
 
-// 行距选项
+/**
+ * 行距选项
+ */
 export const lineHeightOptions = [
   { value: 1, label: '单倍行距' },
   { value: 1.15, label: '1.15 倍行距' },
@@ -54,7 +60,9 @@ export const lineHeightOptions = [
   { value: 3, label: '三倍行距' }
 ]
 
-// 页边距预设
+/**
+ * 页边距预设
+ */
 export const marginPresets = [
   { name: '普通', margins: [96, 120, 96, 120], style: { margin: '14px 18px' } },
   { name: '窄', margins: [48, 48, 48, 48], style: { margin: '7px 7px' } },
@@ -62,7 +70,9 @@ export const marginPresets = [
   { name: '宽', margins: [96, 192, 96, 192], style: { margin: '14px 28px' } }
 ]
 
-// 纸张大小
+/**
+ * 纸张大小
+ */
 export const paperSizes = [
   { name: 'A4', width: 794, height: 1123, displayWidth: '21厘米', displayHeight: '29.7厘米' },
   { name: 'A3', width: 1123, height: 1587, displayWidth: '29.7厘米', displayHeight: '42厘米' },
@@ -72,7 +82,9 @@ export const paperSizes = [
   { name: '16开', width: 696, height: 983, displayWidth: '18.4厘米', displayHeight: '26厘米' }
 ]
 
-// 背景颜色调色板
+/**
+ * 背景颜色调色板
+ */
 export const bgColorPalette = [
   '#FFFFFF', '#000000', '#E7E6E6', '#44546A', '#4472C4', '#ED7D31', '#A5A5A5', '#FFC000', '#5B9BD5', '#70AD47',
   '#F2F2F2', '#7F7F7F', '#D0CECE', '#D6DCE4', '#D9E2F3', '#FCE4D6', '#EDEDED', '#FFF2CC', '#DEEAF6', '#E2EFD9',
@@ -81,7 +93,9 @@ export const bgColorPalette = [
   '#A6A6A6', '#262626', '#3A3838', '#323F4F', '#2F5496', '#C65911', '#7B7B7B', '#BF9000', '#2E75B5', '#538135'
 ]
 
-// 水印预设
+/**
+ * 水印预设
+ */
 export const watermarkPresets = [
   { name: '保密', options: { data: '保密' } },
   { name: '严禁复制', options: { data: '严禁复制' } },
@@ -92,7 +106,9 @@ export const watermarkPresets = [
 ]
 
 
-// 分割线样式
+/**
+ * 分割线样式
+ */
 export const separatorStyles = [
   // 实线系列
   { name: '极细实线', type: 'solid', width: 0.5, dashArray: [0, 0] },
@@ -135,7 +151,9 @@ export const separatorStyles = [
   { name: '浮雕线', type: 'emboss', width: 3, dashArray: [0, 0] }
 ]
 
-// 公式分类
+/**
+ * 公式分类
+ */
 export const formulaCategories = [
   {
     name: '数学公式', icon: 'functions',
@@ -162,11 +180,15 @@ export const formulaCategories = [
   }
 ]
 
-// 缩放级别
+/**
+ * 缩放级别
+ */
 export const zoomLevels = [50, 75, 100, 125, 150, 200]
 
 
-// 标题级别映射
+/**
+ * 标题级别映射
+ */
 export const titleLevelMap: Record<string, string> = {
   first: '标题1',
   second: '标题2',

@@ -11,6 +11,10 @@ import { getAuthToken } from '@/api/document.api'
 let aiService: AIService | null = null
 let currentAbortController: AbortController | null = null
 
+/**
+ * 获取 AI 服务实例（单例，首次调用时按环境变量配置创建）
+ * @returns AI 服务实例
+ */
 function getService(): AIService {
   if (!aiService) {
     const config: AIServiceConfig = {
@@ -23,11 +27,19 @@ function getService(): AIService {
   return aiService
 }
 
+/**
+ * AI 请求参数
+ */
 export interface AIRequestParams {
+  /** AI 操作类型 */
   action: AIAction
+  /** 输入文本 */
   text: string
+  /** 翻译目标语言（action=translate 时有效） */
   targetLanguage?: TranslateLanguage
+  /** 自定义提示词（action=custom 时有效） */
   customPrompt?: string
+  /** 上下文（前后文文本） */
   context?: { before?: string; after?: string }
 }
 

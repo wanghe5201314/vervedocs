@@ -10,8 +10,11 @@
 import {
   Extension,
   onAuthenticatePayload,
-
 } from '@hocuspocus/server'
+import { createLogger } from '../utils/logger.js'
+import { addOnlineUser } from '../utils/online-users.js'
+
+const log = createLogger('auth')
 
 export interface UserContext {
   userId: string
@@ -66,9 +69,12 @@ export class AuthExtension implements Extension {
       color: String(parsed.color ?? '') || randomColor(),
     }
 
-    console.log(
-      `[认证] 用户已认证: ${userContext.userName} (${userContext.userId})`,
+    log.debug(
+      { userId: userContext.userId, userName: userContext.userName },
+      '用户已认证',
     )
+
+    addOnlineUser(userContext.userId, userContext.userName, data.documentName)
 
     return { user: userContext }
   }

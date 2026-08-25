@@ -1,6 +1,8 @@
 import { spawn } from 'node:child_process'
 import fs from 'node:fs/promises'
+import fsSync from 'node:fs'
 import { config } from '../config.js'
+import { createLogger } from '../utils/logger.js'
 import type {
   ParseOptions,
   ExportOptions,
@@ -18,7 +20,15 @@ import type {
  *   0 成功 / 1 解析失败 / 2 参数错误 / 3 IO 错误
  */
 
-/** jar 调用失败 */
+const log = createLogger('jar-bridge')
+
+/**
+ * jar 调用失败错误。
+ *
+ * @param message 错误描述
+ * @param exitCode java 进程退出码（启动失败时为 null）
+ * @param stderr java 进程 stderr 输出
+ */
 export class JarBridgeError extends Error {
   constructor(
     message: string,
@@ -32,13 +42,22 @@ export class JarBridgeError extends Error {
 
 /** jar 调用通用结果 */
 export interface JarRunResult {
+  /** 是否成功（退出码为 0） */
   success: boolean
+  /** java 进程退出码 */
   exitCode: number
+  /** stderr 输出 */
   stderr: string
+  /** stdout 输出 */
   stdout: string
 }
 
-/** 解析选项 → CLI 参数 */
+/**
+ * 将解析选项转为 jar CLI 参数。
+ *
+ * @param opts 解析选项
+ * @returns CLI 参数数组（如 ['--default-font', 'SimSun']）
+ */
 function parseOptionsToArgs(opts: ParseOptions): string[] {
   const args: string[] = []
   if (opts.defaultFont != null) args.push('--default-font', String(opts.defaultFont))
@@ -52,7 +71,12 @@ function parseOptionsToArgs(opts: ParseOptions): string[] {
   return args
 }
 
-/** 导出选项 → CLI 参数 */
+/**
+ * 将导出选项转为 jar CLI 参数。
+ *
+ * @param opts 导出选项
+ * @returns CLI 参数数组
+ */
 function exportOptionsToArgs(opts: ExportOptions): string[] {
   const args: string[] = []
   if (opts.defaultFont != null) args.push('--default-font', String(opts.defaultFont))
@@ -69,13 +93,14 @@ function exportOptionsToArgs(opts: ExportOptions): string[] {
 function runJar(args: string[]): Promise<JarRunResult> {
   return new Promise((resolve, reject) => {
     const fullArgs = [...config.javaOpts, '-jar', config.jarPath, ...args]
+    const begin = Date.now()
+    log.debug({ cmd: config.javaBin, args: fullArgs }, '启动 java 进程')
+
     const child = spawn(config.javaBin, fullArgs, {
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
     })
 
-    let stdout = ''
-    let stderr = ''
     const stdoutChunks: Buffer[] = []
     const stderrChunks: Buffer[] = []
 
@@ -87,6 +112,8 @@ function runJar(args: string[]): Promise<JarRunResult> {
     })
 
     child.on('error', (err) => {
+      const durationMs = Date.now() - begin
+      log.error({ durationMs, err: err.message }, '启动 java 进程失败')
       reject(
         new JarBridgeError(
           `启动 java 进程失败: ${err.message}（请检查 JAVA_BIN=${config.javaBin} 是否可用）`,
@@ -97,19 +124,30 @@ function runJar(args: string[]): Promise<JarRunResult> {
     })
 
     child.on('close', (code) => {
-      stdout = Buffer.concat(stdoutChunks).toString('utf8')
-      stderr = Buffer.concat(stderrChunks).toString('utf8')
-      resolve({
-        success: code === 0,
-        exitCode: code ?? -1,
-        stderr,
-        stdout,
-      })
+      const stdout = Buffer.concat(stdoutChunks).toString('utf8')
+      const stderr = Buffer.concat(stderrChunks).toString('utf8')
+      const durationMs = Date.now() - begin
+      const exitCode = code ?? -1
+      const success = code === 0
+      log.debug(
+        { exitCode, success, durationMs, stdoutBytes: stdout.length, stderrBytes: stderr.length },
+        'java 进程退出',
+      )
+      if (!success && stderr) {
+        log.warn({ stderr }, 'java 进程 stderr')
+      }
+      resolve({ success, exitCode, stderr, stdout })
     })
   })
 }
 
-/** 根据退出码生成错误描述 */
+/**
+ * 根据退出码生成错误描述。
+ *
+ * @param exitCode java 进程退出码
+ * @param stderr stderr 输出（取末尾 3 行）
+ * @returns 人类可读的错误描述
+ */
 function describeFailure(exitCode: number, stderr: string): string {
   const tail = stderr.trim().split('\n').slice(-3).join('\n').trim()
   switch (exitCode) {
@@ -139,6 +177,7 @@ export async function parseDocx(
   jsonPath: string,
   options: ParseOptions = {},
 ): Promise<DocxParseResult> {
+  log.debug({ docxPath, jsonPath, options }, '开始解析 docx → json')
   const args = [
     '-i', docxPath,
     '-o', jsonPath,
@@ -147,6 +186,7 @@ export async function parseDocx(
   ]
   const result = await runJar(args)
   if (!result.success) {
+    log.error({ exitCode: result.exitCode, stderr: result.stderr }, '解析 docx 失败')
     throw new JarBridgeError(
       describeFailure(result.exitCode, result.stderr),
       result.exitCode,
@@ -155,7 +195,16 @@ export async function parseDocx(
   }
 
   const jsonText = await fs.readFile(jsonPath, 'utf8')
-  return JSON.parse(jsonText) as DocxParseResult
+  const parsed = JSON.parse(jsonText) as DocxParseResult
+  log.debug(
+    {
+      jsonBytes: jsonText.length,
+      elementCount: parsed.elements?.length ?? 0,
+      commentCount: parsed.comments?.length ?? 0,
+    },
+    '解析 docx 完成',
+  )
+  return parsed
 }
 
 /**
@@ -176,6 +225,7 @@ export async function exportFromJson(
   format: ExportFormat,
   options: ExportOptions = {},
 ): Promise<void> {
+  log.debug({ jsonPath, outputPath, format, options }, `开始导出 json → ${format}`)
   const args = [
     format === 'pdf' ? '--pdf' : '--export',
     '-i', jsonPath,
@@ -184,12 +234,15 @@ export async function exportFromJson(
   ]
   const result = await runJar(args)
   if (!result.success) {
+    log.error({ format, exitCode: result.exitCode, stderr: result.stderr }, '导出失败')
     throw new JarBridgeError(
       describeFailure(result.exitCode, result.stderr),
       result.exitCode,
       result.stderr,
     )
   }
+  const stat = await fs.stat(outputPath)
+  log.debug({ format, outputBytes: stat.size }, '导出完成')
 }
 
 /** 健康检查：验证 jar 包与 java 可执行文件可用 */
@@ -199,9 +252,10 @@ export async function checkBridge(): Promise<{
   jarPath: string
   message: string
 }> {
-  const fsSync = await import('node:fs')
+
   const jarExists = fsSync.existsSync(config.jarPath)
   if (!jarExists) {
+    log.warn({ jarPath: config.jarPath }, 'jar 包不存在')
     return {
       ok: false,
       javaBin: config.javaBin,
@@ -209,6 +263,7 @@ export async function checkBridge(): Promise<{
       message: `jar 包不存在: ${config.jarPath}`,
     }
   }
+  log.debug({ javaBin: config.javaBin, jarPath: config.jarPath }, 'jar 桥接就绪')
   return {
     ok: true,
     javaBin: config.javaBin,

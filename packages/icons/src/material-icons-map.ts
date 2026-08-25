@@ -38,9 +38,9 @@ const iconMap: Record<string, string> = {
   'format-vertical-align-center': 'vertical_align_center',
   'format-vertical-align-bottom': 'vertical_align_bottom',
   'format-text-rotation-none': 'text_rotation_none',
-  'format-text-rotation-up': 'text_rotation_up',
+  'format-text-rotation-up': 'text_rotate_up',
   'format-text-rotation-down': 'text_rotation_down',
-  'format-text-rotation-vertical': 'text_rotation_vertical',
+  'format-text-rotation-vertical': 'text_rotate_vertical',
   'chevron-down': 'expand_more',
   'table': 'table_chart',
   'table-row-plus-before': 'table_rows',
@@ -204,7 +204,20 @@ const iconMap: Record<string, string> = {
   'clipboard-text-outline': 'assignment',
   'form-select': 'list_alt',
   'bolt': 'bolt',
-  'science': 'science'
+  'science': 'science',
+  'separator-page-break': 'horizontal_split',
+  'separator-column-break': 'vertical_split',
+  'separator-line-break': 'wrap_text',
+  'separator-section-break': 'view_agenda',
+  'separator-horizontal-line': 'horizontal_rule',
+  'layout-paper-direction': 'crop',
+  'layout-paper-size': 'crop_portrait',
+  'layout-margin': 'crop_square',
+  'layout-page-color': 'palette',
+  'layout-column-one': 'view_column',
+  'layout-column-two': 'vertical_split',
+  'layout-column-three': 'grid_on',
+  'layout-watermark': 'label'
 }
 
 export function resolveMaterialIcon(name: string): string | undefined {

@@ -116,6 +116,47 @@ const defaultState: UiThemeState = {
 
 const STORAGE_KEY = 'docx-editor:uiTheme'
 
+type RgbColor = { r: number, g: number, b: number }
+
+const clamp = (value: number) => Math.max(0, Math.min(255, Math.round(value)))
+
+const parseHexToRgb = (hex: string): RgbColor | null => {
+  const normalized = hex.trim()
+  if (!/^#([\da-f]{3}|[\da-f]{6})$/i.test(normalized)) return null
+  const full = normalized.length === 4
+    ? `#${normalized[1]}${normalized[1]}${normalized[2]}${normalized[2]}${normalized[3]}${normalized[3]}`
+    : normalized
+
+  return {
+    r: parseInt(full.slice(1, 3), 16),
+    g: parseInt(full.slice(3, 5), 16),
+    b: parseInt(full.slice(5, 7), 16)
+  }
+}
+
+const toHex = (value: number) => clamp(value).toString(16).padStart(2, '0')
+
+const rgbToHex = ({ r, g, b }: RgbColor) => `#${toHex(r)}${toHex(g)}${toHex(b)}`
+
+const mixHexColor = (source: string, target: string, weight: number) => {
+  const sourceRgb = parseHexToRgb(source)
+  const targetRgb = parseHexToRgb(target)
+  if (!sourceRgb || !targetRgb) return source
+
+  const ratio = Math.max(0, Math.min(1, weight))
+  return rgbToHex({
+    r: sourceRgb.r + (targetRgb.r - sourceRgb.r) * ratio,
+    g: sourceRgb.g + (targetRgb.g - sourceRgb.g) * ratio,
+    b: sourceRgb.b + (targetRgb.b - sourceRgb.b) * ratio
+  })
+}
+
+const getLuminance = (color: string) => {
+  const rgb = parseHexToRgb(color)
+  if (!rgb) return 0
+  return (0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b) / 255
+}
+
 /**
  * 将主题数据应用到根元素的 CSS 变量
  * @param theme 主题数据
@@ -126,12 +167,43 @@ function applyCssVars(theme: ThemeData, kind: 'preset' | 'custom') {
     ? `linear-gradient(${theme.gradientDirection}, ${theme.tabBgColor}, ${theme.tabBgColorEnd})`
     : theme.tabBgColor
 
+  const isLightTheme = getLuminance(theme.tabBgColor) > 0.75
+  const ribbonSurface = '#ffffff'
+  const ribbonBorder = mixHexColor(theme.tabBgColor, ribbonSurface, 0.82)
+  const ribbonBorderSoft = mixHexColor(theme.tabBgColor, ribbonSurface, 0.88)
+  const ribbonShadow = mixHexColor(theme.tabBgColor, ribbonSurface, 0.9)
+  const ribbonHoverBg = mixHexColor(theme.tabBgColor, ribbonSurface, 0.9)
+  const ribbonActiveBg = mixHexColor(theme.tabBgColor, ribbonSurface, 0.82)
+  const ribbonActiveText = isLightTheme ? mixHexColor(theme.tabBgColor, '#000000', 0.45) : theme.tabBgColor
+  const ribbonText = isLightTheme ? '#243247' : '#3c4043'
+  const ribbonTextMuted = isLightTheme ? '#5e6b80' : '#7a8191'
+  const topbarHover = isLightTheme ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.14)'
+  const topbarTextMuted = isLightTheme ? 'rgba(31, 45, 61, 0.72)' : 'rgba(255, 255, 255, 0.86)'
+  const fileTabBg = isLightTheme ? 'rgba(0, 0, 0, 0.1)' : 'rgba(0, 0, 0, 0.16)'
+  const fileTabHover = isLightTheme ? 'rgba(0, 0, 0, 0.16)' : 'rgba(0, 0, 0, 0.22)'
+
   const root = document.documentElement
   root.style.setProperty('--tabs-bg-color', bg)
   root.style.setProperty('--tabs-text-color', theme.tabTextColor)
+  root.style.setProperty('--app-ribbon-brand', theme.tabBgColor)
+  root.style.setProperty('--app-ribbon-brand-strong', theme.tabBgColorEnd)
+  root.style.setProperty('--app-ribbon-topbar-bg', bg)
+  root.style.setProperty('--app-ribbon-topbar-text', theme.tabTextColor)
+  root.style.setProperty('--app-ribbon-topbar-text-muted', topbarTextMuted)
+  root.style.setProperty('--app-ribbon-topbar-hover', topbarHover)
+  root.style.setProperty('--app-ribbon-file-tab-bg', fileTabBg)
+  root.style.setProperty('--app-ribbon-file-tab-hover', fileTabHover)
+  root.style.setProperty('--app-ribbon-surface', ribbonSurface)
+  root.style.setProperty('--app-ribbon-border', ribbonBorder)
+  root.style.setProperty('--app-ribbon-border-soft', ribbonBorderSoft)
+  root.style.setProperty('--app-ribbon-shadow', ribbonShadow)
+  root.style.setProperty('--app-ribbon-text', ribbonText)
+  root.style.setProperty('--app-ribbon-text-muted', ribbonTextMuted)
+  root.style.setProperty('--app-ribbon-hover-bg', ribbonHoverBg)
+  root.style.setProperty('--app-ribbon-active-bg', ribbonActiveBg)
+  root.style.setProperty('--app-ribbon-active-text', ribbonActiveText)
 
-
-if (kind === 'preset' && theme.tabBgColor.toLowerCase() === '#f2f4f7') {
+  if (kind === 'preset' && theme.tabBgColor.toLowerCase() === '#f2f4f7') {
     root.style.setProperty('--tabs-text-active-color', '#1890ff')
     root.style.setProperty('--tabs-text-hover-color', '#1890ff')
   } else {

@@ -6,62 +6,64 @@
       :is-view-mode="!!readOnly"
       :last-save-time="headerLastSaveTime"
       :t="t"
+      @command="handleHeaderCommand"
     />
-    <div class="menu-card">
-      <a-menu mode="horizontal" class="ppt-menu-bar" :selectable="false">
-        <!-- 文件 -->
-        <a-sub-menu key="file" popupClassName="ppt-menu-popper">
-          <template #title>{{ t('editor.file') }}</template>
-          <a-menu-item key="file-new-slide" @click="handleCreateNewFile()"><PlusOutlined class="menu-el-icon" />{{ t('editor.newPresentation') }}</a-menu-item>
-          <a-menu-item key="file-import" @click="handleImportPptx()">
-            <UploadOutlined class="menu-el-icon" />{{ t('editor.importPresentation') }}
-            <a-tag color="red">1.0.0-BETA.20260402</a-tag>
-          </a-menu-item>
-          <a-menu-item key="file-export" @click="handleExportPpt()"><DownloadOutlined class="menu-el-icon" />{{ t('editor.exportFile') }}</a-menu-item>
-          <a-menu-item key="file-print" @click="handlePrint()"><PrinterOutlined class="menu-el-icon" />{{ t('editor.print') }}</a-menu-item>
-        </a-sub-menu>
-
-        <!-- 编辑 -->
-        <a-sub-menu key="edit" popupClassName="ppt-menu-popper">
-          <template #title>{{ t('editor.edit') }}</template>
-          <a-menu-item key="undo" @click="undo()">{{ t('editor.undo') }}<span class="shortcut">Ctrl+Z</span></a-menu-item>
-          <a-menu-item key="redo" @click="redo()">{{ t('editor.redo') }}<span class="shortcut">Ctrl+Y</span></a-menu-item>
-          <a-divider />
-          <a-menu-item key="add-slide" @click="createSlide()">{{ t('editor.addSlide') }}</a-menu-item>
-          <a-menu-item key="del-slide" @click="deleteSlide()">{{ t('editor.deleteSlide') }}</a-menu-item>
-          <a-divider />
-          <a-menu-item key="reset" @click="resetSlides()">{{ t('editor.resetSlides') }}</a-menu-item>
-        </a-sub-menu>
-
-        <!-- 视图 -->
-        <a-sub-menu key="view" popupClassName="ppt-menu-popper">
-          <template #title>{{ t('editor.view') }}</template>
-          <a-menu-item key="grid" @click="toggleGridLines()">
-            {{ showGridLines ? t('editor.closeGrid') : t('editor.openGrid') }}
-          </a-menu-item>
-          <a-menu-item key="ruler" @click="toggleRuler()">
-            {{ showRuler ? t('editor.closeRuler') : t('editor.openRuler') }}
-          </a-menu-item>
-        </a-sub-menu>
-
-        <!-- 放映 -->
-        <a-sub-menu key="present" popupClassName="ppt-menu-popper">
-          <template #title>{{ t('editor.present') }}</template>
-          <a-menu-item key="screen-start" @click="enterScreeningFromStart()">{{ t('editor.fromStart') }}<span class="shortcut">F5</span></a-menu-item>
-          <a-menu-item key="screen-current" @click="enterScreening()">{{ t('editor.fromCurrent') }}<span class="shortcut">Shift+F5</span></a-menu-item>
-        </a-sub-menu>
-
-        <!-- 帮助 -->
-        <a-sub-menu key="help" popupClassName="ppt-menu-popper">
-          <template #title>{{ t('editor.help') }}</template>
-          <a-menu-item key="hotkey" @click="shortcutsVisible = true">{{ t('editor.shortcuts') }}</a-menu-item>
-          <a-menu-item key="about" @click="aboutVisible = true">{{ t('editor.about') }}</a-menu-item>
-        </a-sub-menu>
-      </a-menu>
+    <div class="ribbon-tabs-bar">
+      <div v-for="tab in menuTabs" :key="tab.key" class="ribbon-tab" :class="{ active: activeMenuTab === tab.key }" @click="activeMenuTab = tab.key">{{ tab.label }}</div>
     </div>
-
-    <!-- 工具栏 -->
-    <CanvasTool v-if="!screening" class="canvas-tool" :t="t" />
+    <div class="ribbon-panel">
+      <div v-if="activeMenuTab === 'home'" class="ribbon-tab-panel">
+        <CanvasTool v-if="!screening" :t="t" class="canvas-tool-ribbon" />
+      </div>
+      <div v-else-if="activeMenuTab === 'file'" class="ribbon-tab-panel">
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <button class="ribbon-btn-lg" :disabled="readOnly" @click="handleCreateNewFile()" title="新建演示文稿"><PlusOutlined /><span>新建</span></button>
+            <button class="ribbon-btn-lg" :disabled="readOnly" @click="handleImportPptx()" title="导入演示文稿"><UploadOutlined /><span>导入</span></button>
+            <button class="ribbon-btn-lg" @click="handleExportPpt()" title="导出"><DownloadOutlined /><span>导出</span></button>
+            <button class="ribbon-btn-lg" @click="handlePrint()" title="打印"><PrinterOutlined /><span>打印</span></button>
+          </div>
+          <div class="ribbon-group-title">文件</div>
+        </div>
+      </div>
+      <div v-else-if="activeMenuTab === 'edit'" class="ribbon-tab-panel">
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <button class="ribbon-btn-lg" @click="createSlide()" title="添加幻灯片"><PlusOutlined /><span>添加幻灯片</span></button>
+            <button class="ribbon-btn-lg" @click="deleteSlide()" title="删除幻灯片"><DeleteOutlined /><span>删除幻灯片</span></button>
+            <button class="ribbon-btn-lg" @click="resetSlides()" title="重置"><ReloadOutlined /><span>重置</span></button>
+          </div>
+          <div class="ribbon-group-title">幻灯片</div>
+        </div>
+      </div>
+      <div v-else-if="activeMenuTab === 'view'" class="ribbon-tab-panel">
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <button class="ribbon-btn-lg" @click="toggleGridLines()" :class="{ active: showGridLines }" title="网格线"><BorderOutlined /><span>网格线</span></button>
+            <button class="ribbon-btn-lg" @click="toggleRuler()" :class="{ active: showRuler }" title="标尺"><ColumnHeightOutlined /><span>标尺</span></button>
+          </div>
+          <div class="ribbon-group-title">显示</div>
+        </div>
+      </div>
+      <div v-else-if="activeMenuTab === 'present'" class="ribbon-tab-panel">
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <button class="ribbon-btn-lg" @click="enterScreeningFromStart()" title="从头放映 (F5)"><PlayCircleOutlined /><span>从头开始</span></button>
+            <button class="ribbon-btn-lg" @click="enterScreening()" title="从当前放映 (Shift+F5)"><CaretRightOutlined /><span>从当前</span></button>
+          </div>
+          <div class="ribbon-group-title">放映</div>
+        </div>
+      </div>
+      <div v-else-if="activeMenuTab === 'help'" class="ribbon-tab-panel">
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <button class="ribbon-btn-lg" @click="shortcutsVisible = true" title="快捷键"><KeyOutlined /><span>快捷键</span></button>
+            <button class="ribbon-btn-lg" @click="aboutVisible = true" title="关于"><InfoCircleOutlined /><span>关于</span></button>
+          </div>
+          <div class="ribbon-group-title">帮助</div>
+        </div>
+      </div>
+    </div>
 
     <!-- 主体区域 -->
     <div class="ppt-body" v-if="!screening">
@@ -148,7 +150,7 @@
 
 <script lang="ts" setup>
 import { ref, computed, onMounted, watch, getCurrentInstance } from 'vue'
-import { DownloadOutlined, PlusOutlined, PrinterOutlined, UploadOutlined } from '@ant-design/icons-vue'
+import { DownloadOutlined, PlusOutlined, PrinterOutlined, UploadOutlined, DeleteOutlined, ReloadOutlined, BorderOutlined, ColumnHeightOutlined, PlayCircleOutlined, CaretRightOutlined, KeyOutlined, InfoCircleOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { parsePptxToEditorData } from '@/utils/pptxImport/index'
 import { storeToRefs } from 'pinia'
@@ -225,6 +227,15 @@ const { slideIndex: currentSlideIndex } = storeToRefs(slidesStore)
 const remarkHeight = ref(50)
 const shortcutsVisible = ref(false)
 const aboutVisible = ref(false)
+const activeMenuTab = ref('home')
+const menuTabs = [
+  { key: 'home', label: '开始' },
+  { key: 'file', label: '文件' },
+  { key: 'edit', label: '编辑' },
+  { key: 'view', label: '视图' },
+  { key: 'present', label: '放映' },
+  { key: 'help', label: '帮助' },
+]
 const importFileRef = ref<HTMLInputElement | null>(null)
 const pptxFileInputRef = ref<HTMLInputElement | null>(null)
 const headerLastSaveTime = ref('')
@@ -273,6 +284,13 @@ const setDialogForExport = mainStore.setDialogForExport
 const closeExportDialog = () => mainStore.setDialogForExport('')
 const handlePrint = () => setDialogForExport('pdf')
 const handleExportPpt = () => exportPPTX(slidesStore.slides, true)
+
+const handleHeaderCommand = (cmd: string) => {
+  if (cmd === 'import') handleImportPptx()
+  else if (cmd === 'save') emit('change', { format: 'pptx', data: getCurrentPptData() })
+  else if (cmd === 'undo') undo()
+  else if (cmd === 'redo') redo()
+}
 
 const getCurrentPptData = () => ({
   slides: slidesStore.slides,
@@ -415,17 +433,111 @@ watch(
 
 
 
-.menu-el-icon {
-  margin-right: 8px;
-  font-size: 16px;
+.ribbon-tabs-bar {
+  height: 32px;
+  display: flex;
+  align-items: stretch;
+  background: #c43e1c;
+  padding: 0 4px;
+  flex-shrink: 0;
 }
-
-/* 快捷键 */
-.shortcut {
-  margin-left: auto;
-  padding-left: 24px;
-  color: #9aa0a6;
-  font-size: 12px;
+.ribbon-tab {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  border-radius: 4px 4px 0 0;
+  user-select: none;
+  white-space: nowrap;
+}
+.ribbon-tab:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+.ribbon-tab.active {
+  background: #f1f1f1;
+  color: #c43e1c;
+}
+.ribbon-panel {
+  background: #f1f1f1;
+  padding: 4px 8px 3px;
+  min-height: 82px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-shrink: 0;
+}
+.ribbon-tab-panel {
+  display: flex;
+  align-items: stretch;
+  min-height: 72px;
+}
+.ribbon-group {
+  display: flex;
+  flex-direction: column;
+  padding: 2px 8px;
+  border-right: 1px solid #e3e8f2;
+  flex-shrink: 0;
+}
+.ribbon-group:last-child {
+  border-right: none;
+}
+.ribbon-group-content {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+.ribbon-group-title {
+  font-size: 10px;
+  color: #7a8191;
+  text-align: center;
+  margin-top: 2px;
+  line-height: 1.2;
+  user-select: none;
+}
+.ribbon-btn-lg {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 42px;
+  height: 54px;
+  padding: 4px 3px;
+  gap: 1px;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #3c4043;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+.ribbon-btn-lg:hover:not(:disabled) {
+  background: #edf2fb;
+  color: #202124;
+}
+.ribbon-btn-lg.active {
+  background: #dce8ff;
+  color: #1f57b8;
+}
+.ribbon-btn-lg:disabled {
+  color: #c0c4cc;
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.ribbon-btn-lg :deep(svg) {
+  font-size: 18px;
+}
+.ribbon-btn-lg > span {
+  font-size: 11px;
+  line-height: 1.2;
+  text-align: center;
+}
+.canvas-tool-ribbon {
+  flex: 1;
 }
 
 /* 主体 */
@@ -449,10 +561,6 @@ watch(
   flex-direction: column;
 }
 
-.canvas-tool {
-  height: 40px;
-  flex-shrink: 0;
-}
 
 .canvas-area .canvas-main {
   flex: 1;
@@ -544,107 +652,3 @@ watch(
 @import '@/assets/styles/prosemirror.scss';
 </style>
 
-<!-- 全局样式：popup 是 teleport 到 body 的，必须用非 scoped 样式 -->
-<style>
-.ppt-menu-popper {
-  min-width: 200px !important;
-}
-
-.ppt-menu-popper .ant-menu {
-  border-right: none !important;
-}
-
-.ppt-menu-popper .ant-menu-item {
-  height: 32px !important;
-  line-height: 32px !important;
-  font-size: 13px !important;
-  color: #3c4043 !important;
-  padding: 0 16px !important;
-  margin: 0 !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px;
-  white-space: nowrap;
-}
-
-.ppt-menu-popper .ant-menu-submenu-title {
-  height: 32px !important;
-  line-height: 32px !important;
-  font-size: 13px !important;
-  color: #3c4043 !important;
-  padding: 0 16px !important;
-  margin: 0 !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px;
-  white-space: nowrap;
-}
-
-.ppt-menu-popper .menu-el-icon {
-  margin-right: 0;
-  width: 16px;
-  flex: 0 0 16px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.ppt-menu-popper .ant-menu-item:hover {
-  background: #f1f3f4 !important;
-}
-
-.ppt-menu-popper .ant-divider-horizontal {
-  margin: 4px 12px !important;
-  width: calc(100% - 24px) !important;
-}
-
-/* 菜单栏样式 - 全局作用域，防止宿主 Ant Design Vue CSS 覆盖 */
-.ppt-editor .ppt-menu-bar {
-  border-bottom: none !important;
-  height: auto !important;
-  background: transparent !important;
-  line-height: unset !important;
-}
-.ppt-editor .ppt-menu-bar .ant-menu-horizontal {
-  border-bottom: none !important;
-  background: transparent !important;
-  line-height: unset !important;
-}
-.ppt-editor .ant-menu-horizontal > .ant-menu-item,
-.ppt-editor .ant-menu-horizontal > .ant-menu-submenu {
-  padding-inline: 0 !important;
-}
-.ppt-editor .ppt-menu-bar .ant-menu-submenu-title {
-  padding: 6px 12px !important;
-  height: auto !important;
-  line-height: 1.4 !important;
-  font-size: 13px !important;
-  color: #ffffff !important;
-  border-radius: 4px !important;
-  border-bottom: none !important;
-}
-.ppt-editor .ppt-menu-bar .ant-menu-submenu-title:hover {
-  background: rgba(255, 255, 255, 0.2) !important;
-}
-.ppt-editor .ppt-menu-bar .ant-menu-submenu-open > .ant-menu-submenu-title {
-  background: rgba(255, 255, 255, 0.3) !important;
-}
-.ppt-editor .ppt-menu-bar .ant-menu-submenu-arrow {
-  display: none !important;
-}
-.ppt-editor .ppt-menu-bar .ant-menu-item,
-.ppt-editor .ppt-menu-bar .ant-menu-submenu .ant-menu-submenu-title {
-  height: auto !important;
-  line-height: 1.6 !important;
-}
-.ppt-editor .menu-card {
-  border-radius: 0 !important;
-  border-left: none !important;
-  border-right: none !important;
-  border-top: none !important;
-  border-bottom: 1px solid #9e2b1a !important;
-  background: #b7472a !important;
-  flex-shrink: 0;
-  padding: 0 0 0 8px;
-}
-</style>

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="footer" editor-component="footer">
     <div class="footer-left">
 

@@ -1,0 +1,28 @@
+{
+  "name": "@vervedoc/for-node",
+  "version": "0.1.0",
+  "description": "VerveDocs Node 服务 - 桥接 vervedocs-for-java jar 包，提供 docx<->JSON/PDF HTTP API",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "vervedocs-for-node:dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "type:check": "tsc --noEmit",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "dotenv": "^16.4.7",
+    "hono": "^4.6.14"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.19.0",
+    "typescript": "catalog:"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

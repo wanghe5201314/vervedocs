@@ -27,14 +27,14 @@ import {
 import { MongoClient, Db, Collection, Binary } from 'mongodb'
 import * as Y from 'yjs'
 import { config } from '../config.js'
+import { createLogger } from '../utils/logger.js'
 import { elementArrayToYDoc } from '../utils/elementToYDoc.js'
 import { yDocToElementArray } from '../utils/yDocToElement.js'
 import { yDocToWorkbookData, workbookDataToYDoc } from '../utils/workbookToYDoc.js'
 
-const EXCEL_DOC_PREFIX = 'excel:'
+const log = createLogger('mongodb')
 
-/** Java 后端内部 API 地址 */
-const BACKEND_BASE_URL = process.env.BACKEND_URL || 'http://localhost:8090'
+const EXCEL_DOC_PREFIX = 'excel:'
 
 export class MongoDBExtension implements Extension {
   private client: MongoClient | null = null
@@ -55,7 +55,6 @@ export class MongoDBExtension implements Extension {
     await this.client.connect()
     this.db = this.client.db()
     this.collection = this.db.collection(config.mongoCollection)
-    console.log(`[MongoDB] 已连接，集合: ${config.mongoCollection}`)
   }
 
   async onDestroy() {
@@ -67,7 +66,7 @@ export class MongoDBExtension implements Extension {
 
     if (this.client) {
       await this.client.close()
-      console.log('[MongoDB] 已断开')
+      log.info('已断开 MongoDB')
     }
   }
 
@@ -83,13 +82,13 @@ export class MongoDBExtension implements Extension {
     const isExcel = data.documentName.startsWith(EXCEL_DOC_PREFIX)
     const docId = this.parseDocId(data.documentName)
     if (docId === null) {
-      console.warn(`[MongoDB] 无效的文档名: ${data.documentName}`)
+      log.warn({ documentName: data.documentName }, '无效的文档名')
       return
     }
 
     const row = await this.collection!.findOne({ documentId: docId })
     if (!row) {
-      console.log(`[MongoDB] 未找到文档 id=${docId}，以空文档启动`)
+      log.info({ docId }, '未找到文档，以空文档启动')
       return
     }
 
@@ -100,7 +99,7 @@ export class MongoDBExtension implements Extension {
           ? row.yjsState.buffer
           : row.yjsState
       Y.applyUpdate(data.document, new Uint8Array(state as ArrayBuffer))
-      console.log(`[MongoDB] 已加载 yjsState，docId=${docId}，类型=${isExcel ? 'excel' : 'word'}`)
+      log.info({ docId, docType: isExcel ? 'excel' : 'word' }, '已加载 yjsState')
       return
     }
 
@@ -110,15 +109,13 @@ export class MongoDBExtension implements Extension {
         const workbookData = row.content as Record<string, unknown>
         if (workbookData && typeof workbookData === 'object') {
           workbookDataToYDoc(workbookData, data.document)
-          console.log(`[MongoDB] 已迁移旧版 Excel 内容，docId=${docId}`)
+          log.info({ docId }, '已迁移旧版 Excel 内容')
         }
       } else {
         const elements = row.content as Record<string, unknown>[]
         if (Array.isArray(elements) && elements.length > 0) {
           elementArrayToYDoc(elements, data.document)
-          console.log(
-            `[MongoDB] 已迁移旧版内容，docId=${docId}，${elements.length} 个元素`,
-          )
+          log.info({ docId, elementCount: elements.length }, '已迁移旧版 Word 内容')
         }
       }
     }
@@ -150,7 +147,7 @@ export class MongoDBExtension implements Extension {
         const isExcel = data.documentName.startsWith(EXCEL_DOC_PREFIX)
         await this.persistDocument(docId, data.document, isExcel)
       } catch (err) {
-        console.error(`[MongoDB] 持久化失败，docId=${docId}:`, err)
+        log.error({ docId, err }, '持久化失败')
       }
     }, this.debounceMs)
 
@@ -183,7 +180,7 @@ export class MongoDBExtension implements Extension {
         { upsert: true },
       )
 
-      console.log(`[MongoDB] 已持久化 Excel，docId=${docId}`)
+      log.info({ docId, docType: 'excel' }, '已持久化')
       return
     }
 
@@ -196,7 +193,7 @@ export class MongoDBExtension implements Extension {
       const filterResult = await this.callFilterApi(content)
       if (filterResult && filterResult.filtered) {
         filteredContent = filterResult.content
-        console.log(`[MongoDB] 敏感词已过滤，docId=${docId}，命中: ${filterResult.hitWords.join(',')}`)
+        log.info({ docId, hitWords: filterResult.hitWords }, '敏感词已过滤')
 
         // 将过滤后的内容回写到 Y.Doc（让所有连接的客户端同步看到替换后的内容）
         this.filteringDocs.add(docId)
@@ -208,7 +205,7 @@ export class MongoDBExtension implements Extension {
         }
       }
     } catch (err) {
-      console.error(`[MongoDB] 过滤API调用失败，docId=${docId}，将保存未过滤内容:`, err)
+      log.error({ docId, err }, '过滤 API 调用失败，将保存未过滤内容')
     }
 
     // 过滤后重新编码 yjsState（因为 Y.Doc 可能已被修改）
@@ -232,7 +229,7 @@ export class MongoDBExtension implements Extension {
       { upsert: true },
     )
 
-    console.log(`[MongoDB] 已持久化 Word，docId=${docId}，元素数=${filteredContent.length}`)
+    log.info({ docId, docType: 'word', elementCount: filteredContent.length }, '已持久化')
   }
 
   /**
@@ -243,13 +240,13 @@ export class MongoDBExtension implements Extension {
     content: Record<string, unknown>[]
     hitWords: string[]
   } | null> {
-    const resp = await fetch(`${BACKEND_BASE_URL}/api/internal/filter-content`, {
+    const resp = await fetch(`${config.backendUrl}/api/internal/filter-content`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(content),
     })
     if (!resp.ok) {
-      console.error(`[MongoDB] 过滤API返回 ${resp.status}`)
+      log.error({ status: resp.status }, '过滤 API 返回错误')
       return null
     }
     const body = await resp.json() as {

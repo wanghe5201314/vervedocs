@@ -89,6 +89,7 @@ export interface DocxParseResult {
 /** 统一错误响应 */
 export interface ErrorResponse {
   success: false
+  code: number
   error: string
   /** java 进程退出码（0 成功 / 1 解析失败 / 2 参数错误 / 3 IO 错误） */
   exitCode?: number
@@ -99,6 +100,7 @@ export interface ErrorResponse {
 /** 统一成功响应（解析场景） */
 export interface ParseSuccessResponse {
   success: true
+  code: 200
   data: DocxParseResult
 }
 

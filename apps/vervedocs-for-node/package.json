@@ -12,11 +12,15 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
-    "@hono/node-server": "^1.13.7",
     "dotenv": "^16.4.7",
-    "hono": "^4.6.14"
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.1",
+    "pino": "^10.3.1",
+    "pino-pretty": "^13.1.3"
   },
   "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/multer": "^1.4.12",
     "@types/node": "catalog:",
     "rimraf": "^6.0.1",
     "tsx": "^4.19.0",

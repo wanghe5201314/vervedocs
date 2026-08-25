@@ -1,32 +1,37 @@
 <template>
   <div class="top-header">
-    <div class="left">
-      <div class="doc-icon" :class="`doc-icon-${docType}`">
-        <svg class="file-icon" aria-hidden="true">
-          <use :xlink:href="iconSymbol"></use>
-        </svg>
-      </div>
-      <div class="doc-info">
-        <div class="title-row">
-          <span class="doc-name" :title="title">{{ title }}</span>
-          <div class="cloud-tip">
-            <template v-if="isViewMode">
-              <EyeOutlined class="cloud-icon" style="color:#909399" />
-              <span class="cloud-text">{{ translate('common.readOnlyMode') }}</span>
-            </template>
-            <template v-else>
-              <CheckCircleOutlined v-if="lastSaveTime" class="cloud-icon" style="color:#52c41a" />
-              <CloudOutlined v-else class="cloud-icon" />
-              <span class="cloud-text">{{ lastSaveTime ? translate('common.recentSaved', { time: lastSaveTime }) : translate('common.autoSaved') }}</span>
-            </template>
-          </div>
-        </div>
+    <div class="left-actions">
+      <button class="quick-btn" :title="translate('common.import')" @click="emit('command', 'import')">
+        <VIcon name="file-excel-box" />
+      </button>
+      <button class="quick-btn" :title="translate('common.save') + ' (Ctrl+S)'" @click="emit('command', 'save')">
+        <VIcon name="content-save-outline" />
+      </button>
+      <button class="quick-btn" :title="translate('common.undo') + ' (Ctrl+Z)'" @click="emit('command', 'undo')">
+        <VIcon name="undo" />
+      </button>
+      <button class="quick-btn" :title="translate('common.redo') + ' (Ctrl+Y)'" @click="emit('command', 'redo')">
+        <VIcon name="redo" />
+      </button>
+    </div>
+    <div class="center-title">
+      <span class="doc-name" :title="title">{{ title }}</span>
+      <div class="doc-status">
+        <template v-if="isViewMode">
+          <EyeOutlined class="status-icon" />
+          <span>{{ translate('common.readOnlyMode') }}</span>
+        </template>
+        <template v-else>
+          <CheckCircleOutlined v-if="lastSaveTime" class="status-icon" />
+          <CloudOutlined v-else class="status-icon" />
+          <span>{{ lastSaveTime ? translate('common.recentSaved', { time: lastSaveTime }) : translate('common.autoSaved') }}</span>
+        </template>
       </div>
     </div>
-    <div class="right">
+    <div class="right-actions">
       <a-avatar-group v-if="onlineUsers.length > 0" :maxCount="5" :style="{ display: 'flex', alignItems: 'center' }">
         <a-tooltip v-for="user in onlineUsers" :key="user.userId" :title="user.userName || user.userId" placement="bottom">
-          <a-avatar :size="30" :style="{ backgroundColor: user.color }">
+          <a-avatar :size="26" :style="{ backgroundColor: user.color }">
             {{ getAvatarText(user.userName || user.userId) }}
           </a-avatar>
         </a-tooltip>
@@ -36,8 +41,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { EyeOutlined, CheckCircleOutlined, CloudOutlined } from '@ant-design/icons-vue'
+import { VIcon } from '@vervedoc/icons'
 
 interface CollabUser {
   userId: string
@@ -47,14 +52,19 @@ interface CollabUser {
 
 type Translate = (key: string, params?: Record<string, string | number>) => string
 
+const emit = defineEmits<{
+  (e: 'command', command: string): void
+}>()
+
 const props = withDefaults(defineProps<{
-  docType: 'word' | 'excel' | 'ppt'
+  docType?: 'word' | 'excel' | 'ppt'
   title: string
   isViewMode?: boolean
   lastSaveTime?: string
   onlineUsers?: CollabUser[]
   t?: Translate
 }>(), {
+  docType: 'excel',
   isViewMode: false,
   lastSaveTime: '',
   onlineUsers: () => []
@@ -63,16 +73,14 @@ const props = withDefaults(defineProps<{
 const translate: Translate = (key, params) => {
   if (typeof props.t === 'function') return props.t(key, params)
   if (key === 'common.readOnlyMode') return '只读模式'
-  if (key === 'common.recentSaved') return `最近保存: ${params?.time ?? ''}`
-  if (key === 'common.autoSaved') return '所有编辑内容将自动保存到云端'
+  if (key === 'common.recentSaved') return `已保存 ${params?.time ?? ''}`
+  if (key === 'common.autoSaved') return '自动保存中'
+  if (key === 'common.import') return '导入表格'
+  if (key === 'common.save') return '保存'
+  if (key === 'common.undo') return '撤销'
+  if (key === 'common.redo') return '重做'
   return key
 }
-
-const iconSymbol = computed(() => {
-  if (props.docType === 'excel') return '#icon-excel'
-  if (props.docType === 'ppt') return '#icon-ppt'
-  return '#icon-word'
-})
 
 const getAvatarText = (name: string) => {
   const s = String(name || '').trim()
@@ -85,15 +93,79 @@ const getAvatarText = (name: string) => {
 </script>
 
 <style scoped>
-.top-header { height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid #ebeef5; background: #fff; }
-.left { min-width: 0; display: flex; align-items: center; gap: 12px; }
-.doc-icon { display: inline-flex; align-items: center; justify-content: center; }
-.file-icon { width: 30px; height: 30px; color: #606266; }
-.doc-info { min-width: 0; }
-.title-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.doc-name { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 600; color: #303133; }
-.cloud-tip { display: inline-flex; align-items: center; gap: 6px; color: #909399; font-size: 12px; min-width: 0; }
-.cloud-text { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cloud-icon { font-size: 14px; }
-.right { display: flex; align-items: center; justify-content: flex-end; min-width: 0; }
+.top-header {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  background: var(--app-ribbon-topbar-bg, #217346);
+  color: var(--app-ribbon-topbar-text, #fff);
+}
+
+.left-actions,
+.right-actions {
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.right-actions {
+  justify-content: flex-end;
+}
+
+.center-title {
+  min-width: 0;
+  max-width: 60%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.doc-name {
+  max-width: 540px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-ribbon-topbar-text, #fff);
+}
+
+.doc-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--app-ribbon-topbar-text-muted, rgba(255, 255, 255, 0.86));
+  white-space: nowrap;
+}
+
+.status-icon {
+  font-size: 12px;
+}
+
+.quick-btn {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--app-ribbon-topbar-text, #fff);
+  cursor: pointer;
+}
+
+.quick-btn:hover {
+  background: var(--app-ribbon-topbar-hover, rgba(255, 255, 255, 0.16));
+}
+
+.quick-btn :deep(svg),
+.quick-btn :deep(i) {
+  font-size: 16px;
+}
 </style>

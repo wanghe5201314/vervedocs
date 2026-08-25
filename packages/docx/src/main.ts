@@ -8,7 +8,7 @@ import './style.css'
 import 'prismjs/themes/prism.css'
 import { uiThemeStore } from './stores/ui-theme'
 import { applyUiConstants } from './config/ui-constants'
-import { resolveAppFromLocation } from '@/utils/resolve-app'
+import { resolveAppFromLocation } from '@/app/resolve-app'
 
 applyUiConstants()
 uiThemeStore.init()

@@ -5,8 +5,8 @@
 export * from '@vervedoc/core'
 
 // 导出对象式接入入口
-export { WordEditor } from '../object/word-editor'
-export type { Options } from '../object/word-editor'
+export { WordEditor } from '../core/word-editor'
+export type { Options } from '../core/word-editor'
 
 // 导出版本号
 export const DOCX_EDITOR_UI_VERSION = __APP_VERSION__

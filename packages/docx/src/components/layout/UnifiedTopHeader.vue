@@ -1,33 +1,39 @@
 <template>
   <div class="top-header">
-    <div class="left">
-      <div class="doc-icon">
-        <svg class="file-icon" aria-hidden="true">
-          <use xlink:href="#icon-word"></use>
-        </svg>
-      </div>
-      <div class="doc-info">
-        <div class="title-row">
-          <span class="doc-name" :title="title">{{ title }}</span>
-          <div class="cloud-tip">
-            <template v-if="isViewMode">
-              <EyeOutlined class="cloud-icon" style="color:#909399" />
-              <span class="cloud-text">只读模式</span>
-            </template>
-            <template v-else>
-              <CheckCircleOutlined v-if="lastSaveTime" class="cloud-icon" />
-              <CloudOutlined v-else class="cloud-icon" />
-              <span class="cloud-text">{{ lastSaveTime ? `最近保存: ${lastSaveTime}` : '所有编辑内容将自动保存到云端' }}</span>
-            </template>
-          </div>
-        </div>
+    <div class="left-actions">
+      <button class="quick-btn" title="导入文档" @click="emit('command', 'import')">
+        <VIcon name="file-outline" />
+      </button>
+      <button class="quick-btn" title="保存 (Ctrl+S)" @click="emit('command', 'save')">
+        <VIcon name="content-save-outline" />
+      </button>
+      <button class="quick-btn" title="撤销 (Ctrl+Z)" @click="emit('command', 'undo')">
+        <VIcon name="undo" />
+      </button>
+      <button class="quick-btn" title="重做 (Ctrl+Y)" @click="emit('command', 'redo')">
+        <VIcon name="redo" />
+      </button>
+    </div>
+    <div class="center-title">
+      <span class="doc-name" :title="title">{{ title }}</span>
+      <div class="doc-status">
+        <template v-if="isViewMode">
+          <EyeOutlined class="status-icon" />
+          <span>只读模式</span>
+        </template>
+        <template v-else>
+          <CheckCircleOutlined v-if="lastSaveTime" class="status-icon" />
+          <CloudOutlined v-else class="status-icon" />
+          <span>{{ lastSaveTime ? `已保存 ${lastSaveTime}` : '自动保存中' }}</span>
+        </template>
       </div>
     </div>
-    <div class="right">
+    <div class="right-actions">
+
       <a-avatar-group v-if="onlineUsers.length > 0" :max-count="5" :style="{ display: 'flex', alignItems: 'center' }">
         <a-tooltip v-for="user in onlineUsers" :key="user.userId" placement="bottom">
           <template #title>{{ user.userName || user.userId }}</template>
-          <a-avatar :size="30" :style="{ backgroundColor: user.color }">
+          <a-avatar :size="26" :style="{ backgroundColor: user.color }">
             {{ getAvatarText(user.userName || user.userId) }}
           </a-avatar>
         </a-tooltip>
@@ -38,9 +44,13 @@
 
 <script setup lang="ts">
 import { CheckCircleOutlined, CloudOutlined, EyeOutlined } from '@ant-design/icons-vue'
+import { VIcon } from '@vervedoc/icons'
 import { getAvatarText } from '@/utils'
 import type { CollabUser } from '@/types/collab'
 
+const emit = defineEmits<{
+  (e: 'command', command: string): void
+}>()
 
 withDefaults(defineProps<{
   title: string
@@ -56,15 +66,70 @@ withDefaults(defineProps<{
 </script>
 
 <style scoped>
-.top-header { height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid #f0f0f0; background: #fff; }
-.left { min-width: 0; display: flex; align-items: center; gap: 12px; }
-.doc-icon { display: inline-flex; align-items: center; justify-content: center; }
-.file-icon { width: 30px; height: 30px; color: #606266; }
-.doc-info { min-width: 0; }
-.title-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.doc-name { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 600; color: #303133; }
-.cloud-tip { display: inline-flex; align-items: center; gap: 6px; color: #909399; font-size: 12px; min-width: 0; }
-.cloud-text { max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cloud-icon { font-size: 14px; }
-.right { display: flex; align-items: center; justify-content: flex-end; min-width: 0; }
+.top-header {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  background: var(--app-ribbon-topbar-bg, var(--tabs-bg-color, #1f57b8));
+  color: var(--app-ribbon-topbar-text, #fff);
+}
+.left-actions,
+.right-actions {
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.right-actions {
+  justify-content: flex-end;
+}
+.center-title {
+  min-width: 0;
+  max-width: 60%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.doc-name {
+  max-width: 540px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-ribbon-topbar-text, #fff);
+}
+.doc-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--app-ribbon-topbar-text-muted, rgba(255, 255, 255, 0.86));
+  white-space: nowrap;
+}
+.status-icon {
+  font-size: 12px;
+}
+.quick-btn {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--app-ribbon-topbar-text, #fff);
+  cursor: pointer;
+}
+.quick-btn:hover {
+  background: var(--app-ribbon-topbar-hover, rgba(255, 255, 255, 0.16));
+}
+.quick-btn :deep(svg),
+.quick-btn :deep(i) {
+  font-size: 16px;
+}
 </style>

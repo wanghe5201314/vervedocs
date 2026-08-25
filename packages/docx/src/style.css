@@ -42,6 +42,23 @@
   --app-toolbar-btn-height: 28px;
   --app-toolbar-btn-padding-y: 4px;
   --app-toolbar-btn-padding-x: 6px;
+  --app-ribbon-brand: #1f57b8;
+  --app-ribbon-brand-strong: #2a63c8;
+  --app-ribbon-topbar-bg: linear-gradient(180deg, var(--app-ribbon-brand-strong) 0%, var(--app-ribbon-brand) 100%);
+  --app-ribbon-topbar-text: #ffffff;
+  --app-ribbon-topbar-text-muted: rgba(255, 255, 255, 0.86);
+  --app-ribbon-topbar-hover: rgba(255, 255, 255, 0.14);
+  --app-ribbon-file-tab-bg: rgba(0, 0, 0, 0.16);
+  --app-ribbon-file-tab-hover: rgba(0, 0, 0, 0.22);
+  --app-ribbon-surface: #ffffff;
+  --app-ribbon-border: #d8dce6;
+  --app-ribbon-border-soft: #e3e8f2;
+  --app-ribbon-shadow: #e6eaf2;
+  --app-ribbon-text: #3c4043;
+  --app-ribbon-text-muted: #7a8191;
+  --app-ribbon-hover-bg: #edf2fb;
+  --app-ribbon-active-bg: #dce8ff;
+  --app-ribbon-active-text: #1f57b8;
 }
 
 html,
@@ -829,5 +846,4 @@ ul {
 .separator-preview.gradient { background: linear-gradient(90deg, transparent, #000, transparent); }
 .separator-preview.shadow { background: #000; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
 .separator-preview.emboss { background: linear-gradient(180deg, #666 0%, #000 50%, #666 100%); box-shadow: 0 1px 0 #fff, 0 -1px 0 #fff; }
-
 

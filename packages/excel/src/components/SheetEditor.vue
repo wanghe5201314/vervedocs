@@ -9,704 +9,350 @@
         :last-save-time="headerLastSaveTime"
         :t="t"
         :online-users="collabOnlineUsers"
+        @command="handleHeaderCommand"
       />
       <div class="menu-card">
-      <a-menu mode="horizontal" class="sheet-menu-bar" :selectable="false">
-        <a-sub-menu key="file" popupClassName="sheet-menu-popper">
-          <template #title>文件</template>
-          <a-menu-item key="newWorkbook" :disabled="readOnly" @click="handleCreateNewWorkbook()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="plus" />新建表格</span>
-              <span class="menu-item-meta"></span>
-            </span>
-          </a-menu-item>
-          <a-menu-item key="save" @click="emitChange()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="content-save-outline" />保存</span>
-              <span class="menu-item-meta"><span class="shortcut">Ctrl+S</span></span>
-            </span>
-          </a-menu-item>
-          <a-menu-divider />
-          <a-menu-item key="importExcel" :disabled="readOnly" @click="triggerImportExcel()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="file-excel-box" />导入表格&nbsp;&nbsp;<a-tag color="red">BETA</a-tag></span>
-              <span class="menu-item-meta"><span class="shortcut">Ctrl+O</span></span>
-            </span>
-          </a-menu-item>
-          <a-menu-item key="exportExcel" @click="handleExportExcel()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="file-excel-box" />导出 Excel</span>
-              <span class="menu-item-meta"></span>
-            </span>
-          </a-menu-item>
-          <a-menu-divider />
-          <a-menu-item key="print" @click="handlePrint()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="printer-outline" />打印</span>
-              <span class="menu-item-meta"><span class="shortcut">Ctrl+P</span></span>
-            </span>
-          </a-menu-item>
-        </a-sub-menu>
-
-        <a-sub-menu key="edit" popupClassName="sheet-menu-popper">
-          <template #title>编辑</template>
-          <a-menu-item key="undo" @click="handleUndo()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="undo" />撤销</span>
-              <span class="menu-item-meta"><span class="shortcut">Ctrl+Z</span></span>
-            </span>
-          </a-menu-item>
-          <a-menu-item key="redo" @click="handleRedo()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="redo" />重做</span>
-              <span class="menu-item-meta"><span class="shortcut">Ctrl+Y</span></span>
-            </span>
-          </a-menu-item>
-          <a-menu-divider />
-          <a-menu-item key="cut" @click="handleCut()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="content-cut" />剪切</span>
-              <span class="menu-item-meta"><span class="shortcut">Ctrl+X</span></span>
-            </span>
-          </a-menu-item>
-          <a-menu-item key="copy" @click="handleCopy()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="content-copy" />复制</span>
-              <span class="menu-item-meta"><span class="shortcut">Ctrl+C</span></span>
-            </span>
-          </a-menu-item>
-          <a-menu-item key="paste" @click="handlePaste()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="content-paste" />粘贴</span>
-              <span class="menu-item-meta"><span class="shortcut">Ctrl+V</span></span>
-            </span>
-          </a-menu-item>
-          <a-menu-divider />
-          <a-menu-item key="selectAll" @click="selectAll()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="select-all" />全选</span>
-              <span class="menu-item-meta"><span class="shortcut">Ctrl+A</span></span>
-            </span>
-          </a-menu-item>
-          <a-menu-item key="deleteContent" @click="deleteSelectedContent()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="delete-outline" />删除内容</span>
-              <span class="menu-item-meta"><span class="shortcut">Delete</span></span>
-            </span>
-          </a-menu-item>
-          <a-menu-divider />
-          <a-menu-item key="deleteRow" @click="deleteRow()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="table-row-remove" />删除行</span>
-              <span class="menu-item-meta"></span>
-            </span>
-          </a-menu-item>
-          <a-menu-item key="deleteCol" @click="deleteCol()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="table-column-remove" />删除列</span>
-              <span class="menu-item-meta"></span>
-            </span>
-          </a-menu-item>
-        </a-sub-menu>
-
-        <a-sub-menu key="view" popupClassName="sheet-menu-popper">
-          <template #title>视图</template>
-          <a-menu-item key="showGridlines" @click="toggleGridlines()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="grid" />{{ showGridlines ? '显示网格线' : '隐藏网格线' }}</span>
-              <span class="menu-item-meta"><VIcon v-if="showGridlines" name="check" class="menu-check" /></span>
-            </span>
-          </a-menu-item>
-          <a-menu-item key="showFormulaBar" @click="showFormulaBar = !showFormulaBar">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="function-variant" />{{ showFormulaBar ? '显示编辑栏' : '隐藏编辑栏' }}</span>
-              <span class="menu-item-meta"><VIcon v-if="showFormulaBar" name="check" class="menu-check" /></span>
-            </span>
-          </a-menu-item>
-          <a-menu-divider />
-          <a-sub-menu key="zoomMenu" popupClassName="sheet-menu-popper">
-            <template #title><VIcon name="magnify" />缩放</template>
-            <a-menu-item key="zoom50" @click="setZoom(50)">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="magnify-minus" />50%</span>
-                <span class="menu-item-meta"><VIcon v-if="zoomLevel === 50" name="check" class="menu-check" /></span>
-              </span>
-            </a-menu-item>
-            <a-menu-item key="zoom75" @click="setZoom(75)">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="magnify-minus" />75%</span>
-                <span class="menu-item-meta"><VIcon v-if="zoomLevel === 75" name="check" class="menu-check" /></span>
-              </span>
-            </a-menu-item>
-            <a-menu-item key="zoom100" @click="setZoom(100)">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="magnify" />100%</span>
-                <span class="menu-item-meta"><VIcon v-if="zoomLevel === 100" name="check" class="menu-check" /></span>
-              </span>
-            </a-menu-item>
-            <a-menu-item key="zoom125" @click="setZoom(125)">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="magnify-plus" />125%</span>
-                <span class="menu-item-meta"><VIcon v-if="zoomLevel === 125" name="check" class="menu-check" /></span>
-              </span>
-            </a-menu-item>
-            <a-menu-item key="zoom150" @click="setZoom(150)">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="magnify-plus" />150%</span>
-                <span class="menu-item-meta"><VIcon v-if="zoomLevel === 150" name="check" class="menu-check" /></span>
-              </span>
-            </a-menu-item>
-            <a-menu-item key="zoom200" @click="setZoom(200)">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="magnify-plus" />200%</span>
-                <span class="menu-item-meta"><VIcon v-if="zoomLevel === 200" name="check" class="menu-check" /></span>
-              </span>
-            </a-menu-item>
-          </a-sub-menu>
-          <a-menu-divider />
-          <a-menu-item key="freezeRow" @click="toggleFreezeRow()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="snowflake" />{{ frozenRows > 0 ? '取消冻结行' : '冻结第一行' }}</span>
-              <span class="menu-item-meta"><VIcon v-if="frozenRows > 0" name="check" class="menu-check" /></span>
-            </span>
-          </a-menu-item>
-          <a-menu-item key="freezeCol" @click="toggleFreezeCol()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="snowflake" />{{ frozenCols > 0 ? '取消冻结列' : '冻结第一列' }}</span>
-              <span class="menu-item-meta"><VIcon v-if="frozenCols > 0" name="check" class="menu-check" /></span>
-            </span>
-          </a-menu-item>
-
-        </a-sub-menu>
-
-
-        <a-sub-menu key="insert" popupClassName="sheet-menu-popper">
-          <template #title>插入</template>
-          <a-menu-item key="insertRowAbove" @click="insertRow('above')">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="table-row-plus-before" />在上方插入行</span>
-              <span class="menu-item-meta"></span>
-            </span>
-          </a-menu-item>
-          <a-menu-item key="insertRowBelow" @click="insertRow('below')">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="table-row-plus-after" />在下方插入行</span>
-              <span class="menu-item-meta"></span>
-            </span>
-          </a-menu-item>
-          <a-menu-divider />
-          <a-menu-item key="insertColLeft" @click="insertCol('left')">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="table-column-plus-before" />在左侧插入列</span>
-              <span class="menu-item-meta"></span>
-            </span>
-          </a-menu-item>
-          <a-menu-item key="insertColRight" @click="insertCol('right')">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="table-column-plus-after" />在右侧插入列</span>
-              <span class="menu-item-meta"></span>
-            </span>
-          </a-menu-item>
-        </a-sub-menu>
-
-
-
-
-        <a-sub-menu key="format" popupClassName="sheet-menu-popper">
-          <template #title>格式</template>
-          <a-sub-menu key="textFormat" popupClassName="sheet-menu-popper">
-            <template #title><VIcon name="format-text" />文本</template>
-            <a-menu-item key="fBold" @click="toggleStyle('bold')">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="format-bold" />粗体</span>
-                <span class="menu-item-meta"><span class="shortcut">Ctrl+B</span><VIcon v-if="toolbarState.bold" name="check" class="menu-check" /></span>
-              </span>
-            </a-menu-item>
-            <a-menu-item key="fItalic" @click="toggleStyle('italic')">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="format-italic" />斜体</span>
-                <span class="menu-item-meta"><span class="shortcut">Ctrl+I</span><VIcon v-if="toolbarState.italic" name="check" class="menu-check" /></span>
-              </span>
-            </a-menu-item>
-            <a-menu-item key="fUnderline" @click="toggleStyle('underline')">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="format-underline" />下划线</span>
-                <span class="menu-item-meta"><span class="shortcut">Ctrl+U</span><VIcon v-if="toolbarState.underline" name="check" class="menu-check" /></span>
-              </span>
-            </a-menu-item>
-            <a-menu-item key="fStrikethrough" @click="toggleStyle('strikethrough')">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="format-strikethrough" />删除线</span>
-                <span class="menu-item-meta"><VIcon v-if="toolbarState.strikethrough" name="check" class="menu-check" /></span>
-              </span>
-            </a-menu-item>
-          </a-sub-menu>
-          <a-sub-menu key="alignFormat" popupClassName="sheet-menu-popper">
-            <template #title><VIcon name="format-align-left" />对齐方式</template>
-            <a-menu-item key="aLeft" @click="setAlign('left')">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="format-align-left" />左对齐</span>
-                <span class="menu-item-meta"><VIcon v-if="toolbarState.align === 'left'" name="check" class="menu-check" /></span>
-              </span>
-            </a-menu-item>
-            <a-menu-item key="aCenter" @click="setAlign('center')">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="format-align-center" />居中对齐</span>
-                <span class="menu-item-meta"><VIcon v-if="toolbarState.align === 'center'" name="check" class="menu-check" /></span>
-              </span>
-            </a-menu-item>
-            <a-menu-item key="aRight" @click="setAlign('right')">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="format-align-right" />右对齐</span>
-                <span class="menu-item-meta"><VIcon v-if="toolbarState.align === 'right'" name="check" class="menu-check" /></span>
-              </span>
-            </a-menu-item>
-            <a-menu-divider />
-            <a-menu-item key="vaTop" @click="setVerticalAlign('top')">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="format-vertical-align-top" />顶部对齐</span>
-                <span class="menu-item-meta"><VIcon v-if="toolbarState.verticalAlign === 'top'" name="check" class="menu-check" /></span>
-              </span>
-            </a-menu-item>
-            <a-menu-item key="vaMiddle" @click="setVerticalAlign('middle')">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="format-vertical-align-center" />垂直居中</span>
-                <span class="menu-item-meta"><VIcon v-if="toolbarState.verticalAlign === 'middle'" name="check" class="menu-check" /></span>
-              </span>
-            </a-menu-item>
-            <a-menu-item key="vaBottom" @click="setVerticalAlign('bottom')">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="format-vertical-align-bottom" />底部对齐</span>
-                <span class="menu-item-meta"><VIcon v-if="toolbarState.verticalAlign === 'bottom'" name="check" class="menu-check" /></span>
-              </span>
-            </a-menu-item>
-          </a-sub-menu>
-          <a-sub-menu key="wrapFormat" popupClassName="sheet-menu-popper">
-            <template #title><VIcon name="text-wrap" />文本换行</template>
-            <a-menu-item key="wrapClip" @click="setWrap('clip')">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="crop" />裁剪</span>
-                <span class="menu-item-meta"><VIcon v-if="toolbarState.wrap === 'clip'" name="check" class="menu-check" /></span>
-              </span>
-            </a-menu-item>
-            <a-menu-item key="wrapOverflow" @click="setWrap('overflow')">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="arrow-right" />溢出</span>
-                <span class="menu-item-meta"><VIcon v-if="toolbarState.wrap === 'overflow'" name="check" class="menu-check" /></span>
-              </span>
-            </a-menu-item>
-            <a-menu-item key="wrapWrap" @click="setWrap('wrap')">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="text-wrap" />自动换行</span>
-                <span class="menu-item-meta"><VIcon v-if="toolbarState.wrap === 'wrap'" name="check" class="menu-check" /></span>
-              </span>
-            </a-menu-item>
-          </a-sub-menu>
-          <a-menu-divider />
-          <a-sub-menu key="rowFormat" popupClassName="sheet-menu-popper">
-            <template #title><VIcon name="table-row" />行</template>
-            <a-menu-item key="rowHeight" @click="showRowHeightDialog = true">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="arrow-expand-vertical" />行高</span>
-                <span class="menu-item-meta"></span>
-              </span>
-            </a-menu-item>
-            <a-menu-item key="autoRowHeight" @click="autoFitRowHeight()">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="arrow-fit-vertical" />自动调整行高</span>
-                <span class="menu-item-meta"></span>
-              </span>
-            </a-menu-item>
-            <a-menu-divider />
-            <a-menu-item key="hideRow" @click="hideRow()">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="eye-off-outline" />隐藏行</span>
-                <span class="menu-item-meta"></span>
-              </span>
-            </a-menu-item>
-            <a-menu-item key="unhideRow" @click="unhideRow()">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="eye-outline" />取消隐藏行</span>
-                <span class="menu-item-meta"></span>
-              </span>
-            </a-menu-item>
-          </a-sub-menu>
-          <a-sub-menu key="colFormat" popupClassName="sheet-menu-popper">
-            <template #title><VIcon name="table-column" />列</template>
-            <a-menu-item key="colWidth" @click="showColWidthDialog = true">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="arrow-expand-horizontal" />列宽</span>
-                <span class="menu-item-meta"></span>
-              </span>
-            </a-menu-item>
-            <a-menu-item key="autoColWidth" @click="autoFitColWidth()">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="arrow-fit-horizontal" />自动调整列宽</span>
-                <span class="menu-item-meta"></span>
-              </span>
-            </a-menu-item>
-            <a-menu-divider />
-            <a-menu-item key="hideCol" @click="hideCol()">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="eye-off-outline" />隐藏列</span>
-                <span class="menu-item-meta"></span>
-              </span>
-            </a-menu-item>
-            <a-menu-item key="unhideCol" @click="unhideCol()">
-              <span class="menu-item-content">
-                <span class="menu-item-label"><VIcon name="eye-outline" />取消隐藏列</span>
-                <span class="menu-item-meta"></span>
-              </span>
-            </a-menu-item>
-          </a-sub-menu>
-          <a-menu-divider />
-          <a-menu-item key="mergeCells" @click="handleMergeCells()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="table-merge-cells" />合并单元格</span>
-              <span class="menu-item-meta"></span>
-            </span>
-          </a-menu-item>
-          <a-menu-item key="unmergeCells" @click="handleUnmergeCells()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="table-split-cell" />取消合并</span>
-              <span class="menu-item-meta"></span>
-            </span>
-          </a-menu-item>
-          <a-menu-divider />
-          <a-menu-item key="clearFormat" @click="clearSelectedFormat()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="format-clear" />清除格式</span>
-              <span class="menu-item-meta"></span>
-            </span>
-          </a-menu-item>
-        </a-sub-menu>
-
-        <a-sub-menu key="data" popupClassName="sheet-menu-popper">
-          <template #title>数据</template>
-          <a-menu-item key="sortAsc" @click="openUniverSort('asc')">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="sort-ascending" />按列升序排序</span>
-              <span class="menu-item-meta"></span>
-            </span>
-          </a-menu-item>
-          <a-menu-item key="sortDesc" @click="openUniverSort('desc')">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="sort-descending" />按列降序排序</span>
-              <span class="menu-item-meta"></span>
-            </span>
-          </a-menu-item>
-          <a-menu-divider />
-          <a-menu-item key="dataValidation" @click="openUniverDataValidation()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="check-circle-outline" />数据验证</span>
-              <span class="menu-item-meta"></span>
-            </span>
-          </a-menu-item>
-          <a-menu-item key="removeDuplicates" @click="removeDuplicates()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="table-minus" />删除重复值</span>
-              <span class="menu-item-meta"></span>
-            </span>
-          </a-menu-item>
-        </a-sub-menu>
-
-
-        <a-sub-menu v-if="collabConnectionState === 'connected'" key="collab" popupClassName="sheet-menu-popper">
-          <template #title>协同</template>
-          <a-menu-item key="syncSelection" @click="toggleSyncSelection()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="cursor-default" />显示他人选区</span>
-              <span class="menu-item-meta"><VIcon v-if="syncSelectionEnabled" name="check" class="menu-check" /></span>
-            </span>
-          </a-menu-item>
-          <a-menu-item key="syncFilter" @click="toggleSyncFilter()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="filter-outline" />显示他人筛选</span>
-              <span class="menu-item-meta"><VIcon v-if="syncFilterEnabled" name="check" class="menu-check" /></span>
-            </span>
-          </a-menu-item>
-          <a-menu-item key="syncSort" @click="toggleSyncSort()">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="sort-ascending" />显示他人排序</span>
-              <span class="menu-item-meta"><VIcon v-if="syncSortEnabled" name="check" class="menu-check" /></span>
-            </span>
-          </a-menu-item>
-        </a-sub-menu>
-
-        <a-sub-menu key="help" popupClassName="sheet-menu-popper">
-          <template #title>帮助</template>
-          <a-menu-item key="shortcuts" @click="showShortcutsDialog = true">
-            <span class="menu-item-content">
-              <span class="menu-item-label"><VIcon name="keyboard-outline" />键盘快捷键</span>
-              <span class="menu-item-meta"></span>
-            </span>
-          </a-menu-item>
-
-        </a-sub-menu>
-      </a-menu>
-    </div>
-
-    <!-- 工具栏 -->
-    <div class="toolbar">
-      <!-- 撤销/重做/格式刷 -->
-      <button class="tb" :disabled="readOnly || undoStack.length === 0" @click="handleUndo()" title="撤销 (Ctrl+Z)">
-        <VIcon name="undo" />
-      </button>
-      <button class="tb" :disabled="readOnly || redoStack.length === 0" @click="handleRedo()" title="重做 (Ctrl+Y)">
-        <VIcon name="redo" />
-      </button>
-      <button class="tb" :disabled="readOnly" @click="handleFormatPainter()" :class="{ active: formatPainterActive }" title="格式刷">
-        <VIcon name="format-paint" />
-      </button>
-      <span class="toolbar-divider" />
-
-      <!-- 货币/百分比/小数位快捷按钮 -->
-      <button class="tb" :disabled="readOnly" @click="quickFormat('currency')" title="货币格式 (¥)">
-        <VIcon name="currency-usd" />
-      </button>
-      <button class="tb" :disabled="readOnly" @click="quickFormat('percent')" title="百分比格式 (%)">
-        <VIcon name="percent" />
-      </button>
-      <button class="tb" :disabled="readOnly" @click="changeDecimal(-1)" title="减少小数位">
-        <VIcon name="decimal-decrease" />
-      </button>
-      <button class="tb" :disabled="readOnly" @click="changeDecimal(1)" title="增加小数位">
-        <VIcon name="decimal-increase" />
-      </button>
-      <!-- 数字格式下拉 -->
-      <a-select v-model:value="toolbarState.numberFormat" size="small" class="toolbar-select" style="width: 80px" :disabled="readOnly" @change="updateCellStyle()">
-        <a-select-option label="自动" value="auto" />
-        <a-select-option label="纯文本" value="text" />
-        <a-select-option label="数字" value="number" />
-        <a-select-option label="百分比" value="percent" />
-        <a-select-option label="货币" value="currency" />
-        <a-select-option label="日期" value="date" />
-      </a-select>
-      <span class="toolbar-divider" />
-
-      <!-- 字体 -->
-      <a-select v-model:value="toolbarState.fontFamily" size="small" class="toolbar-select" style="width: 130px" :disabled="readOnly" @change="updateCellStyle()">
-        <a-select-option v-for="font in fontOptions" :key="font.value" :label="font.label" :value="font.value">
-          <span :style="{ fontFamily: font.value }">{{ font.label }}</span>
-        </a-select-option>
-      </a-select>
-
-      <!-- 字号 -->
-      <a-select v-model:value="toolbarState.fontSize" size="small" class="toolbar-size" style="width: 80px" :disabled="readOnly" @change="updateCellStyle()">
-        <a-select-option v-for="s in sizeOptions" :key="s.value + '-' + s.label" :label="s.label" :value="s.value" />
-      </a-select>
-      <button class="tb" :disabled="readOnly" @click="changeFontSize(1)" title="增大字号">
-        <VIcon name="plus" />
-      </button>
-      <button class="tb" :disabled="readOnly" @click="changeFontSize(-1)" title="减小字号">
-        <VIcon name="minus" />
-      </button>
-      <span class="toolbar-divider" />
-
-      <!-- 文字样式 -->
-      <button class="tb" :disabled="readOnly" :class="{ active: toolbarState.bold }" @click="toggleStyle('bold')" title="粗体 (Ctrl+B)">
-        <VIcon name="format-bold" />
-      </button>
-      <button class="tb" :disabled="readOnly" :class="{ active: toolbarState.italic }" @click="toggleStyle('italic')" title="斜体 (Ctrl+I)">
-        <VIcon name="format-italic" />
-      </button>
-      <button class="tb" :disabled="readOnly" :class="{ active: toolbarState.strikethrough }" @click="toggleStyle('strikethrough')" title="删除线">
-        <VIcon name="format-strikethrough" />
-      </button>
-      <button class="tb" :disabled="readOnly" :class="{ active: toolbarState.underline }" @click="toggleStyle('underline')" title="下划线 (Ctrl+U)">
-        <VIcon name="format-underline" />
-      </button>
-      <span class="toolbar-divider" />
-
-      <!-- 字体颜色 -->
-      <a-popover placement="bottom" :width="260" trigger="click">
-        <template #content>
-          <div class="color-panel">
-            <div class="color-grid">
-              <button v-for="c in colorPalette" :key="'fc-'+c" class="color-cell" :style="{ backgroundColor: c }" @click="setFontColor(c)"></button>
+        <div class="ribbon-tabs-bar">
+          <div
+            v-for="tab in menuTabs"
+            :key="tab.key"
+            v-show="tab.key !== 'collab' || collabConnectionState === 'connected'"
+            class="ribbon-tab"
+            :class="{ active: activeMenuTab === tab.key }"
+            @click="activeMenuTab = tab.key"
+          >
+            <span class="ribbon-tab-label">{{ tab.label }}</span>
+          </div>
+        </div>
+        <div class="ribbon-panel">
+          <div v-if="activeMenuTab === 'file'" class="ribbon-tab-panel">
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="handleCreateNewWorkbook()" title="新建表格"><VIcon name="plus" /><span>新建</span></button>
+                <button class="ribbon-btn-lg" @click="emitChange()" title="保存"><VIcon name="content-save-outline" /><span>保存</span></button>
+                <button class="ribbon-btn-lg" @click="handlePrint()" title="打印"><VIcon name="printer-outline" /><span>打印</span></button>
+              </div>
+              <div class="ribbon-group-title">文件</div>
+            </div>
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="triggerImportExcel()" title="导入表格"><VIcon name="file-excel-box" /><span>导入</span></button>
+                <button class="ribbon-btn-lg" @click="handleExportExcel()" title="导出 Excel"><VIcon name="file-excel-box" /><span>导出</span></button>
+              </div>
+              <div class="ribbon-group-title">导入导出</div>
             </div>
           </div>
-        </template>
-        <template #default>
-          <button class="tb color-btn" :disabled="readOnly" title="字体颜色">
-            <VIcon name="format-color-text" />
-            <span class="color-bar" :style="{ backgroundColor: toolbarState.fontColor || '#000000' }"></span>
-          </button>
-        </template>
-      </a-popover>
+          <div v-else-if="activeMenuTab === 'home'" class="ribbon-tab-panel">
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <a-select v-model:value="toolbarState.fontFamily" size="small" style="width: 110px" :disabled="readOnly" @change="updateCellStyle()">
+                  <a-select-option v-for="font in fontOptions" :key="font.value" :label="font.label" :value="font.value">
+                    <span :style="{ fontFamily: font.value }">{{ font.label }}</span>
+                  </a-select-option>
+                </a-select>
+                <a-select v-model:value="toolbarState.fontSize" size="small" style="width: 60px" :disabled="readOnly" @change="updateCellStyle()">
+                  <a-select-option v-for="s in sizeOptions" :key="s.value + '-' + s.label" :label="s.label" :value="s.value" />
+                </a-select>
+                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.bold }" @click="toggleStyle('bold')" title="粗体 (Ctrl+B)"><VIcon name="format-bold" /><span>加粗</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.italic }" @click="toggleStyle('italic')" title="斜体 (Ctrl+I)"><VIcon name="format-italic" /><span>斜体</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.underline }" @click="toggleStyle('underline')" title="下划线 (Ctrl+U)"><VIcon name="format-underline" /><span>下划线</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.strikethrough }" @click="toggleStyle('strikethrough')" title="删除线"><VIcon name="format-strikethrough" /><span>删除线</span></button>
+              </div>
+              <div class="ribbon-group-title">字体</div>
+            </div>
 
-      <!-- 填充颜色 -->
-      <a-popover placement="bottom" :width="260" trigger="click">
-        <template #content>
-          <div class="color-panel">
-            <div class="color-grid">
-              <button class="color-cell color-none" @click="setBgColor('')" title="无填充">
-                <svg viewBox="0 0 16 16" width="14" height="14"><line x1="2" y1="14" x2="14" y2="2" stroke="#f00" stroke-width="1.5"/></svg>
-              </button>
-              <button v-for="c in colorPalette" :key="'bg-'+c" class="color-cell" :style="{ backgroundColor: c }" @click="setBgColor(c)"></button>
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <a-popover placement="bottom" :width="260" trigger="click">
+                  <template #content>
+                    <div class="color-panel"><div class="color-grid">
+                      <button v-for="c in colorPalette" :key="'fc-'+c" class="color-cell" :style="{ backgroundColor: c }" @click="setFontColor(c)"></button>
+                    </div></div>
+                  </template>
+                  <template #default>
+                    <button class="ribbon-btn-lg color-btn" :disabled="readOnly" title="字体颜色"><VIcon name="format-color-text" /><span>字色</span><span class="color-bar" :style="{ backgroundColor: toolbarState.fontColor || '#000000' }"></span></button>
+                  </template>
+                </a-popover>
+                <a-popover placement="bottom" :width="260" trigger="click">
+                  <template #content>
+                    <div class="color-panel"><div class="color-grid">
+                      <button class="color-cell color-none" @click="setBgColor('')" title="无填充"><svg viewBox="0 0 16 16" width="14" height="14"><line x1="2" y1="14" x2="14" y2="2" stroke="#f00" stroke-width="1.5"/></svg></button>
+                      <button v-for="c in colorPalette" :key="'bg-'+c" class="color-cell" :style="{ backgroundColor: c }" @click="setBgColor(c)"></button>
+                    </div></div>
+                  </template>
+                  <template #default>
+                    <button class="ribbon-btn-lg color-btn" :disabled="readOnly" title="填充颜色"><VIcon name="format-color-fill" /><span>填充</span><span class="color-bar" :style="{ backgroundColor: toolbarState.bgColor || '#ffffff' }"></span></button>
+                  </template>
+                </a-popover>
+              </div>
+              <div class="ribbon-group-title">颜色</div>
+            </div>
+
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <a-popover placement="bottom" :width="140" trigger="click">
+                  <template #content>
+                    <div class="align-panel">
+                      <div class="align-group-label">水平对齐</div>
+                      <button class="align-btn" :class="{ active: toolbarState.align === 'left' }" @click="setAlign('left')"><VIcon name="format-align-left" /><span>左对齐</span></button>
+                      <button class="align-btn" :class="{ active: toolbarState.align === 'center' }" @click="setAlign('center')"><VIcon name="format-align-center" /><span>居中</span></button>
+                      <button class="align-btn" :class="{ active: toolbarState.align === 'right' }" @click="setAlign('right')"><VIcon name="format-align-right" /><span>右对齐</span></button>
+                      <div class="align-group-divider"></div>
+                      <div class="align-group-label">垂直对齐</div>
+                      <button class="align-btn" :class="{ active: toolbarState.verticalAlign === 'top' }" @click="setVerticalAlign('top')"><VIcon name="format-vertical-align-top" /><span>顶部</span></button>
+                      <button class="align-btn" :class="{ active: toolbarState.verticalAlign === 'middle' }" @click="setVerticalAlign('middle')"><VIcon name="format-vertical-align-center" /><span>居中</span></button>
+                      <button class="align-btn" :class="{ active: toolbarState.verticalAlign === 'bottom' }" @click="setVerticalAlign('bottom')"><VIcon name="format-vertical-align-bottom" /><span>底部</span></button>
+                    </div>
+                  </template>
+                  <template #default>
+                    <button class="ribbon-btn-lg" :disabled="readOnly" title="对齐方式"><VIcon :name="'format-align-' + (toolbarState.align || 'left')" /><span>对齐</span></button>
+                  </template>
+                </a-popover>
+                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.wrap === 'wrap' }" @click="toggleWrap()" title="自动换行"><VIcon name="text-wrap" /><span>换行</span></button>
+              </div>
+              <div class="ribbon-group-title">对齐</div>
+            </div>
+
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <a-select v-model:value="toolbarState.numberFormat" size="small" style="width: 80px" :disabled="readOnly" @change="updateCellStyle()">
+                  <a-select-option label="自动" value="auto" />
+                  <a-select-option label="纯文本" value="text" />
+                  <a-select-option label="数字" value="number" />
+                  <a-select-option label="百分比" value="percent" />
+                  <a-select-option label="货币" value="currency" />
+                  <a-select-option label="日期" value="date" />
+                </a-select>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="quickFormat('currency')" title="货币格式 (¥)"><VIcon name="currency-usd" /><span>货币</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="quickFormat('percent')" title="百分比格式 (%)"><VIcon name="percent" /><span>百分比</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="changeDecimal(-1)" title="减少小数位"><VIcon name="decimal-decrease" /><span>减位</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="changeDecimal(1)" title="增加小数位"><VIcon name="decimal-increase" /><span>增位</span></button>
+              </div>
+              <div class="ribbon-group-title">数字</div>
+            </div>
+
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <a-popover placement="bottom" :width="200" trigger="click">
+                  <template #content>
+                    <div class="border-panel"><div class="border-grid">
+                      <button class="border-btn" @click="setBorders('all')" title="所有边框"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3,3V21H21V3H3M19,19H13V13H19V19M19,11H13V5H19V11M11,19H5V13H11V19M11,11H5V5H11V11Z"/></svg></button>
+                      <button class="border-btn" @click="setBorders('outer')" title="外侧边框"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3,3V21H21V3H3M19,5V19H5V5H19Z"/></svg></button>
+                      <button class="border-btn" @click="setBorders('none')" title="无边框"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3,3V5H5V3H3M7,3V5H9V3H7M11,3V5H13V3H11M15,3V5H17V3H15M19,3V5H21V3H19M3,7V9H5V7H3M19,7V9H21V7H19M3,11V13H5V11H3M19,11V13H21V11H19M3,15V17H5V15H3M19,15V17H21V15H19M3,19V21H5V19H3M7,19V21H9V19H7M11,19V21H13V19H11M15,19V21H17V19H15M19,19V21H21V19H19Z"/></svg></button>
+                      <button class="border-btn" @click="setBorders('bottom')" title="下边框"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3,19V21H21V19H3Z"/></svg></button>
+                      <button class="border-btn" @click="setBorders('top')" title="上边框"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3,3V5H21V3H3Z"/></svg></button>
+                      <button class="border-btn" @click="setBorders('left')" title="左边框"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3,3V21H5V3H3Z"/></svg></button>
+                      <button class="border-btn" @click="setBorders('right')" title="右边框"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19,3V21H21V3H19Z"/></svg></button>
+                    </div></div>
+                  </template>
+                  <template #default>
+                    <button class="ribbon-btn-lg" :disabled="readOnly" title="边框"><VIcon name="grid" /><span>边框</span></button>
+                  </template>
+                </a-popover>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="handleMergeCells()" title="合并单元格"><VIcon name="table-merge-cells" /><span>合并</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="handleUnmergeCells()" title="取消合并"><VIcon name="table-split-cell" /><span>取消合并</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="clearSelectedFormat()" title="清除格式"><VIcon name="format-clear" /><span>清格式</span></button>
+              </div>
+              <div class="ribbon-group-title">单元格</div>
+            </div>
+
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="showRowHeightDialog = true" title="行高"><VIcon name="arrow-expand-vertical" /><span>行高</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="autoFitRowHeight()" title="自动行高"><VIcon name="arrow-fit-vertical" /><span>自动行高</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="showColWidthDialog = true" title="列宽"><VIcon name="arrow-expand-horizontal" /><span>列宽</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="autoFitColWidth()" title="自动列宽"><VIcon name="arrow-fit-horizontal" /><span>自动列宽</span></button>
+              </div>
+              <div class="ribbon-group-title">行列</div>
             </div>
           </div>
-        </template>
-        <template #default>
-          <button class="tb color-btn" :disabled="readOnly" title="填充颜色">
-            <VIcon name="format-color-fill" />
-            <span class="color-bar" :style="{ backgroundColor: toolbarState.bgColor || '#ffffff' }"></span>
-          </button>
-        </template>
-      </a-popover>
-      <span class="toolbar-divider" />
 
-      <!-- 边框 -->
-      <a-popover placement="bottom" :width="200" trigger="click">
-        <template #content>
-          <div class="border-panel">
-            <div class="border-grid">
-              <button class="border-btn" @click="setBorders('all')" title="所有边框">
-                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3,3V21H21V3H3M19,19H13V13H19V19M19,11H13V5H19V11M11,19H5V13H11V19M11,11H5V5H11V11Z"/></svg>
-              </button>
-              <button class="border-btn" @click="setBorders('outer')" title="外侧边框">
-                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3,3V21H21V3H3M19,5V19H5V5H19Z"/></svg>
-              </button>
-              <button class="border-btn" @click="setBorders('none')" title="无边框">
-                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3,3V5H5V3H3M7,3V5H9V3H7M11,3V5H13V3H11M15,3V5H17V3H15M19,3V5H21V3H19M3,7V9H5V7H3M19,7V9H21V7H19M3,11V13H5V11H3M19,11V13H21V11H19M3,15V17H5V15H3M19,15V17H21V15H19M3,19V21H5V19H3M7,19V21H9V19H7M11,19V21H13V19H11M15,19V21H17V19H15M19,19V21H21V19H19Z"/></svg>
-              </button>
-              <button class="border-btn" @click="setBorders('bottom')" title="下边框">
-                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3,19V21H21V19H3Z"/></svg>
-              </button>
-              <button class="border-btn" @click="setBorders('top')" title="上边框">
-                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3,3V5H21V3H3Z"/></svg>
-              </button>
-              <button class="border-btn" @click="setBorders('left')" title="左边框">
-                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3,3V21H5V3H3Z"/></svg>
-              </button>
-              <button class="border-btn" @click="setBorders('right')" title="右边框">
-                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19,3V21H21V3H19Z"/></svg>
-              </button>
+          <div v-else-if="activeMenuTab === 'edit'" class="ribbon-tab-panel">
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <button class="ribbon-btn-lg" :disabled="readOnly || undoStack.length === 0" @click="handleUndo()" title="撤销 (Ctrl+Z)"><VIcon name="undo" /><span>撤销</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly || redoStack.length === 0" @click="handleRedo()" title="重做 (Ctrl+Y)"><VIcon name="redo" /><span>重做</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="handleFormatPainter()" :class="{ active: formatPainterActive }" title="格式刷"><VIcon name="format-paint" /><span>格式刷</span></button>
+              </div>
+              <div class="ribbon-group-title">操作</div>
+            </div>
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="handleCut()" title="剪切 (Ctrl+X)"><VIcon name="content-cut" /><span>剪切</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="handleCopy()" title="复制 (Ctrl+C)"><VIcon name="content-copy" /><span>复制</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="handlePaste()" title="粘贴 (Ctrl+V)"><VIcon name="content-paste" /><span>粘贴</span></button>
+              </div>
+              <div class="ribbon-group-title">剪贴板</div>
+            </div>
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <button class="ribbon-btn-lg" @click="selectAll()" title="全选 (Ctrl+A)"><VIcon name="select-all" /><span>全选</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="deleteSelectedContent()" title="删除内容 (Delete)"><VIcon name="delete-outline" /><span>删除</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="clearSelectedFormat()" title="清除格式"><VIcon name="format-clear" /><span>清格式</span></button>
+                <button class="ribbon-btn-lg" @click="openUniverReplaceDialog()" title="查找和替换 (Ctrl+H)"><VIcon name="magnify" /><span>查找</span></button>
+              </div>
+              <div class="ribbon-group-title">编辑</div>
+            </div>
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="deleteRow()" title="删除行"><VIcon name="table-row-remove" /><span>删行</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="deleteCol()" title="删除列"><VIcon name="table-column-remove" /><span>删列</span></button>
+              </div>
+              <div class="ribbon-group-title">行列</div>
             </div>
           </div>
-        </template>
-        <template #default>
-          <button class="tb" :disabled="readOnly" title="边框">
-            <VIcon name="grid" />
-            <VIcon name="chevron-down" size="12" />
-          </button>
-        </template>
-      </a-popover>
 
-      <!-- 合并单元格 -->
-      <button class="tb" :disabled="readOnly" @click="handleMergeCells()" title="合并单元格">
-        <VIcon name="table-merge-cells" />
-      </button>
-      <span class="toolbar-divider" />
-
-      <!-- 对齐方式 -->
-      <a-popover placement="bottom" :width="140" trigger="click">
-        <template #content>
-          <div class="align-panel">
-            <div class="align-group-label">水平对齐</div>
-            <button class="align-btn" :class="{ active: toolbarState.align === 'left' }" @click="setAlign('left')"><VIcon name="format-align-left" /><span>左对齐</span></button>
-            <button class="align-btn" :class="{ active: toolbarState.align === 'center' }" @click="setAlign('center')"><VIcon name="format-align-center" /><span>居中</span></button>
-            <button class="align-btn" :class="{ active: toolbarState.align === 'right' }" @click="setAlign('right')"><VIcon name="format-align-right" /><span>右对齐</span></button>
-            <div class="align-group-divider"></div>
-            <div class="align-group-label">垂直对齐</div>
-            <button class="align-btn" :class="{ active: toolbarState.verticalAlign === 'top' }" @click="setVerticalAlign('top')"><VIcon name="format-vertical-align-top" /><span>顶部</span></button>
-            <button class="align-btn" :class="{ active: toolbarState.verticalAlign === 'middle' }" @click="setVerticalAlign('middle')"><VIcon name="format-vertical-align-center" /><span>居中</span></button>
-            <button class="align-btn" :class="{ active: toolbarState.verticalAlign === 'bottom' }" @click="setVerticalAlign('bottom')"><VIcon name="format-vertical-align-bottom" /><span>底部</span></button>
+          <div v-else-if="activeMenuTab === 'view'" class="ribbon-tab-panel">
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <button class="ribbon-btn-lg" @click="toggleGridlines()" :class="{ active: showGridlines }" title="网格线"><VIcon name="grid" /><span>网格线</span></button>
+                <button class="ribbon-btn-lg" @click="showFormulaBar = !showFormulaBar" :class="{ active: showFormulaBar }" title="编辑栏"><VIcon name="function-variant" /><span>编辑栏</span></button>
+              </div>
+              <div class="ribbon-group-title">显示</div>
+            </div>
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <button class="ribbon-btn-lg" @click="setZoom(50)" :class="{ active: zoomLevel === 50 }" title="50%"><VIcon name="magnify-minus" /><span>50%</span></button>
+                <button class="ribbon-btn-lg" @click="setZoom(75)" :class="{ active: zoomLevel === 75 }" title="75%"><VIcon name="magnify-minus" /><span>75%</span></button>
+                <button class="ribbon-btn-lg" @click="setZoom(100)" :class="{ active: zoomLevel === 100 }" title="100%"><VIcon name="magnify" /><span>100%</span></button>
+                <button class="ribbon-btn-lg" @click="setZoom(125)" :class="{ active: zoomLevel === 125 }" title="125%"><VIcon name="magnify-plus" /><span>125%</span></button>
+                <button class="ribbon-btn-lg" @click="setZoom(150)" :class="{ active: zoomLevel === 150 }" title="150%"><VIcon name="magnify-plus" /><span>150%</span></button>
+                <button class="ribbon-btn-lg" @click="setZoom(200)" :class="{ active: zoomLevel === 200 }" title="200%"><VIcon name="magnify-plus" /><span>200%</span></button>
+              </div>
+              <div class="ribbon-group-title">缩放</div>
+            </div>
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <button class="ribbon-btn-lg" @click="toggleFreezeRow()" :class="{ active: frozenRows > 0 }" title="冻结首行"><VIcon name="snowflake" /><span>{{ frozenRows > 0 ? '取消冻结行' : '冻结首行' }}</span></button>
+                <button class="ribbon-btn-lg" @click="toggleFreezeCol()" :class="{ active: frozenCols > 0 }" title="冻结首列"><VIcon name="snowflake" /><span>{{ frozenCols > 0 ? '取消冻结列' : '冻结首列' }}</span></button>
+              </div>
+              <div class="ribbon-group-title">冻结</div>
+            </div>
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="toggleUniverFilter()" title="筛选"><VIcon name="filter-outline" /><span>筛选</span></button>
+              </div>
+              <div class="ribbon-group-title">筛选</div>
+            </div>
           </div>
-        </template>
-        <template #default>
-          <button class="tb" :disabled="readOnly" title="对齐方式">
-            <VIcon :name="'format-align-' + (toolbarState.align || 'left')" />
-            <VIcon name="chevron-down" size="12" />
-          </button>
-        </template>
-      </a-popover>
 
-      <!-- 文本换行 -->
-      <button class="tb" :disabled="readOnly" :class="{ active: toolbarState.wrap === 'wrap' }" @click="toggleWrap()" title="自动换行">
-        <VIcon name="text-wrap" />
-      </button>
 
-      <!-- 文字旋转 -->
-      <a-popover placement="bottom" :width="140" trigger="click">
-        <template #content>
-          <div class="align-panel">
-            <button class="align-btn" :class="{ active: toolbarState.rotation === 0 }" @click="setRotation(0)"><VIcon name="format-text-rotation-none" /><span>无旋转</span></button>
-            <button class="align-btn" :class="{ active: toolbarState.rotation === 45 }" @click="setRotation(45)"><VIcon name="format-text-rotation-up" /><span>向上倾斜</span></button>
-            <button class="align-btn" :class="{ active: toolbarState.rotation === -45 }" @click="setRotation(-45)"><VIcon name="format-text-rotation-down" /><span>向下倾斜</span></button>
-            <button class="align-btn" :class="{ active: toolbarState.rotation === 90 }" @click="setRotation(90)"><VIcon name="format-text-rotation-vertical" /><span>竖排文字</span></button>
+          <div v-else-if="activeMenuTab === 'insert'" class="ribbon-tab-panel">
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="insertRow('above')" title="在上方插入行"><VIcon name="table-row-plus-before" /><span>上方插行</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="insertRow('below')" title="在下方插入行"><VIcon name="table-row-plus-after" /><span>下方插行</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="insertCol('left')" title="在左侧插入列"><VIcon name="table-column-plus-before" /><span>左侧插列</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="insertCol('right')" title="在右侧插入列"><VIcon name="table-column-plus-after" /><span>右侧插列</span></button>
+              </div>
+              <div class="ribbon-group-title">行列</div>
+            </div>
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="openUniverHyperlink()" title="插入链接"><VIcon name="link-variant" /><span>链接</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="insertImage()" title="插入图片"><VIcon name="image-outline" /><span>图片</span></button>
+              </div>
+              <div class="ribbon-group-title">链接</div>
+            </div>
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="openUniverNote()" title="便签"><VIcon name="note-text-outline" /><span>便签</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="openUniverThreadComment()" title="评论"><VIcon name="comment-plus-outline" /><span>评论</span></button>
+              </div>
+              <div class="ribbon-group-title">批注</div>
+            </div>
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <a-popover placement="bottom" :width="150" trigger="click">
+                  <template #content>
+                    <div class="align-panel">
+                      <button class="align-btn" @click="insertFunction('SUM')"><span>SUM 求和</span></button>
+                      <button class="align-btn" @click="insertFunction('AVERAGE')"><span>AVERAGE 平均值</span></button>
+                      <button class="align-btn" @click="insertFunction('COUNT')"><span>COUNT 计数</span></button>
+                      <button class="align-btn" @click="insertFunction('MAX')"><span>MAX 最大值</span></button>
+                      <button class="align-btn" @click="insertFunction('MIN')"><span>MIN 最小值</span></button>
+                    </div>
+                  </template>
+                  <template #default>
+                    <button class="ribbon-btn-lg" :disabled="readOnly" title="函数"><VIcon name="sigma" /><span>函数</span></button>
+                  </template>
+                </a-popover>
+              </div>
+              <div class="ribbon-group-title">函数</div>
+            </div>
           </div>
-        </template>
-        <template #default>
-          <button class="tb" :disabled="readOnly" title="文字旋转">
-            <VIcon name="format-text-rotation-none" />
-            <VIcon name="chevron-down" size="12" />
-          </button>
-        </template>
-      </a-popover>
-      <span class="toolbar-divider" />
 
-      <!-- 冻结 -->
-      <button class="tb" :class="{ active: frozenRows > 0 || frozenCols > 0 }" @click="toggleFreezeRow()" title="冻结首行">
-        <VIcon name="snowflake" />
-      </button>
-      <!-- 筛选排序 -->
-      <button class="tb" :disabled="readOnly" @click="toggleUniverFilter()" title="筛选">
-        <VIcon name="filter-outline" />
-      </button>
-      <span class="toolbar-divider" />
 
-      <!-- 超链接 -->
-      <button class="tb" :disabled="readOnly" @click="openUniverHyperlink()" title="插入链接">
-        <VIcon name="link-variant" />
-      </button>
-      <!-- 插入图片 -->
-      <button class="tb" :disabled="readOnly" @click="insertImage()" title="插入图片">
-        <VIcon name="image-outline" />
-      </button>
-      <!-- 便签 -->
-      <button class="tb" :disabled="readOnly" @click="openUniverNote()" title="便签">
-        <VIcon name="note-text-outline" />
-      </button>
-      <!-- 评论 -->
-      <button class="tb" :disabled="readOnly" @click="openUniverThreadComment()" title="评论">
-        <VIcon name="comment-plus-outline" />
-      </button>
-      <span class="toolbar-divider" />
 
-      <!-- 快速函数 -->
-      <a-popover placement="bottom" :width="150" trigger="click">
-        <template #content>
-          <div class="align-panel">
-            <button class="align-btn" @click="insertFunction('SUM')"><span>SUM 求和</span></button>
-            <button class="align-btn" @click="insertFunction('AVERAGE')"><span>AVERAGE 平均值</span></button>
-            <button class="align-btn" @click="insertFunction('COUNT')"><span>COUNT 计数</span></button>
-            <button class="align-btn" @click="insertFunction('MAX')"><span>MAX 最大值</span></button>
-            <button class="align-btn" @click="insertFunction('MIN')"><span>MIN 最小值</span></button>
+
+          <div v-else-if="activeMenuTab === 'format'" class="ribbon-tab-panel">
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.wrap === 'clip' }" @click="setWrap('clip')" title="裁剪"><VIcon name="crop" /><span>裁剪</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.wrap === 'overflow' }" @click="setWrap('overflow')" title="溢出"><VIcon name="arrow-right" /><span>溢出</span></button>
+              </div>
+              <div class="ribbon-group-title">换行</div>
+            </div>
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.rotation === 0 }" @click="setRotation(0)" title="无旋转"><VIcon name="format-text-rotation-none" /><span>无旋转</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.rotation === 45 }" @click="setRotation(45)" title="向上倾斜"><VIcon name="format-text-rotation-up" /><span>向上</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.rotation === -45 }" @click="setRotation(-45)" title="向下倾斜"><VIcon name="format-text-rotation-down" /><span>向下</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.rotation === 90 }" @click="setRotation(90)" title="竖排文字"><VIcon name="format-text-rotation-vertical" /><span>竖排</span></button>
+              </div>
+              <div class="ribbon-group-title">旋转</div>
+            </div>
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="hideRow()" title="隐藏行"><VIcon name="eye-off-outline" /><span>隐藏行</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="unhideRow()" title="取消隐藏行"><VIcon name="eye-outline" /><span>显示行</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="hideCol()" title="隐藏列"><VIcon name="eye-off-outline" /><span>隐藏列</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="unhideCol()" title="取消隐藏列"><VIcon name="eye-outline" /><span>显示列</span></button>
+              </div>
+              <div class="ribbon-group-title">隐藏</div>
+            </div>
           </div>
-        </template>
-        <template #default>
-          <button class="tb" :disabled="readOnly" title="函数">
-            <VIcon name="sigma" />
-            <VIcon name="chevron-down" size="12" />
-          </button>
-        </template>
-      </a-popover>
-      <span class="toolbar-divider" />
 
-      <!-- 清除格式 -->
-      <button class="tb" :disabled="readOnly" @click="clearSelectedFormat()" title="清除格式">
-        <VIcon name="format-clear" />
-      </button>
-      <!-- 打印 -->
-      <button class="tb" @click="handlePrint()" title="打印 (Ctrl+P)">
-        <VIcon name="printer" />
-      </button>
-      <!-- 查找替换 -->
-      <button class="tb" @click="openUniverReplaceDialog()" title="查找和替换 (Ctrl+H)">
-        <VIcon name="magnify" />
-      </button>
-    </div>
+          <div v-else-if="activeMenuTab === 'data'" class="ribbon-tab-panel">
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="openUniverSort('asc')" title="升序排序"><VIcon name="sort-ascending" /><span>升序</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="openUniverSort('desc')" title="降序排序"><VIcon name="sort-descending" /><span>降序</span></button>
+              </div>
+              <div class="ribbon-group-title">排序</div>
+            </div>
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="openUniverDataValidation()" title="数据验证"><VIcon name="check-circle-outline" /><span>验证</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="removeDuplicates()" title="删除重复值"><VIcon name="table-minus" /><span>去重</span></button>
+              </div>
+              <div class="ribbon-group-title">数据工具</div>
+            </div>
+          </div>
+
+          <div v-else-if="activeMenuTab === 'collab' && collabConnectionState === 'connected'" class="ribbon-tab-panel">
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <button class="ribbon-btn-lg" @click="toggleSyncSelection()" :class="{ active: syncSelectionEnabled }" title="显示/隐藏他人选区"><VIcon name="cursor-default" /><span>{{ syncSelectionEnabled ? '隐藏选区' : '显示选区' }}</span></button>
+                <button class="ribbon-btn-lg" @click="toggleSyncFilter()" :class="{ active: syncFilterEnabled }" title="显示/隐藏他人筛选"><VIcon name="filter-outline" /><span>{{ syncFilterEnabled ? '隐藏筛选' : '显示筛选' }}</span></button>
+                <button class="ribbon-btn-lg" @click="toggleSyncSort()" :class="{ active: syncSortEnabled }" title="显示/隐藏他人排序"><VIcon name="sort-ascending" /><span>{{ syncSortEnabled ? '隐藏排序' : '显示排序' }}</span></button>
+              </div>
+              <div class="ribbon-group-title">协同显示</div>
+            </div>
+          </div>
+
+          <div v-else-if="activeMenuTab === 'help'" class="ribbon-tab-panel">
+            <div class="ribbon-group">
+              <div class="ribbon-group-content">
+                <button class="ribbon-btn-lg" @click="showShortcutsDialog = true" title="键盘快捷键"><VIcon name="keyboard-outline" /><span>快捷键</span></button>
+              </div>
+              <div class="ribbon-group-title">帮助</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
     </div>
 
     <div v-if="showFormulaBar" class="formula-row">
@@ -954,6 +600,19 @@ const undoStack = ref<UndoEntry[]>([])
 const redoStack = ref<UndoEntry[]>([])
 
 const showShortcutsDialog = ref(false)
+
+const activeMenuTab = ref('home')
+const menuTabs = [
+  { key: 'file', label: '文件' },
+  { key: 'home', label: '开始' },
+  { key: 'edit', label: '编辑' },
+  { key: 'view', label: '视图' },
+  { key: 'insert', label: '插入' },
+  { key: 'format', label: '格式' },
+  { key: 'data', label: '数据' },
+  { key: 'collab', label: '协同' },
+  { key: 'help', label: '帮助' },
+]
 
 const importExcelInputRef = ref<HTMLInputElement | null>(null)
 
@@ -2024,6 +1683,15 @@ async function deleteSelectedContent() {
 
 
 // ===== Undo/Redo =====
+function handleHeaderCommand(command: string) {
+  switch (command) {
+    case 'import': return triggerImportExcel()
+    case 'save': return emitChange()
+    case 'undo': return handleUndo()
+    case 'redo': return handleRedo()
+  }
+}
+
 function handleUndo() {
   if (props.readOnly || undoStack.value.length === 0) return
   const sheet = activeSheet.value
@@ -2736,7 +2404,205 @@ function emitChange(source: 'internal' | 'univer' = 'internal') {
   background: #fff;
 }
 
-/* ===== 菜单栏 ===== */
+/* ===== 菜单栏（选项卡 + 面板） ===== */
+.ribbon-tabs-bar {
+  display: flex;
+  align-items: center;
+  background: #217346;
+  padding: 0 8px;
+  height: 26px;
+}
+
+.ribbon-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  min-width: 52px;
+  padding: 0 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.94);
+  border-radius: 4px 4px 0 0;
+  position: relative;
+  user-select: none;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.ribbon-tab:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.ribbon-tab.active {
+  background: #f1f1f1;
+  color: #217346;
+  font-weight: 600;
+}
+
+.ribbon-tab-label {
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.ribbon-panel {
+  background: #f1f1f1;
+  padding: 4px 8px;
+  min-height: 36px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  box-shadow: inset 0 -1px 0 #e6eaf2;
+  display: flex;
+  align-items: center;
+}
+
+.ribbon-tab-panel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+
+.ribbon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #3c4043;
+  white-space: nowrap;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.ribbon-btn:hover:not(:disabled) {
+  background: #dadce0;
+  color: #202124;
+}
+
+.ribbon-btn.active {
+  background: #d3e3fd;
+  color: #1a73e8;
+}
+
+.ribbon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ribbon-btn-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #3c4043;
+  white-space: nowrap;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.ribbon-btn-sm:hover:not(:disabled) {
+  background: #dadce0;
+  color: #202124;
+}
+
+.ribbon-btn-sm.active {
+  background: #d3e3fd;
+  color: #1a73e8;
+}
+
+.ribbon-btn-sm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ribbon-divider {
+  display: inline-block;
+  width: 1px;
+  height: 20px;
+  background: #dadce0;
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* ===== Ribbon 分组 ===== */
+.ribbon-group {
+  display: flex;
+  flex-direction: column;
+  padding: 2px 8px;
+  border-right: 1px solid #e3e8f2;
+  flex-shrink: 0;
+}
+.ribbon-group:last-child {
+  border-right: none;
+}
+.ribbon-group-content {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+.ribbon-group-title {
+  font-size: 10px;
+  color: #7a8191;
+  text-align: center;
+  margin-top: 2px;
+  line-height: 1.2;
+  user-select: none;
+}
+
+/* ===== 大按钮：纵向，图标上文字下 ===== */
+.ribbon-btn-lg {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 42px;
+  height: 54px;
+  padding: 4px 3px;
+  gap: 1px;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #3c4043;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+.ribbon-btn-lg:hover:not(:disabled) {
+  background: #edf2fb;
+  color: #202124;
+}
+.ribbon-btn-lg.active {
+  background: #dce8ff;
+  color: #1f57b8;
+}
+.ribbon-btn-lg:disabled {
+  color: #c0c4cc;
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.ribbon-btn-lg .v-icon {
+  font-size: 18px;
+}
+.ribbon-btn-lg > span {
+  font-size: 11px;
+  line-height: 1.2;
+  text-align: center;
+}
 
 /* ===== 工具栏 ===== */
 .toolbar {
@@ -2745,7 +2611,7 @@ function emitChange(source: 'internal' | 'univer' = 'internal') {
   gap: 3px;
   padding: 4px 12px;
   border-bottom: 1px solid #e2e6ed;
-  background: #fff;
+  background: #f1f1f1;
   flex-wrap: wrap;
   font-size: 14px;
 }
@@ -2784,7 +2650,7 @@ function emitChange(source: 'internal' | 'univer' = 'internal') {
 }
 
 .tb:hover:not(:disabled) {
-  background: #e8eaed;
+  background: #dadce0;
   border-color: transparent;
   color: #202124;
 }
@@ -3191,157 +3057,11 @@ function emitChange(source: 'internal' | 'univer' = 'internal') {
 
 <!-- 全局样式：弹出菜单（teleport 到 body，scoped 无法影响）-->
 <style>
-.sheet-menu-popper {
-  min-width: 220px !important;
-}
-
-.sheet-menu-popper .ant-menu {
-  border-inline-end: none !important;
-}
-
-.sheet-menu-popper .ant-menu-item {
-  height: 32px !important;
-  line-height: 32px !important;
-  font-size: 13px !important;
-  color: #3c4043 !important;
-  padding: 0 16px !important;
-  margin: 0 !important;
-  display: flex !important;
-  align-items: center !important;
-}
-
-.sheet-menu-popper .ant-menu-title-content {
-  display: flex;
-  align-items: center;
-  flex: 1;
-  min-width: 0;
-  height: 100%;
-}
-
-.sheet-menu-popper .ant-menu-item:hover {
-  background: #f1f3f4 !important;
-}
-
-.sheet-menu-popper .ant-menu-item .menu-item-label .v-icon {
-  margin-right: 12px;
-  color: #5f6368;
-  flex-shrink: 0;
-}
-
-.sheet-menu-popper .ant-menu-item .menu-item-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  min-height: 100%;
-  gap: 12px;
-}
-
-.sheet-menu-popper .ant-menu-item .menu-item-label {
-  display: inline-flex;
-  align-items: center;
-  min-width: 0;
-  min-height: 100%;
-}
-
-.sheet-menu-popper .ant-menu-item .menu-item-meta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-left: auto;
-  flex-shrink: 0;
-  min-height: 100%;
-}
-
-.sheet-menu-popper .ant-menu-item .shortcut {
-  display: inline-flex;
-  align-items: center;
-  color: #9aa0a6;
-  font-size: 12px;
-  line-height: 1;
-}
-
-.sheet-menu-popper .ant-menu-item .menu-check {
-  display: inline-flex;
-  align-items: center;
-  color: #1a1a1a;
-  flex-shrink: 0;
-}
-
-.sheet-menu-popper .ant-menu-submenu-title {
-  height: 32px !important;
-  line-height: 32px !important;
-  font-size: 13px !important;
-  color: #3c4043 !important;
-  padding: 0 16px !important;
-  margin: 0 !important;
-  display: flex !important;
-  align-items: center !important;
-}
-
-.sheet-menu-popper .ant-menu-submenu-title:hover {
-  background: #f1f3f4 !important;
-}
-
-.sheet-menu-popper .ant-menu-submenu-title .v-icon {
-  margin-right: 12px;
-  color: #5f6368;
-  flex-shrink: 0;
-}
-
-/* 菜单栏样式 - 全局作用域 */
 .sheet-editor .menu-card {
-  border-radius: 0 !important;
-  border-left: none !important;
-  border-right: none !important;
-  border-top: none !important;
-  border-bottom: 1px solid #185c37 !important;
-  background: #217346 !important;
-  width: 100% !important;
-  margin: 0 !important;
-  padding: 0 !important;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  border-bottom: 1px solid #e2e6ed;
 }
-.sheet-editor .sheet-menu-bar {
-  border-bottom: none !important;
-  height: auto !important;
-  background: transparent !important;
-  width: 100% !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  line-height: 1.4 !important;
-}
-.sheet-editor .sheet-menu-bar .ant-menu {
-  border-bottom: none !important;
-  background: transparent !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  line-height: 1.4 !important;
-}
-.sheet-editor .ant-menu-horizontal > .ant-menu-item,
-.sheet-editor .ant-menu-horizontal > .ant-menu-submenu {
-  padding-inline: 0 !important;
-}
-.sheet-editor .sheet-menu-bar .ant-menu-submenu-title {
-  padding: 6px 12px !important;
-  height: auto !important;
-  line-height: 1.4 !important;
-  font-size: 13px !important;
-  color: #ffffff !important;
-  background: #217346 !important;
-  border-radius: 4px !important;
-  border-bottom: none !important;
-  display: flex !important;
-  align-items: center !important;
-}
-.sheet-editor .sheet-menu-bar .ant-menu-submenu-title:hover {
-  background: #1e6e3a !important;
-}
-.sheet-editor .sheet-menu-bar .ant-menu-submenu-open > .ant-menu-submenu-title {
-  background: #185c37 !important;
-}
-.sheet-editor .sheet-menu-bar .ant-menu-submenu-arrow {
-  display: none !important;
-}
-
 </style>

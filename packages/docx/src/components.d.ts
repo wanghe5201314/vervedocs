@@ -85,7 +85,6 @@ declare module 'vue' {
     SearchLayout: typeof import('./components/sidebars/SearchLayout.vue')['default']
     ShortcutsDialog: typeof import('./components/dialog/app/ShortcutsDialog.vue')['default']
     SignatureDialog: typeof import('./components/dialog/insert/SignatureDialog.vue')['default']
-    SkeletonScreen: typeof import('./components/editor/skeleton-screen.vue')['default']
     TableBordersDialog: typeof import('./components/dialog/document/TableBordersDialog.vue')['default']
     TocDialog: typeof import('./components/dialog/document/TocDialog.vue')['default']
     ToolsTab: typeof import('./components/editor/ribbon/tabs/toolsTab.vue')['default']

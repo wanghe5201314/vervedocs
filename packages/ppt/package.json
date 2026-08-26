@@ -20,9 +20,8 @@
     "dist"
   ],
   "scripts": {
-    "dev": "vite",
-    "build": "vue-tsc -b && vite build --config vite.lib.config.ts",
-    "build:ui": "vue-tsc -b && vite build"
+    "build": "vue-tsc --noEmit && vite build",
+    "lint": "eslint ."
   },
   "peerDependencies": {
     "@mdi/js": "catalog:",

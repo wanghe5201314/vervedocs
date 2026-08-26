@@ -1,4 +1,5 @@
-import { ExcelEditor } from './object/excel-editor'
+import { ExcelEditor } from '@vervedoc/excel'
+import './demo.css'
 
 const applyExcelTheme = () => {
   const root = document.documentElement

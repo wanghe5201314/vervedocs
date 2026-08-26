@@ -135,10 +135,8 @@ class WordEditor {
 ## 🔧 开发命令
 
 ```bash
-npm run dev
-npm run lib
-npm run build:ui
-npm run lint
+pnpm build
+pnpm lint
 ```
 
 ## 📌 说明

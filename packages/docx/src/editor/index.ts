@@ -11,7 +11,7 @@ export type { Options } from '../core/word-editor'
 // 导出版本号
 export const DOCX_EDITOR_UI_VERSION = __APP_VERSION__
 
-// 导出 API 相关类型
+// 导出文档 API 类型与默认实现（供接入方 / playground 注入）
 export type {
   DocumentApi,
   DocumentRequestConfig,
@@ -20,6 +20,10 @@ export type {
   SaveDocumentRequest,
   SaveDocumentResult,
   SetStatusRequest
+} from '../api/document.api'
+export {
+  setDocumentApi,
+  createDefaultDocumentApi
 } from '../api/document.api'
 
 export type {

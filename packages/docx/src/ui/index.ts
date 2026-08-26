@@ -1,4 +1,5 @@
 import '../assets/fonts/material-icons/material-icons.css'
+import '../assets/iconfont/iconfont.js'
 import '../style.css'
 import 'prismjs/themes/prism.css'
 import type { DocumentMeta } from '@/api/document.api'

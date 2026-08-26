@@ -20,7 +20,7 @@ const ensureDistArtifacts = () => {
     ensureFileExists('dist')
     required.forEach(ensureFileExists)
   } catch {
-    execSync('npm run -s lib', { stdio: 'inherit' })
+    execSync('npm run -s build', { stdio: 'inherit' })
     ensureFileExists('dist')
     required.forEach(ensureFileExists)
   }

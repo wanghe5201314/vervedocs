@@ -1,7 +1,8 @@
 packages:
-  - 'packages/*'
-  - 'plugins/*'
-  - 'apps/*'
+  - 'packages/*' # 主要核心组件包
+  - 'plugins/*' # 用于扩展和增强功能的插件
+  - 'apps/*' # 用于构建和部署的应用程序
+  - 'playground/*'   # 用于测试和演示的 playground 项目
 
 catalog:
   # 语言与类型

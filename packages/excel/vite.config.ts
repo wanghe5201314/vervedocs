@@ -8,11 +8,11 @@ import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
 import { resolve } from 'path'
 import { existsSync } from 'node:fs'
 
-export default defineConfig(({ mode }) => {
-  const isLib = mode === 'lib'
+export default defineConfig(() => {
   const collabNodeModules = existsSync(resolve(__dirname, '../../plugins/docx-editor-collaboration/node_modules'))
     ? resolve(__dirname, '../../plugins/docx-editor-collaboration/node_modules')
     : resolve(__dirname, 'node_modules')
+
   const isExternal = (id: string) => {
     if (['vue', '@mdi/js'].includes(id)) {
       return true
@@ -53,13 +53,13 @@ export default defineConfig(({ mode }) => {
     plugins: [
       vue(),
       ...autoImportPlugins,
-      isLib ? cssInjectedByJsPlugin() : null,
-      isLib ? dts({
+      cssInjectedByJsPlugin(),
+      dts({
         include: ['src/**/*.ts', 'src/**/*.vue'],
         outDir: 'dist',
         rollupTypes: false
-      }) : null
-    ].filter(Boolean),
+      })
+    ],
     resolve: {
       dedupe: ['yjs', 'y-protocols', '@hocuspocus/provider', 'lib0', 'eventemitter3'],
       alias: {
@@ -70,11 +70,7 @@ export default defineConfig(({ mode }) => {
         'eventemitter3': resolve(collabNodeModules, 'eventemitter3'),
       }
     },
-    base: isLib ? undefined : './',
-    server: {
-      port: 5174,
-    },
-    build: isLib ? {
+    build: {
       lib: {
         entry: resolve(__dirname, 'src/index.ts'),
         name: 'ExcelEditorUI',
@@ -95,7 +91,6 @@ export default defineConfig(({ mode }) => {
         output: {
           globals: {
             vue: 'Vue',
-
             '@mdi/js': 'MdiJs',
             '@vervedoc/docx-editor-collaboration': 'DocxEditorCollaboration',
           },
@@ -112,9 +107,6 @@ export default defineConfig(({ mode }) => {
       },
       emptyOutDir: true,
       outDir: 'dist'
-    } : {
-      outDir: 'site',
-      emptyOutDir: true,
     }
   }
 })

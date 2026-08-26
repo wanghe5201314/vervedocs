@@ -20,14 +20,15 @@
     "access": "public"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "package.json"
   ],
   "scripts": {
-    "lib": "vite build --mode lib --config vite.config.ts",
-    "dev": "vite --config vite.config.ts",
-    "build": "vue-tsc -b && vite build --mode lib --config vite.config.ts",
-    "build:ui": "vue-tsc -b && vite build --config vite.config.ts",
-    "preview:ui": "vite preview --config vite.config.ts"
+    "build": "vue-tsc --noEmit && vite build",
+    "lint": "eslint ."
   },
   "peerDependencies": {
     "@mdi/js": "catalog:",

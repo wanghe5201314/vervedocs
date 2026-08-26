@@ -1,6 +1,6 @@
 import { computed, reactive } from 'vue'
 import type { DocumentMeta, DocumentStats } from '@/types/document'
-import type { InitialDocument } from '@/utils/resolve-app'
+import type { InitialDocument } from '@/types/document'
 import { emitExternalEvent } from '@/composables/use-external-events'
 
 /**

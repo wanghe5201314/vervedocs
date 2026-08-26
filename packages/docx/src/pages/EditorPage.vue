@@ -135,7 +135,7 @@
 <script setup lang="ts">
 import { inject, onBeforeUnmount, ref, nextTick, watch, type Ref } from 'vue'
 import { message } from 'ant-design-vue'
-import type { InitialDocument } from '@/app/resolve-app'
+import type { InitialDocument } from '@/types/document'
 import type { DocxImportCallback, DocxExportCallback } from '@vervedoc/core'
 import { emitExternalEvent, externalApi } from '@/composables/use-external-events'
 import { aiStateStore } from '@/stores/ai-state'

@@ -17,7 +17,7 @@
     "dev:docx": "pnpm --filter @vervedoc/docx-playground dev",
     "dev:docx-lite": "pnpm --filter @vervedoc/docx-lite-playground dev",
     "dev:excel": "pnpm --filter @vervedoc/excel-playground dev",
-    "dev:ppt": "pnpm --filter @vervedoc/ppt dev",
+    "dev:ppt": "pnpm --filter @vervedoc/ppt-playground dev",
     "dev:icons": "pnpm --filter @vervedoc/icons dev",
     "dev:server": "pnpm --filter @vervedoc/collaboration-server vervedocs-collaboration-server:dev",
     "dev:monitor": "pnpm --filter @vervedoc/monitor-server vervedocs-collaboration-server-monitor:dev",

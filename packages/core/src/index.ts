@@ -160,23 +160,15 @@ export interface WasmModule {
 
 /**
  * WASM 注入配置
- * 
- * <p>外部宿主可以通过此配置注入 WASM 模块，实现浏览器端的 DOCX 解析和生成。</p>
- * 
- * <h3>使用示例:</h3>
- * <pre>{@code
- * import { loadWasmModule } from '@vervedoc/core'
- * 
- * const wasm = await loadWasmModule()
- * }</pre>
+ *
+ * 外部宿主可通过此配置注入 WASM 模块，实现浏览器端的 DOCX 解析和生成。
  */
 export interface WasmInjectionConfig {
   /**
-   * WASM 模块实例
-   * 如果未提供，将使用默认的 WASM 加载器
+   * WASM 模块实例（由外部宿主注入）
    */
   wasmModule?: WasmModule
-  
+
   /**
    * WASM 加载选项
    */
@@ -186,10 +178,6 @@ export interface WasmInjectionConfig {
     timeout?: number
   }
 }
-
-// 导出 WASM 加载器
-export { loadWasmModule, isWasmSupported, getDefaultWasmUrl } from './wasm/wasm-loader'
-export type { WasmLoadOptions } from './wasm/wasm-loader'
 
 // version
 export { version } from '../package.json'

@@ -8,11 +8,10 @@ VerveDocs Node 服务 — 桥接 `vervedocs-for-java` jar 包，对外暴露 HTT
 HTTP Client
     │
     ▼
-Hono (:1320)                          ← 本服务
-    ├ POST /api/parse      docx → json
-    ├ POST /api/export     json → docx
-    ├ POST /api/export-pdf json → pdf
-    └ GET  /health         健康检查
+Express (:1320)                       ← 本服务
+    ├ GET  /health                      健康检查
+    ├ POST /documents/translate/word    docx → json
+    └ POST /documents/render            json → docx/pdf（?format=docx|pdf）
     │
     ▼
 child_process.spawn('java', ['-jar', 'vervedocs-for-java.jar', ...])
@@ -21,7 +20,8 @@ child_process.spawn('java', ['-jar', 'vervedocs-for-java.jar', ...])
 vervedocs-for-java.jar                ← Java 端（Apache POI + docx4j）
 ```
 
-底层通过 `child_process.spawn` 调用 `vervedocs-for-java.jar` 的 CLI，使用临时文件传递输入输出。
+底层通过 `child_process.spawn` 调用 `vervedocs-for-java.jar` 的 CLI，使用临时文件传递输入输出。  
+服务已启用 CORS，便于本地 playground 等浏览器前端直连。
 
 ## 环境要求
 
@@ -89,7 +89,7 @@ pnpm --filter @vervedoc/for-node start
 curl http://localhost:1320/health
 ```
 
-### `POST /api/parse`
+### `POST /documents/translate/word`
 
 解析 `.docx` 文件，返回与前端 `IDocxParseResult` 同构的 JSON。
 
@@ -112,7 +112,7 @@ curl http://localhost:1320/health
 **响应**：`application/json`
 
 ```bash
-curl -X POST http://localhost:1320/api/parse \
+curl -X POST http://localhost:1320/documents/translate/word \
   -F "file=@input.docx" \
   -F "includeHeaderFooter=true"
 ```
@@ -122,6 +122,7 @@ curl -X POST http://localhost:1320/api/parse \
 ```json
 {
   "success": true,
+  "code": 200,
   "data": {
     "success": true,
     "elements": [...],
@@ -145,9 +146,9 @@ curl -X POST http://localhost:1320/api/parse \
 }
 ```
 
-### `POST /api/export`
+### `POST /documents/render`
 
-将 JSON 转换回 `.docx` 文件。
+将 JSON 转换为 `.docx` 或 PDF。
 
 **请求**：支持两种形式
 
@@ -156,35 +157,29 @@ curl -X POST http://localhost:1320/api/parse \
 
 | 选项 | 类型 | 说明 |
 |------|------|------|
+| `format` | `docx`\|`pdf` | 输出格式（query，默认 `docx`） |
 | `defaultFont` | string | 默认字体 |
 | `defaultSize` | number | 默认字号 px |
 
-**响应**：成功返回 `.docx` 二进制流，失败返回 JSON。
+**响应**：成功返回二进制流，失败返回 JSON。
 
 ```bash
-# 方式一：直接 POST JSON body
-curl -X POST http://localhost:1320/api/export \
+# 导出 docx
+curl -X POST "http://localhost:1320/documents/render?format=docx" \
   -H "Content-Type: application/json" \
   --data-binary @input.json \
   -o output.docx
 
-# 方式二：上传 .json 文件
-curl -X POST http://localhost:1320/api/export \
-  -F "file=@input.json" \
-  -o output.docx
-```
-
-### `POST /api/export-pdf`
-
-将 JSON 转换为 PDF 文件（经 docx 中间格式通过 docx4j + FOP 渲染）。
-
-入参与 `/api/export` 完全一致，仅输出格式为 PDF。
-
-```bash
-curl -X POST http://localhost:1320/api/export-pdf \
+# 导出 pdf
+curl -X POST "http://localhost:1320/documents/render?format=pdf" \
   -H "Content-Type: application/json" \
   --data-binary @input.json \
   -o output.pdf
+
+# 上传 .json 文件
+curl -X POST "http://localhost:1320/documents/render?format=docx" \
+  -F "file=@input.json" \
+  -o output.docx
 ```
 
 ## 退出码契约
@@ -210,15 +205,13 @@ apps/vervedocs-for-node/
 └── src/
     ├── index.ts                    # HTTP 服务入口
     ├── config.ts                   # 配置
-    ├── routes/                     # 路由（复数）
-    │   ├── parse-route.ts          # docx → json
-    │   ├── export-route.ts         # json → docx
-    │   └── export-pdf-route.ts     # json → pdf
-    ├── services/                   # 服务层（复数）
+    ├── routes/                     # 路由
+    │   └── index.ts                # /translate/word、/render
+    ├── services/
     │   └── jar-bridge.ts           # Java jar 调用桥接
-    ├── types/                      # 类型定义（复数）
+    ├── types/
     │   └── api-types.ts
-    └── utils/                      # 工具（复数）
+    └── utils/
         └── temp-files.ts           # 临时文件管理
 ```
 

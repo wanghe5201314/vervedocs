@@ -172,6 +172,7 @@ import { useEditorSave } from '@/composables/use-editor-save'
 import { useCollaboration } from '@/composables/use-collaboration'
 import { useDocumentActions } from '@/composables/use-document-actions'
 import { useEditorCommand } from '@/composables/use-editor-command'
+import { replaceDocument } from '@/composables/use-replace-document'
 
 const initialDocument = inject<InitialDocument | null>('docx-editor-ui:initDocument', null)
 const collaborationConfig = inject<CollaborationOptions | null>('docx-editor-ui:collaboration', null)
@@ -342,6 +343,38 @@ const isTrackChanges = ref(false)
 const revisionList = ref<RevisionItem[]>([])
 const activeRevisionId = ref<string>('')
 
+/** 从修订组件同步修订列表到侧栏 revisionList */
+const syncRevisionList = () => {
+  const revisionComp = getRevisionComponent()
+  if (!revisionComp) return
+  revisionList.value = revisionComp.getRevisions().map((r: any) => ({
+    id: r.id, type: r.type, author: r.author, date: r.date, content: r.content
+  }))
+}
+
+/**
+ * 整文档替换封装（docx 导入 / JSON url / content 初始加载共用）
+ * - 默认清空页眉页脚，避免与旧文档杂糅
+ * - 重置批注并 render，同步修订 UI 与目录
+ */
+const applyDocumentReplace = async (payload: {
+  main: any[]
+  header?: any[]
+  footer?: any[]
+  comments?: any[]
+}) => {
+  await replaceDocument(
+    {
+      getEditorInstance,
+      refreshCatalog: async () => {
+        await executeCommand('refreshCatalog')
+      },
+      syncRevisionList
+    },
+    payload
+  )
+}
+
 const aiState = aiStateStore.state
 
 let loaded = false
@@ -394,9 +427,21 @@ const {
 }
 
 const normalizeContent = (content: any): any => {
-  if (Array.isArray(content)) return { main: content }
-  if (Array.isArray(content?.main)) return { main: content.main }
-  if (Array.isArray(content?.data?.main)) return { main: content.data.main }
+  if (Array.isArray(content)) return { main: content, header: [], footer: [] }
+  if (Array.isArray(content?.main)) {
+    return {
+      main: content.main,
+      header: Array.isArray(content.header) ? content.header : [],
+      footer: Array.isArray(content.footer) ? content.footer : []
+    }
+  }
+  if (Array.isArray(content?.data?.main)) {
+    return {
+      main: content.data.main,
+      header: Array.isArray(content.data.header) ? content.data.header : [],
+      footer: Array.isArray(content.data.footer) ? content.data.footer : []
+    }
+  }
   return content
 }
 
@@ -425,12 +470,7 @@ const handleReady = (...args: any[]) => {
   }
 
   const updateRevisionList = () => {
-    const revisionComp = getRevisionComponent()
-    if (revisionComp) {
-      revisionList.value = revisionComp.getRevisions().map((r: any) => ({
-        id: r.id, type: r.type, author: r.author, date: r.date, content: r.content
-      }))
-    }
+    syncRevisionList()
   }
 
   if (instance?.listener) {
@@ -454,6 +494,7 @@ const handleReady = (...args: any[]) => {
       onComplete: (success: boolean, message?: string) => {
         busyState.value = 'idle'
         activeDock.value = 'catalog'
+        syncRevisionList()
         if (!success) console.warn(`[Editor] 初始文档加载失败: ${sourceUrl}`, message || '')
         nextTick(() => initCollaboration())
       }
@@ -472,18 +513,16 @@ const handleReady = (...args: any[]) => {
     busyState.value = 'loading'
     try {
       suppressSaveOnce = true
+      const normalized = normalizeContent(content)
+      const main = Array.isArray(normalized?.main) ? normalized.main : []
+      const header = Array.isArray(normalized?.header) ? normalized.header : []
+      const footer = Array.isArray(normalized?.footer) ? normalized.footer : []
       const savedComments = content?.comments
-      if (Array.isArray(savedComments) && savedComments.length > 0) {
-        getCommentComponent()?.restoreComments(savedComments)
-      }
-      await executeCommand('setValue', normalizeContent(content))
-      nextTick(() => {
-        executeCommand('forceUpdate', { isSubmitHistory: false, isLazy: false, isPartialRender: false, isCompute: true })
-        executeCommand('refreshCatalog')
-        requestAnimationFrame(() => {
-          getCommentComponent()?.render()
-          getRevisionComponent()?.update()
-        })
+      await applyDocumentReplace({
+        main,
+        header,
+        footer,
+        comments: Array.isArray(savedComments) ? savedComments : []
       })
     } finally {
       busyState.value = 'idle'
@@ -562,15 +601,24 @@ const handleImportDoc = () => {
     const file = input.files?.[0]
     if (!file) return
     try {
+      busyState.value = 'loading'
       const arrayBuffer = await file.arrayBuffer()
       const result = await importCallback(arrayBuffer)
       if (!result.success || !result.elements?.length) {
         message.error(`文档解析失败: ${result.error || '未知错误'}`)
         return
       }
-      executeCommand('setValue', { main: result.elements })
+      suppressSaveOnce = true
+      await applyDocumentReplace({
+        main: result.elements,
+        header: [],
+        footer: [],
+        comments: result.comments || []
+      })
     } catch (e) {
       message.error(`导入失败: ${(e as Error)?.message || '未知错误'}`)
+    } finally {
+      busyState.value = 'idle'
     }
   }
   input.click()
@@ -780,8 +828,13 @@ const handleCommand = (command: string, ...args: any[]) => {
 const handleVersionRestore = async (content: any) => {
   if (!content) return
   suppressSaveOnce = true
-  await executeCommand('setValue', normalizeContent(content))
-  nextTick(() => executeCommand('refreshCatalog'))
+  const normalized = normalizeContent(content)
+  await applyDocumentReplace({
+    main: Array.isArray(normalized?.main) ? normalized.main : [],
+    header: Array.isArray(normalized?.header) ? normalized.header : [],
+    footer: Array.isArray(normalized?.footer) ? normalized.footer : [],
+    comments: Array.isArray(content?.comments) ? content.comments : []
+  })
 }
 
 const getExternalApi = () => externalApi

@@ -1,5 +1,6 @@
 import { nextTick } from 'vue'
 import { PaperDirection } from '@vervedoc/core'
+import { replaceDocument } from '@/composables/use-replace-document'
 
 /**
  * 事件发射函数类型
@@ -16,8 +17,10 @@ interface EditorInstance {
     /** 获取当前文档值 */
     getValue: () => { data?: { main?: any[] } }
     /** 设置文档值 */
-    executeSetValue: (value: { main: any[] }) => void
+    executeSetValue: (value: { main: any[]; header?: any[]; footer?: any[] }) => void
   }
+  comment?: any
+  revision?: any
 }
 
 /**
@@ -33,10 +36,10 @@ export function useEditorImport(options: {
   /** 刷新目录 */
   refreshCatalog: () => Promise<void>
 }) {
-  const { emit, getEditorInstance, refreshCatalog } = options
+  const { getEditorInstance, refreshCatalog } = options
 
   /**
-   * 导入 JSON 文件并加载到编辑器，支持进度回调与完成回调
+   * 导入 JSON 文件并整文档替换到编辑器
    * @param payload 导入参数，可包含 url、onProgress、onComplete
    */
   async function importJsonFile(payload?: any) {
@@ -56,16 +59,19 @@ export function useEditorImport(options: {
       }
       onProgress?.(30, '正在解析数据...')
       const json = await resp.json()
+      // 只认扁平文档 JSON（根数组 / elements / main），HTTP { data } 信封由 importCallback 拆包
       const main = Array.isArray(json) ? json
         : Array.isArray(json?.elements) ? json.elements
         : Array.isArray(json?.main) ? json.main
-        : Array.isArray(json?.data?.main) ? json.data.main
         : null
       if (!Array.isArray(main) || main.length === 0) {
         onComplete?.(false, '数据为空或格式不正确')
         return
       }
-      const comments = json?.comments || json?.data?.comments || []
+      const comments = Array.isArray(json?.comments) ? json.comments : []
+      const header = Array.isArray(json?.header) ? json.header : []
+      const footer = Array.isArray(json?.footer) ? json.footer : []
+
       onProgress?.(60, '正在渲染内容...')
       const inst = getEditorInstance()
       if (!inst) {
@@ -93,16 +99,15 @@ export function useEditorImport(options: {
           el.imgFloatPosition.y += marginTop + ascent
         }
       }
-      inst.command.executeSetValue({ main })
-      onProgress?.(80, '正在加载批注...')
-      if (comments.length) {
-        emit('command', 'commentsLoaded', comments)
-      }
-      nextTick(() => {
-        void refreshCatalog()
-      })
+
+      await replaceDocument(
+        { getEditorInstance, refreshCatalog },
+        { main, header, footer, comments }
+      )
+
       onProgress?.(100, '加载完成!')
       onComplete?.(true)
+      await nextTick()
     } catch (e) {
       const msg = e instanceof Error ? e.message : '加载失败'
       onComplete?.(false, msg)

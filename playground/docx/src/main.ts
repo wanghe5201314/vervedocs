@@ -39,11 +39,7 @@ const serverImport: DocxImportCallback = async (data) => {
   if (!json.success) {
     return { success: false, elements: [], error: json.error }
   }
-  return {
-    success: true,
-    elements: json.data?.elements || [],
-    comments: json.data?.comments
-  }
+  return json.data;
 }
 
 const serverExport: DocxExportCallback = async (data) => {

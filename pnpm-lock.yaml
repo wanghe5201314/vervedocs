@@ -206,9 +206,6 @@ importers:
       '@vervedoc/docx-editor-view':
         specifier: workspace:^
         version: link:../../plugins/docx-editor-view
-      docx:
-        specifier: ^9.5.1
-        version: 9.7.1
       vanilla-picker:
         specifier: ^2.12.3
         version: 2.12.3
@@ -395,6 +392,31 @@ importers:
       vue-tsc:
         specifier: 'catalog:'
         version: 2.2.12(typescript@5.6.3)
+
+  packages/docx-parser:
+    dependencies:
+      '@vervedoc/docx-editor-schema':
+        specifier: workspace:^
+        version: link:../../plugins/docx-editor-schema
+      docx:
+        specifier: ^9.5.1
+        version: 9.7.1
+      jszip:
+        specifier: ^3.10.1
+        version: 3.10.1
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 22.20.1
+      typescript:
+        specifier: 'catalog:'
+        version: 5.6.3
+      vite:
+        specifier: 'catalog:'
+        version: 6.4.3(@types/node@22.20.1)(less@4.9.0)(sass-embedded@1.102.0)(sass@1.102.0)(tsx@4.23.12)
+      vite-plugin-dts:
+        specifier: 'catalog:'
+        version: 4.5.4(@types/node@22.20.1)(rollup@4.62.4)(typescript@5.6.3)(vite@6.4.3(@types/node@22.20.1)(less@4.9.0)(sass-embedded@1.102.0)(sass@1.102.0)(tsx@4.23.12))
 
   packages/excel:
     dependencies:
@@ -751,6 +773,9 @@ importers:
       '@vervedoc/docx':
         specifier: workspace:^
         version: link:../../packages/docx
+      '@vervedoc/docx-parser':
+        specifier: workspace:^
+        version: link:../../packages/docx-parser
       vue:
         specifier: 'catalog:'
         version: 3.5.41(typescript@5.6.3)
@@ -761,6 +786,9 @@ importers:
       '@vitejs/plugin-vue':
         specifier: 'catalog:'
         version: 6.0.8(vite@6.4.3(@types/node@22.20.1)(less@4.9.0)(sass-embedded@1.102.0)(sass@1.102.0)(tsx@4.23.12))(vue@3.5.41(typescript@5.6.3))
+      lil-gui:
+        specifier: ^0.21.0
+        version: 0.21.0
       typescript:
         specifier: 'catalog:'
         version: 5.6.3
@@ -3700,7 +3728,7 @@ packages:
 
   glob@7.2.3:
     resolution: {integrity: sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==}
-    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+    deprecated: Glob versions prior to v9 are no longer supported
 
   good-listener@1.2.2:
     resolution: {integrity: sha512-goW1b+d9q/HIwbVYZzZ6SsTr4IgE+WA44A0GmPIQstuOrgsFcT7VEJ48nmr9GaRtNu0XTKacFLGnBPAM6Afouw==}
@@ -3951,6 +3979,9 @@ packages:
 
   lie@3.3.0:
     resolution: {integrity: sha512-UaiMJzeWRlEujzAuw5LokY1L5ecNQYZKfmyZ9L7wDHb/p5etKaxXhohBcrw0EYby+G/NA52vRSN4N39dxHAIwQ==}
+
+  lil-gui@0.21.0:
+    resolution: {integrity: sha512-tpvxN7v1GvE/Tv+GRopfOp0W7fVEjF4PltkuX8vOCIfim22rD1ztvfkoEMcv9lzQeuNUSeIrUmUjBwmlW/oUew==}
 
   listenercount@1.0.1:
     resolution: {integrity: sha512-3mk/Zag0+IJxeDrxSgaDPy4zZ3w05PRZeJNnlWhzFz5OkX49J4krc+A8X2d2M69vGMBEX0uyl8M+W+8gH+kBqQ==}
@@ -8468,6 +8499,8 @@ snapshots:
   lie@3.3.0:
     dependencies:
       immediate: 3.0.6
+
+  lil-gui@0.21.0: {}
 
   listenercount@1.0.1: {}
 

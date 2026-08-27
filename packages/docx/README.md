@@ -83,7 +83,9 @@ const initialDocument: DocxEditorUiInitialDocument = {
     name: '示例文档.docx'
   },
   format: 'canvas',
+  // 优先用 content；没有 content 时可传 url 拉取 JSON；二者皆无则空文档
   content: { main: [] }
+  // url: './demo.json'
 }
 
 const collaboration: CollaborationOptions = {
@@ -112,12 +114,45 @@ interface Options {
   container: string | HTMLElement
   initialDocument?: DocxEditorUiInitialDocument
   collaboration?: CollaborationOptions
+  /** .docx → JSON，由宿主注入（实现方式自定） */
+  importCallback?: DocxImportCallback
+  /** JSON → .docx，由宿主注入；成功后编辑器触发浏览器下载 */
+  exportCallback?: DocxExportCallback
   onReady?: (payload: any) => void
   onChange?: (payload: { content: any; meta: any; raw: any }) => void
   onMetaChange?: (payload: any) => void
   onStatusChange?: (payload: any) => void
 }
 ```
+
+### 初始文档 `initialDocument`
+
+编辑器**不内置**默认演示文件。加载优先级：
+
+1. `content` — 直接渲染宿主传入的 JSON
+2. `url` — 拉取宿主指定的 JSON 地址后渲染
+3. 二者皆无 — 空文档启动
+
+```ts
+interface DocxEditorUiInitialDocument {
+  meta: DocumentMeta
+  /** 仅当未提供 content 时生效 */
+  url?: string
+  format?: 'word' | 'canvas'
+  /** 优先于 url */
+  content?: any
+}
+```
+
+### 导入 / 导出契约
+
+本包**不内置** DOCX 解析与生成。宿主注入符合契约的实现即可：
+
+- 本地 JS：`@vervedoc/docx-parser`（`createDocxImportCallback` / `createDocxExportCallback`）
+- 服务端：对接 `@vervedoc/for-node` 的 `/documents/translate/word`、`/documents/render`
+- 其他自定义引擎：自行包装为 `DocxImportCallback` / `DocxExportCallback`
+
+示例见 `playground/docx/README.md`。
 
 ### WordEditor
 

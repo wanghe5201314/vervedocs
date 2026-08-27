@@ -4,15 +4,17 @@ export type { DocumentMeta, DocumentStatus }
 
 /**
  * 编辑器内部使用的初始文档（meta 允许部分字段缺省）
+ *
+ * 加载优先级：content → url → 空文档
  */
 export type InitialDocument = {
   /** 文档元数据（部分字段可缺省） */
   meta: Partial<DocumentMeta> & { fileName?: string }
-  /** 文档加载地址 */
+  /** 文档 JSON 加载地址（仅当未提供 content 时生效） */
   url?: string
   /** 文档展示格式：word=文档视图，canvas=画布视图 */
   format?: 'word' | 'canvas'
-  /** 文档内容 */
+  /** 文档内容；优先于 url */
   content?: any
 }
 

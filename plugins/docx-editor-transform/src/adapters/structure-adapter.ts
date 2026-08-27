@@ -551,7 +551,9 @@ export class StructureAdapter extends BaseCommandAdapter {
   }
 
   public async exportDocx(_payload?: any): Promise<void> {
-    console.warn('[StructureAdapter] exportDocx requires ExportComponent to be installed')
+    console.warn(
+      '[StructureAdapter] 内置 exportDocx 已移除，请通过 WordEditor.exportCallback 注入实现（如 @vervedoc/docx-parser）'
+    )
   }
 
   public previewHtml(_payload?: any): void {

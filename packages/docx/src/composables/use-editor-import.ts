@@ -40,9 +40,13 @@ export function useEditorImport(options: {
    * @param payload 导入参数，可包含 url、onProgress、onComplete
    */
   async function importJsonFile(payload?: any) {
-    const url = payload?.url || '/test-output.json'
+    const url = String(payload?.url || '').trim()
     const onProgress: ((progress: number, status: string) => void) | undefined = payload?.onProgress
     const onComplete: ((success: boolean, message?: string) => void) | undefined = payload?.onComplete
+    if (!url) {
+      onComplete?.(false, '缺少 url，无法加载 JSON 文档')
+      return
+    }
     try {
       onProgress?.(10, '正在请求文档...')
       const resp = await fetch(url, { cache: 'no-store' })

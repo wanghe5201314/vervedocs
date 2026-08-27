@@ -6,15 +6,20 @@ import type { DocumentMeta } from '@/api/document.api'
 
 /**
  * 编辑器初始文档数据
+ *
+ * 加载优先级（由宿主显式提供，编辑器不内置默认文件）：
+ * 1. `content` — 直接渲染
+ * 2. `url` — 拉取 JSON 后渲染（如 `./test-output.json`）
+ * 3. 二者皆无 — 空文档启动
  */
 export interface DocxEditorUiInitialDocument {
   /** 文档元数据 */
   meta: DocumentMeta
-  /** 文档加载地址 */
+  /** 文档 JSON 加载地址（仅当未提供 content 时生效） */
   url?: string
   /** 文档展示格式：word=文档视图，canvas=画布视图 */
   format?: 'word' | 'canvas'
-  /** 文档内容（编辑器导出的数据结构） */
+  /** 文档内容（编辑器导出的数据结构）；优先于 url */
   content?: any
 }
 

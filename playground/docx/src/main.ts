@@ -42,11 +42,41 @@ const serverImport: DocxImportCallback = async (data) => {
   return json.data;
 }
 
+/** 将编辑器 IEditorData / IElement[] 转为 JAR 可识别的 DocxParseResult（不含 header/footer） */
+function toDocxParseResult(data: unknown): {
+  success: true
+  elements: unknown[]
+  comments?: unknown[]
+} {
+  if (Array.isArray(data)) {
+    return { success: true, elements: data }
+  }
+  if (data && typeof data === 'object') {
+    const obj = data as Record<string, unknown>
+    if (Array.isArray(obj.elements)) {
+      return {
+        success: true,
+        elements: obj.elements,
+        ...(Array.isArray(obj.comments) ? { comments: obj.comments } : {})
+      }
+    }
+    if (Array.isArray(obj.main)) {
+      return {
+        success: true,
+        elements: obj.main,
+        ...(Array.isArray(obj.comments) ? { comments: obj.comments } : {})
+      }
+    }
+  }
+  return { success: true, elements: [] }
+}
+
 const serverExport: DocxExportCallback = async (data) => {
+  const payload = toDocxParseResult(data)
   const resp = await fetch(`${DOCX_SERVER_BASE}/documents/render?format=docx`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
+    body: JSON.stringify(payload)
   })
   if (!resp.ok) {
     return { success: false, error: await resp.text() }

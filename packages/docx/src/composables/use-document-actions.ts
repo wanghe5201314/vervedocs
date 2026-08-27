@@ -2,6 +2,7 @@ import { ref, h } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { emitExternalEvent } from '@/composables/use-external-events'
 import type { DocumentMeta } from '@/types/document'
+import type { ReplaceDocumentPayload } from '@/composables/use-replace-document'
 
 /**
  * 文档操作 composable（重命名、新建、权限、反馈）
@@ -19,8 +20,16 @@ export function useDocumentActions(options: {
   executeCommand: (command: string, ...args: any[]) => void
   /** 设置是否抑制一次保存 */
   setSuppressSaveOnce: (value: boolean) => void
+  /** 整文档替换（清空正文/页眉页脚/批注） */
+  applyDocumentReplace: (payload: ReplaceDocumentPayload) => Promise<void>
 }) {
-  const { documentMeta, emitMetaChange, saveNow, executeCommand, setSuppressSaveOnce } = options
+  const {
+    documentMeta,
+    emitMetaChange,
+    saveNow,
+    setSuppressSaveOnce,
+    applyDocumentReplace
+  } = options
 
   /**
    * 打开访问权限设置，触发权限变更事件
@@ -67,7 +76,7 @@ export function useDocumentActions(options: {
   }
 
   /**
-   * 新建文档，重置元数据并清空编辑器内容
+   * 新建文档：重置元数据，并通过整文档替换清空正文/页眉页脚/批注
    */
   const newDoc = async () => {
     setSuppressSaveOnce(true)
@@ -78,7 +87,12 @@ export function useDocumentActions(options: {
     documentMeta.createdAt = ''
     documentMeta.submittedAt = ''
     emitMetaChange()
-    await executeCommand('setValue', { main: [] })
+    await applyDocumentReplace({
+      main: [],
+      header: [],
+      footer: [],
+      comments: []
+    })
   }
 
   return { renameDoc, newDoc, openAccessPermission, openFeedback }

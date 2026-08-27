@@ -27,7 +27,10 @@
             class="split-left"
             :style="{ width: sidebarPanelSize + 'px' }"
           >
-            <SearchLayout v-if="activeDock === 'search'" @command="handleCommand" />
+            <SearchLayout
+              v-if="activeDock === 'search'"
+              @command="handleCommand"
+            />
             <CatalogLayout
               v-else-if="activeDock === 'catalog' || activeDock === 'section'"
               ref="catalogRef"
@@ -54,7 +57,6 @@
           ></div>
           <div class="split-right">
             <div class="editor-area" ref="editorAreaRef">
-
               <Ruler
                 v-if="rulerVisible && isContentVisible"
                 :visible="rulerVisible"
@@ -62,7 +64,13 @@
                 :set-margins="setMargins"
                 :container-el="editorAreaRef"
               />
-              <Editor v-if="isContentVisible" ref="editorRef" @command="handleEditorCommand" @ready="handleReady" @saved="handleEditorSaved" />
+              <Editor
+                v-if="isContentVisible"
+                ref="editorRef"
+                @command="handleEditorCommand"
+                @ready="handleReady"
+                @saved="handleEditorSaved"
+              />
             </div>
           </div>
         </div>
@@ -85,8 +93,10 @@
 
     <ShortcutsDialog v-model="shortcutsDialogVisible" />
 
-
-    <HyperlinkDialog v-model="hyperlinkDialogVisible" @confirm="handleHyperlinkConfirm" />
+    <HyperlinkDialog
+      v-model="hyperlinkDialogVisible"
+      @confirm="handleHyperlinkConfirm"
+    />
     <BookmarkDialog
       v-model="bookmarkDialogVisible"
       :bookmarks="bookmarkList"
@@ -95,18 +105,48 @@
       @delete="handleDeleteBookmark"
       @goto="handleGotoBookmark"
     />
-    <InsertTableDialog v-model="insertTableDialogVisible" @confirm="handleInsertTableDialogConfirm" />
-    <TableBordersDialog v-model="tableBordersDialogVisible" @confirm="handleTableBordersConfirm" />
-    <ChartDialog v-model="chartDialogVisible" @confirm="handleInsertChartConfirm" />
+    <InsertTableDialog
+      v-model="insertTableDialogVisible"
+      @confirm="handleInsertTableDialogConfirm"
+    />
+    <TableBordersDialog
+      v-model="tableBordersDialogVisible"
+      @confirm="handleTableBordersConfirm"
+    />
+    <ChartDialog
+      v-model="chartDialogVisible"
+      @confirm="handleInsertChartConfirm"
+    />
     <LaTeXDialog v-model="latexDialogVisible" @confirm="handleLatexConfirm" />
-    <BarcodeDialog v-model="barcodeDialogVisible" @confirm="handleBarcodeConfirm" />
-    <QrcodeDialog v-model="qrcodeDialogVisible" @confirm="handleQrcodeConfirm" />
-    <SignatureDialog v-model="signatureDialogVisible" @confirm="handleSignatureConfirm" />
-    <WatermarkDialog v-model="watermarkDialogVisible" @confirm="handleWatermarkConfirm" />
-    <PaperSizeDialog v-model="paperSizeDialogVisible" @confirm="handlePaperSizeConfirm" />
-    <PageNumberDialog v-model="pageNumberDialogVisible" @confirm="handlePageNumberConfirm" />
+    <BarcodeDialog
+      v-model="barcodeDialogVisible"
+      @confirm="handleBarcodeConfirm"
+    />
+    <QrcodeDialog
+      v-model="qrcodeDialogVisible"
+      @confirm="handleQrcodeConfirm"
+    />
+    <SignatureDialog
+      v-model="signatureDialogVisible"
+      @confirm="handleSignatureConfirm"
+    />
+    <WatermarkDialog
+      v-model="watermarkDialogVisible"
+      @confirm="handleWatermarkConfirm"
+    />
+    <PaperSizeDialog
+      v-model="paperSizeDialogVisible"
+      @confirm="handlePaperSizeConfirm"
+    />
+    <PageNumberDialog
+      v-model="pageNumberDialogVisible"
+      @confirm="handlePageNumberConfirm"
+    />
     <DateDialog v-model="dateDialogVisible" @confirm="handleDateConfirm" />
-    <ParagraphDialog v-model="paragraphDialogVisible" :editor="{ executeCommand }" />
+    <ParagraphDialog
+      v-model="paragraphDialogVisible"
+      :editor="{ executeCommand }"
+    />
 
     <TocDialog v-model="tocDialogVisible" @confirm="handleTocConfirm" />
     <AISettingsDialog v-model="aiSettingsDialogVisible" />
@@ -137,11 +177,33 @@ import { inject, onBeforeUnmount, ref, nextTick, watch, type Ref } from 'vue'
 import { message } from 'ant-design-vue'
 import type { InitialDocument } from '@/types/document'
 import type { DocxImportCallback, DocxExportCallback } from '@vervedoc/core'
-import { emitExternalEvent, externalApi } from '@/composables/use-external-events'
+import {
+  emitExternalEvent,
+  externalApi
+} from '@/composables/use-external-events'
 import { aiStateStore } from '@/stores/ai-state'
 import type { AITab } from '@/stores/ai-state'
 import { AIAction } from '@vervedoc/docx-editor-ai'
-import { ShortcutsDialog, HyperlinkDialog, BookmarkDialog, InsertTableDialog, ChartDialog, LaTeXDialog, BarcodeDialog, QrcodeDialog, SignatureDialog, WatermarkDialog, PaperSizeDialog, PageNumberDialog, DateDialog, ParagraphDialog, TocDialog, TableBordersDialog, AISettingsDialog, VersionHistoryDialog } from '@/components/dialog'
+import {
+  ShortcutsDialog,
+  HyperlinkDialog,
+  BookmarkDialog,
+  InsertTableDialog,
+  ChartDialog,
+  LaTeXDialog,
+  BarcodeDialog,
+  QrcodeDialog,
+  SignatureDialog,
+  WatermarkDialog,
+  PaperSizeDialog,
+  PageNumberDialog,
+  DateDialog,
+  ParagraphDialog,
+  TocDialog,
+  TableBordersDialog,
+  AISettingsDialog,
+  VersionHistoryDialog
+} from '@/components/dialog'
 
 import Menu from '@/components/layout/Menu.vue'
 import LeftDockBar from '@/components/layout/LeftDockBar.vue'
@@ -174,10 +236,22 @@ import { useDocumentActions } from '@/composables/use-document-actions'
 import { useEditorCommand } from '@/composables/use-editor-command'
 import { replaceDocument } from '@/composables/use-replace-document'
 
-const initialDocument = inject<InitialDocument | null>('docx-editor-ui:initDocument', null)
-const collaborationConfig = inject<CollaborationOptions | null>('docx-editor-ui:collaboration', null)
-const importCallback = inject<DocxImportCallback | undefined>('docx-editor-ui:importCallback', undefined)
-const exportCallback = inject<DocxExportCallback | undefined>('docx-editor-ui:exportCallback', undefined)
+const initialDocument = inject<InitialDocument | null>(
+  'docx-editor-ui:initDocument',
+  null
+)
+const collaborationConfig = inject<CollaborationOptions | null>(
+  'docx-editor-ui:collaboration',
+  null
+)
+const importCallback = inject<DocxImportCallback | undefined>(
+  'docx-editor-ui:importCallback',
+  undefined
+)
+const exportCallback = inject<DocxExportCallback | undefined>(
+  'docx-editor-ui:exportCallback',
+  undefined
+)
 
 const isContentVisible = ref(true)
 const protectPasswordHash = ref<string | null>(null)
@@ -191,7 +265,9 @@ const PROTECT_HASH_KEY = 'docx-editor:protect-hash'
 const sha256 = async (text: string): Promise<string> => {
   const data = new TextEncoder().encode(text)
   const hash = await globalThis.crypto.subtle.digest('SHA-256', data)
-  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('')
+  return Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
 }
 
 const storedHash = localStorage.getItem(PROTECT_HASH_KEY)
@@ -221,20 +297,27 @@ const {
 } = useDocumentMeta({ initialDocument })
 
 const busyState = ref<'idle' | 'loading' | 'saving'>('idle')
-watch(busyState, (state) => {
+watch(busyState, state => {
   const inst = getEditorInstance()
   if (!inst) return
   if (state === 'idle') {
     inst.setLoading(false)
   } else {
-    inst.setLoading(true, state === 'loading' ? '正在加载文档......' : '正在保存...')
+    inst.setLoading(
+      true,
+      state === 'loading' ? '正在加载文档......' : '正在保存...'
+    )
   }
 })
 
 const isAppReady = ref(false)
-watch(isContentVisible, (visible) => {
-  if (!visible) isAppReady.value = true
-}, { immediate: true })
+watch(
+  isContentVisible,
+  visible => {
+    if (!visible) isAppReady.value = true
+  },
+  { immediate: true }
+)
 
 const getEditorInstance = () => editorRef.value?.getEditorInstance?.() ?? null
 const getCommentComponent = () => getEditorInstance()?.comment ?? null
@@ -251,9 +334,12 @@ const getPageMetrics = () => {
   const height = paperDirection === 'horizontal' ? 794 : 1123
   let pageOffsetLeft = 0
   const areaEl = editorAreaRef.value
-  const pageEl = areaEl?.querySelector('.ce-page-container') as HTMLElement | null
+  const pageEl = areaEl?.querySelector(
+    '.ce-page-container'
+  ) as HTMLElement | null
   if (pageEl && areaEl) {
-    pageOffsetLeft = pageEl.getBoundingClientRect().left - areaEl.getBoundingClientRect().left
+    pageOffsetLeft =
+      pageEl.getBoundingClientRect().left - areaEl.getBoundingClientRect().left
   }
   return { width, height, margins, scale, paperDirection, pageOffsetLeft }
 }
@@ -269,7 +355,9 @@ const executeCommand = (command: string, ...args: any[]) => {
 }
 
 let suppressSaveOnce = false
-const setSuppressSaveOnce = (value: boolean) => { suppressSaveOnce = value }
+const setSuppressSaveOnce = (value: boolean) => {
+  suppressSaveOnce = value
+}
 
 const {
   activeDock,
@@ -319,7 +407,6 @@ const {
   handleTableBordersConfirm
 } = useDialogs({ executeCommand, documentMeta, emitMetaChange })
 
-
 const {
   handleAIAction,
   handleAIApplyResult,
@@ -335,7 +422,6 @@ const {
   handleGotoBookmark
 } = useBookmarks({ getEditorInstance, executeCommand })
 
-
 const toolbarVisible = ref(true)
 const bottomNavVisible = ref(true)
 
@@ -348,7 +434,11 @@ const syncRevisionList = () => {
   const revisionComp = getRevisionComponent()
   if (!revisionComp) return
   revisionList.value = revisionComp.getRevisions().map((r: any) => ({
-    id: r.id, type: r.type, author: r.author, date: r.date, content: r.content
+    id: r.id,
+    type: r.type,
+    author: r.author,
+    date: r.date,
+    content: r.content
   }))
 }
 
@@ -406,18 +496,15 @@ const {
   scheduleSave
 })
 
-const {
-  renameDoc,
-  newDoc,
-  openAccessPermission,
-  openFeedback
-} = useDocumentActions({
-  documentMeta,
-  emitMetaChange,
-  saveNow,
-  executeCommand,
-  setSuppressSaveOnce
-})
+const { renameDoc, newDoc, openAccessPermission, openFeedback } =
+  useDocumentActions({
+    documentMeta,
+    emitMetaChange,
+    executeCommand,
+    saveNow,
+    setSuppressSaveOnce,
+    applyDocumentReplace
+  })
 
 ;(externalApi as any).document = {
   getMeta: () => ({ ...documentMeta }),
@@ -495,7 +582,8 @@ const handleReady = (...args: any[]) => {
         busyState.value = 'idle'
         activeDock.value = 'catalog'
         syncRevisionList()
-        if (!success) console.warn(`[Editor] 初始文档加载失败: ${sourceUrl}`, message || '')
+        if (!success)
+          console.warn(`[Editor] 初始文档加载失败: ${sourceUrl}`, message || '')
         nextTick(() => initCollaboration())
       }
     })
@@ -548,10 +636,8 @@ const { handleEditorCommand, handleEditorSaved } = useEditorCommand({
   isSuppressSaveOnce: () => suppressSaveOnce,
   setSuppressSaveOnce,
   getCollabPlugin,
-  saveNow,
-
+  saveNow
 })
-
 
 const dialogCommands: Record<string, Ref<boolean>> = {
   hyperlink: hyperlinkDialogVisible,
@@ -568,7 +654,7 @@ const dialogCommands: Record<string, Ref<boolean>> = {
   insertDate: dateDialogVisible,
   paragraphDialog: paragraphDialogVisible,
   versionHistory: versionHistoryDialogVisible,
-  aiSettings: aiSettingsDialogVisible,
+  aiSettings: aiSettingsDialogVisible
 }
 
 const infoMessages: Record<string, string> = {
@@ -577,16 +663,25 @@ const infoMessages: Record<string, string> = {
   footnote: '暂不支持脚注',
   spellcheck: '暂不支持拼写检查',
   compare: '暂不支持比较文档',
-  separatorDialog: '分割线颜色暂未接入',
+  separatorDialog: '分割线颜色暂未接入'
 }
 
-const aiCommands: Record<string, { action: string; payload?: any; tab?: AITab }> = {
+const aiCommands: Record<
+  string,
+  { action: string; payload?: any; tab?: AITab }
+> = {
   aiPolish: { action: 'quickAction', payload: { action: AIAction.POLISH } },
-  aiSummarize: { action: 'quickAction', payload: { action: AIAction.SUMMARIZE } },
+  aiSummarize: {
+    action: 'quickAction',
+    payload: { action: AIAction.SUMMARIZE }
+  },
   aiContinue: { action: 'continue' },
-  aiFixGrammar: { action: 'quickAction', payload: { action: AIAction.FIX_GRAMMAR } },
+  aiFixGrammar: {
+    action: 'quickAction',
+    payload: { action: AIAction.FIX_GRAMMAR }
+  },
   aiDocAnalysis: { action: 'docAnalysis', tab: 'analysis' },
-  aiLayout: { action: 'layoutSuggestion', tab: 'layout' },
+  aiLayout: { action: 'layoutSuggestion', tab: 'layout' }
 }
 
 const handleImportDoc = () => {
@@ -632,21 +727,25 @@ const handleExportDoc = () => {
   const instance = getEditorInstance()
   const value = instance?.command?.getValue?.()
   const json = value?.data ?? value
-  exportCallback(json).then(result => {
-    if (!result.success || !result.data) {
-      message.error(`导出失败: ${result.error || '未知错误'}`)
-      return
-    }
-    const blob = new Blob([result.data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${documentMeta.name || '文档'}.docx`
-    a.click()
-    URL.revokeObjectURL(url)
-  }).catch(e => {
-    message.error(`导出失败: ${(e as Error)?.message || '未知错误'}`)
-  })
+  exportCallback(json)
+    .then(result => {
+      if (!result.success || !result.data) {
+        message.error(`导出失败: ${result.error || '未知错误'}`)
+        return
+      }
+      const blob = new Blob([result.data], {
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${documentMeta.name || '文档'}.docx`
+      a.click()
+      URL.revokeObjectURL(url)
+    })
+    .catch(e => {
+      message.error(`导出失败: ${(e as Error)?.message || '未知错误'}`)
+    })
 }
 
 const handleProtectDoc = () => {
@@ -718,63 +817,108 @@ const handleCommand = (command: string, ...args: any[]) => {
     aiStateStore.setVisible(true)
     const cfg = aiCommands[command]
     if (cfg.tab) aiStateStore.setActiveTab(cfg.tab)
-    handleAIAction(cfg.action, cfg.payload ?? (command === 'aiTranslate' ? { targetLanguage: args[0] } : undefined))
+    handleAIAction(
+      cfg.action,
+      cfg.payload ??
+        (command === 'aiTranslate' ? { targetLanguage: args[0] } : undefined)
+    )
     return
   }
 
   switch (command) {
-    case 'new': return void newDoc()
-    case 'save': return void saveNow({ silent: false })
-    case 'rename': return void renameDoc()
-    case 'import': return handleImportDoc()
-    case 'export': return handleExportDoc()
-    case 'preview': return emitExternalEvent('statusChange', { command: 'preview', args: [] })
+    case 'new':
+      return void newDoc()
+    case 'save':
+      return void saveNow({ silent: false })
+    case 'rename':
+      return void renameDoc()
+    case 'import':
+      return handleImportDoc()
+    case 'export':
+      return handleExportDoc()
+    case 'preview':
+      return emitExternalEvent('statusChange', { command: 'preview', args: [] })
     case 'protect':
-    case 'protectDoc': return handleProtectDoc()
-    case 'unprotect': return handleUnprotectDoc()
+    case 'protectDoc':
+      return handleProtectDoc()
+    case 'unprotect':
+      return handleUnprotectDoc()
     case 'eyeCareChange': {
       const instance = getEditorInstance()
-      instance?.command?.executeUpdateOptions?.({ background: { color: args[0] ? '#C7EDCC' : '#FFFFFF' } })
+      instance?.command?.executeUpdateOptions?.({
+        background: { color: args[0] ? '#C7EDCC' : '#FFFFFF' }
+      })
       return
     }
-    case 'accessPermission': return openAccessPermission()
+    case 'accessPermission':
+      return openAccessPermission()
     case 'shortcuts':
     case 'openShortcuts':
-    case 'help': return openShortcuts()
-    case 'feedback': return openFeedback()
-    case 'openSearchPanel': activeDock.value = 'search'; return
-    case 'openAIPanel': activeDock.value = 'ai'; aiStateStore.setVisible(true); return
-    case 'closeAIPanel': return closeAIDock()
-    case 'openRevisionPanel': activeDock.value = 'revision'; return
+    case 'help':
+      return openShortcuts()
+    case 'feedback':
+      return openFeedback()
+    case 'openSearchPanel':
+      activeDock.value = 'search'
+      return
+    case 'openAIPanel':
+      activeDock.value = 'ai'
+      aiStateStore.setVisible(true)
+      return
+    case 'closeAIPanel':
+      return closeAIDock()
+    case 'openRevisionPanel':
+      activeDock.value = 'revision'
+      return
     case 'rulerVisible': {
       rulerVisible.value = !!args[0]
       const instance = getEditorInstance()
-      instance?.command?.executeUpdateOptions?.({ marginIndicatorDisabled: !args[0] })
+      instance?.command?.executeUpdateOptions?.({
+        marginIndicatorDisabled: !args[0]
+      })
       return
     }
-    case 'comment': return executeCommand('comment')
-    case 'toolbarVisible': toolbarVisible.value = !!args[0]; return
-    case 'bottomNavVisible': bottomNavVisible.value = !!args[0]; return
-    case 'tocInsert': return executeCommand('tocInsert', args[0] ?? {})
-    case 'tocRemove': return executeCommand('tocRemove')
-    case 'columns': return executeCommand('columns', args[0])
-    case 'search': activeDock.value = 'search'; break
+    case 'comment':
+      return executeCommand('comment')
+    case 'toolbarVisible':
+      toolbarVisible.value = !!args[0]
+      return
+    case 'bottomNavVisible':
+      bottomNavVisible.value = !!args[0]
+      return
+    case 'tocInsert':
+      return executeCommand('tocInsert', args[0] ?? {})
+    case 'tocRemove':
+      return executeCommand('tocRemove')
+    case 'columns':
+      return executeCommand('columns', args[0])
+    case 'search':
+      activeDock.value = 'search'
+      break
     case 'closeSearchPanel':
       if (activeDock.value === 'search') closeDock()
       return
     case 'replaceCurrent': {
       const navInfo = executeCommand('getSearchNavigateInfo')
-      executeCommand('replace', args[0], { index: navInfo ? navInfo.index - 1 : 0 })
+      executeCommand('replace', args[0], {
+        index: navInfo ? navInfo.index - 1 : 0
+      })
       return
     }
     case 'toggleCollaborationCursor': {
       const plugin = getCollabPlugin()
-      if (plugin) plugin.setSharedSyncState({ cursor: !collabSharedSyncState.value.cursor })
+      if (plugin)
+        plugin.setSharedSyncState({
+          cursor: !collabSharedSyncState.value.cursor
+        })
       return
     }
     case 'toggleCollaborationSelection': {
       const plugin = getCollabPlugin()
-      if (plugin) plugin.setSharedSyncState({ selection: !collabSharedSyncState.value.selection })
+      if (plugin)
+        plugin.setSharedSyncState({
+          selection: !collabSharedSyncState.value.selection
+        })
       return
     }
     case 'toggleTrackChanges': {
@@ -790,26 +934,38 @@ const handleCommand = (command: string, ...args: any[]) => {
         showCommentBalloons: mode === 'all' || mode === 'comments',
         showRevisionBalloons: mode === 'all' || mode === 'revisions'
       })
-      nextTick(() => requestAnimationFrame(() => { getCommentComponent()?.render(); getRevisionComponent()?.update() }))
+      nextTick(() =>
+        requestAnimationFrame(() => {
+          getCommentComponent()?.render()
+          getRevisionComponent()?.update()
+        })
+      )
       return
     }
     case 'acceptAllRevisions':
-    case 'rejectAllRevisions': return executeCommand(command)
+    case 'rejectAllRevisions':
+      return executeCommand(command)
     case 'locateRevision':
       activeRevisionId.value = String(args[0] || '')
       return executeCommand('locateRevision', args[0])
     case 'acceptRevisionById':
-    case 'rejectRevisionById': return executeCommand(command, args[0])
+    case 'rejectRevisionById':
+      return executeCommand(command, args[0])
     case 'toggleCatalog': {
-      const desired = args.length > 0 && typeof args[0] === 'boolean' ? (args[0] as boolean) : null
-      const opened = activeDock.value === 'catalog' || activeDock.value === 'section'
+      const desired =
+        args.length > 0 && typeof args[0] === 'boolean'
+          ? (args[0] as boolean)
+          : null
+      const opened =
+        activeDock.value === 'catalog' || activeDock.value === 'section'
       if (desired === null ? opened : !desired) {
         closeDock()
       } else {
         activeDock.value = 'catalog'
         void nextTick(() => {
           catalogRef.value?.switchToCatalogTab?.()
-          if (cachedCatalog.value.length > 0) catalogRef.value?.updateCatalog?.(cachedCatalog.value)
+          if (cachedCatalog.value.length > 0)
+            catalogRef.value?.updateCatalog?.(cachedCatalog.value)
         })
       }
       return
@@ -944,13 +1100,16 @@ defineExpose({
   font-size: 14px;
 }
 
-
 /* sidebar slide right transition */
 .sidebar-slide-right-enter-active {
-  transition: transform 0.25s ease-out, opacity 0.25s ease-out;
+  transition:
+    transform 0.25s ease-out,
+    opacity 0.25s ease-out;
 }
 .sidebar-slide-right-leave-active {
-  transition: transform 0.2s ease-in, opacity 0.2s ease-in;
+  transition:
+    transform 0.2s ease-in,
+    opacity 0.2s ease-in;
 }
 .sidebar-slide-right-enter-from {
   transform: translateX(100%);
@@ -960,7 +1119,6 @@ defineExpose({
   transform: translateX(100%);
   opacity: 0;
 }
-
 </style>
 
 <style>
@@ -986,5 +1144,4 @@ defineExpose({
 .import-notification .ant-notification-notice-close:hover {
   color: #606266 !important;
 }
-
 </style>

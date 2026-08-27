@@ -5,10 +5,9 @@ import { ConfigProvider } from 'ant-design-vue'
 import '@/ui'
 import WordEditorComponent from '@/app/WordEditorApp.vue'
 import type { CollaborationOptions, DocxEditorUiInitialDocument } from '@/ui'
-import type { 
-  DocxImportCallback, 
-  DocxExportCallback,
-  WasmInjectionConfig
+import type {
+  DocxImportCallback,
+  DocxExportCallback
 } from '@vervedoc/core'
 
 interface WordEditorComponentRef {
@@ -22,7 +21,7 @@ interface WordEditorComponentRef {
  * 用于 `new WordEditor(options)` 创建编辑器实例，包含：
  * - 挂载容器与初始文档
  * - 协作配置（多人协同编辑）
- * - WASM 注入配置（浏览器端 DOCX 解析/生成）
+ * - 导入/导出钩子（实现方式由宿主决定）
  * - 生命周期与状态变更回调
  */
 export interface Options {
@@ -33,26 +32,17 @@ export interface Options {
   /** 多人协作配置（WebSocket 地址、用户信息、权限等） */
   collaboration?: CollaborationOptions
   /**
-   * WASM 注入配置（可选）
-   * 
-   * <p>注入 WASM 模块后，编辑器将使用浏览器端的 DOCX 解析和生成能力，
-   * 无需依赖后端 API。</p>
-   * 
-   * <p>未注入时，将使用后端 API 或 Worker 进行文档处理。</p>
-   */
-  wasm?: WasmInjectionConfig
-  /**
-   * 文档导入回调（.docx → JSON）
+   * 文档导入回调（.docx → IElement JSON）
    *
-   * 点击导入文档时触发：选文件 → importCallback(arrayBuffer) → 外部访问 API 解析 → 返回 JSON 渲染。
-   * 未注入时，导入功能不可用并给出提示。
+   * 选文件 → importCallback(arrayBuffer) → 返回 IDocxImportResult → 渲染。
+   * 未注入时导入不可用。实现示例：createDocxImportCallback()。
    */
   importCallback?: DocxImportCallback
   /**
-   * 文档导出回调（JSON → .docx）
+   * 文档导出回调（IElement JSON → .docx）
    *
-   * 点击导出时触发：取编辑器 JSON → exportCallback(json) → 外部处理成 .docx 二进制 → 编辑器内部下载。
-   * 未注入时，导出功能不可用并给出提示。
+   * 取编辑器 JSON → exportCallback(json) → 返回 ArrayBuffer → 编辑器触发浏览器下载。
+   * 未注入时导出不可用。实现示例：createDocxExportCallback()。
    */
   exportCallback?: DocxExportCallback
   /** 编辑器实例就绪后触发，回调参数为就绪 payload */
@@ -106,7 +96,6 @@ export class WordEditor {
       },
       initialDocument: this.state.initialDocument,
       collaboration: this.state.collaboration,
-      wasm: this.options.wasm,
       importCallback: this.options.importCallback,
       exportCallback: this.options.exportCallback,
       onReady: (payload: any) => this.options.onReady?.(payload),

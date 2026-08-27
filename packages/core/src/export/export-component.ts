@@ -1,15 +1,6 @@
 type Draw = any
 type Command = any
 
-function base64ToArrayBuffer(base64: string): ArrayBuffer {
-  const binaryString = atob(base64.replace(/^data:[^;]+;base64,/, ''))
-  const bytes = new Uint8Array(binaryString.length)
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i)
-  }
-  return bytes.buffer
-}
-
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, '&amp;')
@@ -60,6 +51,10 @@ function generateTableHtml(element: any): string {
   return html
 }
 
+/**
+ * HTML 预览组件（不含 docx 导出）。
+ * .docx 导入/导出请通过宿主注入 DocxImportCallback / DocxExportCallback。
+ */
 export class ExportComponent {
   private _command: Command | null = null
 
@@ -68,161 +63,16 @@ export class ExportComponent {
 
     const structureAdapter = (draw as any).__structureAdapter
     if (structureAdapter) {
-      structureAdapter.exportDocx = this.exportDocx.bind(this)
       structureAdapter.previewHtml = this.previewHtml.bind(this)
+      structureAdapter.exportDocx = async () => {
+        console.warn(
+          '[ExportComponent] 内置 docx 导出已移除，请注入 WordEditor.exportCallback（如 @vervedoc/docx-parser）'
+        )
+        return null
+      }
     }
 
     return this
-  }
-
-  public async exportDocx(payload?: any): Promise<Blob | null> {
-    const callback = payload?.callback
-    try {
-      const result = this._command.getValue()
-      const { Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, BorderStyle } = await import('docx')
-
-      const children: any[] = []
-      const mainData = result.data.main || []
-      let currentParagraph: any[] = []
-
-      for (const element of mainData) {
-        const marker = (element as any)?.extension && typeof (element as any).extension === 'object' ? (element as any).extension.bookmarkMarker : null
-        if (marker?.name) continue
-        if (element.value === '\n' || element.type === 'pageBreak') {
-          if (currentParagraph.length > 0) {
-            children.push(new Paragraph({ children: currentParagraph }))
-            currentParagraph = []
-          }
-          if (element.type === 'pageBreak') {
-            children.push(new Paragraph({ pageBreakBefore: true }))
-          }
-        } else if (element.type === 'image' && element.value) {
-          if (currentParagraph.length > 0) {
-            children.push(new Paragraph({ children: currentParagraph }))
-            currentParagraph = []
-          }
-          try {
-            const imageData = base64ToArrayBuffer(element.value)
-            const width = element.width || 200
-            const height = element.height || 200
-            children.push(new Paragraph({
-              children: [
-                new ImageRun({
-                  data: imageData,
-                  transformation: { width, height },
-                  type: 'png'
-                })
-              ]
-            }))
-          } catch (imgError) {
-            console.warn('[ExportComponent] 图片导出失败:', imgError)
-          }
-        } else if (element.type === 'table' && element.trList) {
-          if (currentParagraph.length > 0) {
-            children.push(new Paragraph({ children: currentParagraph }))
-            currentParagraph = []
-          }
-          try {
-            const normalizeBorderColor = (color: unknown): string => {
-              if (typeof color !== 'string') return '000000'
-              const c = color.trim()
-              if (!c) return '000000'
-              return c.startsWith('#') ? c.slice(1) : c
-            }
-            const getBorderStyle = (borderType: unknown): any => {
-              const bt = borderType === 'dash' ? 'dash' : 'single'
-              if (bt === 'dash') return (BorderStyle as any).DASHED ?? 'dashed'
-              return (BorderStyle as any).SINGLE ?? 'single'
-            }
-            const noneBorderStyle = (BorderStyle as any).NONE ?? (BorderStyle as any).NIL ?? 'none'
-            const toDocxBorderSize = (w: unknown): number => {
-              const width = Number(w)
-              if (!Number.isFinite(width) || width <= 0) return 8
-              return Math.max(1, Math.round(width * 8))
-            }
-            const makeBorder = (payload: { style: any; size: number; color: string }) => ({
-              style: payload.style,
-              size: payload.size,
-              color: payload.color
-            })
-
-            const borderType = element.borderType ?? 'all'
-            const borderColor = normalizeBorderColor(element.borderColor)
-            const baseBorderSize = toDocxBorderSize(element.borderWidth)
-            const externalBorderSize = element.borderExternalWidth !== undefined ? toDocxBorderSize(element.borderExternalWidth) : baseBorderSize
-            const lineStyle = getBorderStyle(borderType)
-            const noneBorder = makeBorder({ style: noneBorderStyle, size: 0, color: borderColor })
-            const innerBorder = makeBorder({ style: lineStyle, size: baseBorderSize, color: borderColor })
-            const outerBorder = makeBorder({ style: lineStyle, size: externalBorderSize, color: borderColor })
-
-            const tableBorders =
-              borderType === 'empty'
-                ? { top: noneBorder, bottom: noneBorder, left: noneBorder, right: noneBorder, insideHorizontal: noneBorder, insideVertical: noneBorder }
-                : borderType === 'external'
-                  ? { top: outerBorder, bottom: outerBorder, left: outerBorder, right: outerBorder, insideHorizontal: noneBorder, insideVertical: noneBorder }
-                  : borderType === 'internal'
-                    ? { top: noneBorder, bottom: noneBorder, left: noneBorder, right: noneBorder, insideHorizontal: innerBorder, insideVertical: innerBorder }
-                    : { top: outerBorder, bottom: outerBorder, left: outerBorder, right: outerBorder, insideHorizontal: innerBorder, insideVertical: innerBorder }
-
-            const rows = element.trList.map((tr: any) => {
-              const cells = (tr.tdList || []).map((td: any) => {
-                const cellContent = (td.value || []).map((item: any) => item.value || '').join('')
-                const cellBorders = Array.isArray(td.borderTypes) && td.borderTypes.length
-                  ? {
-                      ...(td.borderTypes.includes('top') ? { top: innerBorder } : {}),
-                      ...(td.borderTypes.includes('right') ? { right: innerBorder } : {}),
-                      ...(td.borderTypes.includes('bottom') ? { bottom: innerBorder } : {}),
-                      ...(td.borderTypes.includes('left') ? { left: innerBorder } : {})
-                    }
-                  : undefined
-                return new TableCell({
-                  children: [new Paragraph({ children: [new TextRun(cellContent)] })],
-                  columnSpan: td.colspan || 1,
-                  rowSpan: td.rowspan || 1,
-                  ...(cellBorders ? { borders: cellBorders } : {})
-                })
-              })
-              return new TableRow({ children: cells })
-            })
-            children.push(new Table({ rows, width: { size: 100, type: WidthType.PERCENTAGE }, borders: tableBorders }))
-          } catch (tableError) {
-            console.warn('[ExportComponent] 表格导出失败:', tableError)
-          }
-        } else if (element.value) {
-          const textRunOptions: any = {
-            text: element.value,
-            bold: element.bold,
-            italics: element.italic,
-            size: (element.size || 10.5) * 2,
-            font: element.font?.split(',')[0] || 'SimSun',
-            color: element.color?.replace('#', ''),
-            underline: element.underline ? {} : undefined,
-            strike: element.strikeout
-          }
-          if (element.revisionType && element.revisionId && (element.revisionType === 'insert' || element.revisionType === 'delete')) {
-            textRunOptions.revision = {
-              id: element.revisionId,
-              author: element.revisionAuthor || '',
-              date: element.revisionDate || '',
-              type: element.revisionType
-            }
-          }
-          currentParagraph.push(new TextRun(textRunOptions))
-        }
-      }
-
-      if (currentParagraph.length > 0) {
-        children.push(new Paragraph({ children: currentParagraph }))
-      }
-
-      const doc = new Document({ sections: [{ children }] })
-      const blob = await Packer.toBlob(doc)
-      if (callback) callback(blob)
-      return blob
-    } catch (error) {
-      console.error('[ExportComponent] 导出 Docx 失败:', error)
-      return null
-    }
   }
 
   public previewHtml(payload?: any): string {

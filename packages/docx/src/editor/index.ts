@@ -1,12 +1,27 @@
 /**
  * docx-editor 编辑器入口
  * 重导出核心包的所有内容 + UI 组件
+ *
+ * DOCX 导入/导出契约（实现由宿主注入，本包不内置）：
+ * - DocxImportCallback / DocxExportCallback
+ * - 参考实现：@vervedoc/docx-parser（本地 JS）
+ * - 也可自行实现任意引擎，只要满足同一回调接口
  */
 export * from '@vervedoc/core'
 
 // 导出对象式接入入口
 export { WordEditor } from '../core/word-editor'
 export type { Options } from '../core/word-editor'
+
+// 明确再导出导入/导出契约，便于宿主与实现方对齐
+export type {
+  DocxImportCallback,
+  DocxExportCallback,
+  IDocxImportResult,
+  IDocxExportResult,
+  IDocxImportOptions,
+  IDocxExportOptions
+} from '@vervedoc/core'
 
 // 导出版本号
 export const DOCX_EDITOR_UI_VERSION = __APP_VERSION__

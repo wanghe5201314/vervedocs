@@ -443,19 +443,28 @@ const handleReady = (...args: any[]) => {
 
   installCommentCallbacks(instance)
 
+  // 初始内容优先级：content → url → 空文档（由宿主决定，不内置默认文件）
   const content = (initialDocument as any)?.content
+  const sourceUrl = String((initialDocument as any)?.url || '').trim()
 
-
-  if (content == null) {
+  if (content == null && sourceUrl) {
     busyState.value = 'loading'
     executeCommand('importJsonFile', {
-      onComplete: (success: boolean) => {
+      url: sourceUrl,
+      onComplete: (success: boolean, message?: string) => {
         busyState.value = 'idle'
         activeDock.value = 'catalog'
-        if (!success) console.warn('[Editor] test-output.json 加载失败')
+        if (!success) console.warn(`[Editor] 初始文档加载失败: ${sourceUrl}`, message || '')
         nextTick(() => initCollaboration())
       }
     })
+    return
+  }
+
+  if (content == null) {
+    busyState.value = 'idle'
+    activeDock.value = 'catalog'
+    nextTick(() => initCollaboration())
     return
   }
 
@@ -559,7 +568,7 @@ const handleImportDoc = () => {
         message.error(`文档解析失败: ${result.error || '未知错误'}`)
         return
       }
-      executeCommand('executeSetValue', { main: result.elements })
+      executeCommand('setValue', { main: result.elements })
     } catch (e) {
       message.error(`导入失败: ${(e as Error)?.message || '未知错误'}`)
     }

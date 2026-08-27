@@ -21,6 +21,27 @@ const log = logger.child({ module: 'server' })
  */
 const app = express()
 
+/** 允许浏览器跨域访问（playground 等本地前端直连本服务） */
+app.use((req, res, next) => {
+  const origin = req.headers.origin
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Vary', 'Origin')
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*')
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    req.headers['access-control-request-headers'] || 'Content-Type',
+  )
+  if (req.method === 'OPTIONS') {
+    res.status(204).end()
+    return
+  }
+  next()
+})
+
 app.get('/health', async (_req, res) => {
   const bridge = await checkBridge()
   res.json({

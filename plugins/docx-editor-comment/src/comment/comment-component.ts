@@ -423,10 +423,12 @@ export class CommentComponent {
     userDiv.style.cssText = 'display:flex;align-items:center;gap:8px;'
 
     const avatar = document.createElement('div')
+    avatar.classList.add(`${PREFIX}-comment-avatar`)
     avatar.style.cssText = `width:28px;height:28px;border-radius:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:13px;flex-shrink:0;background:${comment.avatarColor || getAvatarColor(comment.userName)};`
     avatar.textContent = comment.userName.charAt(0)
 
     const username = document.createElement('span')
+    username.classList.add(`${PREFIX}-comment-username`)
     username.style.cssText = 'font-weight:600;font-size:13px;color:#1f1f1f;'
     username.textContent = comment.userName
 
@@ -437,12 +439,14 @@ export class CommentComponent {
 
     if (comment.status === 2) {
       const badge = document.createElement('span')
+      badge.classList.add('resolved-badge')
       badge.style.cssText = 'font-size:10px;color:#67c23a;background:#f0f9eb;padding:2px 6px;border-radius:10px;white-space:nowrap;'
       badge.textContent = '已解决'
       headerRight.append(badge)
     }
 
     const dateSpan = document.createElement('span')
+    dateSpan.classList.add(`${PREFIX}-comment-date`)
     dateSpan.style.cssText = 'font-size:11px;color:#9e9e9e;white-space:nowrap;'
     dateSpan.textContent = comment.createdDate
 
@@ -638,6 +642,21 @@ export class CommentComponent {
 
     const header = card.querySelector(':scope > div:first-child') as HTMLDivElement
     if (header) {
+      const avatar = header.querySelector(`.${PREFIX}-comment-avatar`) as HTMLDivElement | null
+      if (avatar) {
+        const bg = comment.avatarColor || getAvatarColor(comment.userName)
+        avatar.style.background = bg
+        avatar.textContent = comment.userName.charAt(0)
+      }
+      const username = header.querySelector(`.${PREFIX}-comment-username`) as HTMLSpanElement | null
+      if (username) {
+        username.textContent = comment.userName
+      }
+      const dateSpan = header.querySelector(`.${PREFIX}-comment-date`) as HTMLSpanElement | null
+      if (dateSpan) {
+        dateSpan.textContent = comment.createdDate
+      }
+
       const headerRight = header.querySelector(':scope > div:last-child') as HTMLDivElement
       if (headerRight) {
         const existingBadge = headerRight.querySelector('.resolved-badge')

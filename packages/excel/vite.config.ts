@@ -5,13 +5,16 @@ import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
-import { resolve } from 'path'
-import { existsSync } from 'node:fs'
+import { dirname, resolve } from 'path'
+import { existsSync, realpathSync } from 'node:fs'
+import { stripUseClientDirective } from './vite/strip-use-client-directive'
 
 export default defineConfig(() => {
   const collabNodeModules = existsSync(resolve(__dirname, '../../plugins/docx-editor-collaboration/node_modules'))
     ? resolve(__dirname, '../../plugins/docx-editor-collaboration/node_modules')
     : resolve(__dirname, 'node_modules')
+  const yjsRealDir = realpathSync(resolve(collabNodeModules, 'yjs'))
+  const lib0Dir = resolve(dirname(yjsRealDir), 'lib0')
 
   const isExternal = (id: string) => {
     if (['vue', '@mdi/js'].includes(id)) {
@@ -52,6 +55,7 @@ export default defineConfig(() => {
   return {
     plugins: [
       vue(),
+      stripUseClientDirective(),
       ...autoImportPlugins,
       cssInjectedByJsPlugin(),
       dts({
@@ -65,6 +69,7 @@ export default defineConfig(() => {
       alias: {
         '@': resolve(__dirname, 'src'),
         'yjs': resolve(collabNodeModules, 'yjs'),
+        'lib0': lib0Dir,
         'y-protocols': resolve(collabNodeModules, 'y-protocols'),
         '@hocuspocus/provider': resolve(collabNodeModules, '@hocuspocus/provider'),
         'eventemitter3': resolve(collabNodeModules, 'eventemitter3'),
@@ -80,9 +85,6 @@ export default defineConfig(() => {
       rollupOptions: {
         external: isExternal,
         onwarn(warning, warn) {
-          if (warning.code === 'MODULE_LEVEL_DIRECTIVE' && warning.message.includes('"use client"')) {
-            return
-          }
           if (warning.code === 'UNUSED_EXTERNAL_IMPORT' && warning.message.includes('resolveComponent')) {
             return
           }

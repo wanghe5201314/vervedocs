@@ -63,7 +63,7 @@ const {
 
   importJsonFile: importJsonFileFn,
 } = useEditorImport({
-  emit,
+  emit: emit as (event: string, ...args: any[]) => void,
   getEditorInstance: () => editorInstance,
   refreshCatalog,
 })

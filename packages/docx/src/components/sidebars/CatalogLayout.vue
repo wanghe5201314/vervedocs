@@ -55,15 +55,8 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
 import { MenuFoldOutlined, FolderOutlined, CloseOutlined, CaretDownOutlined, MoreOutlined } from '@ant-design/icons-vue'
-
-type TitleLevel = 'first' | 'second' | 'third' | 'fourth' | 'fifth' | 'sixth'
-
-interface CatalogItem {
-  id?: string
-  name?: string
-  level?: TitleLevel | number
-  subCatalog?: CatalogItem[]
-}
+import type { ICatalogItem } from '@vervedoc/core'
+import { TitleLevel } from '@vervedoc/core'
 
 interface TreeNode {
   id: string
@@ -113,25 +106,25 @@ const switchToSectionTab = () => {
 }
 
 const levelMap: Record<TitleLevel, number> = {
-  first: 1,
-  second: 2,
-  third: 3,
-  fourth: 4,
-  fifth: 5,
-  sixth: 6
+  [TitleLevel.FIRST]: 1,
+  [TitleLevel.SECOND]: 2,
+  [TitleLevel.THIRD]: 3,
+  [TitleLevel.FOURTH]: 4,
+  [TitleLevel.FIFTH]: 5,
+  [TitleLevel.SIXTH]: 6
 }
 
 const normalizeLevel = (level?: TitleLevel | number) => {
   if (typeof level === 'number' && Number.isFinite(level)) {
     return Math.min(Math.max(Math.trunc(level), 1), 6)
   }
-  if (level && level in levelMap) {
-    return levelMap[level]
+  if (level !== undefined && level in levelMap) {
+    return levelMap[level as TitleLevel]
   }
   return 1
 }
 
-const buildTree = (catalogItems: CatalogItem[]): TreeNode[] => {
+const buildTree = (catalogItems: ICatalogItem[]): TreeNode[] => {
   if (!Array.isArray(catalogItems) || catalogItems.length === 0) return []
   return catalogItems.flatMap(item => {
     if (!item?.id || !item?.name?.trim()) return []
@@ -147,7 +140,7 @@ const buildTree = (catalogItems: CatalogItem[]): TreeNode[] => {
 }
 
 defineExpose({
-  updateCatalog: (newCatalog: CatalogItem[] | null | undefined) => {
+  updateCatalog: (newCatalog: ICatalogItem[] | null | undefined) => {
     treeData.value = buildTree(newCatalog || [])
     nextTick(() => {
       const getAllNodeIds = (nodes: TreeNode[]): string[] => {

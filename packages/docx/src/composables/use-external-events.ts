@@ -160,10 +160,27 @@ export const emitExternalEvent = <T = unknown>(event: ExternalEventName, payload
   }
 }
 
+import type { DocumentMeta } from '@/types/document'
+
+/**
+ * 外部 document API（由 EditorPage 在运行时挂载）
+ */
+export interface ExternalDocumentApi {
+  getMeta: () => DocumentMeta
+  setMeta: (patch: Partial<DocumentMeta> & { fileName?: string }) => void
+  getSnapshot: () => unknown
+  save: (opts?: { silent?: boolean }) => Promise<unknown> | unknown
+}
+
 /**
  * 外部 API 对象（事件订阅/发布）
  */
-export const externalApi = {
+export const externalApi: {
+  on: typeof onExternalEvent
+  off: typeof offExternalEvent
+  events: { on: typeof onExternalEvent; off: typeof offExternalEvent }
+  document?: ExternalDocumentApi
+} = {
   on: onExternalEvent,
   off: offExternalEvent,
   events: {

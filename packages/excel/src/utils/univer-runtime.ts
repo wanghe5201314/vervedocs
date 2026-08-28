@@ -1,43 +1,121 @@
-type CoreModule = typeof import('@univerjs/core')
-type CoreFacadeModule = typeof import('@univerjs/core/facade')
-type DocsModule = typeof import('@univerjs/docs')
-type DocsUIModule = typeof import('@univerjs/docs-ui')
-type FindReplaceModule = typeof import('@univerjs/find-replace')
-type FormulaEngineModule = typeof import('@univerjs/engine-formula')
-type RenderEngineModule = typeof import('@univerjs/engine-render')
-type SheetsConditionalFormattingModule = typeof import('@univerjs/sheets-conditional-formatting')
-type SheetsConditionalFormattingUIModule = typeof import('@univerjs/sheets-conditional-formatting-ui')
-type SheetsCrosshairHighlightModule = typeof import('@univerjs/sheets-crosshair-highlight')
-type SheetsDataValidationModule = typeof import('@univerjs/sheets-data-validation')
-type SheetsDataValidationUIModule = typeof import('@univerjs/sheets-data-validation-ui')
-type SheetsDrawingModule = typeof import('@univerjs/sheets-drawing')
-type SheetsDrawingUIModule = typeof import('@univerjs/sheets-drawing-ui')
-type SheetsFilterModule = typeof import('@univerjs/sheets-filter')
-type SheetsFilterUIModule = typeof import('@univerjs/sheets-filter-ui')
-type SheetsFindReplaceModule = typeof import('@univerjs/sheets-find-replace')
-type SheetsHyperLinkModule = typeof import('@univerjs/sheets-hyper-link')
-type SheetsHyperLinkUIModule = typeof import('@univerjs/sheets-hyper-link-ui')
-type SheetsModule = typeof import('@univerjs/sheets')
-type SheetsFormulaModule = typeof import('@univerjs/sheets-formula')
-type SheetsFormulaUIModule = typeof import('@univerjs/sheets-formula-ui')
-type SheetsGraphicsModule = typeof import('@univerjs/sheets-graphics')
-type SheetsNoteModule = typeof import('@univerjs/sheets-note')
-type SheetsNoteUIModule = typeof import('@univerjs/sheets-note-ui')
-type SheetsNumfmtModule = typeof import('@univerjs/sheets-numfmt')
-type SheetsNumfmtUIModule = typeof import('@univerjs/sheets-numfmt-ui')
-type SheetsSortModule = typeof import('@univerjs/sheets-sort')
-type SheetsSortUIModule = typeof import('@univerjs/sheets-sort-ui')
-type SheetsTableModule = typeof import('@univerjs/sheets-table')
-type SheetsTableUIModule = typeof import('@univerjs/sheets-table-ui')
-type SheetsThreadCommentModule = typeof import('@univerjs/sheets-thread-comment')
-type SheetsThreadCommentUIModule = typeof import('@univerjs/sheets-thread-comment-ui')
-type SheetsUIModule = typeof import('@univerjs/sheets-ui')
-type SheetsZenEditorModule = typeof import('@univerjs/sheets-zen-editor')
-type ThreadCommentModule = typeof import('@univerjs/thread-comment')
-type ThreadCommentUIModule = typeof import('@univerjs/thread-comment-ui')
-type UIModule = typeof import('@univerjs/ui')
-type AdapterModule = typeof import('./univer-adapter')
 import type { ExcelLocale } from '@/i18n/types'
+import * as core from '@univerjs/core'
+import * as coreFacade from '@univerjs/core/facade'
+import * as docs from '@univerjs/docs'
+import * as docsUI from '@univerjs/docs-ui'
+import * as findReplace from '@univerjs/find-replace'
+import * as formulaEngine from '@univerjs/engine-formula'
+import * as renderEngine from '@univerjs/engine-render'
+import * as sheetsConditionalFormatting from '@univerjs/sheets-conditional-formatting'
+import * as sheetsConditionalFormattingUI from '@univerjs/sheets-conditional-formatting-ui'
+import * as sheetsCrosshairHighlight from '@univerjs/sheets-crosshair-highlight'
+import * as sheetsDataValidation from '@univerjs/sheets-data-validation'
+import * as sheetsDataValidationUI from '@univerjs/sheets-data-validation-ui'
+import * as sheetsDrawing from '@univerjs/sheets-drawing'
+import * as sheetsDrawingUI from '@univerjs/sheets-drawing-ui'
+import * as sheetsFilter from '@univerjs/sheets-filter'
+import * as sheetsFilterUI from '@univerjs/sheets-filter-ui'
+import * as sheetsFindReplace from '@univerjs/sheets-find-replace'
+import * as sheetsHyperLink from '@univerjs/sheets-hyper-link'
+import * as sheetsHyperLinkUI from '@univerjs/sheets-hyper-link-ui'
+import * as sheets from '@univerjs/sheets'
+import * as sheetsFormula from '@univerjs/sheets-formula'
+import * as sheetsFormulaUI from '@univerjs/sheets-formula-ui'
+import * as sheetsGraphics from '@univerjs/sheets-graphics'
+import * as sheetsNote from '@univerjs/sheets-note'
+import * as sheetsNoteUI from '@univerjs/sheets-note-ui'
+import * as sheetsNumfmt from '@univerjs/sheets-numfmt'
+import * as sheetsNumfmtUI from '@univerjs/sheets-numfmt-ui'
+import * as sheetsSort from '@univerjs/sheets-sort'
+import * as sheetsSortUI from '@univerjs/sheets-sort-ui'
+import * as sheetsTable from '@univerjs/sheets-table'
+import * as sheetsTableUI from '@univerjs/sheets-table-ui'
+import * as sheetsThreadComment from '@univerjs/sheets-thread-comment'
+import * as sheetsThreadCommentUI from '@univerjs/sheets-thread-comment-ui'
+import * as sheetsUI from '@univerjs/sheets-ui'
+import * as sheetsZenEditor from '@univerjs/sheets-zen-editor'
+import * as threadComment from '@univerjs/thread-comment'
+import * as threadCommentUI from '@univerjs/thread-comment-ui'
+import * as ui from '@univerjs/ui'
+import * as adapter from './univer-adapter'
+
+import '@univerjs/find-replace/lib/index.css'
+import '@univerjs/sheets-conditional-formatting-ui/lib/index.css'
+import '@univerjs/sheets-crosshair-highlight/lib/index.css'
+import '@univerjs/sheets-data-validation-ui/lib/index.css'
+import '@univerjs/design/lib/index.css'
+import '@univerjs/ui/lib/index.css'
+import '@univerjs/docs-ui/lib/index.css'
+import '@univerjs/sheets-drawing-ui/lib/index.css'
+import '@univerjs/sheets-filter-ui/lib/index.css'
+import '@univerjs/sheets-hyper-link-ui/lib/index.css'
+import '@univerjs/sheets-note-ui/lib/index.css'
+import '@univerjs/sheets-sort-ui/lib/index.css'
+import '@univerjs/sheets-thread-comment-ui/lib/index.css'
+import '@univerjs/thread-comment-ui/lib/index.css'
+import '@univerjs/sheets-ui/lib/index.css'
+import '@univerjs/sheets-formula-ui/lib/index.css'
+import '@univerjs/sheets-numfmt-ui/lib/index.css'
+import '@univerjs/sheets-table-ui/lib/index.css'
+import '@univerjs/sheets-zen-editor/lib/index.css'
+
+import '@univerjs/docs-ui/facade'
+import '@univerjs/engine-formula/facade'
+import '@univerjs/sheets-conditional-formatting/facade'
+import '@univerjs/sheets-crosshair-highlight/facade'
+import '@univerjs/sheets-data-validation/facade'
+import '@univerjs/sheets-drawing/facade'
+import '@univerjs/sheets-filter/facade'
+import '@univerjs/sheets-hyper-link-ui/facade'
+import '@univerjs/sheets/facade'
+import '@univerjs/sheets-find-replace/facade'
+import '@univerjs/sheets-formula/facade'
+import '@univerjs/sheets-numfmt/facade'
+import '@univerjs/sheets-table/facade'
+import '@univerjs/sheets-ui/facade'
+import '@univerjs/sheets-drawing-ui/facade'
+import '@univerjs/sheets-zen-editor/facade'
+import '@univerjs/ui/facade'
+
+type CoreModule = typeof core
+type CoreFacadeModule = typeof coreFacade
+type DocsModule = typeof docs
+type DocsUIModule = typeof docsUI
+type FindReplaceModule = typeof findReplace
+type FormulaEngineModule = typeof formulaEngine
+type RenderEngineModule = typeof renderEngine
+type SheetsConditionalFormattingModule = typeof sheetsConditionalFormatting
+type SheetsConditionalFormattingUIModule = typeof sheetsConditionalFormattingUI
+type SheetsCrosshairHighlightModule = typeof sheetsCrosshairHighlight
+type SheetsDataValidationModule = typeof sheetsDataValidation
+type SheetsDataValidationUIModule = typeof sheetsDataValidationUI
+type SheetsDrawingModule = typeof sheetsDrawing
+type SheetsDrawingUIModule = typeof sheetsDrawingUI
+type SheetsFilterModule = typeof sheetsFilter
+type SheetsFilterUIModule = typeof sheetsFilterUI
+type SheetsFindReplaceModule = typeof sheetsFindReplace
+type SheetsHyperLinkModule = typeof sheetsHyperLink
+type SheetsHyperLinkUIModule = typeof sheetsHyperLinkUI
+type SheetsModule = typeof sheets
+type SheetsFormulaModule = typeof sheetsFormula
+type SheetsFormulaUIModule = typeof sheetsFormulaUI
+type SheetsGraphicsModule = typeof sheetsGraphics
+type SheetsNoteModule = typeof sheetsNote
+type SheetsNoteUIModule = typeof sheetsNoteUI
+type SheetsNumfmtModule = typeof sheetsNumfmt
+type SheetsNumfmtUIModule = typeof sheetsNumfmtUI
+type SheetsSortModule = typeof sheetsSort
+type SheetsSortUIModule = typeof sheetsSortUI
+type SheetsTableModule = typeof sheetsTable
+type SheetsTableUIModule = typeof sheetsTableUI
+type SheetsThreadCommentModule = typeof sheetsThreadComment
+type SheetsThreadCommentUIModule = typeof sheetsThreadCommentUI
+type SheetsUIModule = typeof sheetsUI
+type SheetsZenEditorModule = typeof sheetsZenEditor
+type ThreadCommentModule = typeof threadComment
+type ThreadCommentUIModule = typeof threadCommentUI
+type UIModule = typeof ui
+type AdapterModule = typeof adapter
 
 export type LoadedUniverRuntime = {
   core: Pick<CoreModule, 'BorderStyleTypes' | 'BorderType' | 'LocaleType' | 'Univer' | 'mergeLocales'>
@@ -111,188 +189,71 @@ export type LoadedUniverRuntime = {
 
 type LoadedUniverBaseRuntime = Omit<LoadedUniverRuntime, 'locales'>
 
-let univerBaseRuntimePromise: Promise<LoadedUniverBaseRuntime> | null = null
+let univerBaseRuntimeCache: LoadedUniverBaseRuntime | null = null
 const univerRuntimePromises = new Map<ExcelLocale, Promise<LoadedUniverRuntime>>()
 
-function loadUniverBaseRuntime(): Promise<LoadedUniverBaseRuntime> {
-  if (!univerBaseRuntimePromise) {
-    univerBaseRuntimePromise = (async () => {
-      const [
-        core,
-        coreFacade,
-        docs,
-        docsUI,
-        findReplace,
-        formulaEngine,
-        renderEngine,
-        sheetsConditionalFormatting,
-        sheetsConditionalFormattingUI,
-        sheetsCrosshairHighlight,
-        sheetsDataValidation,
-        sheetsDataValidationUI,
-        sheetsDrawing,
-        sheetsDrawingUI,
-        sheetsFilter,
-        sheetsFilterUI,
-        sheetsFindReplace,
-        sheetsHyperLink,
-        sheetsHyperLinkUI,
-        sheets,
-        sheetsFormula,
-        sheetsFormulaUI,
-        sheetsGraphics,
-        sheetsNote,
-        sheetsNoteUI,
-        sheetsNumfmt,
-        sheetsNumfmtUI,
-        sheetsSort,
-        sheetsSortUI,
-        sheetsTable,
-        sheetsTableUI,
-        sheetsThreadComment,
-        sheetsThreadCommentUI,
-        sheetsUI,
-        sheetsZenEditor,
-        threadComment,
-        threadCommentUI,
-        ui,
-        adapter,
-      ] = await Promise.all([
-        import('@univerjs/core'),
-        import('@univerjs/core/facade'),
-        import('@univerjs/docs'),
-        import('@univerjs/docs-ui'),
-        import('@univerjs/find-replace'),
-        import('@univerjs/engine-formula'),
-        import('@univerjs/engine-render'),
-        import('@univerjs/sheets-conditional-formatting'),
-        import('@univerjs/sheets-conditional-formatting-ui'),
-        import('@univerjs/sheets-crosshair-highlight'),
-        import('@univerjs/sheets-data-validation'),
-        import('@univerjs/sheets-data-validation-ui'),
-        import('@univerjs/sheets-drawing'),
-        import('@univerjs/sheets-drawing-ui'),
-        import('@univerjs/sheets-filter'),
-        import('@univerjs/sheets-filter-ui'),
-        import('@univerjs/sheets-find-replace'),
-        import('@univerjs/sheets-hyper-link'),
-        import('@univerjs/sheets-hyper-link-ui'),
-        import('@univerjs/sheets'),
-        import('@univerjs/sheets-formula'),
-        import('@univerjs/sheets-formula-ui'),
-        import('@univerjs/sheets-graphics'),
-        import('@univerjs/sheets-note'),
-        import('@univerjs/sheets-note-ui'),
-        import('@univerjs/sheets-numfmt'),
-        import('@univerjs/sheets-numfmt-ui'),
-        import('@univerjs/sheets-sort'),
-        import('@univerjs/sheets-sort-ui'),
-        import('@univerjs/sheets-table'),
-        import('@univerjs/sheets-table-ui'),
-        import('@univerjs/sheets-thread-comment'),
-        import('@univerjs/sheets-thread-comment-ui'),
-        import('@univerjs/sheets-ui'),
-        import('@univerjs/sheets-zen-editor'),
-        import('@univerjs/thread-comment'),
-        import('@univerjs/thread-comment-ui'),
-        import('@univerjs/ui'),
-        import('./univer-adapter'),
-        import('@univerjs/find-replace/lib/index.css'),
-        import('@univerjs/sheets-conditional-formatting-ui/lib/index.css'),
-        import('@univerjs/sheets-crosshair-highlight/lib/index.css'),
-        import('@univerjs/sheets-data-validation-ui/lib/index.css'),
-        import('@univerjs/design/lib/index.css'),
-        import('@univerjs/ui/lib/index.css'),
-        import('@univerjs/docs-ui/lib/index.css'),
-        import('@univerjs/sheets-drawing-ui/lib/index.css'),
-        import('@univerjs/sheets-filter-ui/lib/index.css'),
-        import('@univerjs/sheets-hyper-link-ui/lib/index.css'),
-        import('@univerjs/sheets-note-ui/lib/index.css'),
-        import('@univerjs/sheets-sort-ui/lib/index.css'),
-        import('@univerjs/sheets-thread-comment-ui/lib/index.css'),
-        import('@univerjs/thread-comment-ui/lib/index.css'),
-        import('@univerjs/sheets-ui/lib/index.css'),
-        import('@univerjs/sheets-formula-ui/lib/index.css'),
-        import('@univerjs/sheets-numfmt-ui/lib/index.css'),
-        import('@univerjs/sheets-table-ui/lib/index.css'),
-        import('@univerjs/sheets-zen-editor/lib/index.css'),
-        import('@univerjs/docs-ui/facade'),
-        import('@univerjs/engine-formula/facade'),
-        import('@univerjs/sheets-conditional-formatting/facade'),
-        import('@univerjs/sheets-crosshair-highlight/facade'),
-        import('@univerjs/sheets-data-validation/facade'),
-        import('@univerjs/sheets-drawing/facade'),
-        import('@univerjs/sheets-filter/facade'),
-        import('@univerjs/sheets-hyper-link-ui/facade'),
-        import('@univerjs/sheets/facade'),
-        import('@univerjs/sheets-find-replace/facade'),
-        import('@univerjs/sheets-formula/facade'),
-        import('@univerjs/sheets-numfmt/facade'),
-        import('@univerjs/sheets-table/facade'),
-        import('@univerjs/sheets-ui/facade'),
-        import('@univerjs/sheets-drawing-ui/facade'),
-        import('@univerjs/sheets-zen-editor/facade'),
-        import('@univerjs/ui/facade'),
-      ])
-
-      return {
-        core: {
-          BorderStyleTypes: core.BorderStyleTypes,
-          BorderType: core.BorderType,
-          LocaleType: core.LocaleType,
-          Univer: core.Univer,
-          mergeLocales: core.mergeLocales,
-        },
-        facade: {
-          FUniver: coreFacade.FUniver,
-        },
-        plugins: {
-          UniverDocsPlugin: docs.UniverDocsPlugin,
-          UniverDocsUIPlugin: docsUI.UniverDocsUIPlugin,
-          UniverFindReplacePlugin: findReplace.UniverFindReplacePlugin,
-          UniverFormulaEnginePlugin: formulaEngine.UniverFormulaEnginePlugin,
-          UniverRenderEnginePlugin: renderEngine.UniverRenderEnginePlugin,
-          UniverSheetsConditionalFormattingPlugin: sheetsConditionalFormatting.UniverSheetsConditionalFormattingPlugin,
-          UniverSheetsConditionalFormattingUIPlugin: sheetsConditionalFormattingUI.UniverSheetsConditionalFormattingUIPlugin,
-          UniverSheetsCrosshairHighlightPlugin: sheetsCrosshairHighlight.UniverSheetsCrosshairHighlightPlugin,
-          UniverSheetsDataValidationPlugin: sheetsDataValidation.UniverSheetsDataValidationPlugin,
-          UniverSheetsDataValidationUIPlugin: sheetsDataValidationUI.UniverSheetsDataValidationUIPlugin,
-          UniverSheetsDrawingPlugin: sheetsDrawing.UniverSheetsDrawingPlugin,
-          UniverSheetsDrawingUIPlugin: sheetsDrawingUI.UniverSheetsDrawingUIPlugin,
-          UniverSheetsFilterPlugin: sheetsFilter.UniverSheetsFilterPlugin,
-          UniverSheetsFilterUIPlugin: sheetsFilterUI.UniverSheetsFilterUIPlugin,
-          UniverSheetsFindReplacePlugin: sheetsFindReplace.UniverSheetsFindReplacePlugin,
-          UniverSheetsHyperLinkPlugin: sheetsHyperLink.UniverSheetsHyperLinkPlugin,
-          UniverSheetsHyperLinkUIPlugin: sheetsHyperLinkUI.UniverSheetsHyperLinkUIPlugin,
-          UniverSheetsPlugin: sheets.UniverSheetsPlugin,
-          UniverSheetsFormulaPlugin: sheetsFormula.UniverSheetsFormulaPlugin,
-          UniverSheetsFormulaUIPlugin: sheetsFormulaUI.UniverSheetsFormulaUIPlugin,
-          UniverSheetsGraphicsPlugin: sheetsGraphics.UniverSheetsGraphicsPlugin,
-          UniverSheetsNotePlugin: sheetsNote.UniverSheetsNotePlugin,
-          UniverSheetsNoteUIPlugin: sheetsNoteUI.UniverSheetsNoteUIPlugin,
-          UniverSheetsNumfmtPlugin: sheetsNumfmt.UniverSheetsNumfmtPlugin,
-          UniverSheetsNumfmtUIPlugin: sheetsNumfmtUI.UniverSheetsNumfmtUIPlugin,
-          UniverSheetsSortPlugin: sheetsSort.UniverSheetsSortPlugin,
-          UniverSheetsSortUIPlugin: sheetsSortUI.UniverSheetsSortUIPlugin,
-          UniverSheetsTablePlugin: sheetsTable.UniverSheetsTablePlugin,
-          UniverSheetsTableUIPlugin: sheetsTableUI.UniverSheetsTableUIPlugin,
-          UniverSheetsThreadCommentPlugin: sheetsThreadComment.UniverSheetsThreadCommentPlugin,
-          UniverSheetsThreadCommentUIPlugin: sheetsThreadCommentUI.UniverSheetsThreadCommentUIPlugin,
-          UniverSheetsUIPlugin: sheetsUI.UniverSheetsUIPlugin,
-          UniverSheetsZenEditorPlugin: sheetsZenEditor.UniverSheetsZenEditorPlugin,
-          UniverThreadCommentPlugin: threadComment.UniverThreadCommentPlugin,
-          UniverThreadCommentUIPlugin: threadCommentUI.UniverThreadCommentUIPlugin,
-          UniverUIPlugin: ui.UniverUIPlugin,
-        },
-        adapter: {
-          internalWorkbookToUniver: adapter.internalWorkbookToUniver,
-          univerWorkbookToInternal: adapter.univerWorkbookToInternal,
-        },
-      }
-    })()
+function createUniverBaseRuntime(): LoadedUniverBaseRuntime {
+  return {
+    core: {
+      BorderStyleTypes: core.BorderStyleTypes,
+      BorderType: core.BorderType,
+      LocaleType: core.LocaleType,
+      Univer: core.Univer,
+      mergeLocales: core.mergeLocales,
+    },
+    facade: {
+      FUniver: coreFacade.FUniver,
+    },
+    plugins: {
+      UniverDocsPlugin: docs.UniverDocsPlugin,
+      UniverDocsUIPlugin: docsUI.UniverDocsUIPlugin,
+      UniverFindReplacePlugin: findReplace.UniverFindReplacePlugin,
+      UniverFormulaEnginePlugin: formulaEngine.UniverFormulaEnginePlugin,
+      UniverRenderEnginePlugin: renderEngine.UniverRenderEnginePlugin,
+      UniverSheetsConditionalFormattingPlugin: sheetsConditionalFormatting.UniverSheetsConditionalFormattingPlugin,
+      UniverSheetsConditionalFormattingUIPlugin: sheetsConditionalFormattingUI.UniverSheetsConditionalFormattingUIPlugin,
+      UniverSheetsCrosshairHighlightPlugin: sheetsCrosshairHighlight.UniverSheetsCrosshairHighlightPlugin,
+      UniverSheetsDataValidationPlugin: sheetsDataValidation.UniverSheetsDataValidationPlugin,
+      UniverSheetsDataValidationUIPlugin: sheetsDataValidationUI.UniverSheetsDataValidationUIPlugin,
+      UniverSheetsDrawingPlugin: sheetsDrawing.UniverSheetsDrawingPlugin,
+      UniverSheetsDrawingUIPlugin: sheetsDrawingUI.UniverSheetsDrawingUIPlugin,
+      UniverSheetsFilterPlugin: sheetsFilter.UniverSheetsFilterPlugin,
+      UniverSheetsFilterUIPlugin: sheetsFilterUI.UniverSheetsFilterUIPlugin,
+      UniverSheetsFindReplacePlugin: sheetsFindReplace.UniverSheetsFindReplacePlugin,
+      UniverSheetsHyperLinkPlugin: sheetsHyperLink.UniverSheetsHyperLinkPlugin,
+      UniverSheetsHyperLinkUIPlugin: sheetsHyperLinkUI.UniverSheetsHyperLinkUIPlugin,
+      UniverSheetsPlugin: sheets.UniverSheetsPlugin,
+      UniverSheetsFormulaPlugin: sheetsFormula.UniverSheetsFormulaPlugin,
+      UniverSheetsFormulaUIPlugin: sheetsFormulaUI.UniverSheetsFormulaUIPlugin,
+      UniverSheetsGraphicsPlugin: sheetsGraphics.UniverSheetsGraphicsPlugin,
+      UniverSheetsNotePlugin: sheetsNote.UniverSheetsNotePlugin,
+      UniverSheetsNoteUIPlugin: sheetsNoteUI.UniverSheetsNoteUIPlugin,
+      UniverSheetsNumfmtPlugin: sheetsNumfmt.UniverSheetsNumfmtPlugin,
+      UniverSheetsNumfmtUIPlugin: sheetsNumfmtUI.UniverSheetsNumfmtUIPlugin,
+      UniverSheetsSortPlugin: sheetsSort.UniverSheetsSortPlugin,
+      UniverSheetsSortUIPlugin: sheetsSortUI.UniverSheetsSortUIPlugin,
+      UniverSheetsTablePlugin: sheetsTable.UniverSheetsTablePlugin,
+      UniverSheetsTableUIPlugin: sheetsTableUI.UniverSheetsTableUIPlugin,
+      UniverSheetsThreadCommentPlugin: sheetsThreadComment.UniverSheetsThreadCommentPlugin,
+      UniverSheetsThreadCommentUIPlugin: sheetsThreadCommentUI.UniverSheetsThreadCommentUIPlugin,
+      UniverSheetsUIPlugin: sheetsUI.UniverSheetsUIPlugin,
+      UniverSheetsZenEditorPlugin: sheetsZenEditor.UniverSheetsZenEditorPlugin,
+      UniverThreadCommentPlugin: threadComment.UniverThreadCommentPlugin,
+      UniverThreadCommentUIPlugin: threadCommentUI.UniverThreadCommentUIPlugin,
+      UniverUIPlugin: ui.UniverUIPlugin,
+    },
+    adapter: {
+      internalWorkbookToUniver: adapter.internalWorkbookToUniver,
+      univerWorkbookToInternal: adapter.univerWorkbookToInternal,
+    },
   }
+}
 
-  return univerBaseRuntimePromise
+function loadUniverBaseRuntime(): Promise<LoadedUniverBaseRuntime> {
+  if (!univerBaseRuntimeCache) {
+    univerBaseRuntimeCache = createUniverBaseRuntime()
+  }
+  return Promise.resolve(univerBaseRuntimeCache)
 }
 
 function loadUniverLocales(locale: ExcelLocale): Promise<LoadedUniverRuntime['locales']> {
@@ -323,19 +284,19 @@ function loadUniverLocales(locale: ExcelLocale): Promise<LoadedUniverRuntime['lo
       import('@univerjs/thread-comment-ui/locale/en-US'),
       import('@univerjs/ui/locale/en-US'),
     ]).then(([
-      findReplace,
+      findReplaceLocale,
       conditionalFormattingUI,
       crosshairHighlight,
       dataValidation,
       dataValidationUI,
       design,
-      docsUI,
+      docsUILocale,
       drawingUI,
-      sheetsFilter,
+      sheetsFilterLocale,
       sheetsFilterUI,
       sheetsHyperLink,
       sheetsHyperLinkUI,
-      sheets,
+      sheetsLocale,
       sheetsFormulaUI,
       sheetsNoteUI,
       sheetsNumfmtUI,
@@ -345,19 +306,19 @@ function loadUniverLocales(locale: ExcelLocale): Promise<LoadedUniverRuntime['lo
       sheetsThreadCommentUI,
       sheetsUI,
       zenEditor,
-      threadCommentUI,
-      ui,
+      threadCommentUILocale,
+      uiLocale,
     ]) => ({
       conditionalFormattingUI: conditionalFormattingUI.default,
       crosshairHighlight: crosshairHighlight.default,
       dataValidation: dataValidation.default,
       dataValidationUI: dataValidationUI.default,
       design: design.default,
-      docsUI: docsUI.default,
+      docsUI: docsUILocale.default,
       drawingUI: drawingUI.default,
-      findReplace: findReplace.default,
-      sheets: sheets.default,
-      sheetsFilter: sheetsFilter.default,
+      findReplace: findReplaceLocale.default,
+      sheets: sheetsLocale.default,
+      sheetsFilter: sheetsFilterLocale.default,
       sheetsFilterUI: sheetsFilterUI.default,
       sheetsHyperLink: sheetsHyperLink.default,
       sheetsHyperLinkUI: sheetsHyperLinkUI.default,
@@ -369,9 +330,9 @@ function loadUniverLocales(locale: ExcelLocale): Promise<LoadedUniverRuntime['lo
       sheetsTableUI: sheetsTableUI.default,
       sheetsThreadCommentUI: sheetsThreadCommentUI.default,
       sheetsUI: sheetsUI.default,
-      threadCommentUI: threadCommentUI.default,
+      threadCommentUI: threadCommentUILocale.default,
       zenEditor: zenEditor.default,
-      ui: ui.default,
+      ui: uiLocale.default,
     }))
   }
 
@@ -401,19 +362,19 @@ function loadUniverLocales(locale: ExcelLocale): Promise<LoadedUniverRuntime['lo
     import('@univerjs/thread-comment-ui/locale/zh-CN'),
     import('@univerjs/ui/locale/zh-CN'),
   ]).then(([
-    findReplace,
+    findReplaceLocale,
     conditionalFormattingUI,
     crosshairHighlight,
     dataValidation,
     dataValidationUI,
     design,
-    docsUI,
+    docsUILocale,
     drawingUI,
-    sheetsFilter,
+    sheetsFilterLocale,
     sheetsFilterUI,
     sheetsHyperLink,
     sheetsHyperLinkUI,
-    sheets,
+    sheetsLocale,
     sheetsFormulaUI,
     sheetsNoteUI,
     sheetsNumfmtUI,
@@ -423,19 +384,19 @@ function loadUniverLocales(locale: ExcelLocale): Promise<LoadedUniverRuntime['lo
     sheetsThreadCommentUI,
     sheetsUI,
     zenEditor,
-    threadCommentUI,
-    ui,
+    threadCommentUILocale,
+    uiLocale,
   ]) => ({
     conditionalFormattingUI: conditionalFormattingUI.default,
     crosshairHighlight: crosshairHighlight.default,
     dataValidation: dataValidation.default,
     dataValidationUI: dataValidationUI.default,
     design: design.default,
-    docsUI: docsUI.default,
+    docsUI: docsUILocale.default,
     drawingUI: drawingUI.default,
-    findReplace: findReplace.default,
-    sheets: sheets.default,
-    sheetsFilter: sheetsFilter.default,
+    findReplace: findReplaceLocale.default,
+    sheets: sheetsLocale.default,
+    sheetsFilter: sheetsFilterLocale.default,
     sheetsFilterUI: sheetsFilterUI.default,
     sheetsHyperLink: sheetsHyperLink.default,
     sheetsHyperLinkUI: sheetsHyperLinkUI.default,
@@ -447,9 +408,9 @@ function loadUniverLocales(locale: ExcelLocale): Promise<LoadedUniverRuntime['lo
     sheetsTableUI: sheetsTableUI.default,
     sheetsThreadCommentUI: sheetsThreadCommentUI.default,
     sheetsUI: sheetsUI.default,
-    threadCommentUI: threadCommentUI.default,
+    threadCommentUI: threadCommentUILocale.default,
     zenEditor: zenEditor.default,
-    ui: ui.default,
+    ui: uiLocale.default,
   }))
 }
 

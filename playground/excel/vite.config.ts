@@ -4,8 +4,9 @@ import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
 import * as path from 'path'
-import { existsSync } from 'node:fs'
+import { existsSync, realpathSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { stripUseClientDirective } from '../../packages/excel/vite/strip-use-client-directive'
 
 export default defineConfig(() => {
   // @ts-ignore
@@ -18,6 +19,8 @@ export default defineConfig(() => {
   const collabNodeModules = existsSync(path.resolve(collabPluginDir, 'node_modules'))
     ? path.resolve(collabPluginDir, 'node_modules')
     : path.resolve(excelPackageDir, 'node_modules')
+  const yjsRealDir = realpathSync(path.resolve(collabNodeModules, 'yjs'))
+  const lib0Dir = path.resolve(path.dirname(yjsRealDir), 'lib0')
 
   const autoImportPlugins = [
     AutoImport({
@@ -40,7 +43,7 @@ export default defineConfig(() => {
   ]
 
   return {
-    plugins: [vue(), ...autoImportPlugins],
+    plugins: [vue(), stripUseClientDirective(), ...autoImportPlugins],
     base: './',
     resolve: {
       dedupe: ['yjs', 'y-protocols', '@hocuspocus/provider', 'lib0', 'eventemitter3'],
@@ -50,7 +53,14 @@ export default defineConfig(() => {
           replacement: path.resolve(excelPackageDir, 'src/index.ts'),
         },
         { find: '@', replacement: path.resolve(excelPackageDir, 'src') },
-        { find: 'yjs', replacement: path.resolve(collabNodeModules, 'yjs') },
+        {
+          find: 'yjs',
+          replacement: path.resolve(collabNodeModules, 'yjs'),
+        },
+        {
+          find: 'lib0',
+          replacement: lib0Dir,
+        },
         {
           find: 'y-protocols',
           replacement: path.resolve(collabNodeModules, 'y-protocols'),

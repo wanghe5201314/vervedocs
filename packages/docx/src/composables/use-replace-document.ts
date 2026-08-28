@@ -1,5 +1,5 @@
 import { nextTick } from 'vue'
-import type { DocxCommentMeta } from '@vervedoc/docx-editor-comment'
+import type { DocxCommentMeta } from '@vervedoc/core'
 
 export interface ReplaceDocumentPayload {
   /** 正文元素（必填） */

@@ -506,7 +506,7 @@ const { renameDoc, newDoc, openAccessPermission, openFeedback } =
     applyDocumentReplace
   })
 
-;(externalApi as any).document = {
+externalApi.document = {
   getMeta: () => ({ ...documentMeta }),
   setMeta,
   getSnapshot,

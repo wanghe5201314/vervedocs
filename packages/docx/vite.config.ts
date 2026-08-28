@@ -45,7 +45,8 @@ export default defineConfig({
     }),
     cssInjectedByJsPlugin(),
     dts({
-      include: ['src/**/*.ts', 'src/**/*.vue'],
+      include: ['src/**/*.ts'],
+      tsconfigPath: path.resolve(currentDir, 'tsconfig.json'),
       // @ts-ignore
       outDir: 'dist',
       rollupTypes: false

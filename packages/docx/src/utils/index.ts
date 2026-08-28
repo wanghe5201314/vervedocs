@@ -18,6 +18,16 @@ export function debounce<T extends (...args: any[]) => any>(
 }
 
 /**
+ * 从文件路径或文件名提取文档显示名（去掉扩展名）
+ */
+export function deriveDocumentNameFromPath(pathOrFileName: string): string {
+  const raw = String(pathOrFileName || '').trim()
+  if (!raw) return ''
+  const segment = raw.split(/[/\\]/).pop()?.split('?')[0]?.split('#')[0] || ''
+  return segment.replace(/\.[^.]+$/, '') || segment
+}
+
+/**
  * 获取用户头像文字
  */
 export function getAvatarText(name: string): string {

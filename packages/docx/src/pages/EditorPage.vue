@@ -235,6 +235,7 @@ import { useCollaboration } from '@/composables/use-collaboration'
 import { useDocumentActions } from '@/composables/use-document-actions'
 import { useEditorCommand } from '@/composables/use-editor-command'
 import { replaceDocument } from '@/composables/use-replace-document'
+import { deriveDocumentNameFromPath } from '@/utils'
 
 const initialDocument = inject<InitialDocument | null>(
   'docx-editor-ui:initDocument',
@@ -582,8 +583,22 @@ const handleReady = (...args: any[]) => {
         busyState.value = 'idle'
         activeDock.value = 'catalog'
         syncRevisionList()
-        if (!success)
+        if (success) {
+          const explicitName = String(
+            (initialDocument as any)?.meta?.name
+              || (initialDocument as any)?.meta?.fileName
+              || ''
+          ).trim()
+          if (!explicitName) {
+            const derivedName = deriveDocumentNameFromPath(sourceUrl)
+            if (derivedName) {
+              documentMeta.name = derivedName
+              emitMetaChange()
+            }
+          }
+        } else {
           console.warn(`[Editor] 初始文档加载失败: ${sourceUrl}`, message || '')
+        }
         nextTick(() => initCollaboration())
       }
     })
@@ -710,6 +725,11 @@ const handleImportDoc = () => {
         footer: [],
         comments: result.comments || []
       })
+      const importedName = deriveDocumentNameFromPath(file.name)
+      if (importedName) {
+        documentMeta.name = importedName
+        emitMetaChange()
+      }
     } catch (e) {
       message.error(`导入失败: ${(e as Error)?.message || '未知错误'}`)
     } finally {

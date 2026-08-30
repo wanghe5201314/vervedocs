@@ -43,7 +43,7 @@
             <span class="rev-time">{{ formatTime(rev.date) }}</span>
           </div>
           <div class="rev-item-content">
-            <span class="rev-type-tag delete">删除</span>
+            <span class="rev-type-tag" :class="rev.type">{{ revisionTypeLabelMap[rev.type] }}</span>
             <span class="rev-content-text">{{ rev.content }}</span>
           </div>
           <div class="rev-item-actions">
@@ -67,7 +67,7 @@ import { VIcon } from '@vervedoc/icons'
 
 export interface RevisionItem {
   id: string
-  type: 'delete'
+  type: 'insert' | 'delete' | 'format'
   author: string
   date: string
   content: string
@@ -84,6 +84,11 @@ const emit = defineEmits<{
 }>()
 
 const AUTHOR_COLORS = ['#1890FF', '#52C41A', '#FAAD14', '#FF4D4F', '#8C8C8C', '#13C2C2', '#722ED1']
+const revisionTypeLabelMap = {
+  insert: '插入',
+  delete: '删除',
+  format: '格式'
+} as const
 
 const getAuthorColor = (name: string): string => {
   let hash = 0
@@ -304,8 +309,21 @@ const formatTime = (dateStr: string): string => {
   flex-shrink: 0;
   line-height: 18px;
 
+}
+
+.rev-type-tag.insert {
+  color: #1890ff;
+  background: #e6f4ff;
+}
+
+.rev-type-tag.delete {
   color: #ff4d4f;
   background: #fff2f0;
+}
+
+.rev-type-tag.format {
+  color: #722ed1;
+  background: #f9f0ff;
 }
 
 .rev-content-text {

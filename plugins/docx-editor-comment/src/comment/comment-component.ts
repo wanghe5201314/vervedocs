@@ -35,6 +35,58 @@ function formatCommentDate(dateStr: string): string {
   }
 }
 
+function formatCommentDisplayDate(dateStr: string): string {
+  if (!dateStr) return ''
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return dateStr.replace(/-/g, '/')
+    const y = d.getFullYear()
+    const m = d.getMonth() + 1
+    const day = d.getDate()
+    const h = String(d.getHours()).padStart(2, '0')
+    const min = String(d.getMinutes()).padStart(2, '0')
+    return `${y}/${m}/${day} ${h}:${min}`
+  } catch {
+    return dateStr.replace(/-/g, '/')
+  }
+}
+
+function extractCommentBody(content: string, rangeText: string): { sourceText: string; mainText: string } {
+  const normalizedContent = String(content || '').trim()
+  const normalizedRange = String(rangeText || '').trim()
+
+  if (!normalizedContent) {
+    return {
+      sourceText: normalizedRange,
+      mainText: ''
+    }
+  }
+
+  const lines = normalizedContent
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean)
+
+  if (lines.length === 0) {
+    return {
+      sourceText: normalizedRange,
+      mainText: ''
+    }
+  }
+
+  const firstLine = lines[0]
+  const match = firstLine.match(/^取自[：:？?]?\s*(.*)$/)
+  const sourceText = (match?.[1] || normalizedRange).trim()
+  const mainText = match
+    ? lines.slice(1).join('\n')
+    : normalizedContent
+
+  return {
+    sourceText,
+    mainText
+  }
+}
+
 export interface DocxCommentMeta {
   id: string | number
   content: string
@@ -352,7 +404,7 @@ export class CommentComponent {
     if (!container) return
     const pageWidth = this._command.getDrawWidth?.() || 794
     const balloonLeft = pageWidth + 16
-    const cardMaxWidth = 300
+    const cardMaxWidth = 270
     const neededWidth = balloonLeft + cardMaxWidth + 16
     ;(container as any).__commentNeededWidth = neededWidth
     this._applyContainerWidth(container, pageWidth)
@@ -417,48 +469,88 @@ export class CommentComponent {
     this._applyCardStyle(card, comment)
 
     const header = document.createElement('div')
-    header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;'
+    header.style.cssText = 'display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:6px;'
 
     const userDiv = document.createElement('div')
-    userDiv.style.cssText = 'display:flex;align-items:center;gap:8px;'
+    userDiv.style.cssText = 'display:flex;align-items:flex-start;gap:8px;min-width:0;flex:1;'
 
     const avatar = document.createElement('div')
     avatar.classList.add(`${PREFIX}-comment-avatar`)
-    avatar.style.cssText = `width:28px;height:28px;border-radius:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:13px;flex-shrink:0;background:${comment.avatarColor || getAvatarColor(comment.userName)};`
+    avatar.style.cssText = `width:14px;height:14px;border-radius:2px;display:flex;align-items:center;justify-content:center;color:#666;font-weight:600;font-size:9px;flex-shrink:0;background:${comment.avatarColor || '#d9d9d9'};margin-top:2px;`
     avatar.textContent = comment.userName.charAt(0)
+
+    const userMeta = document.createElement('div')
+    userMeta.style.cssText = 'display:flex;flex-direction:column;gap:1px;min-width:0;'
 
     const username = document.createElement('span')
     username.classList.add(`${PREFIX}-comment-username`)
-    username.style.cssText = 'font-weight:600;font-size:13px;color:#1f1f1f;'
+    username.style.cssText = 'font-weight:700;font-size:12px;color:#1f1f1f;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
     username.textContent = comment.userName
-
-    userDiv.append(avatar, username)
-
-    const headerRight = document.createElement('div')
-    headerRight.style.cssText = 'display:flex;align-items:center;gap:4px;position:relative;'
-
-    if (comment.status === 2) {
-      const badge = document.createElement('span')
-      badge.classList.add('resolved-badge')
-      badge.style.cssText = 'font-size:10px;color:#67c23a;background:#f0f9eb;padding:2px 6px;border-radius:10px;white-space:nowrap;'
-      badge.textContent = '已解决'
-      headerRight.append(badge)
-    }
 
     const dateSpan = document.createElement('span')
     dateSpan.classList.add(`${PREFIX}-comment-date`)
-    dateSpan.style.cssText = 'font-size:11px;color:#9e9e9e;white-space:nowrap;'
-    dateSpan.textContent = comment.createdDate
+    dateSpan.style.cssText = 'font-size:11px;color:#8c8c8c;line-height:1.15;white-space:nowrap;'
+    dateSpan.textContent = formatCommentDisplayDate(comment.createdDate)
 
-    const moreBtn = document.createElement('button')
-    moreBtn.title = '更多操作'
-    moreBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;width:24px;height:24px;border:none;background:transparent;border-radius:50%;cursor:pointer;color:#9e9e9e;transition:all 0.15s ease;padding:0;flex-shrink:0;'
-    moreBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="19" r="1.5" fill="currentColor"/></svg>'
-    moreBtn.addEventListener('mouseenter', () => { moreBtn.style.background = '#f0f0f0'; moreBtn.style.color = '#666' })
-    moreBtn.addEventListener('mouseleave', () => { moreBtn.style.background = 'transparent'; moreBtn.style.color = '#9e9e9e' })
-    moreBtn.addEventListener('click', (e) => { e.stopPropagation(); this._toggleMenu(comment.id) })
+    userMeta.append(username, dateSpan)
+    userDiv.append(avatar, userMeta)
 
-    headerRight.append(dateSpan, moreBtn)
+    const headerRight = document.createElement('div')
+    headerRight.style.cssText = 'display:flex;align-items:center;gap:2px;flex-shrink:0;'
+
+    const createActionBtn = (className: string, title: string, icon: string, onClick: () => void) => {
+      const btn = document.createElement('button')
+      btn.classList.add(className)
+      btn.title = title
+      btn.type = 'button'
+      btn.style.cssText = 'display:flex;align-items:center;justify-content:center;width:20px;height:20px;border:none;background:transparent;border-radius:4px;cursor:pointer;color:#444;transition:background 0.15s ease,color 0.15s ease;padding:0;'
+      btn.innerHTML = icon
+      btn.addEventListener('mouseenter', () => { btn.style.background = '#f3f3f3' })
+      btn.addEventListener('mouseleave', () => { btn.style.background = 'transparent' })
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation()
+        onClick()
+      })
+      return btn
+    }
+
+    const editBtn = createActionBtn(
+      `${PREFIX}-comment-edit`,
+      '编辑批注',
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 16.25V20h3.75L18.8 8.94l-3.75-3.75L4 16.25Z" fill="currentColor"/><path d="m14.96 5.19 3.75 3.75 1.09-1.09a1.5 1.5 0 0 0 0-2.12l-1.63-1.63a1.5 1.5 0 0 0-2.12 0l-1.09 1.09Z" fill="currentColor"/></svg>',
+      () => {
+        comment.isEditing = true
+        this._refreshCard(comment.id)
+      }
+    )
+    const deleteBtn = createActionBtn(
+      `${PREFIX}-comment-delete`,
+      '删除批注',
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M7 21a2 2 0 0 1-2-2V7h14v12a2 2 0 0 1-2 2H7Z" fill="currentColor"/><path d="M9 4h6l1 2h4v1.5H4V6h4l1-2Z" fill="currentColor"/></svg>',
+      () => {
+        this.deleteComment(comment.id)
+        this._callbacks.onRequestSave?.()
+        this.render()
+      }
+    )
+    const resolveBtn = createActionBtn(
+      `${PREFIX}-comment-resolve`,
+      comment.status === 2 ? '重新打开批注' : '解决批注',
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="m9.55 18.2-5.4-5.4 1.41-1.4 3.99 3.98 8.89-8.88 1.41 1.41-10.3 10.29Z" fill="currentColor"/></svg>',
+      () => {
+        const resolved = comment.status !== 2
+        this.resolveComment(comment.id, resolved)
+        this._callbacks.onResolve?.(comment.id, resolved)
+        this._callbacks.onRequestSave?.()
+        this.render()
+      }
+    )
+    if (comment.status === 2) {
+      resolveBtn.style.color = '#2f8f4e'
+      resolveBtn.style.background = '#eef8f1'
+    }
+
+    headerRight.append(editBtn, deleteBtn, resolveBtn)
     header.append(userDiv, headerRight)
 
     const bodyContainer = document.createElement('div')
@@ -468,10 +560,7 @@ export class CommentComponent {
     card.append(header, bodyContainer)
     bubble.append(card)
     const arrow = document.createElement('div')
-    arrow.style.cssText = 'position:absolute;left:-7px;top:14px;width:0;height:0;border-top:6px solid transparent;border-bottom:6px solid transparent;border-right:7px solid #e8e8e8;'
-    const arrowInner = document.createElement('div')
-    arrowInner.style.cssText = 'position:absolute;left:1px;top:-5px;width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-right:6px solid #fff;'
-    arrow.append(arrowInner)
+    arrow.style.cssText = 'position:absolute;left:-7px;top:20px;width:14px;height:14px;background:#f7f7f7;border-left:1px solid #d9d9d9;border-bottom:1px solid #d9d9d9;transform:rotate(45deg);border-bottom-left-radius:2px;box-sizing:border-box;'
     bubble.append(arrow)
     return bubble
   }
@@ -520,49 +609,66 @@ export class CommentComponent {
       return
     }
 
-    const contentDiv = document.createElement('div')
-    contentDiv.style.cssText = 'font-size:13px;color:#444;line-height:1.4;word-break:break-word;cursor:pointer;padding:2px 0;'
-    contentDiv.textContent = comment.content
-    contentDiv.addEventListener('dblclick', () => {
-      comment.isEditing = true
-      this._refreshCard(comment.id)
-    })
-    contentDiv.addEventListener('mouseenter', () => { contentDiv.style.background = '#f8f8f8'; contentDiv.style.borderRadius = '4px' })
-    contentDiv.addEventListener('mouseleave', () => { contentDiv.style.background = 'transparent' })
-    container.append(contentDiv)
+    const { sourceText, mainText } = extractCommentBody(comment.content, comment.rangeText)
+
+    if (sourceText) {
+      const sourceDiv = document.createElement('div')
+      sourceDiv.style.cssText = 'font-size:12px;color:#1f1f1f;line-height:1.45;word-break:break-word;'
+
+      const label = document.createElement('span')
+      label.style.cssText = 'font-weight:500;color:#1f1f1f;'
+      label.textContent = '取自：'
+
+      const value = document.createElement('span')
+      value.textContent = sourceText
+
+      sourceDiv.append(label, value)
+      container.append(sourceDiv)
+    }
+
+    if (mainText) {
+      const contentDiv = document.createElement('div')
+      contentDiv.style.cssText = 'margin-top:6px;font-size:12px;color:#444;line-height:1.45;word-break:break-word;cursor:pointer;white-space:pre-wrap;'
+      contentDiv.textContent = mainText
+      contentDiv.addEventListener('dblclick', () => {
+        comment.isEditing = true
+        this._refreshCard(comment.id)
+      })
+      container.append(contentDiv)
+    }
 
     if (comment.replies && comment.replies.length > 0) {
       const replyList = document.createElement('div')
-      replyList.style.cssText = 'margin-top:8px;padding-top:8px;border-top:1px solid #f0f0f0;'
+      replyList.style.cssText = 'margin-top:6px;padding-top:6px;border-top:1px solid #ececec;'
       for (const reply of comment.replies) {
         const replyItem = document.createElement('div')
-        replyItem.style.cssText = 'display:flex;align-items:flex-start;gap:8px;padding:6px 0;'
+        replyItem.style.cssText = 'display:flex;align-items:flex-start;gap:6px;padding:4px 0;'
 
         const threadLine = document.createElement('div')
         threadLine.style.cssText = 'width:2px;background:#e4e7ed;border-radius:1px;flex-shrink:0;align-self:stretch;'
 
         const replyAvatar = document.createElement('div')
-        replyAvatar.style.cssText = `width:22px;height:22px;border-radius:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:10px;flex-shrink:0;background:${reply.avatarColor || '#909399'};`
+        replyAvatar.style.cssText = `width:18px;height:18px;border-radius:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:9px;flex-shrink:0;background:${reply.avatarColor || '#909399'};`
         replyAvatar.textContent = reply.userName.charAt(0)
 
         const replyBody = document.createElement('div')
         replyBody.style.cssText = 'flex:1;min-width:0;'
 
         const replyHeader = document.createElement('div')
-        replyHeader.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:4px;'
+        replyHeader.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:2px;'
 
         const replyUsername = document.createElement('span')
-        replyUsername.style.cssText = 'font-size:12px;font-weight:600;color:#303133;'
+        replyUsername.style.cssText = 'font-size:11px;font-weight:600;color:#303133;'
         replyUsername.textContent = reply.userName
 
         const replyDate = document.createElement('span')
-        replyDate.style.cssText = 'font-size:10px;color:#c0c4cc;'
-        replyDate.textContent = reply.createdDate
+        replyDate.style.cssText = 'font-size:9px;color:#c0c4cc;'
+        replyDate.textContent = formatCommentDisplayDate(reply.createdDate)
 
         replyHeader.append(replyUsername, replyDate)
 
         const replyContent = document.createElement('div')
-        replyContent.style.cssText = 'font-size:12px;color:#606266;line-height:1.5;word-break:break-word;'
+        replyContent.style.cssText = 'font-size:11px;color:#606266;line-height:1.4;word-break:break-word;'
         replyContent.textContent = reply.content
 
         replyBody.append(replyHeader, replyContent)
@@ -574,6 +680,16 @@ export class CommentComponent {
 
     if (comment.isReplying) {
       this._renderReplyInput(container, comment)
+    } else {
+      const replyTrigger = document.createElement('button')
+      replyTrigger.type = 'button'
+      replyTrigger.textContent = '添加回复'
+      replyTrigger.style.cssText = 'margin-top:6px;padding:0;border:none;background:transparent;color:#1a73e8;font-size:11px;line-height:1.3;cursor:pointer;text-decoration:underline;text-underline-offset:2px;'
+      replyTrigger.addEventListener('click', () => {
+        comment.isReplying = true
+        this._refreshCard(comment.id)
+      })
+      container.append(replyTrigger)
     }
   }
 
@@ -629,9 +745,9 @@ export class CommentComponent {
   private _applyCardStyle(card: HTMLDivElement, comment: IComment): void {
     const annotationColor = this._annotationColor
     const accentColor = comment.status === 2 ? '#67c23a' : annotationColor
-    let css = `min-width:240px;max-width:300px;border-radius:8px;padding:6px 10px;transition:all 0.2s ease;background:#fff;border:1px solid #e8e8e8;box-shadow:0 2px 8px rgba(0,0,0,0.06);`
-    if (comment.status === 2) css += 'opacity:0.65;'
-    if (comment.isEditing) css += `border-color:${accentColor};box-shadow:0 4px 16px rgba(64,158,255,0.15);background:#fafcff;`
+    let css = `min-width:270px;max-width:270px;border-radius:6px;padding:8px 10px;transition:all 0.2s ease;background:#f7f7f7;border:1px solid #d9d9d9;box-shadow:0 3px 10px rgba(0,0,0,0.08);box-sizing:border-box;`
+    if (comment.status === 2) css += 'opacity:0.78;'
+    if (comment.isEditing) css += `border-color:${accentColor};box-shadow:0 6px 18px rgba(64,158,255,0.16);background:#fafcff;`
     card.style.cssText = css
   }
 
@@ -654,21 +770,14 @@ export class CommentComponent {
       }
       const dateSpan = header.querySelector(`.${PREFIX}-comment-date`) as HTMLSpanElement | null
       if (dateSpan) {
-        dateSpan.textContent = comment.createdDate
+        dateSpan.textContent = formatCommentDisplayDate(comment.createdDate)
       }
 
-      const headerRight = header.querySelector(':scope > div:last-child') as HTMLDivElement
-      if (headerRight) {
-        const existingBadge = headerRight.querySelector('.resolved-badge')
-        if (comment.status === 2 && !existingBadge) {
-          const badge = document.createElement('span')
-          badge.classList.add('resolved-badge')
-          badge.style.cssText = 'font-size:11px;color:#67c23a;background:#f0f9eb;padding:1px 6px;border-radius:3px;white-space:nowrap;'
-          badge.textContent = '已解决'
-          headerRight.insertBefore(badge, headerRight.firstChild)
-        } else if (comment.status !== 2 && existingBadge) {
-          existingBadge.remove()
-        }
+      const resolveBtn = header.querySelector(`.${PREFIX}-comment-resolve`) as HTMLButtonElement | null
+      if (resolveBtn) {
+        resolveBtn.title = comment.status === 2 ? '重新打开批注' : '解决批注'
+        resolveBtn.style.color = comment.status === 2 ? '#2f8f4e' : '#444'
+        resolveBtn.style.background = comment.status === 2 ? '#eef8f1' : 'transparent'
       }
     }
 
@@ -706,74 +815,6 @@ export class CommentComponent {
       comment.isEditing = false
       this._refreshCard(comment.id)
     }
-  }
-
-  private _toggleMenu(commentId: string): void {
-    this._closeMenu()
-
-    const bubble = this._cardDoms.get(commentId)
-    if (!bubble) return
-    const card = bubble.querySelector(`.${PREFIX}-comment-card`) as HTMLDivElement
-    if (!card) return
-    const headerRight = card.querySelector(':scope > div:first-child > div:last-child') as HTMLDivElement
-    if (!headerRight) return
-
-    const comment = this._comments.find(c => c.id === commentId)
-    if (!comment) return
-
-    const menu = document.createElement('div')
-    menu.classList.add(`${PREFIX}-comment-menu`)
-    menu.style.cssText = 'position:absolute;top:100%;right:0;margin-top:4px;background:#fff;border:1px solid #e0e0e0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.1);padding:4px 0;z-index:100;min-width:120px;'
-
-    const items = [
-      { label: '编辑', action: () => { comment.isEditing = true; this._refreshCard(commentId) } },
-      { label: '回复', action: () => { comment.isReplying = true; this._refreshCard(commentId) } },
-      { label: comment.status === 2 ? '重新打开' : '解决', action: () => {
-        const resolved = comment.status !== 2
-        this.resolveComment(commentId, resolved)
-        this._callbacks.onResolve?.(commentId, resolved)
-        this._callbacks.onRequestSave?.()
-        this.render()
-      }},
-      { label: '删除', action: () => {
-        this.deleteComment(commentId)
-        this._callbacks.onRequestSave?.()
-        this.render()
-      }, isDelete: true }
-    ]
-
-    for (const item of items) {
-      const btn = document.createElement('button')
-      btn.style.cssText = `display:flex;align-items:center;gap:8px;width:100%;padding:7px 14px;border:none;background:none;cursor:pointer;font-size:13px;color:${item.isDelete ? '#e53935' : '#444'};transition:all 0.15s ease;text-align:left;border-radius:4px;margin:0 4px;width:calc(100% - 8px);`
-      btn.textContent = item.label
-      btn.addEventListener('click', (e) => { e.stopPropagation(); this._closeMenu(); item.action() })
-      btn.addEventListener('mouseenter', () => {
-        if (item.isDelete) { btn.style.background = '#fce4ec' }
-        else { btn.style.background = '#f5f5f5'; btn.style.color = '#1f1f1f' }
-      })
-      btn.addEventListener('mouseleave', () => {
-        btn.style.background = 'none'
-        btn.style.color = item.isDelete ? '#e53935' : '#444'
-      })
-      menu.append(btn)
-    }
-
-    headerRight.append(menu)
-
-    const closeOnOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement
-      if (!target.closest(`.${PREFIX}-comment-menu`)) {
-        this._closeMenu()
-        document.removeEventListener('click', closeOnOutside)
-      }
-    }
-    setTimeout(() => document.addEventListener('click', closeOnOutside), 0)
-  }
-
-  private _closeMenu(): void {
-    const existing = document.querySelector(`.${PREFIX}-comment-menu`)
-    if (existing) existing.remove()
-
   }
 
   private _showAnchorLines(comment: IComment): void {
@@ -868,7 +909,6 @@ export class CommentComponent {
       this._overlayContainer.remove()
       this._overlayContainer = null
     }
-    this._closeMenu()
     this._comments = []
 
     this._command = null

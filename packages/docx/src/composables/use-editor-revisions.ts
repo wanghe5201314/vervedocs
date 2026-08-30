@@ -70,7 +70,7 @@ export function useEditorRevisions(options: { getEditorInstance: () => EditorIns
         }
       }
       if (firstIndex >= 0) {
-        instance.command.executeSetRange({ startIndex: firstIndex, endIndex: firstIndex })
+        instance.command.executeSetRange(firstIndex, firstIndex)
       }
     }
   }

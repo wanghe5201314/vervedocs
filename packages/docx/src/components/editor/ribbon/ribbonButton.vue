@@ -132,7 +132,7 @@ const handleClick = () => {
 .ribbon-btn-lg {
   flex-direction: column;
   min-width: 42px;
-  height: 54px;
+  height: 50px;
   padding: 4px 3px;
   gap: 1px;
   justify-content: flex-start;

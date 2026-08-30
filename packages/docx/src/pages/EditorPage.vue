@@ -13,6 +13,11 @@
       :app-name-with-version="appNameWithVersion"
       :document-meta="documentMeta"
       :document-stats="documentStats"
+      :revision-count="revisionList.length"
+      :catalog-visible="activeDock === 'catalog' || activeDock === 'section'"
+      :ruler-visible="rulerVisible"
+      :toolbar-visible="toolbarVisible"
+      :bottom-nav-visible="bottomNavVisible"
       :show-collaboration-menu="showCollaborationMenu"
       :cursor-collaboration-enabled="collabSharedSyncState.cursor"
       :selection-collaboration-enabled="collabSharedSyncState.selection"
@@ -182,6 +187,7 @@ import {
   externalApi
 } from '@/composables/use-external-events'
 import { aiStateStore } from '@/stores/ai-state'
+import { editorStateStore } from '@/stores/editor-state'
 import type { AITab } from '@/stores/ai-state'
 import { AIAction } from '@vervedoc/docx-editor-ai'
 import {
@@ -323,6 +329,15 @@ watch(
 const getEditorInstance = () => editorRef.value?.getEditorInstance?.() ?? null
 const getCommentComponent = () => getEditorInstance()?.comment ?? null
 const getRevisionComponent = () => getEditorInstance()?.revision ?? null
+const refreshReviewOverlays = () => {
+  nextTick(() =>
+    requestAnimationFrame(() => {
+      getCommentComponent()?.render()
+      getRevisionComponent()?.update()
+      syncRevisionList()
+    })
+  )
+}
 
 const getPageMetrics = () => {
   const instance = getEditorInstance()
@@ -570,6 +585,7 @@ const handleReady = (...args: any[]) => {
   }
 
   installCommentCallbacks(instance)
+  refreshReviewOverlays()
 
   // 初始内容优先级：content → url → 空文档（由宿主决定，不内置默认文件）
   const content = (initialDocument as any)?.content
@@ -582,7 +598,7 @@ const handleReady = (...args: any[]) => {
       onComplete: (success: boolean, message?: string) => {
         busyState.value = 'idle'
         activeDock.value = 'catalog'
-        syncRevisionList()
+        refreshReviewOverlays()
         if (success) {
           const explicitName = String(
             (initialDocument as any)?.meta?.name
@@ -608,6 +624,7 @@ const handleReady = (...args: any[]) => {
   if (content == null) {
     busyState.value = 'idle'
     activeDock.value = 'catalog'
+    refreshReviewOverlays()
     nextTick(() => initCollaboration())
     return
   }
@@ -630,6 +647,7 @@ const handleReady = (...args: any[]) => {
     } finally {
       busyState.value = 'idle'
       activeDock.value = 'catalog'
+      refreshReviewOverlays()
       nextTick(() => initCollaboration())
     }
   })()
@@ -900,6 +918,17 @@ const handleCommand = (command: string, ...args: any[]) => {
     }
     case 'comment':
       return executeCommand('comment')
+    case 'commentDeleteCurrent': {
+      const groupId = args[0] || editorStateStore.state.groupIds?.[0]
+      if (!groupId) return
+      const commentComp = getCommentComponent()
+      const currentComment = commentComp?.getComments?.().find((item: any) => item.groupId === groupId)
+      if (currentComment && typeof commentComp?.deleteComment === 'function') {
+        commentComp.deleteComment(currentComment.id)
+        return
+      }
+      return executeCommand('deleteGroup', groupId)
+    }
     case 'toolbarVisible':
       toolbarVisible.value = !!args[0]
       return
@@ -954,20 +983,43 @@ const handleCommand = (command: string, ...args: any[]) => {
         showCommentBalloons: mode === 'all' || mode === 'comments',
         showRevisionBalloons: mode === 'all' || mode === 'revisions'
       })
-      nextTick(() =>
-        requestAnimationFrame(() => {
-          getCommentComponent()?.render()
-          getRevisionComponent()?.update()
-        })
-      )
+      refreshReviewOverlays()
       return
     }
     case 'acceptAllRevisions':
     case 'rejectAllRevisions':
       return executeCommand(command)
+    case 'previousRevision':
+    case 'nextRevision': {
+      const revisions = revisionList.value
+      if (!revisions.length) return
+      const currentIndex = revisions.findIndex(rev => rev.id === activeRevisionId.value)
+      const targetIndex = command === 'previousRevision'
+        ? (currentIndex <= 0 ? revisions.length - 1 : currentIndex - 1)
+        : (currentIndex < 0 || currentIndex >= revisions.length - 1 ? 0 : currentIndex + 1)
+      const targetRevision = revisions[targetIndex]
+      if (!targetRevision) return
+      activeRevisionId.value = targetRevision.id
+      return executeCommand('locateRevision', targetRevision.id)
+    }
     case 'locateRevision':
       activeRevisionId.value = String(args[0] || '')
       return executeCommand('locateRevision', args[0])
+    case 'acceptRevisionCurrent':
+    case 'rejectRevisionCurrent': {
+      const revisions = revisionList.value
+      if (!revisions.length) return
+      const currentIndex = revisions.findIndex(rev => rev.id === activeRevisionId.value)
+      const fallbackIndex = currentIndex >= 0 ? currentIndex : 0
+      const currentRevision = revisions[fallbackIndex]
+      if (!currentRevision) return
+      const nextCandidate = revisions[fallbackIndex + 1] || revisions[fallbackIndex - 1] || null
+      activeRevisionId.value = nextCandidate?.id || ''
+      return executeCommand(
+        command === 'acceptRevisionCurrent' ? 'acceptRevisionById' : 'rejectRevisionById',
+        currentRevision.id
+      )
+    }
     case 'acceptRevisionById':
     case 'rejectRevisionById':
       return executeCommand(command, args[0])

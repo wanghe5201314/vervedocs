@@ -68,13 +68,7 @@
         size="large"
         command="versionHistory"
       />
-      <RibbonButton
-        icon="account-multiple-outline"
-        text="访问权限"
-        title="访问权限"
-        size="large"
-        command="accessPermission"
-      />
+
     </RibbonGroup>
   </div>
 </template>

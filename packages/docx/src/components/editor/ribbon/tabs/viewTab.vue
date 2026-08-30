@@ -17,29 +17,108 @@
       </a-dropdown>
     </RibbonGroup>
 
-    <!-- 显示 -->
-    <RibbonGroup title="显示">
-      <RibbonButton icon="page-layout-sidebar-left" text="显示/隐藏左侧面板" title="显示/隐藏左侧面板" size="large" command="toggleCatalog" />
-      <RibbonButton icon="dock-bottom" text="显示/隐藏状态栏" title="显示/隐藏状态栏" size="large" command="toggleBottomNav" />
-      <RibbonButton icon="ruler" text="显示/隐藏标尺" title="显示/隐藏标尺" size="large" command="toggleRuler" />
-      <RibbonButton :icon="showLineBreak ? 'checkbox-marked-outline' : 'checkbox-blank-outline'" text="显示换行符" title="显示换行符" size="large" command="toggleLineBreak" />
-      <RibbonButton icon="eye-outline" text="护眼模式" title="护眼模式" size="large" command="toggleEyeCare" />
-    </RibbonGroup>
-
     <!-- 缩放 -->
     <RibbonGroup title="页面缩放">
-      <a-dropdown :trigger="['click']">
-        <RibbonButton icon="magnify-plus-outline" :text="`${zoomPercent}%`" title="缩放" size="large" has-arrow />
-        <template #overlay>
-          <a-menu @click="({ key }: any) => emit('command', 'pageScale', Number(key) / 100)">
-            <a-menu-item v-for="z in zoomLevels" :key="z">
-              <span class="zoom-check"><VIcon v-if="zoomPercent === z" name="check" /></span>{{ z }}%
-            </a-menu-item>
-          </a-menu>
-        </template>
-      </a-dropdown>
-      <RibbonButton icon="fit-to-page-outline" text="适应页面" title="适应页面" size="large" command="fitPage" />
-      <RibbonButton icon="arrow-expand-horizontal" text="适应宽度" title="适应宽度" size="large" command="fitWidth" />
+      <div class="view-zoom-layout">
+        <div class="view-zoom-select-wrap">
+          <a-dropdown :trigger="['click']">
+            <button class="view-zoom-select" type="button" title="缩放">
+              <span>{{ zoomPercent }}%</span>
+              <VIcon name="chevron-down" />
+            </button>
+            <template #overlay>
+              <a-menu @click="({ key }: any) => emit('command', 'pageScale', Number(key) / 100)">
+                <a-menu-item v-for="z in zoomLevels" :key="z">
+                  <span class="zoom-check"><VIcon v-if="zoomPercent === z" name="check" /></span>{{ z }}%
+                </a-menu-item>
+              </a-menu>
+            </template>
+          </a-dropdown>
+          <div class="view-zoom-caption">缩放</div>
+        </div>
+        <div class="view-zoom-actions">
+          <RibbonButton icon="fit-to-page-outline" text="适合页面" title="适合页面" command="fitPage" />
+          <RibbonButton icon="arrow-expand-horizontal" text="适应宽度" title="适应宽度" command="fitWidth" />
+        </div>
+      </div>
+    </RibbonGroup>
+
+    <!-- 显示 -->
+    <RibbonGroup title="显示">
+      <div class="view-toggle-grid">
+        <button
+          class="view-check-btn"
+          :class="{ active: showToolbar }"
+          type="button"
+          title="始终显示工具栏"
+          @click="handleCommand('toggleToolbar')"
+        >
+          <span class="view-check-box">
+            <VIcon v-if="showToolbar" name="check" />
+          </span>
+          <span class="view-check-label">始终显示工具栏</span>
+        </button>
+        <button
+          class="view-check-btn"
+          :class="{ active: showBottomNav }"
+          type="button"
+          title="状态栏"
+          @click="handleCommand('toggleBottomNav')"
+        >
+          <span class="view-check-box">
+            <VIcon v-if="showBottomNav" name="check" />
+          </span>
+          <span class="view-check-label">状态栏</span>
+        </button>
+        <button
+          class="view-check-btn"
+          :class="{ active: catalogVisible }"
+          type="button"
+          title="左面板"
+          @click="handleCommand('toggleCatalog')"
+        >
+          <span class="view-check-box">
+            <VIcon v-if="catalogVisible" name="check" />
+          </span>
+          <span class="view-check-label">左面板</span>
+        </button>
+        <button
+          class="view-check-btn"
+          :class="{ active: showLineBreak }"
+          type="button"
+          title="换行符"
+          @click="handleCommand('toggleLineBreak')"
+        >
+          <span class="view-check-box">
+            <VIcon v-if="showLineBreak" name="check" />
+          </span>
+          <span class="view-check-label">换行符</span>
+        </button>
+        <button
+          class="view-check-btn"
+          :class="{ active: showRuler }"
+          type="button"
+          title="标尺"
+          @click="handleCommand('toggleRuler')"
+        >
+          <span class="view-check-box">
+            <VIcon v-if="showRuler" name="check" />
+          </span>
+          <span class="view-check-label">标尺</span>
+        </button>
+        <button
+          class="view-check-btn"
+          :class="{ active: eyeCareEnabled }"
+          type="button"
+          title="护眼模式"
+          @click="handleCommand('toggleEyeCare')"
+        >
+          <span class="view-check-box">
+            <VIcon v-if="eyeCareEnabled" name="check" />
+          </span>
+          <span class="view-check-label">护眼模式</span>
+        </button>
+      </div>
     </RibbonGroup>
   </div>
 </template>
@@ -59,7 +138,12 @@ const props = defineProps<{
   zoomPercent?: number
   currentEditorMode?: string
   isModeLocked?: boolean
+  catalogVisible?: boolean
+  showToolbar?: boolean
+  showBottomNav?: boolean
+  showRuler?: boolean
   showLineBreak?: boolean
+  eyeCareEnabled?: boolean
 }>()
 
 const zoomPercent = computed(() => props.zoomPercent ?? 100)
@@ -77,6 +161,10 @@ const handleModeSelect = (modeValue: string) => {
     emit('command', 'mode', modeValue)
   }
 }
+
+const handleCommand = (cmd: string) => {
+  emit('command', cmd)
+}
 </script>
 
 <style scoped>
@@ -85,4 +173,107 @@ const handleModeSelect = (modeValue: string) => {
 .mi-row--toggle { min-width: 180px; }
 .menu-toggle-check { display: inline-flex; align-items: center; width: 16px; color: #1677ff; }
 .zoom-check { display: inline-flex; align-items: center; width: 16px; color: #1677ff; }
+
+.view-zoom-layout {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.view-zoom-select-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.view-zoom-select {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 72px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid #cfd6e4;
+  border-radius: 4px;
+  background: #fff;
+  color: #202124;
+  cursor: pointer;
+  font: inherit;
+}
+
+.view-zoom-select:hover {
+  border-color: #b9c4d8;
+  background: #f8faff;
+}
+
+.view-zoom-actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+
+.view-zoom-caption {
+  font-size: 12px;
+  line-height: 1;
+  color: #202124;
+}
+
+.view-toggle-grid {
+  display: grid;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  grid-auto-flow: column;
+  gap: 6px 14px;
+  align-content: center;
+}
+
+.view-check-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 86px;
+  height: 24px;
+  padding: 0 2px;
+  border: none;
+  background: transparent;
+  color: #202124;
+  cursor: pointer;
+  border-radius: 4px;
+  font: inherit;
+  white-space: nowrap;
+}
+
+.view-check-btn:hover {
+  background: #edf2fb;
+}
+
+.view-check-btn.active {
+  color: #1f57b8;
+}
+
+.view-check-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid #9aa3b2;
+  border-radius: 2px;
+  background: #fff;
+  color: #1f57b8;
+  flex-shrink: 0;
+}
+
+.view-check-btn.active .view-check-box {
+  border-color: #1f57b8;
+  background: #eef4ff;
+}
+
+.view-check-label {
+  font-size: 12px;
+  line-height: 1;
+}
 </style>

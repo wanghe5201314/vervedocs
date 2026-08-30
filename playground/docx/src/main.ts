@@ -26,10 +26,14 @@ const DOCX_SERVER_BASE = 'http://localhost:1320'
 const localImport = createDocxImportCallback()
 const localExport = createDocxExportCallback()
 
-const serverImport: DocxImportCallback = async (data) => {
+const serverImport: DocxImportCallback = async data => {
   const form = new FormData()
   const blob =
-    data instanceof File ? data : new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
+    data instanceof File
+      ? data
+      : new Blob([data], {
+          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        })
   form.append('file', blob, data instanceof File ? data.name : 'import.docx')
   const resp = await fetch(`${DOCX_SERVER_BASE}/documents/translate/word`, {
     method: 'POST',
@@ -39,7 +43,7 @@ const serverImport: DocxImportCallback = async (data) => {
   if (!json.success) {
     return { success: false, elements: [], error: json.error }
   }
-  return json.data;
+  return json.data
 }
 
 /** 将编辑器 IEditorData / IElement[] 转为 JAR 可识别的 DocxParseResult（不含 header/footer） */
@@ -71,7 +75,7 @@ function toDocxParseResult(data: unknown): {
   return { success: true, elements: [] }
 }
 
-const serverExport: DocxExportCallback = async (data) => {
+const serverExport: DocxExportCallback = async data => {
   const payload = toDocxParseResult(data)
   const resp = await fetch(`${DOCX_SERVER_BASE}/documents/render?format=docx`, {
     method: 'POST',
@@ -83,6 +87,8 @@ const serverExport: DocxExportCallback = async (data) => {
   }
   return { success: true, data: await resp.arrayBuffer() }
 }
+
+let autoSaveTimer: ReturnType<typeof setTimeout> | null = null
 
 window.onload = () => {
   const gui = new GUI()
@@ -106,11 +112,36 @@ window.onload = () => {
     initialDocument: buildInitialDocumentFromLocation(),
     collaboration: buildCollaborationFromLocation(),
     importCallback: (data, opts) =>
-      options.isLocalImport ? localImport(data, opts) : serverImport(data, opts),
+      options.isLocalImport
+        ? localImport(data, opts)
+        : serverImport(data, opts),
     exportCallback: (data, opts) =>
-      options.isLocalExport ? localExport(data, opts) : serverExport(data, opts),
+      options.isLocalExport
+        ? localExport(data, opts)
+        : serverExport(data, opts),
     onReady: () => {
       console.info('[playground] WordEditor ready')
+    },
+    onChange: () => {
+      console.log('onChange');
+      if (autoSaveTimer) clearTimeout(autoSaveTimer)
+      autoSaveTimer = setTimeout(async() => {
+        await (window as any).docxEditorUI?.document?.save({ silent: true })
+      }, 800)
+    },
+    onStatusChange: async ({ command, args }) => {
+      console.log('onStatusChange', command, args);
+      if (command !== 'save') return
+      const { silent, snapshot } = args[0]
+      try {
+        await createDefaultDocumentApi().saveDocument({
+          meta: snapshot.meta,
+          content: snapshot.content
+        })
+        console.log(silent ? '自动保存成功' : '手动保存成功')
+      } catch (e) {
+        console.error('保存失败', e)
+      }
     }
   })
 }

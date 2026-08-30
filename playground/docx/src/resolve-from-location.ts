@@ -23,7 +23,7 @@ export function buildInitialDocumentFromLocation(
       name: docName || undefined
     },
     // playground 演示文档：由宿主配置 url，编辑器不内置默认路径
-    url: './test-output.json',
+    url: './test.json',
     format: normalizedFormat
   }
 }

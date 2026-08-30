@@ -1,5 +1,10 @@
 <template>
   <div class="ribbon-tab-panel">
+    <!-- 比较 -->
+    <RibbonGroup title="比较">
+      <RibbonButton icon="compare" text="比较文档" title="比较文档" size="large" command="compare" />
+    </RibbonGroup>
+
     <!-- AI 助手 -->
     <RibbonGroup title="AI 助手">
       <RibbonButton icon="dock-right" text="AI 面板" title="打开 AI 面板" size="large" command="openAIPanel" />

@@ -4,7 +4,7 @@ const PREFIX = 'ce'
 
 interface RevisionBalloonData {
   revisionId: string
-  type: 'delete' | 'format'
+  type: 'insert' | 'delete' | 'format'
   author: string
   date: string
   content: string
@@ -57,86 +57,106 @@ export class RevisionComponent {
     if (!dateStr) return ''
     try {
       const d = new Date(dateStr)
-      if (isNaN(d.getTime())) return dateStr
+      if (isNaN(d.getTime())) return dateStr.replace(/-/g, '/')
       const y = d.getFullYear()
-      const m = String(d.getMonth() + 1).padStart(2, '0')
-      const day = String(d.getDate()).padStart(2, '0')
+      const m = d.getMonth() + 1
+      const day = d.getDate()
       const h = String(d.getHours()).padStart(2, '0')
       const min = String(d.getMinutes()).padStart(2, '0')
-      return `${y}-${m}-${day} ${h}:${min}`
+      return `${y}/${m}/${day} ${h}:${min}`
     } catch {
-      return dateStr
+      return dateStr.replace(/-/g, '/')
     }
+  }
+
+  private _getTypeLabel(type: RevisionBalloonData['type']): string {
+    if (type === 'insert') return '插入：'
+    if (type === 'delete') return '删除：'
+    return '格式：'
   }
 
   private _createBalloonDom(balloon: RevisionBalloonData): HTMLDivElement {
     const div = document.createElement('div')
     div.classList.add(`${PREFIX}-revision-balloon`)
     div.style.cssText =
-      'position:absolute;pointer-events:auto;min-width:240px;max-width:300px;' +
-      `padding:6px 10px;background:#fff;border:1px solid #e8e8e8;border-radius:8px;` +
-      'font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);'
+      'position:absolute;pointer-events:auto;min-width:270px;max-width:270px;box-sizing:border-box;' +
+      'padding:8px 10px;background:#f7f7f7;border:1px solid #d9d9d9;border-radius:6px;' +
+      'font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,0.10);'
     div.style.top = `${balloon.top}px`
     div.style.left = `${balloon.left}px`
     div.addEventListener('mouseenter', () => this._showAnchorLines(balloon))
     div.addEventListener('mouseleave', () => this._hideAnchorLines())
 
     const header = document.createElement('div')
-    header.style.cssText = 'display:flex;align-items:center;justify-content:flex-start;margin-bottom:6px;gap:8px;'
+    header.style.cssText = 'display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;gap:6px;'
+
+    const meta = document.createElement('div')
+    meta.style.cssText = 'display:flex;align-items:flex-start;gap:8px;min-width:0;flex:1;'
+
+    const marker = document.createElement('div')
+    marker.className = 'revision-marker'
+    marker.style.cssText = 'width:14px;height:14px;border-radius:2px;background:#d9d9d9;flex-shrink:0;margin-top:2px;'
+
+    const metaText = document.createElement('div')
+    metaText.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0;flex:1;'
 
     const authorSpan = document.createElement('span')
-    authorSpan.style.cssText = `color:${this._revisionColor};font-weight:600;font-size:13px;white-space:nowrap;`
+    authorSpan.className = 'revision-author'
+    authorSpan.style.cssText = 'color:#1f1f1f;font-weight:700;font-size:12px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;'
     authorSpan.textContent = balloon.author || '未知'
 
     const dateSpan = document.createElement('span')
-    dateSpan.style.cssText = 'color:#9e9e9e;font-size:11px;white-space:nowrap;'
+    dateSpan.className = 'revision-date'
+    dateSpan.style.cssText = 'color:#8c8c8c;font-size:11px;line-height:1.15;white-space:nowrap;'
     dateSpan.textContent = this._formatDate(balloon.date)
 
     const actions = document.createElement('div')
-    actions.style.cssText = 'display:flex;gap:4px;flex-shrink:0;margin-left:auto;'
+    actions.style.cssText = 'display:flex;align-items:center;gap:1px;flex-shrink:0;'
 
     const acceptBtn = document.createElement('button')
     acceptBtn.title = '接受修订'
+    acceptBtn.type = 'button'
     acceptBtn.style.cssText =
-      'display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;' +
-      'border:none;background:transparent;border-radius:0;cursor:pointer;transition:background 0.15s;color:#52c41a;font-size:14px;'
-    acceptBtn.textContent = '✓'
-    acceptBtn.addEventListener('mouseenter', () => { acceptBtn.style.background = '#f6ffed' })
+      'display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;' +
+      'border:none;background:transparent;border-radius:4px;cursor:pointer;transition:background 0.15s;color:#1f1f1f;padding:0;'
+    acceptBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m9.55 18.2-5.4-5.4 1.41-1.4 3.99 3.98 8.89-8.88 1.41 1.41-10.3 10.29Z" fill="currentColor"/></svg>'
+    acceptBtn.addEventListener('mouseenter', () => { acceptBtn.style.background = '#f0f0f0' })
     acceptBtn.addEventListener('mouseleave', () => { acceptBtn.style.background = 'transparent' })
     acceptBtn.addEventListener('click', () => { this.acceptRevision(balloon.revisionId) })
 
     const rejectBtn = document.createElement('button')
     rejectBtn.title = '拒绝修订'
+    rejectBtn.type = 'button'
     rejectBtn.style.cssText =
-      'display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;' +
-      `border:none;background:transparent;border-radius:0;cursor:pointer;transition:background 0.15s;color:${this._revisionColor};font-size:14px;`
-    rejectBtn.textContent = '✕'
-    rejectBtn.addEventListener('mouseenter', () => { rejectBtn.style.background = '#fff1f0' })
+      'display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;' +
+      'border:none;background:transparent;border-radius:4px;cursor:pointer;transition:background 0.15s;color:#1f1f1f;padding:0;'
+    rejectBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m18.3 5.71-1.41-1.41L12 9.17 7.11 4.3 5.7 5.71 10.59 10.6 5.7 15.49l1.41 1.41L12 12.01l4.89 4.89 1.41-1.41-4.89-4.89 4.89-4.89Z" fill="currentColor"/></svg>'
+    rejectBtn.addEventListener('mouseenter', () => { rejectBtn.style.background = '#f0f0f0' })
     rejectBtn.addEventListener('mouseleave', () => { rejectBtn.style.background = 'transparent' })
     rejectBtn.addEventListener('click', () => { this.rejectRevision(balloon.revisionId) })
 
     actions.append(acceptBtn, rejectBtn)
-    header.append(authorSpan, dateSpan, actions)
+    metaText.append(authorSpan, dateSpan)
+    meta.append(marker, metaText)
+    header.append(meta, actions)
 
     const body = document.createElement('div')
-    body.style.cssText = 'font-size:13px;line-height:1.4;word-break:break-word;max-height:72px;overflow:hidden;padding:2px 0;'
+    body.style.cssText = 'font-size:12px;line-height:1.45;word-break:break-word;padding:1px 0;color:#1f1f1f;white-space:pre-wrap;'
 
     const typeLabel = document.createElement('span')
-    typeLabel.style.cssText = `color:${this._revisionColor};font-weight:500;`
-    typeLabel.textContent = balloon.type === 'format' ? '' : '删除：'
+    typeLabel.className = 'revision-type'
+    typeLabel.style.cssText = 'color:#1f1f1f;font-weight:600;'
+    typeLabel.textContent = this._getTypeLabel(balloon.type)
 
     const contentSpan = document.createElement('span')
     contentSpan.className = 'revision-content'
-    contentSpan.style.cssText = 'color:#444;'
+    contentSpan.style.cssText = 'color:#1f1f1f;'
     contentSpan.textContent = balloon.content
 
     body.append(typeLabel, contentSpan)
     div.append(header, body)
     const arrow = document.createElement('div')
-    arrow.style.cssText = 'position:absolute;left:-7px;top:14px;width:0;height:0;border-top:6px solid transparent;border-bottom:6px solid transparent;border-right:7px solid #e8e8e8;'
-    const arrowInner = document.createElement('div')
-    arrowInner.style.cssText = 'position:absolute;left:1px;top:-5px;width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-right:6px solid #fff;'
-    arrow.append(arrowInner)
+    arrow.style.cssText = 'position:absolute;left:-7px;top:20px;width:14px;height:14px;background:#f7f7f7;border-left:1px solid #d9d9d9;border-bottom:1px solid #d9d9d9;transform:rotate(45deg);border-bottom-left-radius:2px;box-sizing:border-box;'
     div.append(arrow)
     return div
   }
@@ -173,16 +193,15 @@ export class RevisionComponent {
   }
 
   private _getRevisions(): Array<{
-    id: string; type: 'delete' | 'format'; author: string; date: string; content: string; firstIndex: number; lastIndex: number
+    id: string; type: 'insert' | 'delete' | 'format'; author: string; date: string; content: string; firstIndex: number; lastIndex: number
   }> {
     if (!this._command) return []
     const elementList = this._command.getElementList?.()
     if (!elementList) return []
-    const revisionMap = new Map<string, { id: string; type: 'delete' | 'format'; author: string; date: string; content: string; firstIndex: number; lastIndex: number }>()
+    const revisionMap = new Map<string, { id: string; type: 'insert' | 'delete' | 'format'; author: string; date: string; content: string; firstIndex: number; lastIndex: number }>()
     for (let i = 0; i < elementList.length; i++) {
       const el = elementList[i]
       if (!el.revisionId || !el.revisionType) continue
-      if (el.revisionType === 'insert') continue
       const existing = revisionMap.get(el.revisionId)
       if (existing) {
         if (el.revisionType === 'format') {
@@ -210,7 +229,7 @@ export class RevisionComponent {
   }
 
   public getRevisions(): Array<{
-    id: string; type: 'delete' | 'format'; author: string; date: string; content: string
+    id: string; type: 'insert' | 'delete' | 'format'; author: string; date: string; content: string
   }> {
     return this._getRevisions().map(r => ({
       id: r.id,
@@ -306,7 +325,7 @@ export class RevisionComponent {
     if (!this._command || balloons.length === 0 || !this._container) return
     const pageWidth = this._command.getDrawWidth?.() || 794
     const balloonLeft = pageWidth + 16
-    const cardMaxWidth = 300
+    const cardMaxWidth = 270
     const neededWidth = balloonLeft + cardMaxWidth + 16
     ;(this._container as any).__revisionNeededWidth = neededWidth
     this._applyContainerWidth(this._container, pageWidth)
@@ -352,6 +371,18 @@ export class RevisionComponent {
       } else {
         balloonDom.style.top = `${balloon.top}px`
         balloonDom.style.left = `${balloon.left}px`
+        const authorSpan = balloonDom.querySelector('.revision-author') as HTMLSpanElement
+        if (authorSpan) {
+          authorSpan.textContent = balloon.author || '未知'
+        }
+        const dateSpan = balloonDom.querySelector('.revision-date') as HTMLSpanElement
+        if (dateSpan) {
+          dateSpan.textContent = this._formatDate(balloon.date)
+        }
+        const typeSpan = balloonDom.querySelector('.revision-type') as HTMLSpanElement
+        if (typeSpan) {
+          typeSpan.textContent = this._getTypeLabel(balloon.type)
+        }
         const contentSpan = balloonDom.querySelector('.revision-content') as HTMLSpanElement
         if (contentSpan) {
           contentSpan.textContent = balloon.content
@@ -388,6 +419,7 @@ export class RevisionComponent {
 
   public acceptRevision(revisionId: string) {
     if (!this._command) return
+    this._hideAnchorLines()
     const elementList = this._command.getElementList?.()
     if (!elementList) return
     const indicesToRemove: number[] = []
@@ -418,6 +450,7 @@ export class RevisionComponent {
 
   public rejectRevision(revisionId: string) {
     if (!this._command) return
+    this._hideAnchorLines()
     const elementList = this._command.getElementList?.()
     if (!elementList) return
     const indicesToRemove: number[] = []

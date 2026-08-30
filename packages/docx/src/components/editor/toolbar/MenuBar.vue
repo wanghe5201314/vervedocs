@@ -72,8 +72,11 @@
       <ReviewTab
         v-else-if="activeTab === 'review'"
         :has-selection="hasSelection"
+        :has-active-comment-group="hasActiveCommentGroup"
         :is-track-changes="isTrackChanges"
+        :revision-count="revisionCount"
         :revision-display-mode="revisionDisplayMode"
+        :revision-view-mode="revisionViewMode"
         :document-stats="documentStats"
         @command="handleCommand"
       />
@@ -82,7 +85,12 @@
         :zoom-percent="zoomPercent"
         :current-editor-mode="currentEditorMode"
         :is-mode-locked="isLocked"
+        :catalog-visible="catalogVisible"
+        :show-toolbar="toolbarVisible"
+        :show-bottom-nav="bottomNavVisible"
+        :show-ruler="rulerVisible"
         :show-line-break="showLineBreak"
+        :eye-care-enabled="isEyeCareEnabled"
         @command="handleCommand"
       />
       <CollaborationTab
@@ -91,14 +99,14 @@
         :selection-collaboration-enabled="selectionCollaborationEnabled"
         @command="handleCommand"
       />
-      <ToolsTab v-else-if="activeTab === 'tools'" :has-selection="hasSelection" @command="handleCommand" />
+
       <HelpTab v-else-if="activeTab === 'help'" @command="handleCommand" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { VIcon } from '@vervedoc/icons'
 import { editorStateStore } from '@/stores/editor-state'
 import { titleLevelMap } from './index'
@@ -112,7 +120,7 @@ import ReferenceTab from '../ribbon/tabs/referenceTab.vue'
 import ReviewTab from '../ribbon/tabs/reviewTab.vue'
 import ViewTab from '../ribbon/tabs/viewTab.vue'
 import CollaborationTab from '../ribbon/tabs/collaborationTab.vue'
-import ToolsTab from '../ribbon/tabs/toolsTab.vue'
+
 import HelpTab from '../ribbon/tabs/helpTab.vue'
 
 const emit = defineEmits(['command'])
@@ -127,6 +135,11 @@ const props = defineProps<{
     charCount: number
     charCountWithSpaces: number
   }
+  revisionCount?: number
+  catalogVisible?: boolean
+  rulerVisible?: boolean
+  toolbarVisible?: boolean
+  bottomNavVisible?: boolean
   showCollaborationMenu?: boolean
   cursorCollaborationEnabled?: boolean
   selectionCollaborationEnabled?: boolean
@@ -148,11 +161,9 @@ const isImporting = ref(false)
 const showLineBreak = ref(false)
 const isTrackChanges = ref(false)
 const currentEditorMode = ref('edit')
-const revisionDisplayMode = ref<'all' | 'comments' | 'revisions'>('all')
-
-const showBottomNav = ref(true)
-const showRuler = ref(false)
-const showToolbar = ref(true)
+const revisionDisplayMode = ref<'all' | 'comments' | 'revisions' | 'none'>('all')
+const revisionViewMode = ref<'finalMarkup' | 'final' | 'originalMarkup' | 'original'>('originalMarkup')
+const isEyeCareEnabled = ref(false)
 
 const editorState = editorStateStore.state
 const isBold = computed(() => editorState.bold)
@@ -165,6 +176,8 @@ const currentCharacterScale = computed(() => {
 })
 const rowFlex = computed(() => editorState.rowFlex || undefined)
 const hasSelection = computed(() => editorState.hasSelection)
+const hasActiveCommentGroup = computed(() => Array.isArray(editorState.groupIds) && editorState.groupIds.length > 0)
+const revisionCount = computed(() => Number(props.revisionCount || 0))
 
 watch(() => editorState.font, v => { if (v) currentFont.value = v })
 watch(() => editorState.size, v => { if (v) currentSize.value = pxToPt(v) })
@@ -177,6 +190,10 @@ const currentTitleLabel = computed(() => currentTitle.value ? titleLevelMap[curr
 const visibleTabs = computed(() =>
   ribbonTabs.filter(tab => tab.key !== 'collaboration' || props.showCollaborationMenu)
 )
+
+onMounted(() => {
+  isEyeCareEnabled.value = document.body.classList.contains('eye-care-mode')
+})
 
 const handleSwitchToolbar = (mode: string) => {
   simpleMode.value = mode === 'simple'
@@ -200,6 +217,9 @@ const handleCommand = (cmd: string, ...args: any[]) => {
       revisionDisplayMode.value = args[0]
       emit('command', 'revisionDisplayMode', ...args)
       return
+    case 'revisionViewMode':
+      revisionViewMode.value = args[0]
+      return
     case 'paperDirection':
       emit('command', 'paperDirection', ...args)
       return
@@ -217,22 +237,25 @@ const handleCommand = (cmd: string, ...args: any[]) => {
       return
     case 'toggleEyeCare':
       document.body.classList.toggle('eye-care-mode')
-      emit('command', 'eyeCareChange', document.body.classList.contains('eye-care-mode'))
+      isEyeCareEnabled.value = document.body.classList.contains('eye-care-mode')
+      emit('command', 'eyeCareChange', isEyeCareEnabled.value)
       return
     case 'toggleCatalog':
-      emit('command', 'toggleCatalog')
+      emit('command', 'toggleCatalog', !props.catalogVisible)
       return
     case 'toggleBottomNav':
-      showBottomNav.value = !showBottomNav.value
-      emit('command', 'bottomNavVisible', showBottomNav.value)
+      emit('command', 'bottomNavVisible', !props.bottomNavVisible)
       return
     case 'toggleRuler':
-      showRuler.value = !showRuler.value
-      emit('command', 'rulerVisible', showRuler.value)
+      emit('command', 'rulerVisible', !props.rulerVisible)
       return
     case 'toggleToolbar':
-      showToolbar.value = !showToolbar.value
-      emit('command', 'toolbarVisible', showToolbar.value)
+      emit('command', 'toolbarVisible', !props.toolbarVisible)
+      return
+    case 'commentDeleteCurrent':
+      if (hasActiveCommentGroup.value) {
+        emit('command', 'commentDeleteCurrent', editorState.groupIds?.[0])
+      }
       return
     case 'fitPage':
       handleZoom(42)
@@ -375,8 +398,8 @@ const handleRowFlex = (v: string) => emit('command', 'rowFlex', v)
 /* Ribbon 面板 */
 .ribbon-panel {
   background: #f1f1f1;
-  padding: 4px 8px 3px;
-  min-height: 82px;
+  padding: 3px 8px 2px;
+  min-height: 80px;
   overflow-x: auto;
   overflow-y: hidden;
   box-shadow: inset 0 -1px 0 var(--app-ribbon-shadow, #e6eaf2);
@@ -384,10 +407,10 @@ const handleRowFlex = (v: string) => emit('command', 'rowFlex', v)
 
 /* 简约模式：缩小面板高度 */
 .office-ribbon.simple-mode .ribbon-panel {
-  min-height: 60px;
+  min-height: 56px;
 }
 .office-ribbon.simple-mode :deep(.ribbon-btn-lg) {
-  height: 40px;
+  height: 38px;
   min-width: 36px;
 }
 .office-ribbon.simple-mode :deep(.ribbon-btn-lg .ribbon-btn-icon svg),
@@ -397,16 +420,16 @@ const handleRowFlex = (v: string) => emit('command', 'rowFlex', v)
 
 /* 非 home 选项卡：更大图标 + 更高面板 */
 .ribbon-panel.non-home-tab {
-  min-height: 96px;
+  min-height: 90px;
 }
 .ribbon-panel.non-home-tab :deep(.ribbon-tab-panel) {
-  min-height: 86px;
+  min-height: 80px;
 }
 .ribbon-panel.non-home-tab :deep(.ribbon-tab-panel .ribbon-group) {
-  min-height: 86px;
+  min-height: 80px;
 }
 .ribbon-panel.non-home-tab :deep(.ribbon-btn-lg) {
-  height: 60px;
+  height: 56px;
 }
 .ribbon-panel.non-home-tab :deep(.ribbon-btn-lg .ribbon-btn-icon svg),
 .ribbon-panel.non-home-tab :deep(.ribbon-btn-lg .ribbon-btn-icon i) {
@@ -423,18 +446,18 @@ const handleRowFlex = (v: string) => emit('command', 'rowFlex', v)
 .ribbon-tab-panel {
   display: flex;
   align-items: stretch;
-  min-height: 72px;
+  min-height: 70px;
 }
 .ribbon-tab-panel .ribbon-group {
-  min-height: 72px;
+  min-height: 70px;
 }
 
 /* 简约模式 */
 .office-ribbon.simple-mode .ribbon-tab-panel {
-  min-height: 56px;
+  min-height: 52px;
 }
 .office-ribbon.simple-mode .ribbon-tab-panel .ribbon-group {
-  min-height: 56px;
+  min-height: 52px;
 }
 
 /* antd 菜单图标 */

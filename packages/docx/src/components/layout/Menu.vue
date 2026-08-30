@@ -3,6 +3,11 @@
     <GoogleDocsToolbar
       :is-locked="isLocked"
       :document-stats="documentStats"
+      :revision-count="revisionCount"
+      :catalog-visible="catalogVisible"
+      :ruler-visible="rulerVisible"
+      :toolbar-visible="toolbarVisible"
+      :bottom-nav-visible="bottomNavVisible"
       :show-collaboration-menu="showCollaborationMenu"
       :cursor-collaboration-enabled="cursorCollaborationEnabled"
       :selection-collaboration-enabled="selectionCollaborationEnabled"
@@ -22,6 +27,11 @@ const props = defineProps<{
   appNameWithVersion: string
   documentMeta: DocumentMeta
   documentStats: DocumentStats
+  revisionCount?: number
+  catalogVisible?: boolean
+  rulerVisible?: boolean
+  toolbarVisible?: boolean
+  bottomNavVisible?: boolean
   showCollaborationMenu?: boolean
   cursorCollaborationEnabled?: boolean
   selectionCollaborationEnabled?: boolean

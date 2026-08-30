@@ -21,7 +21,7 @@ export const ribbonTabs: RibbonTabMeta[] = [
   { key: 'review', label: '审阅', icon: 'comment-check-outline' },
   { key: 'view', label: '视图', icon: 'eye-outline' },
   { key: 'collaboration', label: '协同', icon: 'account-multiple-outline', visible: false },
-  { key: 'tools', label: '工具', icon: 'toolbox-outline' },
+
   { key: 'help', label: '帮助', icon: 'help-circle-outline' }
 ]
 

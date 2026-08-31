@@ -28,6 +28,26 @@ export interface ICellMeta {
   comment?: string
 }
 
+export interface ISheetImageAnchor {
+  col: number
+  row: number
+  /** Excel 原生偏移（EMU） */
+  colOff: number
+  rowOff: number
+}
+
+export interface ISheetFloatingImage {
+  id: string
+  name?: string
+  mimeType: string
+  /** data:image/...;base64,... */
+  dataUrl: string
+  from: ISheetImageAnchor
+  to: ISheetImageAnchor
+  /** Excel editAs: oneCell | twoCell | absolute */
+  anchorType?: string
+}
+
 export interface IUiSheet {
   id: string
   name: string
@@ -47,6 +67,7 @@ export interface IUiSheet {
   filterKeyword?: string
   filterSelectedValues?: Record<string, boolean>
   filterActive?: boolean
+  images?: ISheetFloatingImage[]
 }
 
 export interface IWorkbook {

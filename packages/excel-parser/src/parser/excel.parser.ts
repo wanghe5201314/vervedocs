@@ -1,14 +1,8 @@
 import type { Align, ICellMeta, ICellStyle, IUiSheet, IWorkbook, VerticalAlign } from '../types'
 import type { IExcelImportResult, IExcelParseOptions } from './types'
 import { createExcelJsWorkbook } from '../utils/exceljs-loader'
-
-function normalizeArgbToHex(argb: unknown): string | undefined {
-  const text = String(argb || '').trim()
-  if (!text) return
-  const normalized = text.length === 8 ? text.slice(2) : text
-  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) return
-  return `#${normalized.toUpperCase()}`
-}
+import { normalizeArgbToHex } from '../utils/color'
+import { parseWorksheetImages } from './image.parser'
 
 function toHexColor(input: unknown): string | undefined {
   if (!input || typeof input !== 'object') return
@@ -213,7 +207,7 @@ function parseMergeAddress(range: string): string | null {
   return `${startCell.r}:${startCell.c}:${endCell.r}:${endCell.c}`
 }
 
-function toUiSheet(worksheet: any, index: number, options?: IExcelParseOptions): IUiSheet {
+function toUiSheet(worksheet: any, index: number, workbook: any, options?: IExcelParseOptions): IUiSheet {
   const cells: Record<string, string> = {}
   const styles: Record<string, ICellStyle> = {}
   const cellMeta: Record<string, ICellMeta> = {}
@@ -282,6 +276,7 @@ function toUiSheet(worksheet: any, index: number, options?: IExcelParseOptions):
   const view = Array.isArray(worksheet?.views) ? worksheet.views[0] : undefined
   const frozenRows = Number.isFinite(view?.ySplit) ? Math.max(0, Number(view.ySplit)) : 0
   const frozenCols = Number.isFinite(view?.xSplit) ? Math.max(0, Number(view.xSplit)) : 0
+  const images = parseWorksheetImages(worksheet, workbook, index)
 
   return {
     id: String(index),
@@ -297,7 +292,8 @@ function toUiSheet(worksheet: any, index: number, options?: IExcelParseOptions):
     hiddenCols,
     hiddenRows,
     frozenCols,
-    frozenRows
+    frozenRows,
+    images: images.length ? images : undefined,
   }
 }
 
@@ -309,7 +305,7 @@ async function readExcelToWorkbook(
   const buffer = data instanceof File ? await data.arrayBuffer() : data
   await workbook.xlsx.load(buffer)
   const worksheetList = Array.isArray(workbook.worksheets) ? workbook.worksheets : []
-  const sheets = worksheetList.map((worksheet: any, index: number) => toUiSheet(worksheet, index, options))
+  const sheets = worksheetList.map((worksheet: any, index: number) => toUiSheet(worksheet, index, workbook, options))
   return {
     version: 1,
     sheets: sheets.length ? sheets : [{

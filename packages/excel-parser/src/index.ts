@@ -14,6 +14,8 @@ export type {
   WrapMode,
   ICellStyle,
   ICellMeta,
+  ISheetImageAnchor,
+  ISheetFloatingImage,
   IUiSheet,
   IWorkbook,
 } from './types'

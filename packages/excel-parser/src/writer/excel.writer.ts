@@ -2,6 +2,8 @@ import type { BorderStyle } from 'exceljs'
 import type { ICellMeta, ICellStyle, IWorkbook } from '../types'
 import type { IExcelExportOptions, IExcelExportResult } from '../contract'
 import { createExcelJsWorkbook } from '../utils/exceljs-loader'
+import { normalizeHyperlink } from '../utils/url'
+import { writeWorksheetImages } from './image.writer'
 
 function parseCellKey(key: string): { row: number; col: number } | null {
   const [rowText, colText] = String(key || '').split(':')
@@ -107,13 +109,6 @@ function applyStyle(cell: any, style: ICellStyle) {
   if (numFmt) cell.numFmt = numFmt
 }
 
-function normalizeHyperlink(url: string): string {
-  const text = String(url || '').trim()
-  if (!text) return ''
-  if (/^(https?:\/\/|mailto:|tel:)/i.test(text)) return text
-  return `https://${text}`
-}
-
 function writeCellValue(cell: any, value: string, meta?: ICellMeta) {
   const text = String(value ?? '')
   const hyperlink = normalizeHyperlink(String(meta?.hyperlink || ''))
@@ -192,6 +187,7 @@ export async function writeWorkbookToExcelBuffer(
       if (![r1, c1, r2, c2].every(Number.isFinite)) return
       worksheet.mergeCells(r1 + 1, c1 + 1, r2 + 1, c2 + 1)
     })
+    writeWorksheetImages(workbook, worksheet, sheet)
   })
   if (!workbook.worksheets.length) {
     workbook.addWorksheet(options?.defaultSheetName?.(0) || '工作表1')

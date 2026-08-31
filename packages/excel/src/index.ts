@@ -45,3 +45,13 @@ export { createExcelI18n, registerLangMap, zhCN, enUS } from './i18n'
 export type { Align, VerticalAlign, WrapMode, ICellStyle, IUiSheet, IWorkbook, UndoEntry } from './types'
 export type { ExcelLocale, ExcelI18nMessages } from './i18n'
 export type { ExcelCollaborationConfig, UserInfo } from '@vervedoc/docx-editor-collaboration'
+
+// Excel 导入/导出契约（参考实现见 @vervedoc/excel-parser）
+export type {
+  ExcelImportCallback,
+  ExcelExportCallback,
+  IExcelImportResult,
+  IExcelExportResult,
+  IExcelParseOptions,
+  IExcelExportOptions,
+} from '@vervedoc/excel-parser'

@@ -1,4 +1,8 @@
 import { ExcelEditor } from '@vervedoc/excel'
+import {
+  createExcelExportCallback,
+  createExcelImportCallback,
+} from '@vervedoc/excel-parser'
 import './demo.css'
 
 const applyExcelTheme = () => {
@@ -19,6 +23,8 @@ const color = COLORS[Math.floor(Math.random() * COLORS.length)]
 new ExcelEditor({
   container: '#app',
   documentName: '协同测试',
+  importCallback: createExcelImportCallback(),
+  exportCallback: createExcelExportCallback(),
   collaboration: {
     serverUrl: 'ws://127.0.0.1:1234',
     docId: 'test-excel-collab',

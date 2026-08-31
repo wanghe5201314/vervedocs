@@ -7,12 +7,16 @@ import '@/assets/iconfont/iconfont.js'
 import type { ExcelLocale, ExcelI18nMessages } from '@/i18n'
 import type { SheetDocumentApi, AuthTokenProvider, SheetRequestConfig } from '@/api/sheet.api'
 import type { ExcelCollaborationConfig, UserInfo } from '@vervedoc/docx-editor-collaboration'
+import type { ExcelExportCallback, ExcelImportCallback } from '@vervedoc/excel-parser'
+import {
+  createExcelExportCallback,
+  createExcelImportCallback,
+} from '@vervedoc/excel-parser'
 import {
   setSheetDocumentApi,
   setAuthProvider as setSheetAuthProvider,
   setSheetRequestConfig,
   createHttpSheetDocumentApi,
-  getSheetApiBaseUrl,
 } from '@/api/sheet.api'
 import { version as PKG_VERSION } from '../../package.json'
 
@@ -32,6 +36,10 @@ export interface Options {
   authTokenGetter?: AuthTokenProvider
   sheetApi?: SheetDocumentApi
   requestConfig?: SheetRequestConfig
+  /** xlsx → IWorkbook，默认使用 @vervedoc/excel-parser */
+  importCallback?: ExcelImportCallback
+  /** IWorkbook → xlsx，默认使用 @vervedoc/excel-parser */
+  exportCallback?: ExcelExportCallback
   onReady?: (payload: any) => void
   onChange?: (payload: any) => void
   onNewDocument?: (payload: { dbPayload: any; excelPayload: { fileName: string; mimeType: string; buffer: ArrayBuffer } }) => void
@@ -88,6 +96,8 @@ export class ExcelEditor {
     readOnly?: boolean
     locale?: ExcelLocale
     i18n?: Partial<ExcelI18nMessages>
+    importCallback: ExcelImportCallback
+    exportCallback: ExcelExportCallback
   }
 
   static version: string = PKG_VERSION
@@ -115,7 +125,9 @@ export class ExcelEditor {
       collaboration: normalizeCollaborationOptions(options.collaboration, options.documentName),
       readOnly: options.readOnly,
       locale: options.locale,
-      i18n: options.i18n
+      i18n: options.i18n,
+      importCallback: options.importCallback ?? createExcelImportCallback(),
+      exportCallback: options.exportCallback ?? createExcelExportCallback(),
     })
     const root = defineComponent(() => () => h(SheetEditorComponent as any, {
       ref: (el: any) => {
@@ -128,6 +140,8 @@ export class ExcelEditor {
       readOnly: this.state.readOnly,
       locale: this.state.locale,
       i18n: this.state.i18n,
+      importCallback: this.state.importCallback,
+      exportCallback: this.state.exportCallback,
       onReady: (payload: any) => this.options.onReady?.(payload),
       onChange: (payload: any) => this.options.onChange?.(payload),
       onNewDocument: (payload: any) => this.options.onNewDocument?.(payload),

@@ -12,6 +12,7 @@ import {
   VerticalAlign,
 } from '@univerjs/core'
 import type { ICellMeta, ICellStyle, IUiSheet, IWorkbook } from '../types'
+import { buildSheetDrawingResources, mergeWorkbookResources } from './sheet-drawing-resources'
 
 const DEFAULT_WORKBOOK_ID = 'vervedocs-excel'
 const DEFAULT_SHEET_ROWS = 50
@@ -308,6 +309,7 @@ function toUiSheet(sheet: Partial<IWorksheetData>, index: number): IUiSheet {
     filterKeyword: '',
     filterSelectedValues: {},
     filterActive: false,
+    images: Array.isArray((sheet as any).images) ? JSON.parse(JSON.stringify((sheet as any).images)) : undefined,
   }
 }
 
@@ -356,12 +358,16 @@ function toWorksheetData(sheet: IUiSheet): Partial<IWorksheetData> {
 
   for (let row = 0; row < sheet.rowCount; row++) {
     const next: Record<string, any> = {}
+    const height = sheet.rowHeights?.[row]
+    if (Number.isFinite(height)) next.h = Number(height)
     if (sheet.hiddenRows?.[row]) next.hd = BooleanNumber.TRUE
     if (Object.keys(next).length) rowData[row] = next
   }
 
   for (let col = 0; col < sheet.colCount; col++) {
     const next: Record<string, any> = {}
+    const width = sheet.colWidths?.[col]
+    if (Number.isFinite(width)) next.w = Number(width)
     if (sheet.hiddenCols?.[col]) next.hd = BooleanNumber.TRUE
     if (Object.keys(next).length) columnData[col] = next
   }
@@ -405,6 +411,12 @@ export function internalWorkbookToUniver(workbook: IWorkbook, locale?: string): 
   const sheetMap = Object.fromEntries(
     sheets.map((sheet, index) => [sheetOrder[index], toWorksheetData({ ...sheet, id: sheetOrder[index] })]),
   )
+  const drawingResources = buildSheetDrawingResources(workbook, DEFAULT_WORKBOOK_ID)
+  const resources = drawingResources.length
+    ? mergeWorkbookResources(workbook?.resources, drawingResources)
+    : (workbook?.resources && typeof workbook.resources === 'object'
+      ? JSON.parse(JSON.stringify(workbook.resources))
+      : undefined)
 
   return {
     id: DEFAULT_WORKBOOK_ID,
@@ -414,9 +426,7 @@ export function internalWorkbookToUniver(workbook: IWorkbook, locale?: string): 
     styles: {},
     sheetOrder,
     sheets: sheetMap,
-    resources: workbook?.resources && typeof workbook.resources === 'object'
-      ? JSON.parse(JSON.stringify(workbook.resources))
-      : undefined,
+    resources,
   }
 }
 

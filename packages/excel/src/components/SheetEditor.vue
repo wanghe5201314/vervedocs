@@ -1125,6 +1125,7 @@ function syncWorkbookFromUniver() {
     return {
       ...sheet,
       cellMeta: { ...(sheet.cellMeta || current?.cellMeta || {}) },
+      images: current?.images ?? sheet.images,
       filterColumn: current?.filterColumn ?? null,
       filterKeyword: current?.filterKeyword || '',
       filterSelectedValues: { ...(current?.filterSelectedValues || {}) },
@@ -1169,7 +1170,11 @@ async function renderLuckysheet() {
     }
 
     disposeActiveUniverWorkbook()
-    activeUniverWorkbook = univerAPI?.createWorkbook(runtime.adapter.internalWorkbookToUniver(workbook, props.locale)) || null
+    const univerWorkbookData = runtime.adapter.internalWorkbookToUniver(workbook, props.locale)
+    if (univerWorkbookData.resources) {
+      workbook.resources = JSON.parse(JSON.stringify(univerWorkbookData.resources))
+    }
+    activeUniverWorkbook = univerAPI?.createWorkbook(univerWorkbookData) || null
 
     bindUniverEvents()
     const sheets = activeUniverWorkbook?.getSheets() || []
@@ -1295,6 +1300,7 @@ function fromInternalSheet(sheet: any, i: number): IUiSheet {
     hiddenRows: { ...(sheet?.hiddenRows || {}) },
     frozenCols: Number(sheet?.frozenCols || 0),
     frozenRows: Number(sheet?.frozenRows || 0),
+    images: Array.isArray(sheet?.images) ? JSON.parse(JSON.stringify(sheet.images)) : undefined,
     filterColumn: Number.isFinite(sheet?.filterColumn) ? Number(sheet.filterColumn) : null,
     filterKeyword: String(sheet?.filterKeyword || ''),
     filterSelectedValues: { ...(sheet?.filterSelectedValues || {}) },

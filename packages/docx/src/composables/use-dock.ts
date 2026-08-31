@@ -1,4 +1,4 @@
-import { Ref, ref, nextTick } from 'vue'
+import { ref } from 'vue'
 import { aiStateStore } from '@/stores/ai-state'
 
 /**
@@ -11,14 +11,9 @@ type DockKey = 'search' | 'catalog' | 'section' | 'ai' | 'revision' | ''
  * @param options 配置项
  * @returns 停靠面板状态与切换方法
  */
-export function useDock(options: {
-  /** 目录组件引用 */
-  catalogRef: Ref<any>
-}) {
-  const { catalogRef } = options
+export function useDock() {
   const activeDock = ref<DockKey>('search')
-  const sidebarPanelSize = ref(310)
-  const cachedCatalog = ref<any[]>([])
+  const sidebarPanelSize = ref(295)
 
   /** 关闭修订停靠面板（若当前处于修订面板） */
   const closeRevisionDock = () => {
@@ -33,17 +28,6 @@ export function useDock(options: {
    */
   const handleDockSelect = (key: Exclude<DockKey, ''>) => {
     activeDock.value = key
-    if (key === 'catalog') {
-      void nextTick(() => {
-        catalogRef.value?.switchToCatalogTab?.()
-        if (cachedCatalog.value.length > 0) {
-          catalogRef.value?.updateCatalog?.(cachedCatalog.value)
-        }
-      })
-    }
-    if (key === 'section') {
-      void nextTick(() => catalogRef.value?.switchToSectionTab?.())
-    }
     if (key === 'ai') {
       aiStateStore.setVisible(true)
     }
@@ -77,7 +61,7 @@ export function useDock(options: {
      */
     const onMouseMove = (moveEvent: MouseEvent) => {
       const delta = moveEvent.clientX - startX
-      const newWidth = Math.min(400, Math.max(300, startWidth + delta))
+      const newWidth = Math.min(420, Math.max(300, startWidth + delta))
       sidebarPanelSize.value = newWidth
     }
 
@@ -98,7 +82,6 @@ export function useDock(options: {
   return {
     activeDock,
     sidebarPanelSize,
-    cachedCatalog,
     closeRevisionDock,
     handleDockSelect,
     closeDock,

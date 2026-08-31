@@ -171,13 +171,9 @@ export class CommandAdapt {
 
   // ---- SearchAdapter ----
   public search = (...a: any[]) => this._search.search(...a as [any])
-  public getSearchKeyword = () => this._search.getSearchKeyword()
-  public searchNavigatePre = () => this._search.searchNavigatePre()
-  public searchNavigateNext = () => this._search.searchNavigateNext()
-  public getSearchNavigateInfo = () => this._search.getSearchNavigateInfo()
   public replace = (...a: any[]) => this._search.replace(...a as [any, any?])
-  public getKeywordRangeList = (...a: any[]) => this._search.getKeywordRangeList(...a as [any])
-  public getKeywordContext = (...a: any[]) => this._search.getKeywordContext(...a as [any])
+  public replaceAll = (...a: any[]) => this._search.replaceAll(...a as [any, any])
+  public locateSearchResult = (...a: any[]) => this._search.locateSearchResult(...a as [any])
 
   // ---- ElementAdapter ----
   public insertElementList = (...a: any[]) => this._element.insertElementList(...a as [any, any?])

@@ -407,7 +407,6 @@ ul {
 
 .eye-care-mode,
 .eye-care-mode .ce-container,
-.eye-care-mode .catalog,
 .eye-care-mode .editor-main {
   background-color: #c7edcc !important;
 }
@@ -416,7 +415,6 @@ ul {
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
-.eye-care-mode .catalog,
 .eye-care-mode .editor-main,
 .eye-care-mode .ce-page-container {
   background-color: #c7edcc !important;
@@ -846,4 +844,3 @@ ul {
 .separator-preview.gradient { background: linear-gradient(90deg, transparent, #000, transparent); }
 .separator-preview.shadow { background: #000; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
 .separator-preview.emboss { background: linear-gradient(180deg, #666 0%, #000 50%, #666 100%); box-shadow: 0 1px 0 #fff, 0 -1px 0 #fff; }
-

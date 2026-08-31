@@ -15,12 +15,12 @@ const executeCommand = (command: string, ...args: any[]) => {
   return fn(command, ...args)
 }
 
-const getExternalApi = () => {
-  return editorRef.value?.getExternalApi?.() ?? null
+const getExternalAPI = () => {
+  return editorRef.value?.getExternalAPI?.() ?? null
 }
 
 defineExpose({
   executeCommand,
-  getExternalApi
+  getExternalAPI
 })
 </script>

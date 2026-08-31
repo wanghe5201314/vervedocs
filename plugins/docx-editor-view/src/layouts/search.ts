@@ -7,7 +7,10 @@ import { IEditorOption } from '@vervedoc/docx-editor-schema'
 import { IElement, IElementPosition } from '@vervedoc/docx-editor-schema'
 import {
   IReplaceOption,
+  IRange,
   ISearchResult,
+  ISearchResultItem,
+  ISearchResultRect,
   ISearchResultRestArgs
 } from '@vervedoc/docx-editor-schema'
 import { getUUID, isNumber } from '@vervedoc/docx-editor-schema'
@@ -43,6 +46,9 @@ export class Search {
   public setSearchKeyword(payload: string | null) {
     this.searchKeyword = payload
     this.searchNavigateIndex = null
+    if (!payload) {
+      this.searchMatchList = []
+    }
   }
 
   public searchNavigatePre(): number | null {
@@ -157,6 +163,240 @@ export class Search {
     }
   }
 
+  private getSearchValue(element: IElement) {
+    return !element.type ||
+      (TEXTLIKE_ELEMENT_TYPE.includes(element.type) &&
+        element.controlComponent !== ControlComponent.CHECKBOX &&
+        !element.control?.hide &&
+        !element.area?.hide)
+      ? element.value
+      : ZERO
+  }
+
+  private getPreviewValue(element: IElement) {
+    return !element.type ||
+      (TEXTLIKE_ELEMENT_TYPE.includes(element.type) &&
+        element.controlComponent !== ControlComponent.CHECKBOX &&
+        !element.control?.hide &&
+        !element.area?.hide)
+      ? element.value
+      : ''
+  }
+
+  private getMatchGroups(matchList: ISearchResult[] = this.searchMatchList) {
+    const groups: ISearchResult[][] = []
+    for (const match of matchList) {
+      const lastGroup = groups[groups.length - 1]
+      if (!lastGroup || lastGroup[0].groupId !== match.groupId) {
+        groups.push([match])
+      } else {
+        lastGroup.push(match)
+      }
+    }
+    return groups
+  }
+
+  private getPositionByMatch(match: ISearchResult): IElementPosition | null {
+    const positionList = this.position.getOriginalPositionList()
+    const elementList = this.draw.getOriginalElementList()
+    if (match.type === EditorContext.TABLE) {
+      const { tableIndex, trIndex, tdIndex, index } = match
+      return (
+        elementList[tableIndex!]?.trList?.[trIndex!]?.tdList?.[tdIndex!]
+          ?.positionList?.[index] || null
+      )
+    }
+    return positionList[match.index] || null
+  }
+
+  private getRangeByMatchGroup(matchGroup: ISearchResult[]): IRange {
+    const firstMatch = matchGroup[0]
+    const lastMatch = matchGroup[matchGroup.length - 1]
+    const range: IRange = {
+      startIndex: firstMatch.index,
+      endIndex: lastMatch.index
+    }
+    if (firstMatch.type === EditorContext.TABLE) {
+      range.tableId = firstMatch.tableId
+      range.startTdIndex = firstMatch.tdIndex
+      range.endTdIndex = lastMatch.tdIndex
+      range.startTrIndex = firstMatch.trIndex
+      range.endTrIndex = lastMatch.trIndex
+    }
+    return range
+  }
+
+  private mergeResultRects(positionList: IElementPosition[]): ISearchResultRect[] {
+    const rects: ISearchResultRect[] = []
+    for (const position of positionList) {
+      const {
+        pageNo,
+        rowNo,
+        coordinate: { leftTop, leftBottom, rightTop }
+      } = position
+      const x = leftTop[0]
+      const y = leftTop[1]
+      const width = rightTop[0] - leftTop[0]
+      const height = leftBottom[1] - leftTop[1]
+      const lastRect = rects[rects.length - 1]
+      if (
+        lastRect &&
+        lastRect.pageNo === pageNo + 1 &&
+        lastRect.rowNo === rowNo &&
+        Math.abs(lastRect.y - y) < 0.5 &&
+        Math.abs(lastRect.height - height) < 0.5 &&
+        Math.abs(lastRect.x + lastRect.width - x) < 1
+      ) {
+        lastRect.width = x + width - lastRect.x
+      } else {
+        rects.push({
+          pageNo: pageNo + 1,
+          rowNo,
+          x,
+          y,
+          width,
+          height
+        })
+      }
+    }
+    return rects
+  }
+
+  private getTextFromElementRange(
+    elementList: IElement[],
+    startIndex: number,
+    endIndex: number
+  ) {
+    return elementList
+      .slice(startIndex, endIndex + 1)
+      .map(element => this.getPreviewValue(element))
+      .join('')
+      .replace(new RegExp(`${ZERO}`, 'g'), '')
+  }
+
+  private getPreviewText(
+    elementList: IElement[],
+    startIndex: number,
+    endIndex: number
+  ) {
+    const previewPadding = 20
+    const previewStart = Math.max(0, startIndex - previewPadding)
+    const previewEnd = Math.min(elementList.length - 1, endIndex + previewPadding)
+    return this.getTextFromElementRange(elementList, previewStart, previewEnd)
+      .replace(/\s+/g, ' ')
+      .trim()
+  }
+
+  public getSearchResultList(): ISearchResultItem[] {
+    if (!this.searchKeyword || !this.searchMatchList.length) return []
+    const resultList: ISearchResultItem[] = []
+    const matchGroups = this.getMatchGroups()
+    const originalElementList = this.draw.getOriginalElementList()
+    for (let resultIndex = 0; resultIndex < matchGroups.length; resultIndex++) {
+      const matchGroup = matchGroups[resultIndex]
+      const firstMatch = matchGroup[0]
+      const lastMatch = matchGroup[matchGroup.length - 1]
+      const positionList = matchGroup
+        .map(match => this.getPositionByMatch(match))
+        .filter(Boolean) as IElementPosition[]
+      if (!positionList.length) continue
+      const startPosition = positionList[0]
+      const endPosition = positionList[positionList.length - 1]
+      const range = this.getRangeByMatchGroup(matchGroup)
+      let sourceElementList = originalElementList
+      let sourceStartIndex = firstMatch.index
+      let sourceEndIndex = lastMatch.index
+      if (firstMatch.type === EditorContext.TABLE) {
+        const tableElement =
+          originalElementList[firstMatch.tableIndex!]
+        const tableCell =
+          tableElement?.trList?.[firstMatch.trIndex!]?.tdList?.[firstMatch.tdIndex!]
+        sourceElementList = tableCell?.value || []
+      }
+      const text = this.getTextFromElementRange(
+        sourceElementList,
+        sourceStartIndex,
+        sourceEndIndex
+      )
+      const previewText = this.getPreviewText(
+        sourceElementList,
+        sourceStartIndex,
+        sourceEndIndex
+      )
+      resultList.push({
+        resultIndex,
+        groupId: firstMatch.groupId,
+        keyword: this.searchKeyword,
+        context: firstMatch.type,
+        text,
+        previewText,
+        pageNo: startPosition.pageNo + 1,
+        range,
+        startPosition,
+        endPosition,
+        rects: this.mergeResultRects(positionList)
+      })
+    }
+    return resultList
+  }
+
+  public locateSearchResult(payload: number | string | ISearchResultItem) {
+    const resultList = this.getSearchResultList()
+    let targetResult: ISearchResultItem | undefined
+    if (typeof payload === 'number') {
+      targetResult = resultList[payload]
+    } else if (typeof payload === 'string') {
+      targetResult = resultList.find(item => item.groupId === payload)
+    } else {
+      targetResult = resultList.find(item => item.groupId === payload.groupId)
+    }
+    if (!targetResult) return null
+    const matchIndex = this.searchMatchList.findIndex(
+      match => match.groupId === targetResult!.groupId
+    )
+    if (matchIndex < 0) return null
+    this.searchNavigateIndex = matchIndex
+    const { range } = targetResult
+    const firstMatch = this.searchMatchList[matchIndex]
+    if (firstMatch.type === EditorContext.TABLE) {
+      const element =
+        this.draw
+          .getOriginalElementList()[firstMatch.tableIndex!]
+          ?.trList?.[firstMatch.trIndex!]
+          ?.tdList?.[firstMatch.tdIndex!]
+          ?.value?.[firstMatch.index]
+      this.position.setPositionContext({
+        isTable: true,
+        index: firstMatch.tableIndex,
+        trIndex: firstMatch.trIndex,
+        tdIndex: firstMatch.tdIndex,
+        tdId: element?.tdId || firstMatch.tdId,
+        trId: element?.trId,
+        tableId: element?.tableId || firstMatch.tableId
+      })
+    } else {
+      this.position.setPositionContext({
+        isTable: false
+      })
+    }
+    this.draw.getRange().setRange(
+      range.startIndex,
+      range.endIndex,
+      range.tableId,
+      range.startTdIndex,
+      range.endTdIndex,
+      range.startTrIndex,
+      range.endTrIndex
+    )
+    this.draw.render({
+      curIndex: range.endIndex,
+      isCompute: false,
+      isLazy: false,
+      isSubmitHistory: false
+    })
+    return targetResult
+  }
+
   public getMatchList(
     payload: string,
     originalElementList: IElement[]
@@ -204,23 +444,15 @@ export class Search {
       i++
     }
     // 搜索文本
-    function searchClosure(
+    const searchClosure = (
       payload: string | null,
       type: EditorContext,
       elementList: IElement[],
       restArgs?: ISearchResultRestArgs
-    ) {
+    ) => {
       if (!payload) return
       const text = elementList
-        .map(e =>
-          !e.type ||
-          (TEXTLIKE_ELEMENT_TYPE.includes(e.type) &&
-            e.controlComponent !== ControlComponent.CHECKBOX &&
-            !e.control?.hide &&
-            !e.area?.hide)
-            ? e.value
-            : ZERO
-        )
+        .map(e => this.getSearchValue(e))
         .filter(Boolean)
         .join('')
         .toLocaleLowerCase()

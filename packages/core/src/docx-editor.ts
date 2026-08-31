@@ -1,10 +1,16 @@
 import './assets/css/index.css'
 import { formatElementList, deepClone, mergeOption } from '@vervedoc/docx-editor-schema'
-import type { IEditorData, IEditorOption, IElement, EventBusMap, UsePlugin } from '@vervedoc/docx-editor-schema'
+import type { IComment, IEditorData, IEditorOption, IElement, EventBusMap, UsePlugin } from '@vervedoc/docx-editor-schema'
 
 import { Draw, pasteByApi } from '@vervedoc/docx-editor-view'
 import { Command } from '@vervedoc/docx-editor-transform'
 import { CommandAdapt } from '@vervedoc/docx-editor-transform'
+import type {
+  ICommandSearchApi,
+  ICommandBookmarkApi,
+  ICommandRevisionApi,
+  ICommandCatalogApi
+} from '@vervedoc/docx-editor-transform'
 import { Listener } from '@vervedoc/docx-editor-state'
 import { Register } from '@vervedoc/docx-editor-view'
 import { FloatingBar } from '@vervedoc/docx-editor-view'
@@ -21,8 +27,31 @@ import { TableContextMenuComponent } from './table-contextmenu/table-context-men
 import { printImageBase64 } from './utils/print'
 import { I18n } from './i18n/i18n'
 
+export interface IDocxEditorApi {
+  search: ICommandSearchApi
+  bookmark: ICommandBookmarkApi
+  revision: ICommandRevisionApi
+  catalog: ICommandCatalogApi
+  comment: IDocxCommentApi
+}
+
+export interface IDocxCommentState {
+  list: IComment[]
+  activeGroupId: string
+}
+
+export interface IDocxCommentApi {
+  getState(): IDocxCommentState
+  create(userName?: string): IComment | null
+  remove(id: string): void
+  removeCurrent(groupId?: string): void
+  locate(id: string): void
+  refresh(): void
+}
+
 export default class DocxEditor {
   public command: Command
+  public api: IDocxEditorApi
   public listener: Listener
   public eventBus: EventBus<EventBusMap>
   public override: Override
@@ -118,41 +147,47 @@ export default class DocxEditor {
     })
     this.command = new Command(commandAdapt)
 
-    const bookmarkAdapter = (commandAdapt as any)._bookmark
-    if (bookmarkAdapter) {
-      bookmarkAdapter.addBookmark = (e: { name: string }) => {
-        if (bookmarkAdapter.isDisabled?.() || bookmarkAdapter.draw?.getControl?.().getActiveControl?.()) return
-        const n = e?.name?.trim()
-        if (!n || !/^[\w\u4e00-\u9fff]+$/.test(n) || bookmarkAdapter.getBookmarks().some((b: any) => b.name === n)) return
-        const { startIndex: u, endIndex: l } = bookmarkAdapter.range.getRange()
-        if (u < 0 || l < 0) return
-        const a = bookmarkAdapter.draw.getElementList()
-        const c = '\u200B'
-        const D = u === l, h = u + 1, d = l + 1
-
-        if (!D) {
-          const endEl: any = { value: c, extension: { bookmarkMarker: { name: n, position: 'end' } } }
-          const startEl: any = { value: c, extension: { bookmarkMarker: { name: n, position: 'start' } } }
-          bookmarkAdapter.draw.spliceElementList(a, Math.min(d, a.length), 0, [endEl])
-          bookmarkAdapter.draw.spliceElementList(a, Math.min(h, a.length), 0, [startEl])
-          const F = Math.min(d + 1, a.length - 1)
-          bookmarkAdapter.range.setRange(F, F)
-          bookmarkAdapter.draw.render({ curIndex: F })
-          return
+    ;(draw as any).__structureAdapter = commandAdapt._structure
+    this.api = {
+      search: this.command.search,
+      bookmark: this.command.bookmark,
+      revision: this.command.revision,
+      catalog: this.command.catalog,
+      comment: {
+        getState: () => ({
+          list: [...this.comment.getComments()],
+          activeGroupId: ''
+        }),
+        create: (userName?: string) => {
+          const comment = this.comment.addComment(userName)
+          this.comment.render()
+          return comment
+        },
+        remove: (id: string) => {
+          this.comment.deleteComment(id)
+          this.comment.render()
+        },
+        removeCurrent: (groupId?: string) => {
+          const targetGroupId = groupId || ''
+          if (!targetGroupId) return
+          const currentComment = this.comment
+            .getComments()
+            .find(item => item.groupId === targetGroupId)
+          if (currentComment) {
+            this.comment.deleteComment(currentComment.id)
+          } else {
+            this.command.executeDeleteGroup(targetGroupId)
+          }
+          this.comment.render()
+        },
+        locate: (id: string) => {
+          this.comment.locateComment(id)
+        },
+        refresh: () => {
+          this.comment.render()
         }
-        const startEl: any = { value: c, extension: { bookmarkMarker: { name: n, position: 'start' } } }
-        const f = Math.min(h, a.length)
-        bookmarkAdapter.draw.spliceElementList(a, f, 0, [startEl])
-        const m = Math.min(f, a.length - 1)
-        bookmarkAdapter.range.setRange(m, m)
-        bookmarkAdapter.draw.render({ curIndex: m })
       }
     }
-
-    ;(draw as any).__structureAdapter = commandAdapt._structure
-
-    const _bookmarkAdapter = (commandAdapt as any)._bookmark
-    ;(this.command as any).getBookmarks = () => _bookmarkAdapter?.getBookmarks?.() || []
 
     new GadgetComponent().install(draw, this.command)
     new ExportComponent().install(draw, this.command)

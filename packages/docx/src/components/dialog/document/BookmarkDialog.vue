@@ -4,9 +4,20 @@
       <div class="bookmark-left">
         <a-form :model="form" :label-col="{ style: { width: '70px' } }">
           <a-form-item label="书签名">
-            <a-input v-model:value="form.name" placeholder="字母、数字、下划线或中文" @keydown.enter.prevent="handleAdd"/>
+            <a-input
+              v-model:value="form.name"
+              placeholder="字母、数字、下划线或中文"
+              @keydown.enter.prevent="handleAdd"
+            />
           </a-form-item>
         </a-form>
+        <div v-if="hasSelectionRange" class="bookmark-tip">
+          将按当前选中内容创建范围书签
+        </div>
+        <div v-if="hasSelectionRange && selectionPreview" class="bookmark-selection-preview">
+          {{ selectionPreview }}
+        </div>
+        <div v-if="nameError" class="bookmark-error">{{ nameError }}</div>
 
         <div class="bookmark-list-title">书签</div>
         <div style="overflow-y:auto;height:220px" class="bookmark-list">
@@ -16,14 +27,19 @@
             class="bookmark-item"
             :class="{ active: selectedName === item.name }"
             @click="selectedName = item.name"
+            @dblclick="handleItemGoto(item.name)"
           >
-            {{ item.name }}
+            <div class="bookmark-item-name">{{ item.name }}</div>
+            <div class="bookmark-item-meta">
+              {{ item.collapsed ? '位置书签' : '范围书签' }}
+            </div>
           </div>
+          <div v-if="!bookmarks.length" class="bookmark-empty">当前文档没有可见书签</div>
         </div>
       </div>
 
       <div class="bookmark-actions">
-        <a-button type="primary" @click="handleAdd">添加</a-button>
+        <a-button type="primary" :disabled="!canAdd" @click="handleAdd">添加</a-button>
         <a-button :disabled="!selectedName" @click="handleDelete">删除</a-button>
         <a-button :disabled="!selectedName" @click="handleGoto">转到</a-button>
         <a-button @click="visible = false">关闭</a-button>
@@ -34,18 +50,15 @@
 
 <script setup lang="ts">
 import {computed, ref, watch} from 'vue'
+import type { IBookmarkApi } from '@/composables/use-bookmarks'
 
 const props = defineProps<{
   modelValue: boolean
-  bookmarks: Array<{ name: string }>
+  bookmarkAPI: IBookmarkApi
 }>()
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
-  (e: 'refresh'): void
-  (e: 'add', name: string): void
-  (e: 'delete', name: string): void
-  (e: 'goto', name: string): void
 }>()
 
 const visible = computed({
@@ -55,18 +68,44 @@ const visible = computed({
 
 const form = ref({name: ''})
 const selectedName = ref('')
+const nameError = ref('')
+const lastSuggestedName = ref('')
+const BOOKMARK_NAME_REG = /^[\w\u4e00-\u9fff]+$/
+const bookmarks = computed(() => props.bookmarkAPI.bookmarkList.value)
+const suggestedName = computed(() => props.bookmarkAPI.suggestedBookmarkName.value)
+const hasSelectionRange = computed(() => props.bookmarkAPI.hasBookmarkSelectionRange.value)
+const selectionPreview = computed(() => props.bookmarkAPI.bookmarkSelectionPreview.value)
+const canAdd = computed(() => !!form.value.name.trim() && !nameError.value)
+
+const applySuggestedName = (name?: string) => {
+  const nextName = name?.trim() || ''
+  if (!visible.value || !nextName) return
+  if (!form.value.name.trim() || form.value.name === lastSuggestedName.value) {
+    form.value.name = nextName
+    lastSuggestedName.value = nextName
+  }
+}
 
 watch(
   () => props.modelValue,
   (v) => {
     if (!v) return
-    form.value.name = ''
-    emit('refresh')
+    form.value.name = suggestedName.value.trim() || ''
+    lastSuggestedName.value = form.value.name
+    nameError.value = ''
+    props.bookmarkAPI.refresh()
   }
 )
 
 watch(
-  () => props.bookmarks,
+  suggestedName,
+  (value) => {
+    applySuggestedName(value)
+  }
+)
+
+watch(
+  bookmarks,
   (list) => {
     if (selectedName.value && list.some(i => i.name === selectedName.value)) return
     selectedName.value = list[0]?.name || ''
@@ -74,24 +113,48 @@ watch(
   {immediate: true}
 )
 
+watch(
+  () => form.value.name,
+  (value) => {
+    const name = value.trim()
+    if (!name) {
+      nameError.value = ''
+      return
+    }
+    if (!BOOKMARK_NAME_REG.test(name)) {
+      nameError.value = '仅支持中文、字母、数字和下划线'
+      return
+    }
+    if (bookmarks.value.some(item => item.name === name)) {
+      nameError.value = '该书签名称已存在'
+      return
+    }
+    nameError.value = ''
+  }
+)
+
 const handleAdd = () => {
   const name = form.value.name.trim()
-  if (!name) return
-  if (!/^[\w\u4e00-\u9fff]+$/.test(name)) {
-    return
-  }
-  emit('add', name)
-  form.value.name = ''
+  if (!name || nameError.value) return
+  props.bookmarkAPI.add(name)
+  form.value.name = suggestedName.value.trim() || ''
+  lastSuggestedName.value = form.value.name
+  nameError.value = ''
 }
 
 const handleDelete = () => {
   if (!selectedName.value) return
-  emit('delete', selectedName.value)
+  props.bookmarkAPI.remove(selectedName.value)
 }
 
 const handleGoto = () => {
   if (!selectedName.value) return
-  emit('goto', selectedName.value)
+  props.bookmarkAPI.locate(selectedName.value)
+}
+
+const handleItemGoto = (name: string) => {
+  selectedName.value = name
+  props.bookmarkAPI.locate(name)
 }
 </script>
 
@@ -120,6 +183,22 @@ const handleGoto = () => {
   margin: 6px 0 6px;
 }
 
+.bookmark-tip {
+  margin: -10px 0 8px 70px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.bookmark-selection-preview {
+  margin: -2px 0 8px 70px;
+  max-width: calc(100% - 70px);
+  font-size: 12px;
+  color: #606266;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .bookmark-list {
   border: 1px solid #e4e7ed;
   border-radius: 4px;
@@ -131,6 +210,11 @@ const handleGoto = () => {
   font-size: 13px;
   color: #303133;
   user-select: none;
+  border-bottom: 1px solid #f2f3f5;
+}
+
+.bookmark-item:last-child {
+  border-bottom: none;
 }
 
 .bookmark-item:hover {
@@ -140,5 +224,28 @@ const handleGoto = () => {
 .bookmark-item.active {
   background: #e6f7ff;
   color: #1890ff;
+}
+
+.bookmark-item-name {
+  font-weight: 500;
+}
+
+.bookmark-item-meta {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.bookmark-empty {
+  padding: 20px 12px;
+  color: #909399;
+  font-size: 13px;
+  text-align: center;
+}
+
+.bookmark-error {
+  margin: -2px 0 8px 70px;
+  font-size: 12px;
+  color: #f56c6c;
 }
 </style>

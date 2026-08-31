@@ -176,6 +176,53 @@ export class RevisionComponent {
     return pageNo * (pageHeight + pageGap)
   }
 
+  private _collectOccupiedRanges(selector: string): Array<{ top: number; bottom: number }> {
+    if (!this._container) return []
+    const ranges: Array<{ top: number; bottom: number }> = []
+    const elements = this._container.querySelectorAll(selector)
+    elements.forEach((el: Element) => {
+      const node = el as HTMLElement
+      const top = Number.parseFloat(node.style.top || '')
+      const height = node.offsetHeight || node.getBoundingClientRect().height || 0
+      if (Number.isFinite(top) && height > 0) {
+        ranges.push({ top, bottom: top + height })
+      }
+    })
+    ranges.sort((a, b) => a.top - b.top)
+    return ranges
+  }
+
+  private _estimateBalloonHeight(balloon: RevisionBalloonData): number {
+    const existing = this._balloonDoms.get(balloon.revisionId)
+    const existingHeight = existing?.offsetHeight || existing?.getBoundingClientRect().height || 0
+    if (existingHeight > 0) return existingHeight
+    let height = 82
+    height += Math.min(Math.ceil((balloon.content || '').length / 24), 6) * 16
+    return Math.max(90, Math.min(height, 220))
+  }
+
+  private _resolveVerticalOverlaps(balloons: RevisionBalloonData[]): void {
+    const occupied = this._collectOccupiedRanges(`.${PREFIX}-comment-balloon`)
+    const GAP = 12
+    for (const balloon of balloons) {
+      const height = this._estimateBalloonHeight(balloon)
+      let top = balloon.top
+      let changed = true
+      while (changed) {
+        changed = false
+        for (const range of occupied) {
+          if (top < range.bottom + GAP && top + height > range.top - GAP) {
+            top = range.bottom + GAP
+            changed = true
+          }
+        }
+      }
+      balloon.top = top
+      occupied.push({ top, bottom: top + height })
+      occupied.sort((a, b) => a.top - b.top)
+    }
+  }
+
 
 
   private _formatRevisionDesc(el: any): string {
@@ -310,12 +357,7 @@ export class RevisionComponent {
     }
 
     balloons.sort((a, b) => a.top - b.top)
-    const MIN_GAP = 70
-    for (let i = 1; i < balloons.length; i++) {
-      if (balloons[i].top - balloons[i - 1].top < MIN_GAP) {
-        balloons[i].top = balloons[i - 1].top + MIN_GAP
-      }
-    }
+    this._resolveVerticalOverlaps(balloons)
 
     this._expandContainerWidth(balloons)
     this._renderBalloons(balloons)

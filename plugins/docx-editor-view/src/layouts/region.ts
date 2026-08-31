@@ -6,6 +6,7 @@ import { Draw } from '../renders/engine'
 import { I18n } from '../plugin-stubs'
 import { ZoneTip } from './region-tooltip'
 import { PAGE_NUMBER_STYLES } from '@vervedoc/docx-editor-schema'
+import { RowFlex } from '@vervedoc/docx-editor-schema'
 
 export class Zone {
   private readonly INDICATOR_PADDING = 2
@@ -146,7 +147,7 @@ export class Zone {
       const labelLeft = document.createElement('div')
       labelLeft.classList.add(`${EDITOR_PREFIX}-zone-toolbar-label`)
       const zoneName = this._getZoneName(isHeaderActive)
-      labelLeft.innerText = `${zoneName} - 第 ${p + 1} 节-`
+      labelLeft.innerText = `${zoneName} - 第 ${p + 1} 节 -`
       toolbar.append(labelLeft)
 
       // 右侧插入页码按钮
@@ -199,24 +200,123 @@ export class Zone {
     this._hidePageNumberMenu()
 
     const rect = target.getBoundingClientRect()
+    const pageNumberOptions = (this.draw.getOptions().pageNumber || {}) as any
+    const selectedStyle =
+      PAGE_NUMBER_STYLES.find(item =>
+        item.value === pageNumberOptions.format &&
+        item.numberType === pageNumberOptions.numberType
+      ) ||
+      PAGE_NUMBER_STYLES.find(item => item.value === pageNumberOptions.format) ||
+      PAGE_NUMBER_STYLES[0]
+    const selectedRowFlex = pageNumberOptions.rowFlex || RowFlex.CENTER
+
     const menu = document.createElement('div')
     menu.classList.add(`${EDITOR_PREFIX}-zone-pagenumber-menu`)
-    menu.style.top = `${rect.bottom + 2}px`
+    menu.style.top = `${rect.bottom + 6}px`
     menu.style.left = `${rect.left}px`
 
+    const formItem = document.createElement('div')
+    formItem.classList.add(`${EDITOR_PREFIX}-zone-pagenumber-form-item`)
+
+    const styleLabel = document.createElement('span')
+    styleLabel.classList.add(`${EDITOR_PREFIX}-zone-pagenumber-label`)
+    styleLabel.innerText = '样式:'
+
+    const styleSelect = document.createElement('select')
+    styleSelect.classList.add(`${EDITOR_PREFIX}-zone-pagenumber-select`)
     PAGE_NUMBER_STYLES.forEach(item => {
-      const menuItem = document.createElement('div')
-      menuItem.classList.add(`${EDITOR_PREFIX}-zone-pagenumber-menu-item`)
-      menuItem.innerText = item.label
-      menuItem.onclick = (e) => {
-        e.stopPropagation()
-        this._insertPageNumber(item.value, item.numberType)
-        this._hidePageNumberMenu()
+      const option = document.createElement('option')
+      option.value = item.label
+      option.textContent = item.label
+      if (item.label === selectedStyle.label) {
+        option.selected = true
       }
-      menu.append(menuItem)
+      styleSelect.append(option)
     })
+    formItem.append(styleLabel, styleSelect)
+    menu.append(formItem)
+
+    const positionItem = document.createElement('div')
+    positionItem.classList.add(`${EDITOR_PREFIX}-zone-pagenumber-form-item`)
+
+    const positionLabel = document.createElement('span')
+    positionLabel.classList.add(`${EDITOR_PREFIX}-zone-pagenumber-label`)
+    positionLabel.innerText = '位置:'
+    positionItem.append(positionLabel)
+    menu.append(positionItem)
+
+    const positionSelector = document.createElement('div')
+    positionSelector.classList.add(`${EDITOR_PREFIX}-zone-pagenumber-position-selector`)
+    const positions = [
+      { value: RowFlex.LEFT, label: '左侧' },
+      { value: RowFlex.CENTER, label: '居中' },
+      { value: RowFlex.RIGHT, label: '右侧' }
+    ]
+
+    let currentRowFlex = selectedRowFlex
+    positions.forEach(position => {
+      const item = document.createElement('button')
+      item.type = 'button'
+      item.classList.add(`${EDITOR_PREFIX}-zone-pagenumber-position-item`)
+      if (position.value === currentRowFlex) {
+        item.classList.add('active')
+      }
+      item.innerHTML = `
+        <span class="${EDITOR_PREFIX}-zone-pagenumber-preview-page">
+          <span class="${EDITOR_PREFIX}-zone-pagenumber-preview-line"></span>
+          <span class="${EDITOR_PREFIX}-zone-pagenumber-preview-line"></span>
+          <span class="${EDITOR_PREFIX}-zone-pagenumber-preview-line"></span>
+          <span class="${EDITOR_PREFIX}-zone-pagenumber-preview-line short"></span>
+          <span class="${EDITOR_PREFIX}-zone-pagenumber-preview-number ${position.value}">1</span>
+        </span>
+        <span class="${EDITOR_PREFIX}-zone-pagenumber-position-text">${position.label}</span>
+      `
+      item.onclick = (e) => {
+        e.stopPropagation()
+        currentRowFlex = position.value
+        const activeClass = 'active'
+        positionSelector.querySelectorAll(`.${EDITOR_PREFIX}-zone-pagenumber-position-item`).forEach(node => {
+          node.classList.remove(activeClass)
+        })
+        item.classList.add(activeClass)
+      }
+      positionSelector.append(item)
+    })
+    menu.append(positionSelector)
+
+    const footer = document.createElement('div')
+    footer.classList.add(`${EDITOR_PREFIX}-zone-pagenumber-footer`)
+
+    const confirmBtn = document.createElement('button')
+    confirmBtn.type = 'button'
+    confirmBtn.classList.add(`${EDITOR_PREFIX}-zone-pagenumber-confirm`)
+    confirmBtn.innerText = '确定'
+    confirmBtn.onclick = (e) => {
+      e.stopPropagation()
+      const targetStyle = PAGE_NUMBER_STYLES.find(item => item.label === styleSelect.value) || PAGE_NUMBER_STYLES[0]
+      this._insertPageNumber(targetStyle.value, targetStyle.numberType, currentRowFlex)
+      this._hidePageNumberMenu()
+    }
+    footer.append(confirmBtn)
+    menu.append(footer)
 
     document.body.append(menu)
+    const viewportPadding = 8
+    const menuRect = menu.getBoundingClientRect()
+    let menuTop = rect.bottom + 6
+    let menuLeft = rect.left
+    if (menuLeft + menuRect.width > window.innerWidth - viewportPadding) {
+      menuLeft = Math.max(
+        viewportPadding,
+        window.innerWidth - menuRect.width - viewportPadding
+      )
+    }
+    if (menuTop + menuRect.height > window.innerHeight - viewportPadding) {
+      menuTop = rect.top - menuRect.height - 6
+    }
+    menuTop = Math.max(viewportPadding, menuTop)
+    menu.style.top = `${menuTop}px`
+    menu.style.left = `${menuLeft}px`
     this.pageNumberMenu = menu
 
     // 滚动时关闭菜单
@@ -253,12 +353,16 @@ export class Zone {
     }
   }
 
-  private _insertPageNumber(format: string, numberType?: any) {
+  private _insertPageNumber(format: string, numberType?: any, rowFlex?: RowFlex) {
     const options = this.draw.getOptions()
     // 设置页码格式
     options.pageNumber = options.pageNumber || {}
     const pageNumberOptions = options.pageNumber as any
     pageNumberOptions.format = format
+    pageNumberOptions.disabled = false
+    if (rowFlex) {
+      pageNumberOptions.rowFlex = rowFlex
+    }
     if (numberType) {
       pageNumberOptions.numberType = numberType
     }

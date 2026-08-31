@@ -11,7 +11,6 @@ import { editorStateStore } from '@/stores/editor-state'
 import { useEditorImport } from '@/composables/use-editor-import'
 import { useEditorMedia } from '@/composables/use-editor-media'
 import { useEditorChart } from '@/composables/use-editor-chart'
-import { useEditorRevisions } from '@/composables/use-editor-revisions'
 import { useEditorHeaderFooter } from '@/composables/use-editor-header-footer'
 import { useEditorBreaks } from '@/composables/use-editor-breaks'
 import { useEditorTable } from '@/composables/use-editor-table'
@@ -84,10 +83,6 @@ const {
 })
 
 const {
-  acceptAllRevisions, rejectAllRevisions, acceptRevisionById, rejectRevisionById, locateRevision,
-} = useEditorRevisions({ getEditorInstance: () => editorInstance })
-
-const {
   header: headerFn, footer: footerFn, mainZone: mainZoneFn,
   clearHeader: clearHeaderFn, clearFooter: clearFooterFn, setPageNumber: setPageNumberFn,
 } = useEditorHeaderFooter({ getEditorInstance: () => editorInstance })
@@ -105,10 +100,7 @@ const {
   tableBorderExternalWidth: tableBorderExternalWidthFn,
 } = useEditorTable({ getEditorInstance: () => editorInstance })
 
-const {
-  search: searchFn, searchNavigatePre: searchNavigatePreFn,
-  searchNavigateNext: searchNavigateNextFn, replace: replaceFn, replaceAll: replaceAllFn,
-} = useEditorSearch({ getEditorInstance: () => editorInstance })
+const { searchAPI } = useEditorSearch({ getEditorInstance: () => editorInstance })
 
 const {
   tocInsert: tocInsertFn, tocRemove: tocRemoveFn, locationCatalog: locationCatalogFn,
@@ -500,24 +492,6 @@ const executeCommand = (command: string, ...args: any[]) => {
       }
     },
 
-    addBookmark: (payload: { name: string }) => {
-      if (payload?.name) {
-        editorInstance.command.executeAddBookmark({ name: payload.name })
-      }
-    },
-
-    deleteBookmark: (payload: { name: string }) => {
-      if (payload?.name) {
-        editorInstance.command.executeDeleteBookmark({ name: payload.name })
-      }
-    },
-
-    gotoBookmark: (payload: { name: string }) => {
-      if (payload?.name) {
-        editorInstance.command.executeGotoBookmark({ name: payload.name })
-      }
-    },
-
     // 分隔符
     separator: separatorFn,
 
@@ -547,13 +521,6 @@ const executeCommand = (command: string, ...args: any[]) => {
     block: () => {
       // 实现内容块对话框逻辑
     },
-
-    // 搜索替换
-    search: searchFn,
-    searchNavigatePre: searchNavigatePreFn,
-    searchNavigateNext: searchNavigateNextFn,
-    replace: replaceFn,
-    replaceAll: replaceAllFn,
 
     tocInsert: tocInsertFn,
     tocRemove: tocRemoveFn,
@@ -626,12 +593,6 @@ const executeCommand = (command: string, ...args: any[]) => {
     previewHtml: (payload: any) => {
       editorInstance.command.execute('previewHtml', payload)
     },
-
-    acceptAllRevisions,
-    rejectAllRevisions,
-    acceptRevisionById,
-    rejectRevisionById,
-    locateRevision,
 
     comment: () => {
       const c = editorInstance.comment
@@ -733,6 +694,7 @@ const insertBlankPageBefore = (direction?: string) => {
 defineExpose({
   executeCommand,
   getEditorInstance,
+  getSearchAPI: () => searchAPI,
   updateCatalog,
   refreshThumbnails,
   insertBlankPageBefore

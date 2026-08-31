@@ -1,3 +1,5 @@
+import type { ISearchResultItem } from '@vervedoc/core'
+
 /**
  * 编辑器实例接口
  */
@@ -6,64 +8,68 @@ interface EditorInstance {
   command: any
 }
 
+export interface IEditorSearchApi {
+  query(keyword: string | null): ISearchResultItem[]
+  locate(result: ISearchResultItem | number): ISearchResultItem | null
+  replaceOne(
+    result: ISearchResultItem | null,
+    replacement: string
+  ): ISearchResultItem[]
+  replaceAll(keyword: string, replacement: string): ISearchResultItem[]
+  clear(): ISearchResultItem[]
+}
+
 /**
  * 查找替换 composable
  * @param options 配置项
- * @returns 查找、上一个/下一个、替换、全部替换方法
+ * @returns 搜索领域 API
  */
 export function useEditorSearch(options: { getEditorInstance: () => EditorInstance | null }) {
   const { getEditorInstance } = options
 
-  /**
-   * 执行查找操作
-   * @param text 待查找的文本，传入 null 可清除查找结果
-   */
-  function search(text: string | null) {
+  function query(keyword: string | null): ISearchResultItem[] {
     const instance = getEditorInstance()
-    if (!instance) return
-    instance.command.executeSearch(text)
+    if (!instance) return []
+    return instance.command.executeSearch(keyword) || []
   }
 
-  /** 跳转到上一个查找匹配结果 */
-  function searchNavigatePre() {
+  function locate(result: ISearchResultItem | number): ISearchResultItem | null {
     const instance = getEditorInstance()
-    if (!instance) return
-    instance.command.executeSearchNavigatePre()
+    if (!instance) return null
+    return instance.command.executeLocateSearchResult?.(result) ?? null
   }
 
-  /** 跳转到下一个查找匹配结果 */
-  function searchNavigateNext() {
+  function replaceOne(
+    result: ISearchResultItem | null,
+    replacement: string
+  ): ISearchResultItem[] {
     const instance = getEditorInstance()
-    if (!instance) return
-    instance.command.executeSearchNavigateNext()
+    if (!instance || !result || !replacement) return []
+    instance.command.executeReplace(replacement, {
+      index: result.resultIndex
+    })
+    return instance.command.executeSearch(result.keyword) || []
   }
 
-  /**
-   * 替换当前匹配的查找结果
-   * @param text 替换后的文本
-   */
-  function replace(text: string) {
+  function replaceAll(keyword: string, replacement: string): ISearchResultItem[] {
     const instance = getEditorInstance()
-    if (!instance) return
-    instance.command.executeReplace(text)
+    if (!instance) return []
+    return instance.command.executeReplaceAll?.(keyword, replacement) || []
   }
 
-  /**
-   * 替换文档中所有匹配的查找结果
-   * @param searchText 待查找的文本
-   * @param replaceText 替换后的文本
-   */
-  function replaceAll(searchText: string, replaceText: string) {
-    const instance = getEditorInstance()
-    if (!instance) return
-    instance.command.executeReplaceAll?.(searchText, replaceText)
+  function clear(): ISearchResultItem[] {
+    return query(null)
+  }
+
+  const searchAPI: IEditorSearchApi = {
+    query,
+    locate,
+    replaceOne,
+    replaceAll,
+    clear
   }
 
   return {
-    search,
-    searchNavigatePre,
-    searchNavigateNext,
-    replace,
-    replaceAll
+    searchAPI
   }
 }

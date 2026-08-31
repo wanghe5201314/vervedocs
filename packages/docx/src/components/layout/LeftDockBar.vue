@@ -92,8 +92,8 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: column;
   align-items: center;
-  border-right: 1px solid #e4e7ed;
-  background-color: #f2f4f7;
+  border-right: 1px solid #f1f1f1;
+  background-color: #f1f1f1;
   padding: 12px 0;
 }
 

@@ -5,6 +5,7 @@ import { ConfigProvider } from 'ant-design-vue'
 import '@/ui'
 import WordEditorComponent from '@/app/WordEditorApp.vue'
 import type { CollaborationOptions, DocxEditorUiInitialDocument } from '@/ui'
+import type { ExternalEditorApi } from '@/composables/use-external-events'
 import type {
   DocxImportCallback,
   DocxExportCallback
@@ -12,7 +13,7 @@ import type {
 
 interface WordEditorComponentRef {
   executeCommand?: (command: string, ...args: unknown[]) => unknown
-  api?: unknown
+  api?: ExternalEditorApi
 }
 
 /**
@@ -138,7 +139,7 @@ export class WordEditor {
    * 获取编辑器对外暴露的 API 对象
    * @returns 编辑器 API
    */
-  getApi() {
+  getApi(): ExternalEditorApi | undefined {
     return this.editorRef?.api
   }
 

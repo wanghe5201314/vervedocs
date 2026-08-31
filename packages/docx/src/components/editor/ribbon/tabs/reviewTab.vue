@@ -34,22 +34,9 @@
       <RibbonButton icon="pencil-plus" text="修订模式" title="修订模式" size="large" :active="isTrackChanges" command="toggleTrackChanges" />
       <div class="review-ribbon-actions">
         <a-dropdown :trigger="['click']">
-          <RibbonButton icon="file-difference-outline" text="显示模式" :title="currentRevisionViewModeLabel" size="large" has-arrow />
-          <template #overlay>
-            <a-menu @click="({ key }: any) => emit('command', 'revisionViewMode', key)">
-              <a-menu-item v-for="option in revisionViewModeOptions" :key="option.value">
-                <span class="review-mode-item" :class="{ active: revisionViewMode === option.value }">
-                  <span>{{ option.label }}</span>
-                </span>
-              </a-menu-item>
-            </a-menu>
-          </template>
-        </a-dropdown>
-
-        <a-dropdown :trigger="['click']">
           <RibbonButton icon="eye-outline" text="显示标记" :title="currentRevisionDisplayModeLabel" size="large" has-arrow />
           <template #overlay>
-            <a-menu @click="({ key }: any) => emit('command', 'revisionDisplayMode', key)">
+            <a-menu class="review-mode-menu" @click="({ key }: any) => emit('command', 'revisionDisplayMode', key)">
               <a-menu-item v-for="option in revisionDisplayModeOptions" :key="option.value">
                 <span class="review-mode-item" :class="{ active: revisionDisplayMode === option.value }">
                   <span>{{ option.label }}</span>
@@ -102,7 +89,6 @@ const props = defineProps<{
   isTrackChanges?: boolean
   revisionCount?: number
   revisionDisplayMode?: 'all' | 'comments' | 'revisions' | 'none'
-  revisionViewMode?: 'finalMarkup' | 'final' | 'originalMarkup' | 'original'
   documentStats?: {
     totalPages: number
     wordCount: number
@@ -112,24 +98,12 @@ const props = defineProps<{
   }
 }>()
 
-const revisionViewModeOptions = [
-  { value: 'finalMarkup', label: '显示标记的最终状态' },
-  { value: 'final', label: '最终状态' },
-  { value: 'originalMarkup', label: '显示标记的原始状态' },
-  { value: 'original', label: '原始状态' }
-] as const
-
 const revisionDisplayModeOptions = [
   { value: 'all', label: '显示所有批注和修订' },
   { value: 'comments', label: '仅显示批注' },
   { value: 'revisions', label: '仅显示修订' },
   { value: 'none', label: '不显示标记' }
 ] as const
-
-const currentRevisionViewModeLabel = computed(() => {
-  const current = revisionViewModeOptions.find(option => option.value === props.revisionViewMode)
-  return current?.label || '显示标记的原始状态'
-})
 
 const currentRevisionDisplayModeLabel = computed(() => {
   switch (props.revisionDisplayMode) {
@@ -150,7 +124,6 @@ const hasRevisions = computed(() => Number(props.revisionCount || 0) > 0)
 
 <style scoped>
 @import '../../toolbar/ribbon-popover.css';
-.mi { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
 
 .review-ribbon-actions {
   display: flex;
@@ -170,11 +143,18 @@ const hasRevisions = computed(() => Number(props.revisionCount || 0) > 0)
   display: flex;
   align-items: center;
   min-width: 190px;
-  padding: 6px 8px;
+  padding: 4px 6px;
   border-radius: 4px;
+  font-size: 12px;
 }
 
 .review-mode-item.active {
   background: #eef1f5;
+}
+
+:deep(.review-mode-menu .ant-menu-item) {
+  padding: 2px 8px;
+  line-height: 20px;
+  margin: 0;
 }
 </style>

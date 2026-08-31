@@ -76,7 +76,6 @@
         :is-track-changes="isTrackChanges"
         :revision-count="revisionCount"
         :revision-display-mode="revisionDisplayMode"
-        :revision-view-mode="revisionViewMode"
         :document-stats="documentStats"
         @command="handleCommand"
       />
@@ -162,7 +161,6 @@ const showLineBreak = ref(false)
 const isTrackChanges = ref(false)
 const currentEditorMode = ref('edit')
 const revisionDisplayMode = ref<'all' | 'comments' | 'revisions' | 'none'>('all')
-const revisionViewMode = ref<'finalMarkup' | 'final' | 'originalMarkup' | 'original'>('originalMarkup')
 const isEyeCareEnabled = ref(false)
 
 const editorState = editorStateStore.state
@@ -216,9 +214,6 @@ const handleCommand = (cmd: string, ...args: any[]) => {
     case 'revisionDisplayMode':
       revisionDisplayMode.value = args[0]
       emit('command', 'revisionDisplayMode', ...args)
-      return
-    case 'revisionViewMode':
-      revisionViewMode.value = args[0]
       return
     case 'paperDirection':
       emit('command', 'paperDirection', ...args)

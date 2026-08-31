@@ -2,29 +2,70 @@ import { IElement } from '@vervedoc/docx-editor-schema'
 import { formatElementContext } from '@vervedoc/docx-editor-schema'
 import { BaseCommandAdapter, IAdapterContext } from './types'
 
+export interface IBookmarkInfo {
+  name: string
+  index: number
+  startIndex: number
+  endIndex: number | null
+  collapsed: boolean
+  hidden: boolean
+}
+
 export class BookmarkAdapter extends BaseCommandAdapter {
   constructor(context: IAdapterContext) {
     super(context)
   }
 
-  public getBookmarks(): Array<{ name: string; index: number }> {
+  private _getBookmarkMarker(element: IElement | undefined) {
+    const ext = (element as any)?.extension
+    const marker =
+      ext && typeof ext === 'object' ? (ext as any).bookmarkMarker : null
+    if (!marker?.name || typeof marker.name !== 'string') return null
+    return {
+      name: marker.name as string,
+      position: marker.position === 'end' ? 'end' : 'start'
+    }
+  }
+
+  private _isBookmarkNameValid(name: string) {
+    return /^[\w\u4e00-\u9fff]+$/.test(name)
+  }
+
+  public getBookmarks(): IBookmarkInfo[] {
     const elementList = this.draw.getOriginalMainElementList()
-    const map = new Map<string, number>()
+    const map = new Map<string, IBookmarkInfo>()
     for (let i = 0; i < elementList.length; i++) {
-      const element: any = elementList[i]
-      const ext = element?.extension
-      const marker = ext && typeof ext === 'object' ? (ext as any).bookmarkMarker : null
-      const name = marker?.name
-      if (!name || typeof name !== 'string') continue
-      const pos = marker?.position === 'end' ? 'end' : 'start'
-      if (pos === 'start') {
-        if (!map.has(name)) map.set(name, i)
-      } else if (!map.has(name)) {
-        map.set(name, i)
+      const marker = this._getBookmarkMarker(elementList[i])
+      if (!marker) continue
+      const current = map.get(marker.name)
+      if (!current) {
+        map.set(marker.name, {
+          name: marker.name,
+          index: i,
+          startIndex: marker.position === 'start' ? i : -1,
+          endIndex: marker.position === 'end' ? i : null,
+          collapsed: marker.position !== 'end',
+          hidden: marker.name.startsWith('_')
+        })
+        continue
+      }
+      if (marker.position === 'start') {
+        if (current.startIndex < 0) current.startIndex = i
+        current.index = current.startIndex
+      } else {
+        current.endIndex = i
+        if (current.startIndex < 0) {
+          current.startIndex = i
+          current.index = i
+        }
       }
     }
-    return Array.from(map.entries())
-      .map(([name, index]) => ({ name, index }))
+    return Array.from(map.values())
+      .map(bookmark => ({
+        ...bookmark,
+        collapsed:
+          bookmark.endIndex == null || bookmark.endIndex <= bookmark.startIndex + 1
+      }))
       .sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
   }
 
@@ -35,7 +76,7 @@ export class BookmarkAdapter extends BaseCommandAdapter {
 
     const name = payload?.name?.trim()
     if (!name) return
-    const isValid = /^[A-Za-z][A-Za-z0-9_]*$/.test(name)
+    const isValid = this._isBookmarkNameValid(name)
     if (!isValid) return
 
     const exists = this.getBookmarks().some(b => b.name === name)
@@ -95,9 +136,7 @@ export class BookmarkAdapter extends BaseCommandAdapter {
     const elementList = this.draw.getElementList()
     const indicesToDelete: number[] = []
     for (let i = 0; i < elementList.length; i++) {
-      const el: any = elementList[i]
-      const ext = el?.extension
-      const marker = ext && typeof ext === 'object' ? (ext as any).bookmarkMarker : null
+      const marker = this._getBookmarkMarker(elementList[i])
       if (marker?.name === name) {
         indicesToDelete.push(i)
       }
@@ -119,11 +158,21 @@ export class BookmarkAdapter extends BaseCommandAdapter {
     const list = this.getBookmarks()
     const target = list.find(b => b.name === name)
     if (!target) return
-    const index = target.index
+    const elementList = this.draw.getElementList()
+    const caretIndex = Math.max(
+      0,
+      Math.min(target.startIndex + 1, elementList.length - 1)
+    )
+    const hasRange =
+      target.endIndex !== null && target.endIndex > target.startIndex + 1
+    const startIndex = caretIndex
+    const endIndex = hasRange
+      ? Math.max(caretIndex, (target.endIndex as number) - 1)
+      : startIndex
     this.position.setPositionContext({ isTable: false })
-    this.range.setRange(index, index)
+    this.range.setRange(startIndex, endIndex)
     this.draw.render({
-      curIndex: index,
+      curIndex: endIndex,
       isCompute: false,
       isSubmitHistory: false
     })

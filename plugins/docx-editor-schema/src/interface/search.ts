@@ -19,6 +19,29 @@ export interface ISearchResultRestArgs {
 
 export type ISearchResult = ISearchResultBasic & ISearchResultRestArgs
 
+export interface ISearchResultRect {
+  pageNo: number
+  rowNo: number
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+export interface ISearchResultItem {
+  resultIndex: number
+  groupId: string
+  keyword: string
+  context: EditorContext
+  text: string
+  previewText: string
+  pageNo: number
+  range: IRange
+  startPosition: IElementPosition
+  endPosition: IElementPosition
+  rects: ISearchResultRect[]
+}
+
 export interface ISearchResultContext {
   range: IRange
   startPosition: IElementPosition

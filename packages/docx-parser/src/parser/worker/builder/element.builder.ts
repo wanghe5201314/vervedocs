@@ -37,6 +37,7 @@ export function buildElements(
 ): IElement[] {
   const elements: IElement[] = []
   const activeCommentIds = new Set<string>()
+  const bookmarkIdNameMap = new Map<string, string>()
   const defaultSize = options.defaultSize ?? 12
 
   // 预处理：合并连续空段落
@@ -50,14 +51,14 @@ export function buildElements(
 
     if (node.type === 'paragraph') {
       const endSize = buildParagraph(
-        node, elements, options, isFirst, activeCommentIds, prevEndSize
+        node, elements, options, isFirst, activeCommentIds, bookmarkIdNameMap, prevEndSize
       )
       prevEndSize = endSize
     } else if (node.type === 'table') {
-      buildTable(node, elements, options, activeCommentIds)
+      buildTable(node, elements, options, activeCommentIds, bookmarkIdNameMap)
       prevEndSize = defaultSize
     } else if (node.type === 'column') {
-      buildColumn(node, elements, options, activeCommentIds)
+      buildColumn(node, elements, options, activeCommentIds, bookmarkIdNameMap)
       prevEndSize = defaultSize
     }
   }
@@ -131,6 +132,7 @@ function buildParagraph(
   options: IDocxParseOptions,
   isFirst: boolean,
   activeCommentIds: Set<string>,
+  bookmarkIdNameMap: Map<string, string>,
   prevEndSize: number
 ): number {
   const { style, chunks } = para
@@ -187,7 +189,7 @@ function buildParagraph(
   // 构建内容元素
   const contentElements: IElement[] = []
   for (const chunk of chunks) {
-    buildChunk(chunk, contentElements, options, activeCommentIds)
+    buildChunk(chunk, contentElements, options, activeCommentIds, bookmarkIdNameMap)
   }
 
   if (contentElements.length === 0) {
@@ -263,7 +265,8 @@ function buildChunk(
   chunk: InlineChunk,
   elements: IElement[],
   options: IDocxParseOptions,
-  activeCommentIds: Set<string>
+  activeCommentIds: Set<string>,
+  bookmarkIdNameMap: Map<string, string>
 ): void {
   switch (chunk.type) {
     case 'text':
@@ -289,7 +292,7 @@ function buildChunk(
       }
       break
     case 'bookmark':
-      // 书签：忽略
+      buildBookmarkChunk(chunk, elements, options, activeCommentIds, bookmarkIdNameMap)
       break
     default:
       // 嵌套表格 chunk（来自单元格内的 parseTable 结果）
@@ -297,6 +300,37 @@ function buildChunk(
         // 嵌套表格在 buildTable 中处理，此处跳过（已在 parseCellContent 中作为 ParagraphNode 包装）
       }
   }
+}
+
+function buildBookmarkChunk(
+  chunk: Extract<InlineChunk, { type: 'bookmark' }>,
+  elements: IElement[],
+  options: IDocxParseOptions,
+  activeCommentIds: Set<string>,
+  bookmarkIdNameMap: Map<string, string>
+): void {
+  const name =
+    chunk.markType === 'start'
+      ? chunk.name
+      : (chunk.id ? bookmarkIdNameMap.get(chunk.id) : undefined)
+  if (!name) return
+  if (chunk.markType === 'start' && chunk.id) {
+    bookmarkIdNameMap.set(chunk.id, name)
+  }
+  const el: IElement = {
+    value: ZERO_WIDTH_SPACE,
+    extension: {
+      bookmarkMarker: {
+        name,
+        position: chunk.markType
+      }
+    },
+    size: (options.defaultSize ?? 12) as any
+  }
+  if (activeCommentIds.size > 0) {
+    el.groupIds = [...activeCommentIds]
+  }
+  elements.push(el)
 }
 
 function buildTextChunk(
@@ -449,7 +483,8 @@ function buildTable(
   table: TableNode,
   elements: IElement[],
   options: IDocxParseOptions,
-  activeCommentIds: Set<string>
+  activeCommentIds: Set<string>,
+  bookmarkIdNameMap: Map<string, string>
 ): void {
   const targetInnerWidth = options.targetInnerWidth
   const tableWidthMode = options.tableWidthMode ?? 'fit'
@@ -479,9 +514,23 @@ function buildTable(
         // 检测嵌套表格包装段落
         if (isNestedTableParagraph(para)) {
           const nestedTable = (para.chunks[0] as any).table as TableNode
-          buildTable(nestedTable, cellElements, options, activeCommentIds)
+          buildTable(
+            nestedTable,
+            cellElements,
+            options,
+            activeCommentIds,
+            bookmarkIdNameMap
+          )
         } else {
-          buildParagraph(para, cellElements, options, pi === 0 && cellElements.length === 0, activeCommentIds, options.defaultSize ?? 12)
+          buildParagraph(
+            para,
+            cellElements,
+            options,
+            pi === 0 && cellElements.length === 0,
+            activeCommentIds,
+            bookmarkIdNameMap,
+            options.defaultSize ?? 12
+          )
         }
       }
 
@@ -540,7 +589,8 @@ function buildColumn(
   column: ColumnNode,
   elements: IElement[],
   options: IDocxParseOptions,
-  activeCommentIds: Set<string>
+  activeCommentIds: Set<string>,
+  bookmarkIdNameMap: Map<string, string>
 ): void {
   const columnId = generateElementId()
 
@@ -569,7 +619,15 @@ function buildColumn(
     let prevEndSize = options.defaultSize ?? 12
     for (let pi = 0; pi < group.length; pi++) {
       const isFirst = pi === 0 && colIdx === 0
-      const endSize = buildParagraph(group[pi], elements, options, isFirst, activeCommentIds, prevEndSize)
+      const endSize = buildParagraph(
+        group[pi],
+        elements,
+        options,
+        isFirst,
+        activeCommentIds,
+        bookmarkIdNameMap,
+        prevEndSize
+      )
       prevEndSize = endSize
 
       // 为该列的元素附加 columnId

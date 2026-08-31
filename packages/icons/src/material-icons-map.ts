@@ -98,7 +98,6 @@ const iconMap: Record<string, string> = {
   'file-plus-outline': 'note_add',
   'file-compare': 'compare',
   'file-compare-outline': 'compare',
-  'file-difference-outline': 'difference',
   'file-import-outline': 'file_download',
   'file-search-outline': 'plagiarism',
   'printer-outline': 'print',

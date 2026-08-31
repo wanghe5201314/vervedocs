@@ -156,8 +156,13 @@ export function parseParagraph(
     } else if (tag === 'commentRangeEnd' && childNs === NS.w) {
       const commentId = child.getAttributeNS(NS.w, 'id') ?? child.getAttribute('w:id') ?? ''
       if (commentId) chunks.push({ type: 'commentMarker', markType: 'end', commentId })
-    } else if (tag === 'bookmarkStart' || tag === 'bookmarkEnd') {
-      // 书签：忽略
+    } else if (tag === 'bookmarkStart' && childNs === NS.w) {
+      const name = child.getAttributeNS(NS.w, 'name') ?? child.getAttribute('w:name') ?? ''
+      const id = child.getAttributeNS(NS.w, 'id') ?? child.getAttribute('w:id') ?? ''
+      if (name) chunks.push({ type: 'bookmark', name, id, markType: 'start' })
+    } else if (tag === 'bookmarkEnd' && childNs === NS.w) {
+      const id = child.getAttributeNS(NS.w, 'id') ?? child.getAttribute('w:id') ?? ''
+      if (id) chunks.push({ type: 'bookmark', id, markType: 'end' })
     }
   })
 

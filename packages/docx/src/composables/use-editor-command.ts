@@ -1,14 +1,9 @@
 import { Ref, nextTick } from 'vue'
 import { emitExternalEvent } from '@/composables/use-external-events'
+import type { IEditorCatalogApi } from '@/composables/use-editor-catalog'
+import type { IEditorCommentApi } from '@/composables/use-editor-comments'
+import type { IRevisionApi } from '@/composables/use-editor-revisions'
 import type { DocumentStats } from '@/types/document'
-
-/**
- * 在下一帧延迟渲染评论
- * @param getCommentComponent 获取评论组件的函数
- */
-function renderCommentsLater(getCommentComponent: () => any): void {
-  nextTick(() => requestAnimationFrame(() => getCommentComponent()?.render()))
-}
 
 /**
  * 编辑器命令分发 composable
@@ -16,20 +11,18 @@ function renderCommentsLater(getCommentComponent: () => any): void {
  * @returns 编辑器命令处理函数
  */
 export function useEditorCommand(options: {
-  /** 缓存的目录数据 */
-  cachedCatalog: Ref<any[]>
-  /** 目录组件引用 */
-  catalogRef: Ref<any>
   /** 页脚组件引用 */
   footerRef: Ref<any>
   /** 文档统计信息 */
   documentStats: DocumentStats
-  /** 获取评论组件 */
-  getCommentComponent: () => any
-  /** 获取修订组件 */
-  getRevisionComponent: () => any
-  /** 修订列表 */
-  revisionList: Ref<any[]>
+  /** 评论 API */
+  commentAPI: IEditorCommentApi
+  /** 目录 API */
+  catalogAPI: IEditorCatalogApi
+  /** 修订 API */
+  revisionAPI: IRevisionApi
+  /** 刷新批注/修订覆盖层 */
+  refreshReviewOverlays: () => void
   /** 判断本次是否需要抑制一次保存 */
   isSuppressSaveOnce: () => boolean
   /** 设置是否抑制一次保存 */
@@ -40,41 +33,24 @@ export function useEditorCommand(options: {
   saveNow: (opts?: { silent?: boolean }) => Promise<void>
 }) {
   const {
-    cachedCatalog,
-    catalogRef,
     footerRef,
     documentStats,
-    getCommentComponent,
-    getRevisionComponent,
-    revisionList,
+    commentAPI,
+    catalogAPI,
+    revisionAPI,
+    refreshReviewOverlays,
     isSuppressSaveOnce,
     setSuppressSaveOnce,
     getCollabPlugin,
     saveNow,
   } = options
 
-  /**
-   * 同步修订列表到响应式数据
-   */
-  const syncRevisionList = () => {
-    const revisionComp = getRevisionComponent()
-    if (!revisionComp) return
-    revisionList.value = revisionComp.getRevisions().map((r: any) => ({
-      id: r.id,
-      type: r.type,
-      author: r.author,
-      date: r.date,
-      content: r.content
-    }))
-  }
-
   const commandHandlers: Record<string, (args: any[]) => void | boolean> = {
     catalogChange: args => {
-      cachedCatalog.value = args[0] ?? []
-      catalogRef.value?.updateCatalog?.(cachedCatalog.value)
+      void catalogAPI.sync(args[0] ?? [])
     },
     thumbnailsChange: args => {
-      catalogRef.value?.updateThumbnails?.(args[0] ?? [])
+      catalogAPI.setThumbnails(args[0] ?? [])
     },
     editorStatus: args => {
       const payload = (args[0] ?? {}) as Record<string, any>
@@ -97,13 +73,10 @@ export function useEditorCommand(options: {
     },
     contentChange: args => {
       emitExternalEvent('contentChange', args[0] ?? null)
-      nextTick(() => {
-        getCommentComponent()?.render()
-        getRevisionComponent()?.update()
-      })
+      nextTick(() => refreshReviewOverlays())
       const collab = getCollabPlugin()
       collab?.syncComments()
-      syncRevisionList()
+      revisionAPI.sync()
       if (isSuppressSaveOnce()) {
         setSuppressSaveOnce(false)
         return true
@@ -113,8 +86,7 @@ export function useEditorCommand(options: {
     },
     commentsLoaded: args => {
       const metas: any[] = args[0] || []
-      getCommentComponent()?.buildCommentsFromMetas(metas)
-      renderCommentsLater(getCommentComponent)
+      commentAPI.load(metas)
     },
   }
 

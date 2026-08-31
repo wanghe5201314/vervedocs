@@ -309,6 +309,59 @@ export class CommentComponent {
     return pageNo * (pageHeight + pageGap)
   }
 
+  private _collectOccupiedRanges(selector: string): Array<{ top: number; bottom: number }> {
+    const container = this._command?.getContainer?.()
+    if (!container) return []
+    const ranges: Array<{ top: number; bottom: number }> = []
+    const elements = container.querySelectorAll(selector)
+    elements.forEach((el: Element) => {
+      const node = el as HTMLElement
+      const top = Number.parseFloat(node.style.top || '')
+      const height = node.offsetHeight || node.getBoundingClientRect().height || 0
+      if (Number.isFinite(top) && height > 0) {
+        ranges.push({ top, bottom: top + height })
+      }
+    })
+    ranges.sort((a, b) => a.top - b.top)
+    return ranges
+  }
+
+  private _estimateCommentHeight(comment: IComment): number {
+    const existing = this._cardDoms.get(comment.id)
+    const existingHeight = existing?.offsetHeight || existing?.getBoundingClientRect().height || 0
+    if (existingHeight > 0) return existingHeight
+    if (comment.isEditing) return 190
+    const { sourceText, mainText } = extractCommentBody(comment.content, comment.rangeText)
+    let height = 86
+    height += Math.min(Math.ceil(sourceText.length / 22), 4) * 16
+    height += Math.min(Math.ceil(mainText.length / 24), 6) * 16
+    height += Math.min(comment.replies?.length || 0, 3) * 34
+    return Math.max(96, Math.min(height, 260))
+  }
+
+  private _resolveVerticalOverlaps(comments: IComment[]): void {
+    const occupied = this._collectOccupiedRanges(`.${PREFIX}-revision-balloon`)
+    const GAP = 12
+    for (const comment of comments) {
+      if (!comment.position) continue
+      const height = this._estimateCommentHeight(comment)
+      let top = comment.position.top
+      let changed = true
+      while (changed) {
+        changed = false
+        for (const range of occupied) {
+          if (top < range.bottom + GAP && top + height > range.top - GAP) {
+            top = range.bottom + GAP
+            changed = true
+          }
+        }
+      }
+      comment.position.top = top
+      occupied.push({ top, bottom: top + height })
+      occupied.sort((a, b) => a.top - b.top)
+    }
+  }
+
   private _computePositions(): void {
     if (!this._command || this._comments.length === 0) return
     const positionList = this._command.getPositionList?.()
@@ -346,14 +399,7 @@ export class CommentComponent {
     }
 
     const sorted = this._comments.filter(c => c.position).sort((a, b) => (a.position!.top - b.position!.top))
-    const MIN_GAP = 80
-    for (let i = 1; i < sorted.length; i++) {
-      const prev = sorted[i - 1]
-      const curr = sorted[i]
-      if (curr.position!.top - prev.position!.top < MIN_GAP) {
-        curr.position!.top = prev.position!.top + MIN_GAP
-      }
-    }
+    this._resolveVerticalOverlaps(sorted)
   }
 
   public render(): void {
@@ -459,6 +505,7 @@ export class CommentComponent {
 
   private _createCardDom(comment: IComment): HTMLDivElement {
     const bubble = document.createElement('div')
+    bubble.classList.add(`${PREFIX}-comment-balloon`)
     bubble.style.cssText = 'position:absolute;pointer-events:auto;transition:all 0.2s ease;'
     bubble.addEventListener('mouseenter', () => this._showAnchorLines(comment))
     bubble.addEventListener('mouseleave', () => this._hideAnchorLines())

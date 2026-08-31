@@ -1,9 +1,99 @@
+import type { ICatalogItem, ISearchResultItem } from '@vervedoc/docx-editor-schema'
+import type { IBookmarkInfo } from './adapters/bookmark-adapter'
 import { CommandAdapt } from './command-adapt'
 
 type CommandFunction = (...args: any[]) => any
 
+const DEFAULT_BOOKMARK_NAME = '书签'
+const MAX_BOOKMARK_NAME_LENGTH = 12
+
+const sanitizeBookmarkName = (text: string): string => {
+  return text
+    .replace(/\u200B/g, '')
+    .replace(/\s+/g, '')
+    .replace(/[^\w\u4e00-\u9fff]/g, '')
+    .slice(0, MAX_BOOKMARK_NAME_LENGTH)
+}
+
+const ensureUniqueBookmarkName = (baseName: string, names: Set<string>): string => {
+  const normalizedBase = baseName || DEFAULT_BOOKMARK_NAME
+  if (!names.has(normalizedBase)) return normalizedBase
+  let suffix = 1
+  while (true) {
+    const nextName = `${normalizedBase}${suffix}`
+    if (!names.has(nextName)) return nextName
+    suffix++
+  }
+}
+
+export interface ICommandSearchApi {
+  query(keyword: string | null): ISearchResultItem[]
+  locate(result: ISearchResultItem | number | string): ISearchResultItem | null
+  replaceOne(
+    result: ISearchResultItem | null,
+    replacement: string
+  ): ISearchResultItem[]
+  replaceAll(keyword: string, replacement: string): ISearchResultItem[]
+  clear(): ISearchResultItem[]
+}
+
+export interface ICommandBookmarkState {
+  list: IBookmarkInfo[]
+  suggestedName: string
+  selectionPreview: string
+  hasSelectionRange: boolean
+}
+
+export interface ICommandBookmarkApi {
+  getState(): ICommandBookmarkState
+  add(name: string): void
+  remove(name: string): void
+  locate(name: string): void
+}
+
+export interface ICommandRevisionItem {
+  id: string
+  type: 'insert' | 'delete' | 'format'
+  author: string
+  date: string
+  content: string
+}
+
+export interface ICommandRevisionState {
+  list: ICommandRevisionItem[]
+  activeId: string
+}
+
+export interface ICommandRevisionApi {
+  getState(): ICommandRevisionState
+  locate(id: string): void
+  locatePrevious(): void
+  locateNext(): void
+  accept(id: string): void
+  reject(id: string): void
+  acceptCurrent(): void
+  rejectCurrent(): void
+  acceptAll(): void
+  rejectAll(): void
+}
+
+export interface ICommandCatalogState {
+  list: ICatalogItem[]
+}
+
+export interface ICommandCatalogApi {
+  getState(): Promise<ICommandCatalogState>
+  locate(id: string): void
+}
+
 export class Command {
   private _commandRegistry: Map<string, CommandFunction>
+  private _activeRevisionId = ''
+
+  public search: ICommandSearchApi
+  public bookmark: ICommandBookmarkApi
+  public revision: ICommandRevisionApi
+  public catalog: ICommandCatalogApi
 
   public executeMode: CommandAdapt['mode']
   public executeCut: CommandAdapt['cut']
@@ -84,10 +174,9 @@ export class Command {
   public executeAddWatermark: CommandAdapt['addWatermark']
   public executeDeleteWatermark: CommandAdapt['deleteWatermark']
   public executeSearch: CommandAdapt['search']
-  public executeGetSearchKeyword: CommandAdapt['getSearchKeyword']
-  public executeSearchNavigatePre: CommandAdapt['searchNavigatePre']
-  public executeSearchNavigateNext: CommandAdapt['searchNavigateNext']
   public executeReplace: CommandAdapt['replace']
+  public executeReplaceAll: CommandAdapt['replaceAll']
+  public executeLocateSearchResult: CommandAdapt['locateSearchResult']
   public executePrint: CommandAdapt['print']
   public executeReplaceImageElement: CommandAdapt['replaceImageElement']
   public executeSaveAsImageElement: CommandAdapt['saveAsImageElement']
@@ -162,10 +251,7 @@ export class Command {
   public getRangeContext: CommandAdapt['getRangeContext']
   public getRangeRow: CommandAdapt['getRangeRow']
   public getRangeParagraph: CommandAdapt['getRangeParagraph']
-  public getKeywordRangeList: CommandAdapt['getKeywordRangeList']
-  public getKeywordContext: CommandAdapt['getKeywordContext']
   public getPaperMargin: CommandAdapt['getPaperMargin']
-  public getSearchNavigateInfo: CommandAdapt['getSearchNavigateInfo']
   public getLocale: CommandAdapt['getLocale']
   public getGroupIds: CommandAdapt['getGroupIds']
   public getGroupContext: CommandAdapt['getGroupContext']
@@ -272,10 +358,9 @@ export class Command {
     this.executeAddWatermark = adapt.addWatermark.bind(adapt)
     this.executeDeleteWatermark = adapt.deleteWatermark.bind(adapt)
     this.executeSearch = adapt.search.bind(adapt)
-    this.executeGetSearchKeyword = adapt.getSearchKeyword.bind(adapt)
-    this.executeSearchNavigatePre = adapt.searchNavigatePre.bind(adapt)
-    this.executeSearchNavigateNext = adapt.searchNavigateNext.bind(adapt)
     this.executeReplace = adapt.replace.bind(adapt)
+    this.executeReplaceAll = adapt.replaceAll.bind(adapt)
+    this.executeLocateSearchResult = adapt.locateSearchResult.bind(adapt)
     this.executePrint = adapt.print.bind(adapt)
     this.executeReplaceImageElement = adapt.replaceImageElement.bind(adapt)
     this.executeSaveAsImageElement = adapt.saveAsImageElement.bind(adapt)
@@ -337,8 +422,6 @@ export class Command {
     this.getRangeContext = adapt.getRangeContext.bind(adapt)
     this.getRangeRow = adapt.getRangeRow.bind(adapt)
     this.getRangeParagraph = adapt.getRangeParagraph.bind(adapt)
-    this.getKeywordRangeList = adapt.getKeywordRangeList.bind(adapt)
-    this.getKeywordContext = adapt.getKeywordContext.bind(adapt)
     this.getCatalog = adapt.getCatalog.bind(adapt)
     this.getElementList = adapt.getElementList.bind(adapt)
     this.spliceElementList = adapt.spliceElementList.bind(adapt)
@@ -349,7 +432,6 @@ export class Command {
     this.getPaperWidth = adapt.getPaperWidth.bind(adapt)
     this.getPaperHeight = adapt.getPaperHeight.bind(adapt)
     this.getPaperMargin = adapt.getPaperMargin.bind(adapt)
-    this.getSearchNavigateInfo = adapt.getSearchNavigateInfo.bind(adapt)
     this.getLocale = adapt.getLocale.bind(adapt)
     this.getOptions = adapt.getOptions.bind(adapt)
     this.getGroupIds = adapt.getGroupIds.bind(adapt)
@@ -380,6 +462,155 @@ export class Command {
 
     this._commandRegistry = new Map<string, CommandFunction>()
     this._registerCommands(adapt)
+    this.search = {
+      query: keyword => this.executeSearch(keyword) || [],
+      locate: result => this.executeLocateSearchResult(result) || null,
+      replaceOne: (result, replacement) => {
+        if (!result || !replacement) return []
+        this.executeReplace(replacement, {
+          index: result.resultIndex
+        })
+        return this.executeSearch(result.keyword) || []
+      },
+      replaceAll: (keyword, replacement) =>
+        this.executeReplaceAll(keyword, replacement) || [],
+      clear: () => this.executeSearch(null) || []
+    }
+    this.bookmark = {
+      getState: () => {
+        const list = this.getBookmarks() || []
+        const rangeContext = this.getRangeContext?.()
+        const selectionText = String(rangeContext?.selectionText || '')
+          .replace(/\u200B/g, '')
+          .trim()
+        const hasSelectionRange = !!selectionText && !rangeContext?.isCollapsed
+        const existingNames = new Set(
+          list
+            .map(item => (typeof item?.name === 'string' ? item.name : ''))
+            .filter(Boolean)
+        )
+        const baseName =
+          sanitizeBookmarkName(selectionText) || DEFAULT_BOOKMARK_NAME
+        return {
+          list,
+          suggestedName: ensureUniqueBookmarkName(baseName, existingNames),
+          selectionPreview: selectionText,
+          hasSelectionRange
+        }
+      },
+      add: name => {
+        if (!name) return
+        this.executeAddBookmark({ name })
+      },
+      remove: name => {
+        if (!name) return
+        this.executeDeleteBookmark({ name })
+      },
+      locate: name => {
+        if (!name) return
+        this.executeGotoBookmark({ name })
+      }
+    }
+    this.revision = {
+      getState: () => {
+        const list = (this.getRevisions?.() || []).map(item => ({
+          id: item.id,
+          type: item.type,
+          author: item.author,
+          date: item.date,
+          content: item.content
+        }))
+        if (!list.some(item => item.id === this._activeRevisionId)) {
+          this._activeRevisionId = ''
+        }
+        return {
+          list,
+          activeId: this._activeRevisionId
+        }
+      },
+      locate: id => {
+        if (!id) return
+        const elementList = this.getElementList?.() || []
+        const firstIndex = elementList.findIndex(
+          (element: any) => element.revisionId === id
+        )
+        if (firstIndex < 0) return
+        this._activeRevisionId = id
+        this.executeSetRange(firstIndex, firstIndex)
+      },
+      locatePrevious: () => {
+        const { list, activeId } = this.revision.getState()
+        if (!list.length) return
+        const currentIndex = list.findIndex(item => item.id === activeId)
+        const targetIndex = currentIndex <= 0 ? list.length - 1 : currentIndex - 1
+        this.revision.locate(list[targetIndex].id)
+      },
+      locateNext: () => {
+        const { list, activeId } = this.revision.getState()
+        if (!list.length) return
+        const currentIndex = list.findIndex(item => item.id === activeId)
+        const targetIndex =
+          currentIndex < 0 || currentIndex >= list.length - 1
+            ? 0
+            : currentIndex + 1
+        this.revision.locate(list[targetIndex].id)
+      },
+      accept: id => {
+        if (!id) return
+        const { list } = this.revision.getState()
+        const currentIndex = list.findIndex(item => item.id === id)
+        const nextActiveId =
+          currentIndex < 0
+            ? ''
+            : list[currentIndex + 1]?.id || list[currentIndex - 1]?.id || ''
+        this.executeAcceptRevision(id)
+        this._activeRevisionId = nextActiveId
+      },
+      reject: id => {
+        if (!id) return
+        const { list } = this.revision.getState()
+        const currentIndex = list.findIndex(item => item.id === id)
+        const nextActiveId =
+          currentIndex < 0
+            ? ''
+            : list[currentIndex + 1]?.id || list[currentIndex - 1]?.id || ''
+        this.executeRejectRevision(id)
+        this._activeRevisionId = nextActiveId
+      },
+      acceptCurrent: () => {
+        const { list, activeId } = this.revision.getState()
+        if (!list.length) return
+        const currentIndex = list.findIndex(item => item.id === activeId)
+        const currentRevision = list[currentIndex >= 0 ? currentIndex : 0]
+        if (!currentRevision) return
+        this.revision.accept(currentRevision.id)
+      },
+      rejectCurrent: () => {
+        const { list, activeId } = this.revision.getState()
+        if (!list.length) return
+        const currentIndex = list.findIndex(item => item.id === activeId)
+        const currentRevision = list[currentIndex >= 0 ? currentIndex : 0]
+        if (!currentRevision) return
+        this.revision.reject(currentRevision.id)
+      },
+      acceptAll: () => {
+        this.executeAcceptAllRevisions()
+        this._activeRevisionId = ''
+      },
+      rejectAll: () => {
+        this.executeRejectAllRevisions()
+        this._activeRevisionId = ''
+      }
+    }
+    this.catalog = {
+      getState: async () => ({
+        list: (await this.getCatalog?.()) || []
+      }),
+      locate: id => {
+        if (!id) return
+        this.executeLocationCatalog(id)
+      }
+    }
   }
 
   private _registerCommands(adapt: CommandAdapt): void {
@@ -465,10 +696,9 @@ export class Command {
       ['addWatermark', adapt.addWatermark.bind(adapt)],
       ['deleteWatermark', adapt.deleteWatermark.bind(adapt)],
       ['search', adapt.search.bind(adapt)],
-      ['getSearchKeyword', adapt.getSearchKeyword.bind(adapt)],
-      ['searchNavigatePre', adapt.searchNavigatePre.bind(adapt)],
-      ['searchNavigateNext', adapt.searchNavigateNext.bind(adapt)],
       ['replace', adapt.replace.bind(adapt)],
+      ['replaceAll', adapt.replaceAll.bind(adapt)],
+      ['locateSearchResult', adapt.locateSearchResult.bind(adapt)],
       ['print', adapt.print.bind(adapt)],
       ['replaceImageElement', adapt.replaceImageElement.bind(adapt)],
       ['saveAsImageElement', adapt.saveAsImageElement.bind(adapt)],

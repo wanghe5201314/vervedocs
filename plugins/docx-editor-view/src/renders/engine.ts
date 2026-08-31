@@ -1495,6 +1495,31 @@ export class Draw {
     )
   }
 
+  private getElementLineHeightConfig(el: IElement) {
+    const { defaultLineHeight, scale } = this.options
+    const rule = el.lineHeightRule ?? 'auto'
+    const value = Number(el.lineHeight)
+    if (!Number.isFinite(value) || value <= 0) {
+      return {
+        rule: 'auto' as const,
+        multiple: defaultLineHeight,
+        absolute: 0
+      }
+    }
+    if (rule === 'exact' || rule === 'atLeast') {
+      return {
+        rule,
+        multiple: defaultLineHeight,
+        absolute: value * scale
+      }
+    }
+    return {
+      rule: 'auto' as const,
+      multiple: value,
+      absolute: 0
+    }
+  }
+
   private isPageBreakElement(element?: IElement) {
     return element?.type === ElementType.PAGE_BREAK
   }
@@ -1558,7 +1583,6 @@ export class Draw {
     } = payload
     const {
       defaultSize,
-      defaultRowMargin,
       scale,
       table: { tdPadding, defaultTrMinHeight },
       defaultTabWidth
@@ -1723,7 +1747,7 @@ export class Draw {
         ? (element.paragraphSpacingAfter || 0) * scale
         : 0
 
-      const rowMargin = defaultBasicRowMarginHeight * defaultRowMargin
+      const rowMargin = this.getElementRowMargin(element)
       const rowMarginTop = rowMargin + paragraphSpacingBefore
       const rowMarginBottom = rowMargin + paragraphSpacingAfter
       const metrics: IElementMetrics = {
@@ -2147,19 +2171,29 @@ export class Draw {
           metrics.boundingBoxDescent += metrics.height / 2
         }
       }
-      const lineHeight = this.options.defaultLineHeight
+      const lineHeightConfig = this.getElementLineHeightConfig(element)
+      const naturalContentHeight =
+        metrics.boundingBoxAscent + metrics.boundingBoxDescent
+      const contentHeight =
+        lineHeightConfig.rule === 'auto'
+          ? naturalContentHeight * lineHeightConfig.multiple
+          : lineHeightConfig.rule === 'exact'
+            ? lineHeightConfig.absolute
+            : Math.max(naturalContentHeight, lineHeightConfig.absolute)
+      const contentExtraHeight = Math.max(
+        0,
+        contentHeight - naturalContentHeight
+      )
       const ascent =
         isImageElement(element) ||
         element.type === ElementType.LATEX
           ? metrics.height + rowMarginTop
           : metrics.boundingBoxAscent +
             rowMarginTop +
-            ((metrics.boundingBoxAscent + metrics.boundingBoxDescent) *
-              (lineHeight - 1)) /
-              2
+            contentExtraHeight / 2
       const height =
         rowMarginTop +
-        (metrics.boundingBoxAscent + metrics.boundingBoxDescent) * lineHeight +
+        contentHeight +
         rowMarginBottom
       const rowElement: IRowElement = Object.assign(element, {
         metrics,

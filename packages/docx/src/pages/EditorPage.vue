@@ -34,12 +34,12 @@
           >
             <SearchLayout
               v-if="activeDock === 'search'"
-              @command="handleCommand"
+              :searchAPI="searchAPI"
+              @close="closeDock"
             />
             <CatalogLayout
               v-else-if="activeDock === 'catalog' || activeDock === 'section'"
-              ref="catalogRef"
-              @command="handleCommand"
+              :catalogAPI="catalogAPI"
             />
             <AISidebarPanel
               v-else-if="activeDock === 'ai'"
@@ -49,10 +49,9 @@
             />
             <RevisionPanel
               v-else-if="activeDock === 'revision'"
-              :revisions="revisionList"
-              :active-revision-id="activeRevisionId"
+              :revisionAPI="revisionAPI"
+              :commentAPI="commentAPI"
               @close="closeRevisionDock"
-              @command="handleCommand"
             />
           </div>
           <div
@@ -64,6 +63,7 @@
             <div class="editor-area" ref="editorAreaRef">
               <Ruler
                 v-if="rulerVisible && isContentVisible"
+                ref="rulerRef"
                 :visible="rulerVisible"
                 :get-page-metrics="getPageMetrics"
                 :set-margins="setMargins"
@@ -104,11 +104,7 @@
     />
     <BookmarkDialog
       v-model="bookmarkDialogVisible"
-      :bookmarks="bookmarkList"
-      @refresh="refreshBookmarks"
-      @add="handleAddBookmark"
-      @delete="handleDeleteBookmark"
-      @goto="handleGotoBookmark"
+      :bookmarkAPI="bookmarkAPI"
     />
     <InsertTableDialog
       v-model="insertTableDialogVisible"
@@ -181,10 +177,20 @@
 import { inject, onBeforeUnmount, ref, nextTick, watch, type Ref } from 'vue'
 import { message } from 'ant-design-vue'
 import type { InitialDocument } from '@/types/document'
-import type { DocxImportCallback, DocxExportCallback } from '@vervedoc/core'
+import type {
+  DocxImportCallback,
+  DocxExportCallback,
+  ICommandBookmarkState,
+  ICommandRevisionState
+} from '@vervedoc/core'
+import type { IEditorSearchApi } from '@/composables/use-editor-search'
 import {
   emitExternalEvent,
-  externalApi
+  externalApi,
+  type ExternalBookmarkApi,
+  type ExternalCatalogApi,
+  type ExternalCommentApi,
+  type ExternalRevisionApi
 } from '@/composables/use-external-events'
 import { aiStateStore } from '@/stores/ai-state'
 import { editorStateStore } from '@/stores/editor-state'
@@ -219,7 +225,6 @@ import SearchLayout from '@/components/sidebars/SearchLayout.vue'
 import AISidebarPanel from '@/components/sidebars/ai/AISidebarPanel.vue'
 import AIResultPanel from '@/components/sidebars/ai/AIResultPanel.vue'
 import RevisionPanel from '@/components/sidebars/RevisionPanel.vue'
-import type { RevisionItem } from '@/components/sidebars/RevisionPanel.vue'
 import Editor from '@/components/editor/Editor.vue'
 import AppSkeleton from '@/components/layout/app-skeleton.vue'
 import PasswordCard from '@/components/editor/PasswordCard.vue'
@@ -235,6 +240,9 @@ import { useDialogs } from '@/composables/use-dialogs'
 
 import { useAIActions } from '@/composables/use-ai-actions'
 import { useBookmarks } from '@/composables/use-bookmarks'
+import { useEditorCatalog } from '@/composables/use-editor-catalog'
+import { useEditorComments } from '@/composables/use-editor-comments'
+import { useEditorRevisions } from '@/composables/use-editor-revisions'
 
 import { useEditorSave } from '@/composables/use-editor-save'
 import { useCollaboration } from '@/composables/use-collaboration'
@@ -287,8 +295,8 @@ if (storedHash) {
 
 const editorAppRef = ref<HTMLElement | null>(null)
 const editorAreaRef = ref<HTMLElement | null>(null)
+const rulerRef = ref<{ refreshMetrics?: () => void } | null>(null)
 const rulerVisible = ref(false)
-const catalogRef = ref<any>(null)
 const editorRef = ref<any>(null)
 const footerRef = ref<any>(null)
 
@@ -333,8 +341,9 @@ const refreshReviewOverlays = () => {
   nextTick(() =>
     requestAnimationFrame(() => {
       getCommentComponent()?.render()
+      commentAPI.sync()
       getRevisionComponent()?.update()
-      syncRevisionList()
+      revisionAPI.sync()
     })
   )
 }
@@ -346,8 +355,10 @@ const getPageMetrics = () => {
   const margins = options.margins ?? [113, 79, 113, 79]
   const paperDirection = options.paperDirection ?? 'vertical'
   const scale = options.scale ?? 1
-  const width = paperDirection === 'horizontal' ? 1123 : 794
-  const height = paperDirection === 'horizontal' ? 794 : 1123
+  const baseWidth = options.width ?? 794
+  const baseHeight = options.height ?? 1123
+  const width = paperDirection === 'horizontal' ? baseHeight : baseWidth
+  const height = paperDirection === 'horizontal' ? baseWidth : baseHeight
   let pageOffsetLeft = 0
   const areaEl = editorAreaRef.value
   const pageEl = areaEl?.querySelector(
@@ -360,6 +371,29 @@ const getPageMetrics = () => {
   return { width, height, margins, scale, paperDirection, pageOffsetLeft }
 }
 
+const refreshRulerMetrics = () => {
+  nextTick(() =>
+    requestAnimationFrame(() => {
+      rulerRef.value?.refreshMetrics?.()
+      requestAnimationFrame(() => {
+        rulerRef.value?.refreshMetrics?.()
+      })
+    })
+  )
+}
+
+const refreshSectionThumbnails = () => {
+  if (activeDock.value !== 'section') return
+  nextTick(() =>
+    requestAnimationFrame(() => {
+      executeCommand('refreshThumbnails')
+      requestAnimationFrame(() => {
+        executeCommand('refreshThumbnails')
+      })
+    })
+  )
+}
+
 const setMargins = (margins: number[]) => {
   const instance = getEditorInstance()
   instance?.command?.executeUpdateOptions?.({ margins })
@@ -370,6 +404,28 @@ const executeCommand = (command: string, ...args: any[]) => {
   if (typeof fn === 'function') return fn(command, ...args)
 }
 
+const getSearchAPI = (): IEditorSearchApi | null => {
+  return editorRef.value?.getSearchAPI?.() ?? null
+}
+
+const searchAPI: IEditorSearchApi = {
+  query(keyword) {
+    return getSearchAPI()?.query(keyword) ?? []
+  },
+  locate(result) {
+    return getSearchAPI()?.locate(result) ?? null
+  },
+  replaceOne(result, replacement) {
+    return getSearchAPI()?.replaceOne(result, replacement) ?? []
+  },
+  replaceAll(keyword, replacement) {
+    return getSearchAPI()?.replaceAll(keyword, replacement) ?? []
+  },
+  clear() {
+    return getSearchAPI()?.clear() ?? []
+  }
+}
+
 let suppressSaveOnce = false
 const setSuppressSaveOnce = (value: boolean) => {
   suppressSaveOnce = value
@@ -378,13 +434,12 @@ const setSuppressSaveOnce = (value: boolean) => {
 const {
   activeDock,
   sidebarPanelSize,
-  cachedCatalog,
   closeRevisionDock,
-  handleDockSelect,
+  handleDockSelect: baseHandleDockSelect,
   closeDock,
   closeAIDock,
   handleResizeStart
-} = useDock({ catalogRef })
+} = useDock()
 
 const {
   shortcutsDialogVisible,
@@ -430,32 +485,145 @@ const {
   handleAIResultClose
 } = useAIActions({ getEditorInstance })
 
-const {
-  bookmarkList,
-  refreshBookmarks,
-  handleAddBookmark,
-  handleDeleteBookmark,
-  handleGotoBookmark
-} = useBookmarks({ getEditorInstance, executeCommand })
+const { bookmarkAPI } = useBookmarks({ getEditorInstance })
+const { commentAPI } = useEditorComments({
+  getEditorInstance,
+  getCommentComponent,
+  getActiveGroupId: () => editorStateStore.state.groupIds?.[0] || ''
+})
 
 const toolbarVisible = ref(true)
 const bottomNavVisible = ref(true)
 
 const isTrackChanges = ref(false)
-const revisionList = ref<RevisionItem[]>([])
-const activeRevisionId = ref<string>('')
+const { revisionAPI } = useEditorRevisions({ getEditorInstance })
+const revisionList = revisionAPI.revisionList
+const { catalogAPI } = useEditorCatalog({
+  getEditorInstance,
+  executeCommand,
+  activeDock
+})
 
-/** 从修订组件同步修订列表到侧栏 revisionList */
-const syncRevisionList = () => {
-  const revisionComp = getRevisionComponent()
-  if (!revisionComp) return
-  revisionList.value = revisionComp.getRevisions().map((r: any) => ({
-    id: r.id,
-    type: r.type,
-    author: r.author,
-    date: r.date,
-    content: r.content
-  }))
+const handleDockSelect = (key: 'search' | 'catalog' | 'section' | 'ai' | 'revision') => {
+  if (key === 'catalog' || key === 'section') {
+    catalogAPI.open(key)
+    return
+  }
+  baseHandleDockSelect(key)
+}
+
+const externalBookmarkAPI: ExternalBookmarkApi = {
+  getState(): ICommandBookmarkState {
+    return (
+      getEditorInstance()?.command?.bookmark?.getState?.() ?? {
+        list: [],
+        suggestedName: '书签',
+        selectionPreview: '',
+        hasSelectionRange: false
+      }
+    )
+  },
+  add(name) {
+    getEditorInstance()?.command?.bookmark?.add?.(name)
+  },
+  remove(name) {
+    getEditorInstance()?.command?.bookmark?.remove?.(name)
+  },
+  locate(name) {
+    getEditorInstance()?.command?.bookmark?.locate?.(name)
+  }
+}
+
+const externalRevisionAPI: ExternalRevisionApi = {
+  getState(): ICommandRevisionState {
+    revisionAPI.sync()
+    return {
+      list: [...revisionAPI.revisionList.value],
+      activeId: revisionAPI.activeRevisionId.value
+    }
+  },
+  locate(id) {
+    revisionAPI.locate(id)
+  },
+  locatePrevious() {
+    revisionAPI.locatePrevious()
+  },
+  locateNext() {
+    revisionAPI.locateNext()
+  },
+  accept(id) {
+    revisionAPI.accept(id)
+  },
+  reject(id) {
+    revisionAPI.reject(id)
+  },
+  acceptCurrent() {
+    revisionAPI.acceptCurrent()
+  },
+  rejectCurrent() {
+    revisionAPI.rejectCurrent()
+  },
+  acceptAll() {
+    revisionAPI.acceptAll()
+  },
+  rejectAll() {
+    revisionAPI.rejectAll()
+  }
+}
+
+const externalCommentAPI: ExternalCommentApi = {
+  getState() {
+    return commentAPI.getState()
+  },
+  create(userName) {
+    return getEditorInstance()?.api?.comment?.create?.(userName) ?? commentAPI.create(userName)
+  },
+  remove(id) {
+    getEditorInstance()?.api?.comment?.remove?.(id) ?? commentAPI.remove(id)
+  },
+  removeCurrent(groupId) {
+    commentAPI.removeCurrent(groupId)
+  },
+  locate(id) {
+    getEditorInstance()?.api?.comment?.locate?.(id) ?? commentAPI.locate(id)
+  },
+  refresh() {
+    getEditorInstance()?.api?.comment?.refresh?.() ?? commentAPI.render()
+  }
+}
+
+const externalCatalogAPI: ExternalCatalogApi = {
+  getState() {
+    const state = catalogAPI.getState()
+    return {
+      list: [...state.list],
+      thumbnails: [...state.thumbnails],
+      selectedId: state.selectedId,
+      activeTab: state.activeTab,
+      visible: state.visible
+    }
+  },
+  sync() {
+    return catalogAPI.sync()
+  },
+  locate(id) {
+    catalogAPI.locate(id)
+  },
+  pageJump(index) {
+    catalogAPI.pageJump(index)
+  },
+  open(tab) {
+    catalogAPI.open(tab)
+  },
+  close() {
+    catalogAPI.close()
+  },
+  toggle(desired, tab) {
+    catalogAPI.toggle(desired, tab)
+  },
+  switchTab(tab) {
+    catalogAPI.switchTab(tab)
+  }
 }
 
 /**
@@ -475,7 +643,7 @@ const applyDocumentReplace = async (payload: {
       refreshCatalog: async () => {
         await executeCommand('refreshCatalog')
       },
-      syncRevisionList
+      syncRevisionList: revisionAPI.sync
     },
     payload
   )
@@ -528,6 +696,11 @@ externalApi.document = {
   getSnapshot,
   save: (opts?: { silent?: boolean }) => saveNow(opts)
 }
+externalApi.search = searchAPI
+externalApi.bookmark = externalBookmarkAPI
+externalApi.revision = externalRevisionAPI
+externalApi.comment = externalCommentAPI
+externalApi.catalog = externalCatalogAPI
 
 const normalizeContent = (content: any): any => {
   if (Array.isArray(content)) return { main: content, header: [], footer: [] }
@@ -565,6 +738,7 @@ const handleReady = (...args: any[]) => {
         onReject: (id: string) => executeCommand('rejectRevision', id)
       })
       instance.command.setRevisionOverlay?.(revisionComp)
+      revisionAPI.sync()
     }
     const commentComp = getCommentComponent()
     if (commentComp) {
@@ -573,7 +747,7 @@ const handleReady = (...args: any[]) => {
   }
 
   const updateRevisionList = () => {
-    syncRevisionList()
+    revisionAPI.sync()
   }
 
   if (instance?.listener) {
@@ -586,6 +760,7 @@ const handleReady = (...args: any[]) => {
 
   installCommentCallbacks(instance)
   refreshReviewOverlays()
+  void catalogAPI.sync()
 
   // 初始内容优先级：content → url → 空文档（由宿主决定，不内置默认文件）
   const content = (initialDocument as any)?.content
@@ -597,7 +772,7 @@ const handleReady = (...args: any[]) => {
       url: sourceUrl,
       onComplete: (success: boolean, message?: string) => {
         busyState.value = 'idle'
-        activeDock.value = 'catalog'
+        catalogAPI.open('catalog')
         refreshReviewOverlays()
         if (success) {
           const explicitName = String(
@@ -623,7 +798,7 @@ const handleReady = (...args: any[]) => {
 
   if (content == null) {
     busyState.value = 'idle'
-    activeDock.value = 'catalog'
+    catalogAPI.open('catalog')
     refreshReviewOverlays()
     nextTick(() => initCollaboration())
     return
@@ -646,7 +821,7 @@ const handleReady = (...args: any[]) => {
       })
     } finally {
       busyState.value = 'idle'
-      activeDock.value = 'catalog'
+      catalogAPI.open('catalog')
       refreshReviewOverlays()
       nextTick(() => initCollaboration())
     }
@@ -658,22 +833,29 @@ onBeforeUnmount(() => {
   cleanupCollaboration()
 })
 
-const { handleEditorCommand, handleEditorSaved } = useEditorCommand({
-  cachedCatalog,
-  catalogRef,
+const { handleEditorCommand: baseHandleEditorCommand, handleEditorSaved } = useEditorCommand({
   footerRef,
   documentStats,
-  getCommentComponent,
-  getRevisionComponent,
-  revisionList,
+  commentAPI,
+  catalogAPI,
+  revisionAPI,
+  refreshReviewOverlays,
   isSuppressSaveOnce: () => suppressSaveOnce,
   setSuppressSaveOnce,
   getCollabPlugin,
   saveNow
 })
 
+const handleEditorCommand = (command: string, ...args: any[]) => {
+  baseHandleEditorCommand(command, ...args)
+  if (command === 'scaleChange') {
+    refreshRulerMetrics()
+  }
+}
+
 const dialogCommands: Record<string, Ref<boolean>> = {
   hyperlink: hyperlinkDialogVisible,
+  bookmark: bookmarkDialogVisible,
   insertTableDialog: insertTableDialogVisible,
   tableBordersDialog: tableBordersDialogVisible,
   insertChart: chartDialogVisible,
@@ -841,7 +1023,7 @@ const handleCommand = (command: string, ...args: any[]) => {
 
   if (dialogCommands[command]) {
     dialogCommands[command].value = true
-    if (command === 'bookmark') refreshBookmarks()
+    if (command === 'bookmark') bookmarkAPI.refresh()
     return
   }
 
@@ -886,6 +1068,7 @@ const handleCommand = (command: string, ...args: any[]) => {
       instance?.command?.executeUpdateOptions?.({
         background: { color: args[0] ? '#C7EDCC' : '#FFFFFF' }
       })
+      refreshSectionThumbnails()
       return
     }
     case 'accessPermission':
@@ -917,18 +1100,9 @@ const handleCommand = (command: string, ...args: any[]) => {
       return
     }
     case 'comment':
-      return executeCommand('comment')
-    case 'commentDeleteCurrent': {
-      const groupId = args[0] || editorStateStore.state.groupIds?.[0]
-      if (!groupId) return
-      const commentComp = getCommentComponent()
-      const currentComment = commentComp?.getComments?.().find((item: any) => item.groupId === groupId)
-      if (currentComment && typeof commentComp?.deleteComment === 'function') {
-        commentComp.deleteComment(currentComment.id)
-        return
-      }
-      return executeCommand('deleteGroup', groupId)
-    }
+      return commentAPI.create()
+    case 'commentDeleteCurrent':
+      return commentAPI.removeCurrent(String(args[0] || ''))
     case 'toolbarVisible':
       toolbarVisible.value = !!args[0]
       return
@@ -941,18 +1115,15 @@ const handleCommand = (command: string, ...args: any[]) => {
       return executeCommand('tocRemove')
     case 'columns':
       return executeCommand('columns', args[0])
-    case 'search':
-      activeDock.value = 'search'
-      break
-    case 'closeSearchPanel':
-      if (activeDock.value === 'search') closeDock()
-      return
-    case 'replaceCurrent': {
-      const navInfo = executeCommand('getSearchNavigateInfo')
-      executeCommand('replace', args[0], {
-        index: navInfo ? navInfo.index - 1 : 0
-      })
-      return
+    case 'pageScale':
+    case 'pageScaleAdd':
+    case 'pageScaleMinus':
+    case 'pageScaleRecovery':
+    case 'paperSize':
+    case 'paperDirection': {
+      const result = executeCommand(command, ...args)
+      refreshRulerMetrics()
+      return result
     }
     case 'toggleCollaborationCursor': {
       const plugin = getCollabPlugin()
@@ -987,61 +1158,28 @@ const handleCommand = (command: string, ...args: any[]) => {
       return
     }
     case 'acceptAllRevisions':
+      return revisionAPI.acceptAll()
     case 'rejectAllRevisions':
-      return executeCommand(command)
+      return revisionAPI.rejectAll()
     case 'previousRevision':
-    case 'nextRevision': {
-      const revisions = revisionList.value
-      if (!revisions.length) return
-      const currentIndex = revisions.findIndex(rev => rev.id === activeRevisionId.value)
-      const targetIndex = command === 'previousRevision'
-        ? (currentIndex <= 0 ? revisions.length - 1 : currentIndex - 1)
-        : (currentIndex < 0 || currentIndex >= revisions.length - 1 ? 0 : currentIndex + 1)
-      const targetRevision = revisions[targetIndex]
-      if (!targetRevision) return
-      activeRevisionId.value = targetRevision.id
-      return executeCommand('locateRevision', targetRevision.id)
-    }
+      return revisionAPI.locatePrevious()
+    case 'nextRevision':
+      return revisionAPI.locateNext()
     case 'locateRevision':
-      activeRevisionId.value = String(args[0] || '')
-      return executeCommand('locateRevision', args[0])
+      return revisionAPI.locate(String(args[0] || ''))
     case 'acceptRevisionCurrent':
-    case 'rejectRevisionCurrent': {
-      const revisions = revisionList.value
-      if (!revisions.length) return
-      const currentIndex = revisions.findIndex(rev => rev.id === activeRevisionId.value)
-      const fallbackIndex = currentIndex >= 0 ? currentIndex : 0
-      const currentRevision = revisions[fallbackIndex]
-      if (!currentRevision) return
-      const nextCandidate = revisions[fallbackIndex + 1] || revisions[fallbackIndex - 1] || null
-      activeRevisionId.value = nextCandidate?.id || ''
-      return executeCommand(
-        command === 'acceptRevisionCurrent' ? 'acceptRevisionById' : 'rejectRevisionById',
-        currentRevision.id
-      )
-    }
+      return revisionAPI.acceptCurrent()
+    case 'rejectRevisionCurrent':
+      return revisionAPI.rejectCurrent()
     case 'acceptRevisionById':
+      return revisionAPI.accept(String(args[0] || ''))
     case 'rejectRevisionById':
-      return executeCommand(command, args[0])
-    case 'toggleCatalog': {
-      const desired =
-        args.length > 0 && typeof args[0] === 'boolean'
-          ? (args[0] as boolean)
-          : null
-      const opened =
-        activeDock.value === 'catalog' || activeDock.value === 'section'
-      if (desired === null ? opened : !desired) {
-        closeDock()
-      } else {
-        activeDock.value = 'catalog'
-        void nextTick(() => {
-          catalogRef.value?.switchToCatalogTab?.()
-          if (cachedCatalog.value.length > 0)
-            catalogRef.value?.updateCatalog?.(cachedCatalog.value)
-        })
-      }
-      return
-    }
+      return revisionAPI.reject(String(args[0] || ''))
+    case 'toggleCatalog':
+      return catalogAPI.toggle(
+        typeof args[0] === 'boolean' ? (args[0] as boolean) : undefined,
+        'catalog'
+      )
     case 'aiTranslate':
       activeDock.value = 'ai'
       aiStateStore.setVisible(true)
@@ -1065,11 +1203,11 @@ const handleVersionRestore = async (content: any) => {
   })
 }
 
-const getExternalApi = () => externalApi
+const getExternalAPI = () => externalApi
 
 defineExpose({
   executeCommand,
-  getExternalApi
+  getExternalAPI
 })
 </script>
 
@@ -1106,7 +1244,7 @@ defineExpose({
 
 .split-left {
   min-width: 300px;
-  max-width: 400px;
+  max-width: 420px;
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -1145,7 +1283,7 @@ defineExpose({
   width: 100%;
   height: 100%;
   overflow: auto;
-  background: #f5f7fa;
+  background: #e2e2e2;
   position: relative;
 }
 

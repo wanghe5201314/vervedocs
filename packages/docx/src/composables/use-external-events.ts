@@ -161,6 +161,16 @@ export const emitExternalEvent = <T = unknown>(event: ExternalEventName, payload
 }
 
 import type { DocumentMeta } from '@/types/document'
+import type {
+  ICommandSearchApi,
+  ICommandBookmarkApi,
+  ICommandBookmarkState,
+  ICommandCatalogState,
+  IDocxCommentApi,
+  IDocxCommentState,
+  ICommandRevisionApi,
+  ICommandRevisionState
+} from '@vervedoc/core'
 
 /**
  * 外部 document API（由 EditorPage 在运行时挂载）
@@ -172,15 +182,53 @@ export interface ExternalDocumentApi {
   save: (opts?: { silent?: boolean }) => Promise<unknown> | unknown
 }
 
+export interface ExternalBookmarkApi
+  extends Pick<ICommandBookmarkApi, 'add' | 'remove' | 'locate'> {
+  getState: () => ICommandBookmarkState
+}
+
+export interface ExternalRevisionApi
+  extends Omit<ICommandRevisionApi, 'getState'> {
+  getState: () => ICommandRevisionState
+}
+
+export interface ExternalCommentApi
+  extends Pick<IDocxCommentApi, 'create' | 'remove' | 'removeCurrent' | 'locate' | 'refresh'> {
+  getState: () => IDocxCommentState
+}
+
+export interface ExternalCatalogApi {
+  getState: () => ICommandCatalogState & {
+    thumbnails: string[]
+    selectedId: string
+    activeTab: 'catalog' | 'section'
+    visible: boolean
+  }
+  sync: () => Promise<ICommandCatalogState['list']>
+  locate: (id: string) => void
+  pageJump: (index: number) => void
+  open: (tab?: 'catalog' | 'section') => void
+  close: () => void
+  toggle: (desired?: boolean, tab?: 'catalog' | 'section') => void
+  switchTab: (tab: 'catalog' | 'section') => void
+}
+
 /**
  * 外部 API 对象（事件订阅/发布）
  */
-export const externalApi: {
+export interface ExternalEditorApi {
   on: typeof onExternalEvent
   off: typeof offExternalEvent
   events: { on: typeof onExternalEvent; off: typeof offExternalEvent }
   document?: ExternalDocumentApi
-} = {
+  search?: ICommandSearchApi
+  bookmark?: ExternalBookmarkApi
+  revision?: ExternalRevisionApi
+  comment?: ExternalCommentApi
+  catalog?: ExternalCatalogApi
+}
+
+export const externalApi: ExternalEditorApi = {
   on: onExternalEvent,
   off: offExternalEvent,
   events: {

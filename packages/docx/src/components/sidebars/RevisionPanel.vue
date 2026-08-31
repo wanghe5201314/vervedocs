@@ -1,87 +1,111 @@
 <template>
   <div class="revision-panel" editor-component="revision-panel">
-    <div class="revision-header">
-      <div class="revision-title">
-        <VIcon name="pencil-plus" />
-        <span>修订记录</span>
-      </div>
-      <div class="revision-header-right">
-        <span v-if="revisions.length > 0" class="rev-count">共 {{ revisions.length }} 处修订</span>
-        <div class="revision-close" @click="emit('close')" title="关闭">
-          <VIcon name="close" />
+    <div class="sidebar-header">
+      <div class="sidebar-title-wrap">
+        <div class="sidebar-title-row">
+          <VIcon name="pencil-plus" class="sidebar-title-icon" />
+          <span class="sidebar-title">修订记录</span>
+        </div>
+        <div class="header-stats">
+          <span class="status-pill">{{ reviewItems.length }} 条记录</span>
+          <span class="status-pill review-comment">{{ comments.length }} 批注</span>
+          <span class="status-pill review-revision">{{ revisions.length }} 审阅</span>
         </div>
       </div>
-    </div>
-
-    <div class="revision-toolbar">
-      <button class="rev-btn accept" @click="emit('command', 'acceptAllRevisions')" title="接受所有修订">
-        <VIcon name="check-all" />
-        <span>接受所有修订</span>
-      </button>
-      <button class="rev-btn reject" @click="emit('command', 'rejectAllRevisions')" title="拒绝所有修订">
-        <VIcon name="close-box-multiple-outline" />
-        <span>拒绝所有修订</span>
-      </button>
-    </div>
-
-    <div class="revision-list">
-      <a-empty v-if="revisions.length === 0" description="暂无修订记录" />
-      <div
-        v-for="rev in revisions"
-        :key="rev.id"
-        class="revision-item"
-        :class="{ active: activeRevisionId === rev.id }"
-        @click="emit('command', 'locateRevision', rev.id)"
-      >
-        <div class="rev-item-left-bar"></div>
-        <div class="rev-item-body">
-          <div class="rev-item-header">
-            <span class="rev-author">
-              <span class="rev-author-dot" :style="{ backgroundColor: getAuthorColor(rev.author) }"></span>
-              {{ rev.author }}
-            </span>
-            <span class="rev-time">{{ formatTime(rev.date) }}</span>
-          </div>
-          <div class="rev-item-content">
-            <span class="rev-type-tag" :class="rev.type">{{ revisionTypeLabelMap[rev.type] }}</span>
-            <span class="rev-content-text">{{ rev.content }}</span>
-          </div>
-          <div class="rev-item-actions">
-            <button class="rev-action-btn accept" @click.stop="emit('command', 'acceptRevisionById', rev.id)" title="接受">
-              <VIcon name="check" />
-            </button>
-            <button class="rev-action-btn reject" @click.stop="emit('command', 'rejectRevisionById', rev.id)" title="拒绝">
-              <VIcon name="close" />
-            </button>
-          </div>
-        </div>
+      <div class="sidebar-close" @click="emit('close')" title="关闭">
+        <VIcon name="close" />
       </div>
     </div>
 
+    <div class="sidebar-content">
+      <div v-if="reviewItems.length" class="revision-list">
+        <div
+          v-for="item in reviewItems"
+          :key="item.key"
+          class="revision-item"
+          tabindex="0"
+          role="button"
+          :class="{ active: isActiveItem(item) }"
+          @click="handleLocate(item)"
+          @keydown.enter.prevent="handleLocate(item)"
+          @keydown.space.prevent="handleLocate(item)"
+        >
+          <div class="revision-body">
+            <div class="revision-item-top">
+              <div class="revision-author-group">
+                <span class="rev-author-dot" :style="{ backgroundColor: getItemColor(item) }"></span>
+                <span class="rev-author">{{ item.author || '未知用户' }}</span>
+              </div>
+              <span class="rev-time">{{ formatTime(item.date) }}</span>
+            </div>
 
+            <div class="revision-main-row">
+              <div class="revision-text-column">
+                <div
+                  class="rev-content-text"
+                  :class="{ placeholder: !item.content }"
+                >
+                  {{ item.content || getEmptyText(item) }}
+                </div>
+
+                <div v-if="item.kind === 'comment' && item.rangeText" class="range-text">
+                  {{ item.rangeText }}
+                </div>
+              </div>
+
+              <div class="revision-actions">
+                <template v-if="item.kind === 'revision'">
+                  <button class="action-btn accept" type="button" @click.stop="props.revisionAPI.accept(item.id)">
+                    <VIcon name="check" />
+                    接受
+                  </button>
+                  <button class="action-btn reject" type="button" @click.stop="props.revisionAPI.reject(item.id)">
+                    <VIcon name="close" />
+                    拒绝
+                  </button>
+                </template>
+                <template v-else>
+                  <button class="action-btn review-comment" type="button" @click.stop="props.commentAPI.remove(item.id)">
+                    <VIcon name="delete-outline" />
+                    删除
+                  </button>
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-else class="empty-state">
+        <a-empty
+          :image="false"
+          description="暂无修订记录"
+        />
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { VIcon } from '@vervedoc/icons'
+import { computed } from 'vue'
+import type { IEditorCommentApi } from '@/composables/use-editor-comments'
+import type { IRevisionApi } from '@/composables/use-editor-revisions'
+import type { RevisionItem } from '@/composables/use-editor-revisions'
 
-export interface RevisionItem {
-  id: string
-  type: 'insert' | 'delete' | 'format'
-  author: string
-  date: string
-  content: string
-}
-
-const _props = defineProps<{
-  revisions: RevisionItem[]
-  activeRevisionId?: string
+const props = defineProps<{
+  revisionAPI: IRevisionApi
+  commentAPI: IEditorCommentApi
 }>()
 
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'command', cmd: string, ...args: any[]): void
 }>()
+
+const revisions = computed(() => props.revisionAPI.revisionList.value)
+const activeRevisionId = computed(() => props.revisionAPI.activeRevisionId.value)
+const comments = computed(() => props.commentAPI.commentList.value.filter(item => item.status !== 0))
+const activeCommentGroupId = computed(() => props.commentAPI.activeGroupId.value)
 
 const AUTHOR_COLORS = ['#1890FF', '#52C41A', '#FAAD14', '#FF4D4F', '#8C8C8C', '#13C2C2', '#722ED1']
 const revisionTypeLabelMap = {
@@ -89,6 +113,64 @@ const revisionTypeLabelMap = {
   delete: '删除',
   format: '格式'
 } as const
+type ReviewFeedItem =
+  | {
+      kind: 'revision'
+      key: string
+      id: string
+      author: string
+      date: string
+      content: string
+      chipClass: RevisionItem['type']
+      chipLabel: string
+      sortTime: number
+    }
+  | {
+      kind: 'comment'
+      key: string
+      id: string
+      groupId: string
+      author: string
+      date: string
+      content: string
+      rangeText: string
+      chipClass: 'review-comment' | 'review-resolved'
+      chipLabel: string
+      sortTime: number
+    }
+
+const reviewItems = computed<ReviewFeedItem[]>(() => {
+  const revisionItems: ReviewFeedItem[] = revisions.value.map(item => ({
+    kind: 'revision',
+    key: `revision-${item.id}`,
+    id: item.id,
+    author: item.author,
+    date: item.date,
+    content: getReviewContent(item.content),
+    chipClass: item.type,
+    chipLabel: revisionTypeLabelMap[item.type],
+    sortTime: getSortTime(item.date)
+  }))
+
+  const commentItems: ReviewFeedItem[] = comments.value.map(item => ({
+    kind: 'comment',
+    key: `comment-${item.id}`,
+    id: item.id,
+    groupId: item.groupId,
+    author: item.userName,
+    date: item.createdDate,
+    content: getReviewContent(item.content),
+    rangeText: getReviewContent(item.rangeText),
+    chipClass: item.status === 2 ? 'review-resolved' : 'review-comment',
+    chipLabel: item.status === 2 ? '已解决批注' : '批注',
+    sortTime: getSortTime(item.createdDate)
+  }))
+
+  return [...revisionItems, ...commentItems].sort((a, b) => {
+    if (b.sortTime !== a.sortTime) return b.sortTime - a.sortTime
+    return a.key.localeCompare(b.key)
+  })
+})
 
 const getAuthorColor = (name: string): string => {
   let hash = 0
@@ -96,6 +178,42 @@ const getAuthorColor = (name: string): string => {
     hash = name.charCodeAt(i) + ((hash << 5) - hash)
   }
   return AUTHOR_COLORS[Math.abs(hash) % AUTHOR_COLORS.length]
+}
+
+const getReviewContent = (content: string): string => {
+  const normalized = String(content || '').replace(/\s+/g, ' ').trim()
+  return normalized
+}
+
+const getEmptyText = (item: ReviewFeedItem): string => {
+  return item.kind === 'comment' ? '未填写批注内容' : '无审阅内容'
+}
+
+const getSortTime = (dateStr: string): number => {
+  if (!dateStr) return 0
+  const time = new Date(dateStr).getTime()
+  return Number.isFinite(time) ? time : 0
+}
+
+const getItemColor = (item: ReviewFeedItem): string => {
+  if (item.kind === 'comment') {
+    if (item.chipClass === 'review-resolved') return '#67c23a'
+    return '#7c3aed'
+  }
+  return getAuthorColor(item.author)
+}
+
+const isActiveItem = (item: ReviewFeedItem): boolean => {
+  if (item.kind === 'revision') return activeRevisionId.value === item.id
+  return activeCommentGroupId.value === item.groupId
+}
+
+const handleLocate = (item: ReviewFeedItem) => {
+  if (item.kind === 'revision') {
+    props.revisionAPI.locate(item.id)
+    return
+  }
+  props.commentAPI.locate(item.id)
 }
 
 const formatTime = (dateStr: string): string => {
@@ -113,171 +231,202 @@ const formatTime = (dateStr: string): string => {
     return dateStr
   }
 }
-
-
 </script>
 
 <style scoped>
 .revision-panel {
+  display: flex;
+  flex-direction: column;
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  background: #f2f4f7;
+  width: 100%;
+  background: #f1f1f1;
   overflow: hidden;
+  border-right: 1px solid #f1f1f1;
 }
 
-.revision-header {
+.sidebar-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid #e4e7ed;
+  padding: 8px 10px 9px;
+  min-height: 56px;
+  border-bottom: 1px solid #d9d9d9;
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
-.revision-title {
+.sidebar-title-wrap {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #303133;
-}
-
-.revision-title .material-icons {
-  font-size: 18px;
-  color: #1890ff;
-}
-
-.revision-header-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.revision-close {
-  cursor: pointer;
-  color: #8c8c8c;
-  display: flex;
-  align-items: center;
-  padding: 4px;
-  border-radius: 0;
-  transition: all 0.2s;
-}
-
-.revision-close:hover {
-  color: #595959;
-  background: #e4e7ed;
-}
-
-.revision-toolbar {
-  padding: 8px 12px;
-  border-bottom: 1px solid #e4e7ed;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  justify-content: center;
-}
-
-.rev-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border: 1px solid #d9d9d9;
-  background: #fff;
-  border-radius: 0;
-  cursor: pointer;
-  color: #595959;
-  font-size: 12px;
-  transition: all 0.15s;
-  white-space: nowrap;
-  flex: none;
-}
-
-.rev-btn:hover {
-  background: #f0f2f5;
-  color: #303133;
-  border-color: #bfbfbf;
-}
-
-.rev-btn.accept {
-  color: #52c41a;
-  border-color: #b7eb8f;
-}
-
-.rev-btn.accept:hover {
-  background: #f6ffed;
-  border-color: #52c41a;
-}
-
-.rev-btn.reject {
-  color: #ff4d4f;
-  border-color: #ffa39e;
-}
-
-.rev-btn.reject:hover {
-  background: #fff2f0;
-  border-color: #ff4d4f;
-}
-
-.rev-btn .material-icons {
-  font-size: 16px;
-}
-
-.revision-list {
-  display: flex;
-  overflow-y: auto;
   flex-direction: column;
+  align-items: flex-start;
   gap: 6px;
-  padding:6px;
-}
-
-.revision-item {
-  display: flex;
-  cursor: pointer;
-  transition: background 0.15s;
-  position: relative;
-  background: #fff;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.revision-item:hover {
-  background: #f5f7fa;
-}
-
-.revision-item.active {
-  background: #e6f7ff;
-}
-
-.rev-item-left-bar {
-  width: 3px;
-  flex-shrink: 0;
-
-  background: #ff4d4f;
-}
-
-.rev-item-body {
-  flex: 1;
-  padding: 10px 12px;
   min-width: 0;
 }
 
-.rev-item-header {
+.sidebar-title-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.sidebar-title-icon {
+  font-size: 14px;
+  color: #303133;
+  flex-shrink: 0;
+}
+
+.sidebar-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111;
+  line-height: 1;
+}
+
+.header-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-left: 12px;
+}
+
+.sidebar-close {
+  color: #666;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+  margin-left: 8px;
+}
+
+.sidebar-close:hover {
+  color: #111;
+  background: #e5e5e5;
+}
+
+.sidebar-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 8px 12px;
+  overflow: hidden;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 0;
+  font-size: 11px;
+  line-height: 1;
+  background: #ececec;
+  color: #555;
+}
+
+.status-pill.review-comment {
+  background: #f3e8ff;
+  color: #7c3aed;
+}
+
+.status-pill.review-revision {
+  background: #e6f4ff;
+  color: #1677ff;
+}
+
+.revision-item-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
+  gap: 8px;
+}
+
+.rev-time {
+  font-size: 10px;
+  color: #8a8a8a;
+}
+.action-btn,
+.revision-item {
+  border: none;
+  outline: none;
+}
+
+.revision-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.revision-item {
+  flex-shrink: 0;
+  width: 100%;
+  display: flex;
+  text-align: left;
+  background: #f7f7f7;
+  border: 1px solid #dfdfdf;
+  border-radius: 0;
+  cursor: pointer;
+  transition: all 0.2s;
+  overflow: hidden;
+}
+
+.revision-item.active {
+  background: #edf5ff;
+  border-color: #b8d4ff;
+  box-shadow: inset 0 0 0 1px rgba(58, 123, 213, 0.06);
+}
+
+.revision-item:hover {
+  border-color: #cfcfcf;
+  background: #fbfbfb;
+}
+
+.revision-body {
+  flex: 1;
+  padding: 10px 10px 9px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.revision-main-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.revision-text-column {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.revision-author-group,
+.rev-author {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  min-width: 0;
 }
 
 .rev-author {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
-  color: #303133;
+  color: #111;
 }
 
 .rev-author-dot {
@@ -287,107 +436,100 @@ const formatTime = (dateStr: string): string => {
   flex-shrink: 0;
 }
 
-.rev-time {
-  font-size: 11px;
-  color: #bfbfbf;
-  white-space: nowrap;
-}
-
-.rev-item-content {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  margin-bottom: 6px;
-}
-
-.rev-type-tag {
-  display: inline-block;
-  padding: 1px 6px;
-  font-size: 11px;
-  font-weight: 500;
-  border-radius: 0;
-  flex-shrink: 0;
-  line-height: 18px;
-
-}
-
-.rev-type-tag.insert {
-  color: #1890ff;
-  background: #e6f4ff;
-}
-
-.rev-type-tag.delete {
-  color: #ff4d4f;
-  background: #fff2f0;
-}
-
-.rev-type-tag.format {
-  color: #722ed1;
-  background: #f9f0ff;
-}
-
 .rev-content-text {
-  font-size: 13px;
-  color: #595959;
-  line-height: 1.4;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  word-break: break-all;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #303133;
+  word-break: break-word;
+  white-space: pre-wrap;
 }
 
-.rev-item-actions {
+.rev-content-text.placeholder {
+  color: #9aa0a6;
+}
+
+.range-text {
+  padding: 6px 8px;
+  border-left: 2px solid #e3e6eb;
+  background: #f3f4f6;
+  color: #666;
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.revision-actions {
   display: flex;
-  gap: 6px;
-  opacity: 0;
-  transition: opacity 0.15s;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
-.revision-item:hover .rev-item-actions,
-.revision-item.active .rev-item-actions {
-  opacity: 1;
-}
-
-.rev-action-btn {
+.action-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  border: 1px solid #d9d9d9;
-  background: #fff;
+  min-width: 48px;
+  height: 24px;
+  padding: 0 8px;
   border-radius: 0;
+  background: #fff;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s;
+  font-size: 11px;
+  color: #444;
+  border: 1px solid #dfdfdf;
+  gap: 3px;
 }
 
-.rev-action-btn .material-icons {
-  font-size: 14px;
+.action-btn :deep(.material-icons) {
+  font-size: 12px;
 }
 
-.rev-action-btn.accept {
-  color: #52c41a;
-}
-
-.rev-action-btn.accept:hover {
-  border-color: #52c41a;
+.action-btn.accept {
+  color: #237804;
+  border-color: #b7eb8f;
   background: #f6ffed;
 }
 
-.rev-action-btn.reject {
-  color: #ff4d4f;
+.action-btn.accept:hover {
+  border-color: #73d13d;
+  background: #edfadb;
 }
 
-.rev-action-btn.reject:hover {
-  border-color: #ff4d4f;
+.action-btn.reject {
+  color: #cf1322;
+  border-color: #ffccc7;
   background: #fff2f0;
 }
 
+.action-btn.reject:hover {
+  border-color: #ff7875;
+  background: #ffe9e6;
+}
 
-.rev-count {
-  font-size: 12px;
-  color: #8c8c8c;
+.action-btn.review-comment {
+  color: #7c3aed;
+  border-color: #d8b4fe;
+  background: #faf5ff;
+}
+
+.action-btn.review-comment:hover {
+  border-color: #c084fc;
+  background: #f3e8ff;
+}
+
+.empty-state {
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+:deep(.ant-empty) {
+  margin: 0;
 }
 </style>

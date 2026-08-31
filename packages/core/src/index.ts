@@ -3,6 +3,11 @@ import type { IElement, IEditorData } from '@vervedoc/docx-editor-schema'
 import type { DocxCommentMeta } from '@vervedoc/docx-editor-comment'
 
 export default DocxEditor
+export type {
+  IDocxEditorApi,
+  IDocxCommentState,
+  IDocxCommentApi
+} from './docx-editor'
 
 // 核心四层模块 - schema 全量导出
 export * from '@vervedoc/docx-editor-schema'
@@ -13,6 +18,14 @@ export { Listener, RangeManager, EventBus } from '@vervedoc/docx-editor-state'
 // transform 模块 - 排除与 schema 重复的 IControlContext
 export { Command, CommandAdapt } from '@vervedoc/docx-editor-transform'
 export type {
+  ICommandSearchApi,
+  ICommandBookmarkState,
+  ICommandBookmarkApi,
+  ICommandRevisionItem,
+  ICommandRevisionState,
+  ICommandRevisionApi,
+  ICommandCatalogState,
+  ICommandCatalogApi,
   IDrawContext,
   ICursorContext,
   IBadgeContext,

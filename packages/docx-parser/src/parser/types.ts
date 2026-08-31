@@ -178,7 +178,9 @@ export interface TabChunk {
 
 export interface BookmarkChunk {
   type: 'bookmark'
-  name: string
+  name?: string
+  id?: string
+  markType: 'start' | 'end'
 }
 
 export interface CommentMarkerChunk {

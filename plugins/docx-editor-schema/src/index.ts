@@ -157,7 +157,7 @@ export type {
 } from './interface/position'
 export type { IPreviewerCreateResult, IPreviewerDrawOption } from './interface/previewer'
 export type { IRadioOption } from './interface/radio'
-export type { ISearchResultBasic, ISearchResultRestArgs, ISearchResult, ISearchResultContext, IReplaceOption } from './interface/search'
+export type { ISearchResultBasic, ISearchResultRestArgs, ISearchResult, ISearchResultRect, ISearchResultItem, ISearchResultContext, IReplaceOption } from './interface/search'
 export type { ISeparatorOption, ISeparatorPayload, SeparatorType } from './interface/separator'
 export type { ITextMetrics, ITextDecoration } from './interface/text'
 export type { ITitleOption, ITitleSizeOption, IGetTitleValueOption, IGetTitleValueResult } from './interface/title'

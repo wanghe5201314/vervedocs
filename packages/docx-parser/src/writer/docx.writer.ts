@@ -26,7 +26,7 @@ export async function writeDocx(
   options?: IDocxExportOptions
 ): Promise<IDocxExportResult> {
   try {
-    const { Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, BorderStyle } =
+    const { Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, BorderStyle, BookmarkStart, BookmarkEnd } =
       await import('docx')
 
     const children: any[] = []
@@ -34,13 +34,27 @@ export async function writeDocx(
     const defaultSize = options?.defaultSize ?? 10.5
     const defaultFont = options?.defaultFont || 'SimSun'
     let currentParagraph: any[] = []
+    let bookmarkLinkId = 1
+    const bookmarkLinkIdMap = new Map<string, number>()
 
     for (const element of mainData) {
       const marker =
         (element as any)?.extension && typeof (element as any).extension === 'object'
           ? (element as any).extension.bookmarkMarker
           : null
-      if (marker?.name) continue
+      if (marker?.name) {
+        let linkId = bookmarkLinkIdMap.get(marker.name)
+        if (!linkId) {
+          linkId = bookmarkLinkId++
+          bookmarkLinkIdMap.set(marker.name, linkId)
+        }
+        if (marker.position === 'end') {
+          currentParagraph.push(new BookmarkEnd(linkId) as any)
+        } else {
+          currentParagraph.push(new BookmarkStart(marker.name, linkId) as any)
+        }
+        continue
+      }
 
       if (element.value === '\n' || element.type === 'pageBreak') {
         if (currentParagraph.length > 0) {

@@ -2166,6 +2166,7 @@ async function handleImportExcelChange(e: Event) {
 async function handleExportExcel() {
   if (!workbook.sheets.length) return
   try {
+    syncWorkbookFromUniver()
     const result = await props.exportCallback(workbook, {
       defaultSheetName: index => t('sheet.defaultSheetName', { index: index + 1 }),
     })

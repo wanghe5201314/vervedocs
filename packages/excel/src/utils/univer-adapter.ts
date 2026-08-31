@@ -279,6 +279,8 @@ function toUiSheet(sheet: Partial<IWorksheetData>, index: number): IUiSheet {
   for (const [indexText, columnData] of Object.entries(sheet.columnData || {})) {
     const col = Number(indexText)
     if (!Number.isFinite(col) || !columnData || typeof columnData !== 'object') continue
+    const width = (columnData as Record<string, any>).w
+    if (Number.isFinite(width)) colWidths[col] = Number(width)
     const hidden = (columnData as Record<string, any>).hd
     if (hidden === BooleanNumber.TRUE) hiddenCols[col] = true
   }
@@ -286,6 +288,8 @@ function toUiSheet(sheet: Partial<IWorksheetData>, index: number): IUiSheet {
   for (const [indexText, rowData] of Object.entries(sheet.rowData || {})) {
     const row = Number(indexText)
     if (!Number.isFinite(row) || !rowData || typeof rowData !== 'object') continue
+    const height = (rowData as Record<string, any>).h
+    if (Number.isFinite(height)) rowHeights[row] = Number(height)
     const hidden = (rowData as Record<string, any>).hd
     if (hidden === BooleanNumber.TRUE) hiddenRows[row] = true
   }

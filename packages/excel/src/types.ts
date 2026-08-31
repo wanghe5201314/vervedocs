@@ -3,6 +3,7 @@ export type {
   VerticalAlign,
   WrapMode,
   ICellStyle,
+  ICellRichTextRun,
   ICellMeta,
   IUiSheet,
   IWorkbook,

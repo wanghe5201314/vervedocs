@@ -1,13 +1,12 @@
-import type { Align, ICellMeta, ICellStyle, IUiSheet, IWorkbook, VerticalAlign } from '../types'
+import type { Align, ICellMeta, ICellRichTextRun, ICellStyle, IUiSheet, IWorkbook, VerticalAlign } from '../types'
 import type { IExcelImportResult, IExcelParseOptions } from './types'
 import { createExcelJsWorkbook } from '../utils/exceljs-loader'
-import { normalizeArgbToHex } from '../utils/color'
+import { createThemeColorResolver, resolveExcelColor, type ThemeColorResolver } from '../utils/color'
+import { parseExcelRichText, richTextToPlainText, stripRunLevelFontStyle } from '../utils/rich-text'
 import { parseWorksheetImages } from './image.parser'
 
-function toHexColor(input: unknown): string | undefined {
-  if (!input || typeof input !== 'object') return
-  const color = input as { argb?: string }
-  return normalizeArgbToHex(color.argb)
+function toHexColor(input: unknown, resolver: ThemeColorResolver, context: 'font' | 'fill' | 'border' = 'fill'): string | undefined {
+  return resolveExcelColor(input, resolver, context)
 }
 
 function borderLineStyleToCss(style: unknown): string {
@@ -42,13 +41,13 @@ function borderLineWidthToCss(style: unknown): string {
   return '1px'
 }
 
-function toCssBorder(borderPart: unknown): string | undefined {
+function toCssBorder(borderPart: unknown, resolver: ThemeColorResolver): string | undefined {
   if (!borderPart || typeof borderPart !== 'object') return
   const part = borderPart as { style?: string; color?: unknown }
   const lineStyle = borderLineStyleToCss(part.style)
   if (!lineStyle) return
   const lineWidth = borderLineWidthToCss(part.style)
-  const color = toHexColor(part.color) || '#000000'
+  const color = toHexColor(part.color, resolver, 'border') || '#000000'
   return `${lineWidth} ${lineStyle} ${color}`
 }
 
@@ -86,32 +85,32 @@ function inferNumberFormat(formatCode: unknown): Pick<ICellStyle, 'numberFormat'
   return {}
 }
 
-function parseCellStyle(cell: any): ICellStyle | undefined {
+function parseCellStyle(cell: any, resolver: ThemeColorResolver, hasRichText = false): ICellStyle | undefined {
   const style = cell?.style || {}
   const result: ICellStyle = {}
   const font = style?.font
-  if (font) {
+  if (font && !hasRichText) {
     if (font.bold) result.bold = true
     if (font.italic) result.italic = true
     if (font.underline) result.underline = true
     if (font.strike) result.strikethrough = true
     if (font.name) result.fontFamily = String(font.name)
     if (Number.isFinite(font.sz)) result.fontSize = Number(font.sz)
-    const fontColor = toHexColor(font.color)
+    const fontColor = toHexColor(font.color, resolver, 'font')
     if (fontColor) result.fontColor = fontColor
   }
   const fill = style?.fill
   const fillType = String(fill?.type || '').toLowerCase()
   const fillPattern = String(fill?.pattern || '').toLowerCase()
   const bgColor = fillType === 'pattern' && fillPattern !== 'none'
-    ? (toHexColor(fill?.fgColor) || toHexColor(fill?.bgColor))
+    ? (toHexColor(fill?.fgColor, resolver, 'fill') || toHexColor(fill?.bgColor, resolver, 'fill'))
     : undefined
   if (bgColor) result.bgColor = bgColor
   const border = style?.border
-  const borderTop = toCssBorder(border?.top)
-  const borderBottom = toCssBorder(border?.bottom)
-  const borderLeft = toCssBorder(border?.left)
-  const borderRight = toCssBorder(border?.right)
+  const borderTop = toCssBorder(border?.top, resolver)
+  const borderBottom = toCssBorder(border?.bottom, resolver)
+  const borderLeft = toCssBorder(border?.left, resolver)
+  const borderRight = toCssBorder(border?.right, resolver)
   if (borderTop) result.borderTop = borderTop
   if (borderBottom) result.borderBottom = borderBottom
   if (borderLeft) result.borderLeft = borderLeft
@@ -207,9 +206,30 @@ function parseMergeAddress(range: string): string | null {
   return `${startCell.r}:${startCell.c}:${endCell.r}:${endCell.c}`
 }
 
+function parseCellContent(
+  cell: any,
+  resolver: ThemeColorResolver,
+): { value: string; style?: ICellStyle; richText?: ICellRichTextRun[] } {
+  const rawValue = cell?.value
+  const richText = parseExcelRichText(rawValue, undefined, resolver)
+  const hasRichText = !!richText?.length
+  const defaultFontStyle = hasRichText ? parseCellStyle(cell, resolver, false) : undefined
+  const resolvedRichText = hasRichText
+    ? parseExcelRichText(rawValue, defaultFontStyle, resolver)
+    : undefined
+  const value = resolvedRichText ? richTextToPlainText(resolvedRichText) : parseCellValue(cell)
+  const style = parseCellStyle(cell, resolver, hasRichText)
+  return {
+    value,
+    style: hasRichText ? stripRunLevelFontStyle(style) : style,
+    richText: resolvedRichText,
+  }
+}
+
 function toUiSheet(worksheet: any, index: number, workbook: any, options?: IExcelParseOptions): IUiSheet {
   const cells: Record<string, string> = {}
   const styles: Record<string, ICellStyle> = {}
+  const cellRichTexts: Record<string, ICellRichTextRun[]> = {}
   const cellMeta: Record<string, ICellMeta> = {}
   const colWidths: Record<number, number> = {}
   const rowHeights: Record<number, number> = {}
@@ -219,16 +239,18 @@ function toUiSheet(worksheet: any, index: number, workbook: any, options?: IExce
   const maxRowFromCells = Number.isFinite(worksheet?.actualRowCount) ? Number(worksheet.actualRowCount) : 0
   const maxColFromCells = Number.isFinite(worksheet?.actualColumnCount) ? Number(worksheet.actualColumnCount) : 0
 
+  const resolver = createThemeColorResolver(workbook)
+
   worksheet?.eachRow?.({ includeEmpty: false }, (row: any, rowNumber: number) => {
     row?.eachCell?.({ includeEmpty: false }, (cell: any, colNumber: number) => {
       const rowIndex = Number(rowNumber) - 1
       const colIndex = Number(colNumber) - 1
       if (rowIndex < 0 || colIndex < 0) return
       const key = `${rowIndex}:${colIndex}`
-      const value = parseCellValue(cell)
-      if (value !== '') cells[key] = value
-      const style = parseCellStyle(cell)
-      if (style) styles[key] = style
+      const content = parseCellContent(cell, resolver)
+      if (content.value !== '') cells[key] = content.value
+      if (content.style) styles[key] = content.style
+      if (content.richText?.length) cellRichTexts[key] = content.richText
       const meta = parseCellMeta(cell)
       if (meta) cellMeta[key] = meta
     })
@@ -285,6 +307,7 @@ function toUiSheet(worksheet: any, index: number, workbook: any, options?: IExce
     colCount,
     cells,
     styles,
+    cellRichTexts: Object.keys(cellRichTexts).length ? cellRichTexts : undefined,
     cellMeta,
     merges,
     colWidths,

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<xml xmlns:oa="urn:schemas-microsoft-com:office:activation" xmlns:p="urn:schemas-microsoft-com:office:powerpoint" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:v="urn:schemas-microsoft-com:vml"><o:shapelayout v:ext="edit"><o:idmap v:ext="edit" data="2"/></o:shapelayout><v:shapetype id="_x0000_t202" coordsize="21600,21600" o:spt="202" path="m0,0l0,21600,21600,21600,21600,0xe">
+  <v:stroke joinstyle="miter"/>
+  <v:path gradientshapeok="t" o:connecttype="rect"/>
+</v:shapetype>
+
+<v:shape id="_x0000_s2049" o:spt="202" type="#_x0000_t202" style="position:absolute;left:0pt;top:0pt;margin-left:107.25pt;margin-top:1.5pt;height:60pt;width:97.5pt;visibility:hidden;" fillcolor="#FFFFE1" filled="t" stroked="t" o:insetmode="auto" coordsize="21600,21600"><v:path/><v:fill on="t" color2="#FFFFFF" focussize="0,0"/><v:stroke color="#000000"/><v:imagedata o:title=""/><o:lock v:ext="edit" aspectratio="f"/><v:textbox style="direction:context;layout-flow:horizontal;mso-rotate:0;"><div style="text-align:left"/></v:textbox><x:ClientData ObjectType="Note"><x:MoveWithCells/><x:SizeWithCells/><x:Anchor>2,22,0,3,4,25,4,11</x:Anchor><x:Row>0</x:Row><x:Column>1</x:Column></x:ClientData></v:shape></xml>

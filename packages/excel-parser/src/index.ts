@@ -13,6 +13,7 @@ export type {
   VerticalAlign,
   WrapMode,
   ICellStyle,
+  ICellRichTextRun,
   ICellMeta,
   ISheetImageAnchor,
   ISheetFloatingImage,

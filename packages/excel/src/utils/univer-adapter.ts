@@ -11,8 +11,9 @@ import {
   type IWorksheetData,
   VerticalAlign,
 } from '@univerjs/core'
-import type { ICellMeta, ICellStyle, IUiSheet, IWorkbook } from '../types'
+import type { ICellMeta, ICellRichTextRun, ICellStyle, IUiSheet, IWorkbook } from '../types'
 import { buildSheetDrawingResources, mergeWorkbookResources } from './sheet-drawing-resources'
+import { internalRichTextToUniver, stripRunLevelFontStyle, univerRichTextToInternal } from './rich-text'
 
 const DEFAULT_WORKBOOK_ID = 'vervedocs-excel'
 const DEFAULT_SHEET_ROWS = 50
@@ -249,6 +250,7 @@ function fromRange(range: IRange): string {
 function toUiSheet(sheet: Partial<IWorksheetData>, index: number): IUiSheet {
   const cells: Record<string, string> = {}
   const styles: Record<string, ICellStyle> = {}
+  const cellRichTexts: Record<string, ICellRichTextRun[]> = {}
   const cellMeta: Record<string, ICellMeta> = {}
   const rawCellData = sheet.cellData || {}
   for (const [rowText, rowData] of Object.entries(rawCellData)) {
@@ -259,13 +261,19 @@ function toUiSheet(sheet: Partial<IWorksheetData>, index: number): IUiSheet {
       if (!Number.isFinite(col) || !rawCell || typeof rawCell !== 'object') continue
       const key = `${row}:${col}`
       const cell = rawCell as Record<string, any>
-      if (typeof cell.f === 'string' && cell.f.trim()) {
+      const richText = univerRichTextToInternal(cell.p)
+      if (richText?.length) {
+        cells[key] = richText.map((run) => run.text).join('')
+        cellRichTexts[key] = richText
+      } else if (typeof cell.f === 'string' && cell.f.trim()) {
         cells[key] = `=${cell.f}`
       } else if (cell.v !== null && cell.v !== undefined && cell.v !== '') {
         cells[key] = String(cell.v)
       }
       const style = univerStyleToInternal(cell.s as IStyleData | undefined)
-      if (style) styles[key] = style
+      if (style) {
+        styles[key] = richText?.length ? (stripRunLevelFontStyle(style) || style) : style
+      }
       const meta = customToCellMeta(cell.custom)
       if (meta) cellMeta[key] = meta
     }
@@ -301,6 +309,7 @@ function toUiSheet(sheet: Partial<IWorksheetData>, index: number): IUiSheet {
     colCount: Math.max(DEFAULT_SHEET_COLS, Number(sheet.columnCount || DEFAULT_SHEET_COLS)),
     cells,
     styles,
+    cellRichTexts: Object.keys(cellRichTexts).length ? cellRichTexts : undefined,
     cellMeta,
     merges: Array.isArray(sheet.mergeData) ? sheet.mergeData.map(fromRange) : [],
     colWidths,
@@ -325,12 +334,19 @@ function toWorksheetData(sheet: IUiSheet): Partial<IWorksheetData> {
     const col = Number(colText)
     if (!Number.isFinite(row) || !Number.isFinite(col)) continue
     if (!cellData[row]) cellData[row] = {}
-    const style = internalStyleToUniver(sheet.styles?.[key])
+    const richText = sheet.cellRichTexts?.[key]
+    const style = internalStyleToUniver(
+      richText?.length ? stripRunLevelFontStyle(sheet.styles?.[key]) : sheet.styles?.[key],
+    )
     const meta = cellMetaToCustom(sheet.cellMeta?.[key])
     const raw = String(value ?? '')
     const next: Record<string, any> = {}
     if (raw.startsWith('=') && raw.length > 1) {
       next.f = raw.slice(1)
+    } else if (richText?.length) {
+      next.p = internalRichTextToUniver(richText, key)
+      next.v = null
+      next.t = CellValueType.STRING
     } else if (raw !== '') {
       const numeric = Number(raw)
       if (raw.trim() !== '' && Number.isFinite(numeric) && !/^0\d+/.test(raw.trim())) {
@@ -459,6 +475,7 @@ export function univerWorkbookToInternal(workbook: Partial<IWorkbookData>): IWor
         cells: {},
         styles: {},
         cellMeta: {},
+        cellRichTexts: {},
         merges: [],
         colWidths: {},
         rowHeights: {},

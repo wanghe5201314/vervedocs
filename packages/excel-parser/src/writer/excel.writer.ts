@@ -1,6 +1,7 @@
 import type { BorderStyle } from 'exceljs'
-import type { ICellMeta, ICellStyle, IWorkbook, SheetI18nOptions } from '../types'
-import { createExcelJsWorkbook } from './exceljs-loader'
+import type { ICellMeta, ICellStyle, IWorkbook } from '../types'
+import type { IExcelExportOptions, IExcelExportResult } from '../contract'
+import { createExcelJsWorkbook } from '../utils/exceljs-loader'
 
 function parseCellKey(key: string): { row: number; col: number } | null {
   const [rowText, colText] = String(key || '').split(':')
@@ -137,7 +138,10 @@ function writeCellValue(cell: any, value: string, meta?: ICellMeta) {
   if (comment) cell.note = comment
 }
 
-export async function writeWorkbookToExcelBuffer(data: IWorkbook, options?: SheetI18nOptions): Promise<ArrayBuffer> {
+export async function writeWorkbookToExcelBuffer(
+  data: IWorkbook,
+  options?: IExcelExportOptions
+): Promise<ArrayBuffer> {
   const workbook = await createExcelJsWorkbook()
   const sheets = Array.isArray(data?.sheets) ? data.sheets : []
   sheets.forEach((sheet, index) => {
@@ -195,4 +199,19 @@ export async function writeWorkbookToExcelBuffer(data: IWorkbook, options?: Shee
   const raw = await workbook.xlsx.writeBuffer()
   const dataView = raw instanceof Uint8Array ? raw : new Uint8Array(raw)
   return dataView.buffer.slice(dataView.byteOffset, dataView.byteOffset + dataView.byteLength)
+}
+
+export async function writeExcel(
+  workbook: IWorkbook,
+  options?: IExcelExportOptions
+): Promise<IExcelExportResult> {
+  try {
+    const data = await writeWorkbookToExcelBuffer(workbook, options)
+    return { success: true, data }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '导出失败'
+    }
+  }
 }

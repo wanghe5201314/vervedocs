@@ -30,6 +30,9 @@
     "build": "vue-tsc --noEmit && vite build",
     "lint": "eslint ."
   },
+  "dependencies": {
+    "@vervedoc/excel-parser": "workspace:^"
+  },
   "peerDependencies": {
     "@mdi/js": "catalog:",
     "@univerjs/core": "^0.25.1",
@@ -84,7 +87,6 @@
     "ant-design-vue": "catalog:",
     "eslint": "catalog:",
     "eslint-plugin-unused-imports": "catalog:",
-    "exceljs": "^4.4.0",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
     "unplugin-auto-import": "^21.1.0",

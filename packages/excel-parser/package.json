@@ -1,0 +1,48 @@
+{
+  "name": "@vervedoc/excel-parser",
+  "version": "1.0.0",
+  "description": "VerveDoc 本地 JS 实现：Excel 导入/导出（符合 ExcelImportCallback / ExcelExportCallback 契约）",
+  "author": "wanghe",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/excel-parser.js",
+    "module": "./dist/excel-parser.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/excel-parser.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "package.json"
+  ],
+  "scripts": {
+    "clean": "node -e \"const fs = require('fs'); if(fs.existsSync('dist')) fs.rmSync('dist', {recursive: true})\"",
+    "type:check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

@@ -26,6 +26,10 @@ interface Options {
   readOnly?: boolean
   locale?: ExcelLocale
   i18n?: Partial<ExcelI18nMessages>
+  /** xlsx → IWorkbook，默认 @vervedoc/excel-parser */
+  importCallback?: ExcelImportCallback
+  /** IWorkbook → xlsx，默认 @vervedoc/excel-parser */
+  exportCallback?: ExcelExportCallback
   onChange?: (content: any) => void
 }
 
@@ -42,3 +46,4 @@ class ExcelEditor {
 
 - 统一采用 `new ExcelEditor(...)` 接入。
 - 宿主负责数据请求与持久化；编辑器仅负责渲染与变更回调。
+- `.xlsx` 导入/导出由 `@vervedoc/excel-parser` 提供（可通过 `importCallback` / `exportCallback` 替换）。

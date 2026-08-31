@@ -1,5 +1,6 @@
-import type { Align, ICellMeta, ICellStyle, IUiSheet, IWorkbook, SheetI18nOptions, VerticalAlign } from '../types'
-import { createExcelJsWorkbook } from './exceljs-loader'
+import type { Align, ICellMeta, ICellStyle, IUiSheet, IWorkbook, VerticalAlign } from '../types'
+import type { IExcelImportResult, IExcelParseOptions } from './types'
+import { createExcelJsWorkbook } from '../utils/exceljs-loader'
 
 function normalizeArgbToHex(argb: unknown): string | undefined {
   const text = String(argb || '').trim()
@@ -212,7 +213,7 @@ function parseMergeAddress(range: string): string | null {
   return `${startCell.r}:${startCell.c}:${endCell.r}:${endCell.c}`
 }
 
-function toUiSheet(worksheet: any, index: number, options?: SheetI18nOptions): IUiSheet {
+function toUiSheet(worksheet: any, index: number, options?: IExcelParseOptions): IUiSheet {
   const cells: Record<string, string> = {}
   const styles: Record<string, ICellStyle> = {}
   const cellMeta: Record<string, ICellMeta> = {}
@@ -300,9 +301,12 @@ function toUiSheet(worksheet: any, index: number, options?: SheetI18nOptions): I
   }
 }
 
-export async function readExcelFileToWorkbook(file: File, options?: SheetI18nOptions): Promise<IWorkbook> {
+async function readExcelToWorkbook(
+  data: ArrayBuffer | File,
+  options?: IExcelParseOptions
+): Promise<IWorkbook> {
   const workbook = await createExcelJsWorkbook()
-  const buffer = await file.arrayBuffer()
+  const buffer = data instanceof File ? await data.arrayBuffer() : data
   await workbook.xlsx.load(buffer)
   const worksheetList = Array.isArray(workbook.worksheets) ? workbook.worksheets : []
   const sheets = worksheetList.map((worksheet: any, index: number) => toUiSheet(worksheet, index, options))
@@ -325,4 +329,28 @@ export async function readExcelFileToWorkbook(file: File, options?: SheetI18nOpt
       frozenRows: 0
     }]
   }
+}
+
+export async function parseExcel(
+  data: ArrayBuffer | File,
+  options?: IExcelParseOptions
+): Promise<IExcelImportResult> {
+  try {
+    const workbook = await readExcelToWorkbook(data, options)
+    return { success: true, workbook }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '导入失败'
+    }
+  }
+}
+
+/** @deprecated 使用 parseExcel */
+export async function readExcelFileToWorkbook(
+  file: File,
+  options?: IExcelParseOptions
+): Promise<IWorkbook> {
+  const result = await readExcelToWorkbook(file, options)
+  return result
 }

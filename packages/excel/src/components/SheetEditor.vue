@@ -470,10 +470,9 @@ import type { FRange, FWorkbook, FWorksheet } from '@univerjs/sheets/facade'
 import { VIcon } from '@vervedoc/icons'
 import UnifiedTopHeader from './UnifiedTopHeader.vue'
 import type { Align, VerticalAlign, WrapMode, ICellStyle, IUiSheet, IWorkbook, UndoEntry } from '../types'
+import type { ExcelExportCallback, ExcelImportCallback } from '@vervedoc/excel-parser'
 
 import type { ExcelI18nMessages, ExcelLocale } from '@/i18n'
-import { readExcelFileToWorkbook } from '../utils/excel-import'
-import { writeWorkbookToExcelBuffer } from '../utils/excel-export'
 import { getAuthToken } from '../api/sheet.api'
 import { loadUniverRuntime } from '../utils/univer-runtime'
 import type { LoadedUniverRuntime } from '../utils/univer-runtime'
@@ -491,6 +490,8 @@ const props = withDefaults(defineProps<{
   locale?: ExcelLocale
   i18n?: Partial<ExcelI18nMessages>
   collaboration?: ExcelCollaborationConfig
+  importCallback: ExcelImportCallback
+  exportCallback: ExcelExportCallback
 }>(), {
   initialContent: undefined,
   documentUrl: undefined,
@@ -1268,11 +1269,13 @@ async function loadWorkbookFromDocumentUrl(url: string) {
   if (!resp.ok) throw new Error(`请求失败: ${resp.status}`)
   const buffer = await resp.arrayBuffer()
   if (!buffer || buffer.byteLength === 0) throw new Error('远程文件内容为空')
-  const file = new File([buffer], 'import.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-  const importedWorkbook = await readExcelFileToWorkbook(file, {
+  const result = await props.importCallback(buffer, {
     defaultSheetName: index => t('sheet.defaultSheetName', { index: index + 1 }),
   })
-  applyWorkbookState(importedWorkbook)
+  if (!result.success || !result.workbook) {
+    throw new Error(result.error || t('message.importFailed'))
+  }
+  applyWorkbookState(result.workbook)
   emitChange()
 }
 
@@ -2137,10 +2140,13 @@ async function handleImportExcelChange(e: Event) {
   const file = input?.files?.[0]
   if (!file) return
   try {
-    const importedWorkbook = await readExcelFileToWorkbook(file, {
+    const result = await props.importCallback(file, {
       defaultSheetName: index => t('sheet.defaultSheetName', { index: index + 1 }),
     })
-    applyWorkbookState(importedWorkbook)
+    if (!result.success || !result.workbook) {
+      throw new Error(result.error || t('message.importFailed'))
+    }
+    applyWorkbookState(result.workbook)
     emitChange()
     message.success(t('message.importSuccess', { name: file.name }))
   } catch (error) {
@@ -2154,10 +2160,13 @@ async function handleImportExcelChange(e: Event) {
 async function handleExportExcel() {
   if (!workbook.sheets.length) return
   try {
-    const buffer = await writeWorkbookToExcelBuffer(workbook, {
+    const result = await props.exportCallback(workbook, {
       defaultSheetName: index => t('sheet.defaultSheetName', { index: index + 1 }),
     })
-    const blob = new Blob([buffer], {
+    if (!result.success || !result.data) {
+      throw new Error(result.error || t('message.exportFailed'))
+    }
+    const blob = new Blob([result.data], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     })
     const link = document.createElement('a')
@@ -2203,16 +2212,19 @@ async function handleCreateNewWorkbook() {
         sheets: workbook.sheets
       }
     }
-    const buffer = await writeWorkbookToExcelBuffer(workbook, {
+    const result = await props.exportCallback(workbook, {
       defaultSheetName: index => t('sheet.defaultSheetName', { index: index + 1 }),
     })
+    if (!result.success || !result.data) {
+      throw new Error(result.error || t('message.exportFailed'))
+    }
     const now = new Date()
     const fileName = `${t('sheet.defaultWorkbookName')}-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}.xlsx`
     localDocumentTitle.value = fileName.replace(/\.xlsx$/i, '')
     const excelPayload = {
       fileName,
       mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      buffer
+      buffer: result.data
     }
 
     emit('new-document', { dbPayload, excelPayload })

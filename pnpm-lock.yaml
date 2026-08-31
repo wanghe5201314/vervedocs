@@ -349,9 +349,6 @@ importers:
       vue-eslint-parser:
         specifier: ^10.4.0
         version: 10.4.1(eslint@10.8.1)
-      vue-types:
-        specifier: ^3.0.2
-        version: 3.0.2(vue@3.5.41(typescript@5.6.3))
 
   packages/docx-lite:
     dependencies:
@@ -537,6 +534,9 @@ importers:
       '@univerjs/ui':
         specifier: ^0.25.1
         version: 0.25.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(rxjs@7.8.2)
+      '@vervedoc/excel-parser':
+        specifier: workspace:^
+        version: link:../excel-parser
     devDependencies:
       '@ant-design/icons-vue':
         specifier: 'catalog:'
@@ -568,9 +568,6 @@ importers:
       eslint-plugin-unused-imports:
         specifier: 'catalog:'
         version: 4.4.1(@typescript-eslint/eslint-plugin@8.67.0(@typescript-eslint/parser@8.67.0(eslint@10.8.1)(typescript@5.6.3))(eslint@10.8.1)(typescript@5.6.3))(eslint@10.8.1)
-      exceljs:
-        specifier: ^4.4.0
-        version: 4.4.0
       typescript:
         specifier: 'catalog:'
         version: 5.6.3
@@ -601,6 +598,19 @@ importers:
       vue-tsc:
         specifier: 'catalog:'
         version: 2.2.12(typescript@5.6.3)
+
+  packages/excel-parser:
+    dependencies:
+      exceljs:
+        specifier: ^4.4.0
+        version: 4.4.0
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 22.20.1
+      typescript:
+        specifier: 'catalog:'
+        version: 5.6.3
 
   packages/icons:
     devDependencies:
@@ -838,6 +848,9 @@ importers:
       '@vervedoc/excel':
         specifier: workspace:^
         version: link:../../packages/excel
+      '@vervedoc/excel-parser':
+        specifier: workspace:^
+        version: link:../../packages/excel-parser
       vue:
         specifier: 'catalog:'
         version: 3.5.41(typescript@5.6.3)
@@ -5297,7 +5310,6 @@ packages:
 
   uuid@8.3.2:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
-    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   vanilla-picker@2.12.3:

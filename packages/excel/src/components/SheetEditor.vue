@@ -1292,6 +1292,9 @@ function fromInternalSheet(sheet: any, i: number): IUiSheet {
     colCount: Number(sheet?.colCount || sheet?.meta?.colCount || 26),
     cells: { ...(sheet?.cells || {}) },
     styles: { ...(sheet?.styles || {}) },
+    cellRichTexts: sheet?.cellRichTexts
+      ? JSON.parse(JSON.stringify(sheet.cellRichTexts))
+      : undefined,
     cellMeta: { ...(sheet?.cellMeta || {}) },
     merges: Array.isArray(sheet?.merges) ? [...sheet.merges] : [],
     colWidths: { ...(sheet?.colWidths || {}) },

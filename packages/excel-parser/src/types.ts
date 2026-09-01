@@ -2,6 +2,17 @@ export type Align = 'left' | 'center' | 'right'
 export type VerticalAlign = 'top' | 'middle' | 'bottom'
 export type WrapMode = 'clip' | 'overflow' | 'wrap'
 
+export interface ICellRichTextRun {
+  text: string
+  bold?: boolean
+  italic?: boolean
+  underline?: boolean
+  strikethrough?: boolean
+  fontFamily?: string
+  fontSize?: number
+  fontColor?: string
+}
+
 export interface ICellStyle {
   bold?: boolean
   italic?: boolean
@@ -55,6 +66,7 @@ export interface IUiSheet {
   colCount: number
   cells: Record<string, string>
   styles: Record<string, ICellStyle>
+  cellRichTexts?: Record<string, ICellRichTextRun[]>
   cellMeta?: Record<string, ICellMeta>
   merges?: string[]
   colWidths?: Record<number, number>

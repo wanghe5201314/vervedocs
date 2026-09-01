@@ -1,8 +1,9 @@
 import type { BorderStyle } from 'exceljs'
-import type { ICellMeta, ICellStyle, IWorkbook } from '../types'
+import type { ICellMeta, ICellRichTextRun, ICellStyle, IWorkbook } from '../types'
 import type { IExcelExportOptions, IExcelExportResult } from '../contract'
 import { createExcelJsWorkbook } from '../utils/exceljs-loader'
 import { normalizeHyperlink } from '../utils/url'
+import { runToExcelFont } from '../utils/rich-text'
 import { writeWorksheetImages } from './image.writer'
 
 function parseCellKey(key: string): { row: number; col: number } | null {
@@ -74,11 +75,11 @@ function toExcelNumFmt(style: ICellStyle): string | undefined {
   return
 }
 
-function applyStyle(cell: any, style: ICellStyle) {
+function applyStyle(cell: any, style: ICellStyle, hasRichText = false) {
   const color = String(style.fontColor || '').replace('#', '')
   const fillColor = String(style.bgColor || '').replace('#', '')
   const fontName = String(style.fontFamily || '').split(',')[0]?.trim()
-  if (style.bold || style.italic || style.underline || style.strikethrough || style.fontFamily || style.fontSize || color) {
+  if (!hasRichText && (style.bold || style.italic || style.underline || style.strikethrough || style.fontFamily || style.fontSize || color)) {
     cell.font = {
       bold: !!style.bold,
       italic: !!style.italic,
@@ -109,10 +110,20 @@ function applyStyle(cell: any, style: ICellStyle) {
   if (numFmt) cell.numFmt = numFmt
 }
 
-function writeCellValue(cell: any, value: string, meta?: ICellMeta) {
+function writeCellValue(cell: any, value: string, meta?: ICellMeta, richText?: ICellRichTextRun[]) {
   const text = String(value ?? '')
   const hyperlink = normalizeHyperlink(String(meta?.hyperlink || ''))
   const comment = String(meta?.comment || '').trim()
+  if (richText?.length) {
+    cell.value = {
+      richText: richText.map((run) => ({
+        text: run.text,
+        font: runToExcelFont(run),
+      })),
+    }
+    if (comment) cell.note = comment
+    return
+  }
   if (text.startsWith('=') && text.length > 1) {
     cell.value = { formula: text.slice(1) }
     if (comment) cell.note = comment
@@ -166,7 +177,7 @@ export async function writeWorkbookToExcelBuffer(
       const pos = parseCellKey(key)
       if (!pos) return
       const cell = worksheet.getCell(pos.row + 1, pos.col + 1)
-      writeCellValue(cell, value, sheet?.cellMeta?.[key])
+      writeCellValue(cell, value, sheet?.cellMeta?.[key], sheet?.cellRichTexts?.[key])
     })
     Object.entries(sheet?.cellMeta || {}).forEach(([key, meta]) => {
       if (sheet?.cells?.[key] !== undefined) return
@@ -179,7 +190,7 @@ export async function writeWorkbookToExcelBuffer(
       const pos = parseCellKey(key)
       if (!pos) return
       const cell = worksheet.getCell(pos.row + 1, pos.col + 1)
-      applyStyle(cell, style || {})
+      applyStyle(cell, style || {}, !!sheet?.cellRichTexts?.[key]?.length)
     })
     const merges = Array.isArray(sheet?.merges) ? sheet.merges : []
     merges.forEach((merge: string) => {

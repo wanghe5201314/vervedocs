@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<sst
+  xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+  count="28"
+  uniqueCount="28"
+  ><si><t>基本文字</t></si
+  ><si><t>单元格合并</t></si
+  ><si><t>加粗</t></si
+  ><si><t>左对齐</t></si
+  ><si><t>冻结第一行</t></si
+  ><si><t>倾斜</t></si
+  ><si><t>居中</t></si
+  ><si><t>下划线</t></si
+  ><si><t>右对齐</t></si
+  ><si><t>删除线</t></si
+  ><si><t>两端</t></si
+  ><si
+    ><r
+      ><rPr
+        ><sz val="11" /><color rgb="FFFF0000" /><rFont val="宋体" /><charset
+          val="134" /><scheme val="minor" /></rPr
+      ><t>颜</t></r
+    ><r
+      ><rPr
+        ><sz val="11" /><color theme="1" /><rFont val="宋体" /><charset
+          val="134" /><scheme val="minor" /></rPr
+      ><t>色</t></r
+    ></si
+  ><si><t>大字</t></si
+  ><si><t>求和公式</t></si
+  ><si><t>小字</t></si
+  ><si><t>排序测试</t></si
+  ><si><t>黑体</t></si
+  ><si><t>http://www.qq.com</t></si
+  ><si><t>百分比</t></si
+  ><si><t>`314%`</t></si
+  ><si><t xml:space="preserve">千分位分隔 </t></si
+  ><si><t>`123,456,789.00`</t></si
+  ><si><t>增加小数位</t></si
+  ><si><t>`3.1400`</t></si
+  ><si><t>减少小数位数</t></si
+  ><si><t>`3.1415926`显示`3.141593`</t></si
+  ><si><t>插入图表</t></si
+  ><si><t>多sheet测试</t></si></sst
+>

@@ -593,6 +593,34 @@ function readRangeTextDecoration(
   return !!activeSheet.value?.styles?.[sheetKey]?.[sheetField]
 }
 
+function getToolbarCellRange(row: number, col: number): FRange | null {
+  const sheet = getActiveSheet()
+  if (!sheet) return null
+  return sheet.getRange(row, col, 1, 1)
+}
+
+function readRangeFontSize(range: FRange, row: number, col: number): number {
+  const key = cellKey(row, col)
+  const sheetSize = activeSheet.value?.styles?.[key]?.fontSize
+  if (Number.isFinite(sheetSize)) return Number(sheetSize)
+  const richTextSize = activeSheet.value?.cellRichTexts?.[key]?.find(run => Number.isFinite(run.fontSize))?.fontSize
+  if (Number.isFinite(richTextSize)) return Number(richTextSize)
+  const cellStyle = readRangeCellStyleData(range, 'cell')
+  if (cellStyle && Number.isFinite(cellStyle.fs)) return Number(cellStyle.fs)
+  const cellData = (range as any).getCellData?.()
+  const textRuns = cellData?.p?.body?.textRuns
+  if (Array.isArray(textRuns)) {
+    for (const run of textRuns) {
+      if (Number.isFinite(run?.ts?.fs)) return Number(run.ts.fs)
+    }
+  }
+  const cellSize = (range as any).getFontSize?.('cell')
+  if (Number.isFinite(cellSize)) return Number(cellSize)
+  const composedSize = (range as any).getFontSize?.()
+  if (Number.isFinite(composedSize)) return Number(composedSize)
+  return 12
+}
+
 function restoreSelectionCell(row: number, col: number) {
   const sheet = getActiveSheet()
   if (!sheet) return
@@ -1661,31 +1689,31 @@ function syncToolbarAndFormula() {
   const range = activeRange || getSelectionRange()
   const row = activeRange?.getRow?.() ?? selected.row
   const col = activeRange?.getColumn?.() ?? selected.col
-  if (range) {
+  const cellRange = getToolbarCellRange(row, col) || range
+  if (cellRange) {
     const key = cellKey(row, col)
-    formulaValue.value = getRangeFormulaBarValue(range) || activeSheet.value?.cells[key] || ''
-    toolbarState.bold = readRangeBooleanStyle(range, 'bl', key, 'bold')
-    toolbarState.italic = readRangeBooleanStyle(range, 'it', key, 'italic')
-    toolbarState.underline = readRangeTextDecoration(range, 'ul', key, 'underline')
-    toolbarState.strikethrough = readRangeTextDecoration(range, 'st', key, 'strikethrough')
-    const hAlign = String((range as any).getHorizontalAlignment?.() || 'left')
+    formulaValue.value = getRangeFormulaBarValue(cellRange) || activeSheet.value?.cells[key] || ''
+    toolbarState.bold = readRangeBooleanStyle(cellRange, 'bl', key, 'bold')
+    toolbarState.italic = readRangeBooleanStyle(cellRange, 'it', key, 'italic')
+    toolbarState.underline = readRangeTextDecoration(cellRange, 'ul', key, 'underline')
+    toolbarState.strikethrough = readRangeTextDecoration(cellRange, 'st', key, 'strikethrough')
+    const hAlign = String((cellRange as any).getHorizontalAlignment?.() || 'left')
     toolbarState.align = (hAlign === 'center' ? 'center' : hAlign === 'right' || hAlign === 'normal' ? 'right' : 'left') as Align
-    const vAlign = String((range as any).getVerticalAlignment?.() || 'bottom')
+    const vAlign = String((cellRange as any).getVerticalAlignment?.() || 'bottom')
     toolbarState.verticalAlign = (vAlign === 'top' ? 'top' : vAlign === 'middle' ? 'middle' : 'bottom') as VerticalAlign
     toolbarState.fontFamily = resolveSheetFontFamily(
-      readRangeFontFamily(range, row, col)
+      readRangeFontFamily(cellRange, row, col)
       || readFontFamilyFromSheetState(activeSheet.value?.styles, activeSheet.value?.cellRichTexts, key)
       || DEFAULT_FONT_FAMILY,
     )
-    const fontSize = Number((range as any).getFontSize?.() || 12)
-    toolbarState.fontSize = fontSize
-    const fontColor = String((range as any).getFontColor?.() || '#000000')
+    toolbarState.fontSize = readRangeFontSize(cellRange, row, col)
+    const fontColor = String((cellRange as any).getFontColor?.() || '#000000')
     toolbarState.fontColor = fontColor === 'null' ? '#000000' : fontColor
-    const bgColor = String((range as any).getBackground?.() || '')
+    const bgColor = String((cellRange as any).getBackground?.() || '')
     toolbarState.bgColor = bgColor === 'null' ? '' : bgColor
-    const wrapStrategy = Number((range as any).getWrapStrategy?.() ?? 0)
+    const wrapStrategy = Number((cellRange as any).getWrapStrategy?.() ?? 0)
     toolbarState.wrap = (wrapStrategy === 2 ? 'wrap' : wrapStrategy === 1 ? 'overflow' : 'clip') as WrapMode
-    const textRotation = Number((range as any).getTextRotation?.() ?? 0)
+    const textRotation = Number((cellRange as any).getTextRotation?.() ?? 0)
     toolbarState.rotation = textRotation
   } else {
     const key = cellKey(selected.row, selected.col)

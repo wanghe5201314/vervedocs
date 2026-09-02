@@ -3,6 +3,7 @@ import type { IExcelImportResult, IExcelParseOptions } from './types'
 import { createExcelJsWorkbook } from '../utils/exceljs-loader'
 import { createThemeColorResolver, resolveExcelColor, type ThemeColorResolver } from '../utils/color'
 import { parseExcelRichText, richTextToPlainText, stripRunLevelFontStyle } from '../utils/rich-text'
+import { normalizeFontFamily } from '../utils/font-family'
 import { parseWorksheetImages } from './image.parser'
 import { installExcelJsCommentHarvest, mergeCommentsIntoCellMeta } from './comment.parser'
 
@@ -89,13 +90,13 @@ function inferNumberFormat(formatCode: unknown): Pick<ICellStyle, 'numberFormat'
 function parseCellStyle(cell: any, resolver: ThemeColorResolver, hasRichText = false): ICellStyle | undefined {
   const style = cell?.style || {}
   const result: ICellStyle = {}
-  const font = style?.font
+  const font = style?.font || cell?.font
   if (font && !hasRichText) {
     if (font.bold) result.bold = true
     if (font.italic) result.italic = true
     if (font.underline) result.underline = true
     if (font.strike) result.strikethrough = true
-    if (font.name) result.fontFamily = String(font.name)
+    if (font.name) result.fontFamily = normalizeFontFamily(String(font.name)) || String(font.name)
     if (Number.isFinite(font.sz)) result.fontSize = Number(font.sz)
     const fontColor = toHexColor(font.color, resolver, 'font')
     if (fontColor) result.fontColor = fontColor

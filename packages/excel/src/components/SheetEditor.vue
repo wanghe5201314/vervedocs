@@ -24,7 +24,7 @@
             <span class="ribbon-tab-label">{{ tab.label }}</span>
           </div>
         </div>
-        <div class="ribbon-panel">
+        <div class="ribbon-panel" @mousedown.capture="handleRibbonStyleMouseDownCapture">
           <div v-if="activeMenuTab === 'file'" class="ribbon-tab-panel">
             <div class="ribbon-group">
               <div class="ribbon-group-content">
@@ -45,9 +45,9 @@
           <div v-else-if="activeMenuTab === 'home'" class="ribbon-tab-panel">
             <div class="ribbon-group">
               <div class="ribbon-group-content">
-                <a-select v-model:value="toolbarState.fontFamily" size="small" style="width: 110px" :disabled="readOnly" @change="updateCellStyle()">
+                <a-select v-model:value="toolbarState.fontFamily" size="small" style="width: 110px" :disabled="readOnly" @mousedown="handleFontSelectMouseDown" @change="handleFontFamilyChange">
                   <a-select-option v-for="font in fontOptions" :key="font.value" :label="font.label" :value="font.value">
-                    <span :style="{ fontFamily: font.value }">{{ font.label }}</span>
+                    <span :style="{ fontFamily: font.cssFamily || font.value }">{{ font.label }}</span>
                   </a-select-option>
                 </a-select>
                 <a-select v-model:value="toolbarState.fontSize" size="small" style="width: 60px" :disabled="readOnly" @change="updateCellStyle()">
@@ -433,7 +433,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
-import { BorderStyleTypes, BorderType, Direction } from '@univerjs/core'
+import { BorderStyleTypes, BorderType, BooleanNumber, Direction } from '@univerjs/core'
 import type { Univer as UniverType } from '@univerjs/core'
 import type { FUniver } from '@univerjs/core/facade'
 import {
@@ -445,25 +445,12 @@ import {
   RemoveColCommand,
   RemoveRowCommand,
   RemoveWorksheetMergeCommand,
-  ResetBackgroundColorCommand,
-  ResetTextColorCommand,
-  SetBackgroundColorCommand,
   SetBorderBasicCommand,
-  SetBoldCommand,
   SetColHiddenCommand,
-  SetFontFamilyCommand,
-  SetFontSizeCommand,
-  SetHorizontalTextAlignCommand,
-  SetItalicCommand,
   SetRowHiddenCommand,
   SetSpecificColsVisibleCommand,
   SetSpecificRowsVisibleCommand,
-  SetStrikeThroughCommand,
-  SetTextColorCommand,
-  SetTextRotationCommand,
-  SetTextWrapCommand,
-  SetUnderlineCommand,
-  SetVerticalTextAlignCommand,
+  SetStyleCommand,
 } from '@univerjs/sheets'
 import { SetNumfmtCommand } from '@univerjs/sheets-numfmt'
 import type { FRange, FWorkbook, FWorksheet } from '@univerjs/sheets/facade'
@@ -481,6 +468,13 @@ import type { ExcelCollaborationConfig, UserInfo } from '@vervedoc/docx-editor-c
 import { useSheetCollaboration } from '@/composables/use-sheet-collaboration'
 import { useSheetI18n } from '@/composables/use-sheet-i18n'
 import { useSheetFilter } from '@/composables/use-sheet-filter'
+import {
+  DEFAULT_FONT_FAMILY,
+  readFontFamilyFromSheetState,
+  readFontFamilyFromUniverCellData,
+  resolveToolbarFontFamily,
+  toUniverFontFamily,
+} from '@/utils/font-family'
 
 const props = withDefaults(defineProps<{
   initialContent?: any
@@ -525,20 +519,95 @@ const emit = defineEmits<{
 }>()
 
 const fontOptions = [
-  { label: '宋体', value: 'SimSun, serif' },
-  { label: '楷体', value: 'KaiTi, serif' },
-  { label: '仿宋', value: 'FangSong, serif' },
-  { label: '黑体', value: 'SimHei, sans-serif' },
-  { label: '微软雅黑', value: 'Microsoft YaHei, sans-serif' },
-  { label: '微软正黑体', value: 'Microsoft JhengHei, sans-serif' },
-  { label: '华文新魏', value: 'STXinwei, serif' },
-  { label: '思源黑体', value: 'Source Han Sans CN, sans-serif' },
-  { label: '思源宋体', value: 'Source Han Serif CN, serif' },
-  { label: 'Arial', value: 'Arial, sans-serif' },
-  { label: 'Times New Roman', value: 'Times New Roman, serif' },
-  { label: 'Segoe UI', value: 'Segoe UI, sans-serif' },
-  { label: 'Courier New', value: 'Courier New, monospace' },
+  { label: '宋体', value: 'SimSun', cssFamily: 'SimSun, serif' },
+  { label: '楷体', value: 'KaiTi', cssFamily: 'KaiTi, serif' },
+  { label: '仿宋', value: 'FangSong', cssFamily: 'FangSong, serif' },
+  { label: '黑体', value: 'SimHei', cssFamily: 'SimHei, sans-serif' },
+  { label: '微软雅黑', value: 'Microsoft YaHei', cssFamily: 'Microsoft YaHei, sans-serif' },
+  { label: '微软正黑体', value: 'Microsoft JhengHei', cssFamily: 'Microsoft JhengHei, sans-serif' },
+  { label: '华文新魏', value: 'STXinwei', cssFamily: 'STXinwei, serif' },
+  { label: '思源黑体', value: 'Source Han Sans CN', cssFamily: 'Source Han Sans CN, sans-serif' },
+  { label: '思源宋体', value: 'Source Han Serif CN', cssFamily: 'Source Han Serif CN, serif' },
+  { label: 'Arial', value: 'Arial', cssFamily: 'Arial, sans-serif' },
+  { label: 'Times New Roman', value: 'Times New Roman', cssFamily: 'Times New Roman, serif' },
+  { label: 'Segoe UI', value: 'Segoe UI', cssFamily: 'Segoe UI, sans-serif' },
+  { label: 'Courier New', value: 'Courier New', cssFamily: 'Courier New, monospace' },
 ]
+
+function resolveSheetFontFamily(fontFamily?: string): string {
+  return resolveToolbarFontFamily(fontFamily, fontOptions, DEFAULT_FONT_FAMILY)
+}
+
+function readRangeFontFamily(range: FRange, row: number, col: number): string | undefined {
+  const cellFont = (range as any).getFontFamily?.('cell')
+  if (cellFont) return String(cellFont)
+  const styleData = (range as any).getCellStyleData?.('cell')
+  if (styleData?.ff) return String(styleData.ff)
+  const cellDataFont = readFontFamilyFromUniverCellData((range as any).getCellData?.())
+  if (cellDataFont) return cellDataFont
+  const key = cellKey(row, col)
+  const sheetFont = readFontFamilyFromSheetState(
+    activeSheet.value?.styles,
+    activeSheet.value?.cellRichTexts,
+    key,
+  )
+  if (sheetFont) return sheetFont
+  return undefined
+}
+
+function readRangeCellStyleData(range: FRange, type: 'cell' | 'row' = 'cell') {
+  return (range as any).getCellStyleData?.(type) as Record<string, any> | null | undefined
+}
+
+function readRangeBooleanStyle(
+  range: FRange,
+  styleKey: 'bl' | 'it',
+  sheetKey: string,
+  sheetField: 'bold' | 'italic',
+): boolean {
+  const cellStyle = readRangeCellStyleData(range, 'cell')
+  if (cellStyle?.[styleKey] !== undefined) {
+    return cellStyle[styleKey] === BooleanNumber.TRUE
+  }
+  const composed = readRangeCellStyleData(range, 'row')
+  if (composed?.[styleKey] !== undefined) {
+    return composed[styleKey] === BooleanNumber.TRUE
+  }
+  return !!activeSheet.value?.styles?.[sheetKey]?.[sheetField]
+}
+
+function readRangeTextDecoration(
+  range: FRange,
+  styleKey: 'ul' | 'st',
+  sheetKey: string,
+  sheetField: 'underline' | 'strikethrough',
+): boolean {
+  const cellStyle = readRangeCellStyleData(range, 'cell')
+  if (cellStyle?.[styleKey]?.s !== undefined) {
+    return cellStyle[styleKey].s === BooleanNumber.TRUE
+  }
+  const composed = readRangeCellStyleData(range, 'row')
+  if (composed?.[styleKey]?.s !== undefined) {
+    return composed[styleKey].s === BooleanNumber.TRUE
+  }
+  return !!activeSheet.value?.styles?.[sheetKey]?.[sheetField]
+}
+
+function restoreSelectionCell(row: number, col: number) {
+  const sheet = getActiveSheet()
+  if (!sheet) return
+  const range = sheet.getRange(row, col, 1, 1)
+  sheet.setActiveSelection(range)
+  selected.row = row
+  selected.col = col
+  selectionEnd.row = row
+  selectionEnd.col = col
+}
+
+function toFacadeHorizontalAlignment(align: Align): 'left' | 'center' | 'normal' {
+  return align === 'center' ? 'center' : align === 'right' ? 'normal' : 'left'
+}
+
 const sizeOptions = [
   { label: '八号', value: 5 },
   { label: '七号', value: 5.5 },
@@ -583,6 +652,8 @@ const selectionEnd = reactive({ row: 0, col: 0 })
 const formulaValue = ref('')
 const formulaFocused = ref(false)
 const formulaInputRef = ref<HTMLInputElement | null>(null)
+const editingCell = ref<{ row: number; col: number } | null>(null)
+const pendingStyleTargetCell = ref<{ row: number; col: number } | null>(null)
 
 
 const sheetEditorRef = ref<HTMLElement | null>(null)
@@ -636,7 +707,7 @@ let lastUniverSnapshot = ''
 
 
 const toolbarState = reactive<ICellStyle & { numberFormat: string; decimalPlaces: number; rotation: number; verticalAlign: VerticalAlign }>({
-  fontFamily: 'Microsoft YaHei, sans-serif',
+  fontFamily: DEFAULT_FONT_FAMILY,
   fontSize: 12,
   align: 'left',
   verticalAlign: 'bottom',
@@ -698,14 +769,65 @@ async function executeUniverCommand(commandId: string, params?: Record<string, a
   }
 }
 
-async function executeStyleCommand(commandId: string, params?: Record<string, any>) {
-  syncUniverSelection()
-  const ok = await executeUniverCommand(commandId, params)
-  if (ok) {
-    await nextTick()
-    syncToolbarAndFormula()
+async function commitActiveCellEdit(target?: { row: number; col: number } | null) {
+  const workbook = activeUniverWorkbook
+  if (!workbook?.endEditingAsync) return
+  const restoreTarget = target || pendingStyleTargetCell.value || editingCell.value
+  try {
+    await workbook.endEditingAsync(true)
+  } catch {
+    // 当前未处于编辑态时忽略
   }
-  return ok
+  if (restoreTarget) {
+    restoreSelectionCell(restoreTarget.row, restoreTarget.col)
+  }
+}
+
+async function handleRibbonStyleMouseDownCapture(event: MouseEvent) {
+  if (activeMenuTab.value === 'file') return
+  const target = event.target as HTMLElement | null
+  if (!target?.closest('.ribbon-group-content')) return
+  if (target.closest('button[disabled], .ant-select-disabled')) return
+
+  const workbook = activeUniverWorkbook
+  if (!workbook?.isCellEditing?.()) return
+
+  pendingStyleTargetCell.value = editingCell.value || { row: selected.row, col: selected.col }
+  // 阻止工具栏抢焦点，先提交单元格编辑内容，避免 A1/A2 等输入内容丢失
+  event.preventDefault()
+  await commitActiveCellEdit()
+}
+
+async function getPreparedSelectionRange(): Promise<FRange | null> {
+  const sheet = getActiveSheet()
+  if (!sheet) return null
+
+  const target = pendingStyleTargetCell.value || editingCell.value
+  await commitActiveCellEdit()
+
+  if (target) {
+    pendingStyleTargetCell.value = null
+    return sheet.getRange(target.row, target.col, 1, 1)
+  }
+  return getSelectionRange()
+}
+
+async function finishRangeStyleMutation() {
+  await nextTick()
+  syncToolbarAndFormula()
+  commitUniverFacadeMutation()
+}
+
+async function applyRangeStyleType(range: FRange, type: string, value: unknown) {
+  const sheet = getActiveSheet()
+  const workbook = activeUniverWorkbook
+  if (!sheet || !workbook) return false
+  return executeUniverCommand(SetStyleCommand.id, {
+    unitId: workbook.getId(),
+    subUnitId: sheet.getSheetId(),
+    range: range.getRange(),
+    style: { type, value },
+  })
 }
 
 function getActiveSheetCommandContext() {
@@ -741,6 +863,7 @@ function getActiveSheetCommandContext() {
 }
 
 async function executeSheetCommand(commandId: string, params?: Record<string, any>) {
+  await commitActiveCellEdit()
   syncUniverSelection()
   const ok = await executeUniverCommand(commandId, params)
   if (ok) {
@@ -751,12 +874,11 @@ async function executeSheetCommand(commandId: string, params?: Record<string, an
 }
 
 function syncUniverSelection() {
-  const target = univerAPI?.getActiveSheet?.()
-  const worksheet = target?.worksheet
-  if (!worksheet) return
+  const sheet = getActiveSheet()
+  if (!sheet) return
   const { r1, r2, c1, c2 } = selectionRange.value
-  const range = worksheet.getRange(r1, c1, r2 - r1 + 1, c2 - c1 + 1)
-  worksheet.setActiveSelection(range)
+  const range = sheet.getRange(r1, c1, r2 - r1 + 1, c2 - c1 + 1)
+  sheet.setActiveSelection(range)
 }
 
 async function openUniverSort(order: 'asc' | 'desc') {
@@ -948,6 +1070,24 @@ async function ensureUniverInitialized(host: HTMLElement) {
 function bindUniverEvents() {
   clearUniverWorkbookDisposables()
   if (!univerAPI) return
+  univerWorkbookDisposables.push(univerAPI.addEvent(univerAPI.Event.SheetEditStarted, (params: { row: number; column: number }) => {
+    editingCell.value = { row: params.row, col: params.column }
+  }))
+  univerWorkbookDisposables.push(univerAPI.addEvent(univerAPI.Event.SheetEditEnded, () => {
+    editingCell.value = null
+  }))
+  univerWorkbookDisposables.push(univerAPI.addEvent(univerAPI.Event.SheetEditChanging, (params: { row: number; column: number; value?: { toPlainText?: () => string } }) => {
+    const key = cellKey(params.row, params.column)
+    if (cellKey(selected.row, selected.col) !== key) return
+    const plainText = params.value?.toPlainText?.()
+    if (plainText !== undefined) {
+      formulaValue.value = plainText
+    }
+  }))
+  univerWorkbookDisposables.push(univerAPI.addEvent(univerAPI.Event.SelectionChanged, () => {
+    if (renderingUniver) return
+    updateSelectionFromUniver()
+  }))
   univerWorkbookDisposables.push(univerAPI.addEvent(univerAPI.Event.CommandExecuted, () => {
     if (renderingUniver) return
     window.setTimeout(() => {
@@ -1339,7 +1479,7 @@ function fromFortuneSheetRecord(sheet: any, i: number): IUiSheet {
       italic: !!cell?.it,
       underline: !!cell?.un,
       align: (cell?.ht || 'left') as Align,
-      fontFamily: String(cell?.ff || 'Microsoft YaHei, sans-serif'),
+      fontFamily: resolveSheetFontFamily(String(cell?.ff || DEFAULT_FONT_FAMILY)),
       fontSize: Number(cell?.fs || 12)
     }
   })
@@ -1516,23 +1656,27 @@ function getRangeFormulaBarValue(range: FRange): string {
 
 // ===== Toolbar sync =====
 function syncToolbarAndFormula() {
-  const range = getSelectionRange()
+  const sheet = getActiveSheet()
+  const activeRange = sheet?.getActiveRange?.() || null
+  const range = activeRange || getSelectionRange()
+  const row = activeRange?.getRow?.() ?? selected.row
+  const col = activeRange?.getColumn?.() ?? selected.col
   if (range) {
-    const key = cellKey(selected.row, selected.col)
+    const key = cellKey(row, col)
     formulaValue.value = getRangeFormulaBarValue(range) || activeSheet.value?.cells[key] || ''
-    const fontWeight = String((range as any).getFontWeight?.() || 'normal')
-    const fontStyle = String((range as any).getFontStyle?.() || 'normal')
-    const fontLine = String((range as any).getFontLine?.() || 'none')
-    toolbarState.bold = fontWeight === 'bold'
-    toolbarState.italic = fontStyle === 'italic'
-    toolbarState.underline = fontLine === 'underline'
-    toolbarState.strikethrough = fontLine === 'line-through'
+    toolbarState.bold = readRangeBooleanStyle(range, 'bl', key, 'bold')
+    toolbarState.italic = readRangeBooleanStyle(range, 'it', key, 'italic')
+    toolbarState.underline = readRangeTextDecoration(range, 'ul', key, 'underline')
+    toolbarState.strikethrough = readRangeTextDecoration(range, 'st', key, 'strikethrough')
     const hAlign = String((range as any).getHorizontalAlignment?.() || 'left')
-    toolbarState.align = (hAlign === 'center' ? 'center' : hAlign === 'right' ? 'right' : 'left') as Align
+    toolbarState.align = (hAlign === 'center' ? 'center' : hAlign === 'right' || hAlign === 'normal' ? 'right' : 'left') as Align
     const vAlign = String((range as any).getVerticalAlignment?.() || 'bottom')
     toolbarState.verticalAlign = (vAlign === 'top' ? 'top' : vAlign === 'middle' ? 'middle' : 'bottom') as VerticalAlign
-    const fontFamily = String((range as any).getFontFamily?.() || 'Microsoft YaHei, sans-serif')
-    toolbarState.fontFamily = fontFamily
+    toolbarState.fontFamily = resolveSheetFontFamily(
+      readRangeFontFamily(range, row, col)
+      || readFontFamilyFromSheetState(activeSheet.value?.styles, activeSheet.value?.cellRichTexts, key)
+      || DEFAULT_FONT_FAMILY,
+    )
     const fontSize = Number((range as any).getFontSize?.() || 12)
     toolbarState.fontSize = fontSize
     const fontColor = String((range as any).getFontColor?.() || '#000000')
@@ -1552,7 +1696,7 @@ function syncToolbarAndFormula() {
     toolbarState.underline = !!style.underline
     toolbarState.strikethrough = !!style.strikethrough
     toolbarState.align = (style.align || 'left') as Align
-    toolbarState.fontFamily = style.fontFamily || 'Microsoft YaHei, sans-serif'
+    toolbarState.fontFamily = resolveSheetFontFamily(style.fontFamily || DEFAULT_FONT_FAMILY)
     toolbarState.fontSize = Number(style.fontSize || 12)
     toolbarState.fontColor = style.fontColor || '#000000'
     toolbarState.bgColor = style.bgColor || ''
@@ -1578,71 +1722,84 @@ function saveUndoState() {
   redoStack.value = []
 }
 
+async function handleFontSelectMouseDown() {
+  if (props.readOnly) return
+  const workbook = activeUniverWorkbook
+  if (!workbook?.isCellEditing?.()) return
+  pendingStyleTargetCell.value = editingCell.value || { row: selected.row, col: selected.col }
+  await commitActiveCellEdit(pendingStyleTargetCell.value)
+}
+
+async function handleFontFamilyChange() {
+  await updateCellStyle()
+}
+
 async function updateCellStyle() {
   if (props.readOnly) return
-  const range = getSelectionRange()
+  const range = await getPreparedSelectionRange()
   if (!range) return
   saveUndoState()
-  const currentFontLine = String((range as any).getFontLine?.() || 'none')
-  const currentBold = String((range as any).getFontWeight?.() || 'normal') === 'bold'
-  const currentItalic = String((range as any).getFontStyle?.() || 'normal') === 'italic'
-  const currentUnderline = currentFontLine === 'underline'
-  const currentStrikethrough = currentFontLine === 'line-through'
 
-  if (toolbarState.bold !== currentBold) await executeStyleCommand(SetBoldCommand.id)
-  if (toolbarState.italic !== currentItalic) await executeStyleCommand(SetItalicCommand.id)
-  if (toolbarState.underline !== currentUnderline) await executeStyleCommand(SetUnderlineCommand.id)
-  if (toolbarState.strikethrough !== currentStrikethrough) await executeStyleCommand(SetStrikeThroughCommand.id)
-
-  await executeStyleCommand(SetHorizontalTextAlignCommand.id, {
-    value: toolbarState.align === 'left' ? 'left' : toolbarState.align === 'center' ? 'center' : 'right',
-  })
-  await executeStyleCommand(SetVerticalTextAlignCommand.id, { value: toolbarState.verticalAlign })
-  await executeStyleCommand(SetFontFamilyCommand.id, { value: toolbarState.fontFamily || 'Microsoft YaHei, sans-serif' })
-  await executeStyleCommand(SetFontSizeCommand.id, { value: Number(toolbarState.fontSize || 12) })
-  await executeStyleCommand(
-    toolbarState.fontColor ? SetTextColorCommand.id : ResetTextColorCommand.id,
-    toolbarState.fontColor ? { value: toolbarState.fontColor } : undefined
-  )
-  await executeStyleCommand(
-    toolbarState.bgColor ? SetBackgroundColorCommand.id : ResetBackgroundColorCommand.id,
-    toolbarState.bgColor ? { value: toolbarState.bgColor } : undefined
-  )
-  await executeStyleCommand(SetTextWrapCommand.id, {
-    value: toolbarState.wrap === 'wrap' ? 2 : toolbarState.wrap === 'overflow' ? 1 : 0,
-  })
-  await executeStyleCommand(SetTextRotationCommand.id, { value: Number(toolbarState.rotation ?? 0) })
+  range.setFontWeight(toolbarState.bold ? 'bold' : null)
+  range.setFontStyle(toolbarState.italic ? 'italic' : null)
+  await applyRangeStyleType(range, 'ul', toolbarState.underline ? { s: BooleanNumber.TRUE } : null)
+  await applyRangeStyleType(range, 'st', toolbarState.strikethrough ? { s: BooleanNumber.TRUE } : null)
+  range.setHorizontalAlignment(toFacadeHorizontalAlignment(toolbarState.align || 'left'))
+  range.setVerticalAlignment(toolbarState.verticalAlign)
+  range.setFontFamily(toUniverFontFamily(toolbarState.fontFamily))
+  range.setFontSize(Number(toolbarState.fontSize || 12))
+  if (toolbarState.fontColor) {
+    range.setFontColor(toolbarState.fontColor)
+  } else {
+    await applyRangeStyleType(range, 'cl', null)
+  }
+  if (toolbarState.bgColor) {
+    range.setBackgroundColor(toolbarState.bgColor)
+  } else {
+    await applyRangeStyleType(range, 'bg', null)
+  }
+  range.setWrapStrategy(toolbarState.wrap === 'wrap' ? 2 : toolbarState.wrap === 'overflow' ? 1 : 0)
+  range.setTextRotation(Number(toolbarState.rotation ?? 0))
+  await finishRangeStyleMutation()
 }
 
 
 async function toggleStyle(style: 'bold' | 'italic' | 'underline' | 'strikethrough') {
   if (props.readOnly) return
   toolbarState[style] = !toolbarState[style]
-  const range = getSelectionRange()
+  const range = await getPreparedSelectionRange()
   if (!range) return
   saveUndoState()
-  if (style === 'bold') await executeStyleCommand(SetBoldCommand.id)
-  else if (style === 'italic') await executeStyleCommand(SetItalicCommand.id)
-  else if (style === 'underline') await executeStyleCommand(SetUnderlineCommand.id)
-  else if (style === 'strikethrough') await executeStyleCommand(SetStrikeThroughCommand.id)
+  if (style === 'bold') {
+    range.setFontWeight(toolbarState.bold ? 'bold' : null)
+  } else if (style === 'italic') {
+    range.setFontStyle(toolbarState.italic ? 'italic' : null)
+  } else if (style === 'underline') {
+    await applyRangeStyleType(range, 'ul', toolbarState.underline ? { s: BooleanNumber.TRUE } : null)
+  } else if (style === 'strikethrough') {
+    await applyRangeStyleType(range, 'st', toolbarState.strikethrough ? { s: BooleanNumber.TRUE } : null)
+  }
+  await finishRangeStyleMutation()
 }
 
 async function setAlign(align: Align) {
   if (props.readOnly) return
   toolbarState.align = align
+  const range = await getPreparedSelectionRange()
+  if (!range) return
   saveUndoState()
-  await executeStyleCommand(SetHorizontalTextAlignCommand.id, {
-    value: align === 'left' ? 'left' : align === 'center' ? 'center' : 'right',
-  })
+  range.setHorizontalAlignment(toFacadeHorizontalAlignment(align))
+  await finishRangeStyleMutation()
 }
 
 async function setWrap(wrap: WrapMode) {
   if (props.readOnly) return
   toolbarState.wrap = wrap
+  const range = await getPreparedSelectionRange()
+  if (!range) return
   saveUndoState()
-  await executeStyleCommand(SetTextWrapCommand.id, {
-    value: wrap === 'wrap' ? 2 : wrap === 'overflow' ? 1 : 0,
-  })
+  range.setWrapStrategy(wrap === 'wrap' ? 2 : wrap === 'overflow' ? 1 : 0)
+  await finishRangeStyleMutation()
 }
 
 function toggleWrap() {
@@ -1652,18 +1809,25 @@ function toggleWrap() {
 async function setFontColor(color: string) {
   if (props.readOnly) return
   toolbarState.fontColor = color
+  const range = await getPreparedSelectionRange()
+  if (!range) return
   saveUndoState()
-  await executeStyleCommand(SetTextColorCommand.id, { value: color || '#000000' })
+  range.setFontColor(color || '#000000')
+  await finishRangeStyleMutation()
 }
 
 async function setBgColor(color: string) {
   if (props.readOnly) return
   toolbarState.bgColor = color
+  const range = await getPreparedSelectionRange()
+  if (!range) return
   saveUndoState()
-  await executeStyleCommand(
-    color ? SetBackgroundColorCommand.id : ResetBackgroundColorCommand.id,
-    color ? { value: color } : undefined
-  )
+  if (color) {
+    range.setBackgroundColor(color)
+  } else {
+    await applyRangeStyleType(range, 'bg', null)
+  }
+  await finishRangeStyleMutation()
 }
 
 async function setBorders(type: string) {
@@ -2120,7 +2284,6 @@ const {
 
 
 onMounted(async () => {
-
   if (hasUsableWorkbookContent(props.initialContent)) {
     console.log('[ExcelEditor] 文档加载方式: JSON 加载', props.initialContent)
   } else if (props.documentUrl) {
@@ -2176,6 +2339,7 @@ async function handleImportExcelChange(e: Event) {
       throw new Error(result.error || t('message.importFailed'))
     }
     applyWorkbookState(result.workbook)
+    scheduleUniverRender()
     emitChange()
     message.success(t('message.importSuccess', { name: file.name }))
   } catch (error) {
@@ -2279,8 +2443,11 @@ async function changeFontSize(delta: number) {
     newIdx = idx <= 0 ? 0 : idx - 1
   }
   toolbarState.fontSize = numericSizes[newIdx]
+  const range = await getPreparedSelectionRange()
+  if (!range) return
   saveUndoState()
-  await executeStyleCommand(SetFontSizeCommand.id, { value: numericSizes[newIdx] })
+  range.setFontSize(numericSizes[newIdx])
+  await finishRangeStyleMutation()
 }
 
 // ===== 快捷格式按钮 =====
@@ -2335,16 +2502,22 @@ async function changeDecimal(delta: number) {
 async function setVerticalAlign(va: VerticalAlign) {
   if (props.readOnly) return
   toolbarState.verticalAlign = va
+  const range = await getPreparedSelectionRange()
+  if (!range) return
   saveUndoState()
-  await executeStyleCommand(SetVerticalTextAlignCommand.id, { value: va })
+  range.setVerticalAlignment(va)
+  await finishRangeStyleMutation()
 }
 
 // ===== 文字旋转 =====
 async function setRotation(deg: number) {
   if (props.readOnly) return
   toolbarState.rotation = deg
+  const range = await getPreparedSelectionRange()
+  if (!range) return
   saveUndoState()
-  await executeStyleCommand(SetTextRotationCommand.id, { value: deg })
+  range.setTextRotation(deg)
+  await finishRangeStyleMutation()
 }
 
 // ===== 筛选 =====

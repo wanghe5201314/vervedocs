@@ -1,4 +1,5 @@
 import type { ICellRichTextRun, ICellStyle } from '../types'
+import { normalizeFontFamily } from './font-family'
 import type { ThemeColorResolver } from './color'
 import { resolveExcelColor } from './color'
 
@@ -19,8 +20,8 @@ function parseFontRun(font: any, defaults: ICellStyle | undefined, resolver: The
   if (font?.italic || defaults?.italic) run.italic = !!(font?.italic ?? defaults?.italic)
   if (font?.underline || defaults?.underline) run.underline = !!(font?.underline ?? defaults?.underline)
   if (font?.strike || defaults?.strikethrough) run.strikethrough = !!(font?.strike ?? defaults?.strikethrough)
-  const fontFamily = font?.name || defaults?.fontFamily
-  if (fontFamily) run.fontFamily = String(fontFamily)
+  const fontFamily = normalizeFontFamily(font?.name || defaults?.fontFamily)
+  if (fontFamily) run.fontFamily = fontFamily
   const fontSize = Number.isFinite(font?.sz) ? Number(font.sz) : defaults?.fontSize
   if (Number.isFinite(fontSize)) run.fontSize = Number(fontSize)
   const fontColor = font?.color

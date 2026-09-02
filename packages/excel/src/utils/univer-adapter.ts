@@ -12,6 +12,7 @@ import {
   VerticalAlign,
 } from '@univerjs/core'
 import type { ICellMeta, ICellRichTextRun, ICellStyle, IUiSheet, IWorkbook } from '../types'
+import { normalizeFontFamily } from '@vervedoc/excel-parser'
 import { buildSheetDrawingResources, mergeWorkbookResources } from './sheet-drawing-resources'
 import { applyNoteResourcesToSheets, buildSheetNoteResources } from './sheet-note-resources'
 import { internalRichTextToUniver, stripRunLevelFontStyle, univerRichTextToInternal } from './rich-text'
@@ -172,7 +173,7 @@ function applyFormulaResult(
 function internalStyleToUniver(style?: ICellStyle): IStyleData | undefined {
   if (!style) return undefined
   const next: IStyleData = {}
-  if (style.fontFamily) next.ff = style.fontFamily
+  if (style.fontFamily) next.ff = normalizeFontFamily(style.fontFamily) || style.fontFamily
   if (Number.isFinite(style.fontSize)) next.fs = Number(style.fontSize)
   if (style.bold !== undefined) next.bl = toBooleanNumber(style.bold)
   if (style.italic !== undefined) next.it = toBooleanNumber(style.italic)
@@ -218,10 +219,20 @@ function internalStyleToUniver(style?: ICellStyle): IStyleData | undefined {
   return Object.keys(next).length ? next : undefined
 }
 
+function resolveUniverStyleData(
+  raw: unknown,
+  workbookStyles?: Record<string, IStyleData>,
+): IStyleData | undefined {
+  if (!raw) return undefined
+  if (typeof raw === 'object') return raw as IStyleData
+  const key = String(raw)
+  return workbookStyles?.[key]
+}
+
 function univerStyleToInternal(style?: IStyleData | null): ICellStyle | undefined {
   if (!style) return undefined
   const next: ICellStyle = {}
-  if (style.ff) next.fontFamily = style.ff
+  if (style.ff) next.fontFamily = normalizeFontFamily(style.ff) || style.ff
   if (Number.isFinite(style.fs)) next.fontSize = Number(style.fs)
   if (style.bl !== undefined) next.bold = style.bl === BooleanNumber.TRUE
   if (style.it !== undefined) next.italic = style.it === BooleanNumber.TRUE
@@ -277,7 +288,11 @@ function fromRange(range: IRange): string {
   return `${range.startRow}:${range.startColumn}:${range.endRow}:${range.endColumn}`
 }
 
-function toUiSheet(sheet: Partial<IWorksheetData>, index: number): IUiSheet {
+function toUiSheet(
+  sheet: Partial<IWorksheetData>,
+  index: number,
+  workbookStyles?: Record<string, IStyleData>,
+): IUiSheet {
   const cells: Record<string, string> = {}
   const styles: Record<string, ICellStyle> = {}
   const cellRichTexts: Record<string, ICellRichTextRun[]> = {}
@@ -305,7 +320,7 @@ function toUiSheet(sheet: Partial<IWorksheetData>, index: number): IUiSheet {
       } else if (cell.v !== null && cell.v !== undefined && cell.v !== '') {
         cells[key] = String(cell.v)
       }
-      const style = univerStyleToInternal(cell.s as IStyleData | undefined)
+      const style = univerStyleToInternal(resolveUniverStyleData(cell.s, workbookStyles))
       if (style) {
         styles[key] = richText?.length ? (stripRunLevelFontStyle(style) || style) : style
       }
@@ -489,11 +504,12 @@ export function internalWorkbookToUniver(workbook: IWorkbook, locale?: string): 
 
 export function univerWorkbookToInternal(workbook: Partial<IWorkbookData>): IWorkbook {
   const order = Array.isArray(workbook.sheetOrder) ? workbook.sheetOrder : Object.keys(workbook.sheets || {})
+  const workbookStyles = (workbook.styles || {}) as Record<string, IStyleData>
   const sheets = order
     .map((sheetId, index) => {
       const sheet = workbook.sheets?.[sheetId]
       if (!sheet) return null
-      return toUiSheet({ ...sheet, id: sheetId }, index)
+      return toUiSheet({ ...sheet, id: sheetId }, index, workbookStyles)
     })
     .filter((sheet): sheet is IUiSheet => !!sheet)
 

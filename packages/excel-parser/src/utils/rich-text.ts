@@ -1,5 +1,6 @@
 import type { ICellRichTextRun, ICellStyle } from '../types'
 import { normalizeFontFamily } from './font-family'
+import { readExcelFontSize } from './excel-font'
 import type { ThemeColorResolver } from './color'
 import { resolveExcelColor } from './color'
 
@@ -22,7 +23,7 @@ function parseFontRun(font: any, defaults: ICellStyle | undefined, resolver: The
   if (font?.strike || defaults?.strikethrough) run.strikethrough = !!(font?.strike ?? defaults?.strikethrough)
   const fontFamily = normalizeFontFamily(font?.name || defaults?.fontFamily)
   if (fontFamily) run.fontFamily = fontFamily
-  const fontSize = Number.isFinite(font?.sz) ? Number(font.sz) : defaults?.fontSize
+  const fontSize = readExcelFontSize(font) ?? defaults?.fontSize
   if (Number.isFinite(fontSize)) run.fontSize = Number(fontSize)
   const fontColor = font?.color
     ? resolveExcelColor(font.color, resolver, 'font')

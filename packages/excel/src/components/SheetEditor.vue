@@ -29,7 +29,7 @@
             <div class="ribbon-group">
               <div class="ribbon-group-content">
                 <button class="ribbon-btn-lg" :disabled="readOnly" @click="handleCreateNewWorkbook()" title="新建表格"><VIcon name="plus" /><span>新建</span></button>
-                <button class="ribbon-btn-lg" @click="emitChange()" title="保存"><VIcon name="content-save-outline" /><span>保存</span></button>
+                <button class="ribbon-btn-lg" @click="handleSave()" title="保存"><VIcon name="content-save-outline" /><span>保存</span></button>
                 <button class="ribbon-btn-lg" @click="handlePrint()" title="打印"><VIcon name="printer-outline" /><span>打印</span></button>
               </div>
               <div class="ribbon-group-title">文件</div>
@@ -774,7 +774,7 @@ async function openUniverSort(order: 'asc' | 'desc') {
   const endRow = sortWholeSheet ? Math.max(0, (activeSheet.value?.rowCount || 1) - 1) : r2
   const startColumn = sortWholeSheet ? 0 : c1
   const endColumn = sortWholeSheet ? Math.max(0, (activeSheet.value?.colCount || 1) - 1) : c2
-  const colIndex = Math.max(0, selected.col - startColumn)
+  const colIndex = selected.col
 
   return executeUniverCommand(UNIVER_COMMANDS.sortRange, {
     unitId: workbook.getId(),
@@ -1122,9 +1122,21 @@ function syncWorkbookFromUniver() {
   workbook.sheets = extracted.sheets.map((sheet, index) => {
     const currentById = currentSheets.find(item => item.id === sheet.id)
     const current = currentById || currentSheets[index]
+    // comment 以 Univer SHEET_NOTE_PLUGIN（已写入 extracted.cellMeta）为准，避免删除后残留
+    const mergedMeta: Record<string, any> = { ...(current?.cellMeta || {}) }
+    for (const [key, meta] of Object.entries(mergedMeta)) {
+      if (!meta || typeof meta !== 'object' || meta.comment === undefined) continue
+      const rest = { ...meta }
+      delete rest.comment
+      if (Object.keys(rest).length) mergedMeta[key] = rest
+      else delete mergedMeta[key]
+    }
+    for (const [key, meta] of Object.entries(sheet.cellMeta || {})) {
+      mergedMeta[key] = { ...(mergedMeta[key] || {}), ...(meta || {}) }
+    }
     return {
       ...sheet,
-      cellMeta: { ...(sheet.cellMeta || current?.cellMeta || {}) },
+      cellMeta: mergedMeta,
       images: current?.images ?? sheet.images,
       filterColumn: current?.filterColumn ?? null,
       filterKeyword: current?.filterKeyword || '',
@@ -1441,11 +1453,9 @@ function applyFormulaValue() {
   const range = getSelectionRange()
   if (!range) return
   saveUndoState()
-  if (value.startsWith('=') && value.length > 1) {
-    range.setFormula(value.slice(1))
-  } else {
-    range.setValue(value)
-  }
+  range.setValue(value)
+  syncToolbarAndFormula()
+  commitUniverFacadeMutation()
 }
 
 function commitUniverFacadeMutation() {
@@ -1480,7 +1490,7 @@ function handleGlobalKeydown(e: KeyboardEvent) {
       case 'f': e.preventDefault(); void openUniverFindDialog(); return
       case 'h': e.preventDefault(); void openUniverReplaceDialog(); return
       case 'p': e.preventDefault(); handlePrint(); return
-      case 's': e.preventDefault(); emitChange(); return
+      case 's': e.preventDefault(); handleSave(); return
       case 'o': e.preventDefault(); triggerImportExcel(); return
     }
   }
@@ -1494,12 +1504,22 @@ function moveSelection(dr: number, dc: number) {
   selectCell(newR, newC)
 }
 
+function getRangeFormulaBarValue(range: FRange): string {
+  const formula = String((range as any).getFormula?.() || '').trim()
+  if (formula) return formula.startsWith('=') ? formula : `=${formula}`
+  const cellFormula = String((range as any).getCellData?.()?.f || '').trim()
+  if (cellFormula) return cellFormula.startsWith('=') ? cellFormula : `=${cellFormula}`
+  const value = range.getValue()
+  if (value !== null && value !== undefined && value !== '') return String(value)
+  return ''
+}
+
 // ===== Toolbar sync =====
 function syncToolbarAndFormula() {
   const range = getSelectionRange()
   if (range) {
-    const value = String(range.getValue() || '')
-    formulaValue.value = value
+    const key = cellKey(selected.row, selected.col)
+    formulaValue.value = getRangeFormulaBarValue(range) || activeSheet.value?.cells[key] || ''
     const fontWeight = String((range as any).getFontWeight?.() || 'normal')
     const fontStyle = String((range as any).getFontStyle?.() || 'normal')
     const fontLine = String((range as any).getFontLine?.() || 'none')
@@ -1698,7 +1718,7 @@ async function deleteSelectedContent() {
 function handleHeaderCommand(command: string) {
   switch (command) {
     case 'import': return triggerImportExcel()
-    case 'save': return emitChange()
+    case 'save': return handleSave()
     case 'undo': return handleUndo()
     case 'redo': return handleRedo()
   }
@@ -2382,13 +2402,19 @@ function insertFunction(fn: string) {
   const range = getSelectionRange()
   if (!range) return
   saveUndoState()
-  range.setFormula(`${fn}()`)
+  range.setValue(`=${fn}()`)
   formulaValue.value = `=${fn}()`
   syncToolbarAndFormula()
   commitUniverFacadeMutation()
+  selectCellRefInput()
 }
 
 // ===== Emit =====
+function handleSave() {
+  syncWorkbookFromUniver()
+  emitChange('univer')
+}
+
 function emitChange(source: 'internal' | 'univer' = 'internal') {
   if (source !== 'univer') {
     scheduleUniverRender()

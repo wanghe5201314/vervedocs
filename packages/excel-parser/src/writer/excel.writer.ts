@@ -4,6 +4,7 @@ import type { IExcelExportOptions, IExcelExportResult } from '../contract'
 import { createExcelJsWorkbook } from '../utils/exceljs-loader'
 import { normalizeHyperlink } from '../utils/url'
 import { runToExcelFont } from '../utils/rich-text'
+import { applyNoteResourcesToWorkbook } from '../utils/sheet-note-sync'
 import { writeWorksheetImages } from './image.writer'
 
 function parseCellKey(key: string): { row: number; col: number } | null {
@@ -148,6 +149,7 @@ export async function writeWorkbookToExcelBuffer(
   data: IWorkbook,
   options?: IExcelExportOptions
 ): Promise<ArrayBuffer> {
+  applyNoteResourcesToWorkbook(data)
   const workbook = await createExcelJsWorkbook()
   const sheets = Array.isArray(data?.sheets) ? data.sheets : []
   sheets.forEach((sheet, index) => {

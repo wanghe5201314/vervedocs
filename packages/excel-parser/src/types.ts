@@ -37,6 +37,8 @@ export interface ICellStyle {
 export interface ICellMeta {
   hyperlink?: string
   comment?: string
+  /** xlsx 导入时的公式缓存结果，用于初始化 Univer 单元格显示值 */
+  formulaResult?: string | number | boolean
 }
 
 export interface ISheetImageAnchor {

@@ -13,6 +13,7 @@ import {
 } from '@univerjs/core'
 import type { ICellMeta, ICellRichTextRun, ICellStyle, IUiSheet, IWorkbook } from '../types'
 import { buildSheetDrawingResources, mergeWorkbookResources } from './sheet-drawing-resources'
+import { applyNoteResourcesToSheets, buildSheetNoteResources } from './sheet-note-resources'
 import { internalRichTextToUniver, stripRunLevelFontStyle, univerRichTextToInternal } from './rich-text'
 
 const DEFAULT_WORKBOOK_ID = 'vervedocs-excel'
@@ -136,7 +137,36 @@ function customToCellMeta(custom?: Record<string, any> | null): ICellMeta | unde
   if (typeof meta.comment === 'string' && meta.comment.trim()) {
     next.comment = meta.comment.trim()
   }
+  if (meta.formulaResult !== undefined && meta.formulaResult !== null && meta.formulaResult !== '') {
+    next.formulaResult = meta.formulaResult
+  }
   return Object.keys(next).length ? next : undefined
+}
+
+function applyFormulaResult(
+  next: Record<string, any>,
+  formulaResult: ICellMeta['formulaResult'],
+) {
+  if (formulaResult === undefined || formulaResult === null || formulaResult === '') return
+  if (typeof formulaResult === 'number' && Number.isFinite(formulaResult)) {
+    next.v = formulaResult
+    next.t = CellValueType.NUMBER
+    return
+  }
+  if (typeof formulaResult === 'boolean') {
+    next.v = formulaResult
+    next.t = CellValueType.BOOLEAN
+    return
+  }
+  const text = String(formulaResult)
+  const numeric = Number(text)
+  if (text.trim() !== '' && Number.isFinite(numeric) && !/^0\d+/.test(text.trim())) {
+    next.v = numeric
+    next.t = CellValueType.NUMBER
+    return
+  }
+  next.v = text
+  next.t = CellValueType.STRING
 }
 
 function internalStyleToUniver(style?: ICellStyle): IStyleData | undefined {
@@ -261,12 +291,17 @@ function toUiSheet(sheet: Partial<IWorksheetData>, index: number): IUiSheet {
       if (!Number.isFinite(col) || !rawCell || typeof rawCell !== 'object') continue
       const key = `${row}:${col}`
       const cell = rawCell as Record<string, any>
+      let meta = customToCellMeta(cell.custom)
       const richText = univerRichTextToInternal(cell.p)
       if (richText?.length) {
         cells[key] = richText.map((run) => run.text).join('')
         cellRichTexts[key] = richText
       } else if (typeof cell.f === 'string' && cell.f.trim()) {
-        cells[key] = `=${cell.f}`
+        const formula = cell.f.trim()
+        cells[key] = formula.startsWith('=') ? formula : `=${formula}`
+        if (cell.v !== null && cell.v !== undefined && cell.v !== '') {
+          meta = { ...(meta || {}), formulaResult: cell.v }
+        }
       } else if (cell.v !== null && cell.v !== undefined && cell.v !== '') {
         cells[key] = String(cell.v)
       }
@@ -274,8 +309,7 @@ function toUiSheet(sheet: Partial<IWorksheetData>, index: number): IUiSheet {
       if (style) {
         styles[key] = richText?.length ? (stripRunLevelFontStyle(style) || style) : style
       }
-      const meta = customToCellMeta(cell.custom)
-      if (meta) cellMeta[key] = meta
+      if (meta && Object.keys(meta).length) cellMeta[key] = meta
     }
   }
 
@@ -343,6 +377,7 @@ function toWorksheetData(sheet: IUiSheet): Partial<IWorksheetData> {
     const next: Record<string, any> = {}
     if (raw.startsWith('=') && raw.length > 1) {
       next.f = raw.slice(1)
+      applyFormulaResult(next, sheet.cellMeta?.[key]?.formulaResult)
     } else if (richText?.length) {
       next.p = internalRichTextToUniver(richText, key)
       next.v = null
@@ -432,8 +467,10 @@ export function internalWorkbookToUniver(workbook: IWorkbook, locale?: string): 
     sheets.map((sheet, index) => [sheetOrder[index], toWorksheetData({ ...sheet, id: sheetOrder[index] })]),
   )
   const drawingResources = buildSheetDrawingResources(workbook, DEFAULT_WORKBOOK_ID)
-  const resources = drawingResources.length
-    ? mergeWorkbookResources(workbook?.resources, drawingResources)
+  const noteResources = buildSheetNoteResources(workbook)
+  const pluginResources = [...drawingResources, ...noteResources]
+  const resources = pluginResources.length
+    ? mergeWorkbookResources(workbook?.resources, pluginResources)
     : (workbook?.resources && typeof workbook.resources === 'object'
       ? JSON.parse(JSON.stringify(workbook.resources))
       : undefined)
@@ -460,11 +497,17 @@ export function univerWorkbookToInternal(workbook: Partial<IWorkbookData>): IWor
     })
     .filter((sheet): sheet is IUiSheet => !!sheet)
 
+  const resources = workbook.resources && typeof workbook.resources === 'object'
+    ? JSON.parse(JSON.stringify(workbook.resources))
+    : undefined
+
+  if (sheets.length) {
+    applyNoteResourcesToSheets(sheets, resources)
+  }
+
   return {
     version: 1,
-    resources: workbook.resources && typeof workbook.resources === 'object'
-      ? JSON.parse(JSON.stringify(workbook.resources))
-      : undefined,
+    resources,
     sheets: sheets.length
       ? sheets
       : [{

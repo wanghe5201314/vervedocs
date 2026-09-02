@@ -4,6 +4,7 @@ import { createExcelJsWorkbook } from '../utils/exceljs-loader'
 import { createThemeColorResolver, resolveExcelColor, type ThemeColorResolver } from '../utils/color'
 import { parseExcelRichText, richTextToPlainText, stripRunLevelFontStyle } from '../utils/rich-text'
 import { parseWorksheetImages } from './image.parser'
+import { installExcelJsCommentHarvest, mergeCommentsIntoCellMeta } from './comment.parser'
 
 function toHexColor(input: unknown, resolver: ThemeColorResolver, context: 'font' | 'fill' | 'border' = 'fill'): string | undefined {
   return resolveExcelColor(input, resolver, context)
@@ -154,15 +155,24 @@ function parseCellValue(cell: any): string {
 function parseCellMeta(cell: any): ICellMeta | undefined {
   const value = cell?.value
   const result: ICellMeta = {}
+  if (value && typeof value === 'object' && typeof value.formula === 'string' && value.formula.trim()) {
+    const formulaResult = value.result
+    if (formulaResult !== undefined && formulaResult !== null && formulaResult !== '') {
+      result.formulaResult = formulaResult instanceof Date
+        ? formulaResult.toISOString()
+        : formulaResult as string | number | boolean
+    }
+  }
   if (value && typeof value === 'object' && typeof value.hyperlink === 'string' && value.hyperlink.trim()) {
     result.hyperlink = String(value.hyperlink).trim()
   }
   const note = cell?.note
   if (typeof note === 'string' && note.trim()) {
-    result.comment = note.trim()
+    // 全文保留（含作者行与换行），仅用 trim 判断是否为空
+    result.comment = note
   } else if (note && typeof note === 'object' && Array.isArray(note.texts)) {
-    const text = note.texts.map((part: any) => String(part?.text || '')).join('').trim()
-    if (text) result.comment = text
+    const text = note.texts.map((part: any) => String(part?.text || '')).join('')
+    if (text.trim()) result.comment = text
   }
   return Object.keys(result).length ? result : undefined
 }
@@ -326,9 +336,20 @@ async function readExcelToWorkbook(
 ): Promise<IWorkbook> {
   const workbook = await createExcelJsWorkbook()
   const buffer = data instanceof File ? await data.arrayBuffer() : data
-  await workbook.xlsx.load(buffer)
+  const finishHarvest = installExcelJsCommentHarvest(workbook)
+  let harvestedComments: Map<number, Record<string, string>>
+  try {
+    await workbook.xlsx.load(buffer)
+  } finally {
+    harvestedComments = finishHarvest()
+  }
   const worksheetList = Array.isArray(workbook.worksheets) ? workbook.worksheets : []
-  const sheets = worksheetList.map((worksheet: any, index: number) => toUiSheet(worksheet, index, workbook, options))
+  const sheets = worksheetList.map((worksheet: any, index: number) => {
+    const sheet = toUiSheet(worksheet, index, workbook, options)
+    if (!sheet.cellMeta) sheet.cellMeta = {}
+    mergeCommentsIntoCellMeta(sheet.cellMeta, harvestedComments.get(index))
+    return sheet
+  })
   return {
     version: 1,
     sheets: sheets.length ? sheets : [{

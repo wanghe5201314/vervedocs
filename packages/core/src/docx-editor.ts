@@ -1,14 +1,19 @@
 /**
  * VerveDocs Core —— DocxEditor
  *
- * 全新构造，零兼容：只接受 IDocxDocument。
+ * 全新构造，零兼容：只接受 IDocxDocumentMeta。
  */
 
-import type { IDocxDocument, IEditorOption } from '@vervedoc/docx-editor-schema'
+import type { IDocxDocumentMeta, IEditorOption } from '@vervedoc/docx-editor-schema'
 import { cloneTree, formatElementTree, mergeOption } from '@vervedoc/docx-editor-schema'
 import { EventBus, Listener, RangeManager } from '@vervedoc/docx-editor-state'
 import { Draw } from '@vervedoc/docx-editor-view'
 import { Command, CommandAdapt } from '@vervedoc/docx-editor-transform'
+import { CommentComponent, RevisionComponent } from '@vervedoc/docx-editor-comment'
+import type { DocxCommentMeta, RevisionCallbacks, CommentCallbacks } from '@vervedoc/docx-editor-comment'
+import { ShortcutHandler } from './shortcut'
+
+export type { DocxCommentMeta, RevisionCallbacks, CommentCallbacks }
 
 export class DocxEditor {
   public listener: Listener
@@ -16,10 +21,12 @@ export class DocxEditor {
   public range: RangeManager
   public draw: Draw
   public command: Command
+  public comment: CommentComponent
+  public revision: RevisionComponent
 
   constructor(
     container: HTMLDivElement,
-    document: IDocxDocument,
+    document: IDocxDocumentMeta,
     options: IEditorOption = {}
   ) {
     if (!container || !(container instanceof HTMLDivElement)) {
@@ -27,12 +34,12 @@ export class DocxEditor {
     }
     if (!document || typeof document !== 'object' || !Array.isArray(document.elements)) {
       throw new TypeError(
-        '[DocxEditor] document 必须是 IDocxDocument，且 elements 为数组。不再兼容 IElement[] / IEditorData 形态。'
+        '[DocxEditor] document 必须是 IDocxDocumentMeta，且 elements 为数组。不再兼容 IElement[] / IEditorData 形态。'
       )
     }
 
     const editorOptions = mergeOption(options)
-    const doc: IDocxDocument = cloneTree(document)
+    const doc: IDocxDocumentMeta = cloneTree(document)
 
     formatElementTree(doc.elements, {
       editorOptions,
@@ -48,8 +55,18 @@ export class DocxEditor {
     this.eventBus = new EventBus()
     this.range = new RangeManager(this.listener)
 
+    this.comment = new CommentComponent()
+    this.revision = new RevisionComponent()
+
     // 先声明适配器占位，以便在 Draw 构造时可以引用（onInput 回调需要 CommandAdapt）
     let adapt: CommandAdapt | null = null
+
+    const shortcut = new ShortcutHandler({
+      getDraw: () => this.draw,
+      getCommand: () => this.command,
+      getRange: () => this.range,
+      getAdapt: () => adapt
+    })
 
     this.draw = new Draw(container, editorOptions, {
       document: doc,
@@ -59,37 +76,119 @@ export class DocxEditor {
       onInput: (text: string) => {
         adapt?.insertText(text)
       },
-      onKeyDown: (e: KeyboardEvent) => {
-        if (!adapt) return
-        if (e.key === 'Backspace') { e.preventDefault(); adapt.deleteBackward(); return }
-        if (e.key === 'Delete')    { e.preventDefault(); adapt.deleteForward(); return }
-        if (e.key === 'Enter')     { e.preventDefault(); adapt.splitParagraph(); return }
-        if (e.key === 'ArrowLeft') { e.preventDefault(); adapt.moveCaretLeft(); return }
-        if (e.key === 'ArrowRight'){ e.preventDefault(); adapt.moveCaretRight(); return }
-        // Tab / Escape 等其它按键暂不处理
+      onKeyDown: shortcut.handle,
+      afterRender: () => {
+        this.comment.render()
+        this.revision.update()
+      },
+      onCommand: (command: string, ...args: any[]) => {
+        const fn = (this.command as unknown as Record<string, ((...a: any[]) => void) | undefined>)[command]
+        if (typeof fn === 'function') fn.call(this.command, ...args)
+      },
+      onZoneChange: (zone) => {
+        this.listener.emit('zoneChange', zone)
       }
     })
 
     adapt = new CommandAdapt(
-      { getDocument: () => this.draw.getDocument(), setDocument: (d: IDocxDocument) => this.draw.setDocument(d) },
+      {
+        getDocument: () => this.draw.getDocument(),
+        setDocument: (d: IDocxDocumentMeta) => this.draw.setDocument(d),
+        getActiveDocument: () => {
+          const doc = this.draw.getDocument()
+          const zone = this.draw.getZone()
+          if (zone === 'header' && doc.sections?.header) {
+            return { ...doc, elements: doc.sections.header }
+          }
+          if (zone === 'footer' && doc.sections?.footer) {
+            return { ...doc, elements: doc.sections.footer }
+          }
+          return doc
+        },
+        applyActiveDocument: (d: IDocxDocumentMeta) => {
+          const zone = this.draw.getZone()
+          if (zone === 'header' || zone === 'footer') {
+            const doc = this.draw.getDocument()
+            if (!doc.sections) doc.sections = {}
+            if (zone === 'header') doc.sections.header = d.elements
+            else doc.sections.footer = d.elements
+            this.draw.setDocument(doc)
+          } else {
+            this.draw.setDocument(d)
+          }
+        },
+        setScale: (s: number) => this.draw.setScale(s),
+        setPageSize: (w: number, h: number) => this.draw.setPageSize(w, h),
+        getOptions: () => this.draw.getOptions(),
+        print: () => this.draw.print()
+      },
       this.range
     )
     this.command = new Command(adapt)
+
+    // 构造批注/修订组件所需的命令代理（桥接视图与文档查询接口）
+    const drawRef = this.draw
+    const commentProxy = {
+      getContainer: () => drawRef.getScroller(),
+      getPositionList: () => null,
+      getDrawWidth: () => Number(editorOptions.pageWidth ?? 794),
+      getDrawHeight: () => Number(editorOptions.pageHeight ?? 1123),
+      getPageGap: () => Number((editorOptions as any).pageGap ?? 24),
+      getOptions: () => editorOptions,
+      getElementList: () => drawRef.getDocument().elements,
+      getGroupContext: (groupId: string) => {
+        const anchorMap = drawRef.getGroupAnchorMap()
+        const anchor = anchorMap.get(groupId)
+        if (!anchor) return null
+        return {
+          isTable: false,
+          index: -1,
+          startIndex: -1,
+          endIndex: -1,
+          _anchor: anchor
+        }
+      },
+      executeSetGroup: () => null,
+      executeDeleteGroup: () => {},
+      executeLocationGroup: () => {},
+      executeUpdateOptions: (opts: any) => {
+        Object.assign(editorOptions, opts)
+        drawRef.setDocument(drawRef.getDocument())
+      },
+      spliceElementList: (list: any[], idx: number, deleteCount: number) => { list.splice(idx, deleteCount) },
+      renderDraw: () => { drawRef.setDocument(drawRef.getDocument()) },
+      setActiveGroup: (groupId: string | null) => { drawRef.setActiveGroup(groupId) },
+    }
+    this.comment.install(commentProxy)
+    this.revision.install(commentProxy)
+
+    // 从文档中自动加载批注数据
+    if (doc.comments && doc.comments.length > 0) {
+      this.comment.buildCommentsFromMetas(doc.comments)
+    }
 
     // 鼠标点击 -> hit + setCaret + focus 隐藏输入框
     // 注意：Draw 内 mousedown 已处理 hit，这里不再重复绑定
   }
 
-  getDocument(): IDocxDocument { return this.draw.getDocument() }
+  getDocument(): IDocxDocumentMeta { return this.draw.getDocument() }
 
-  setDocument(doc: IDocxDocument): void {
+  setDocument(doc: IDocxDocumentMeta): void {
     if (!doc || !Array.isArray(doc.elements)) {
-      throw new TypeError('[DocxEditor.setDocument] 需要 IDocxDocument')
+      throw new TypeError('[DocxEditor.setDocument] 需要 IDocxDocumentMeta')
+    }
+    // 同步批注数据
+    if (doc.comments && doc.comments.length > 0) {
+      this.comment.buildCommentsFromMetas(doc.comments)
+    } else {
+      this.comment.buildCommentsFromMetas([])
     }
     this.draw.setDocument(doc)
   }
 
   destroy(): void {
+    this.comment.destroy()
+    this.revision.destroy()
     this.draw.destroy()
     this.listener = new Listener()
     this.eventBus.clear()

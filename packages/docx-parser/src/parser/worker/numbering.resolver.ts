@@ -7,6 +7,7 @@ interface LevelDefinition {
   start: number
   indentLeft?: number
   indentHanging?: number
+  lvlJc?: string
 }
 
 interface AbstractNumbering {
@@ -30,8 +31,14 @@ export interface NumberingInfo {
   listType: string
   listStyle: string
   level: number
+  numFmt: string
+  lvlText: string
+  start: number
   indentLeft?: number
   indentHanging?: number
+  lvlJc?: string
+  numId?: string
+  abstractNumId?: string
 }
 
 /**
@@ -66,7 +73,7 @@ export class NumberingResolver {
     // 检查该 num 是否有对应层级的 lvlOverride
     const override = numRef.levelOverrides.get(level)
     if (override?.overrideLevelDef) {
-      return this.mapLevelToInfo(override.overrideLevelDef, level)
+      return this.mapLevelToInfo(override.overrideLevelDef, level, numId, numRef.abstractNumId)
     }
 
     // 使用 abstractNum 的级别定义
@@ -75,10 +82,10 @@ export class NumberingResolver {
       // 找不到该层级，回退到 level 0
       const fallback = abstractNum.levels.get(0)
       if (!fallback) return null
-      return this.mapLevelToInfo(fallback, level)
+      return this.mapLevelToInfo(fallback, level, numId, numRef.abstractNumId)
     }
 
-    return this.mapLevelToInfo(levelDef, level)
+    return this.mapLevelToInfo(levelDef, level, numId, numRef.abstractNumId)
   }
 
   // ---- 私有方法 ----
@@ -157,24 +164,26 @@ export class NumberingResolver {
     }
   }
 
-  private mapLevelToInfo(levelDef: LevelDefinition, level: number): NumberingInfo {
+  private mapLevelToInfo(levelDef: LevelDefinition, level: number, numId?: string, abstractNumId?: string): NumberingInfo {
+    const base: Omit<NumberingInfo, 'listType' | 'listStyle'> = {
+      level,
+      numFmt: levelDef.numFmt,
+      lvlText: levelDef.lvlText,
+      start: levelDef.start,
+      indentLeft: levelDef.indentLeft,
+      indentHanging: levelDef.indentHanging,
+      lvlJc: levelDef.lvlJc,
+      numId,
+      abstractNumId,
+    }
     const mapped = NUM_FMT_MAP[levelDef.numFmt]
     if (mapped) {
-      return {
-        listType: mapped.listType,
-        listStyle: mapped.listStyle,
-        level,
-        indentLeft: levelDef.indentLeft,
-        indentHanging: levelDef.indentHanging
-      }
+      return { listType: mapped.listType, listStyle: mapped.listStyle, ...base }
     }
-
-    // 未映射格式：通过 lvlText 判断是否为项目符号
     if (isBulletLvlText(levelDef.lvlText)) {
-      return { listType: 'ul', listStyle: 'disc', level }
+      return { listType: 'ul', listStyle: 'disc', ...base }
     }
-
-    return { listType: 'ol', listStyle: 'decimal', level }
+    return { listType: 'ol', listStyle: 'decimal', ...base }
   }
 }
 
@@ -193,6 +202,7 @@ function parseLevelDefinition(lvlEl: Element): LevelDefinition {
   // 列表缩进 <w:pPr><w:ind .../>
   let indentLeft: number | undefined
   let indentHanging: number | undefined
+  let lvlJc: string | undefined
   const pPrEl = getFirstChildByTag(lvlEl, NS.w, 'pPr')
   if (pPrEl) {
     const indEl = getFirstChildByTag(pPrEl, NS.w, 'ind')
@@ -202,9 +212,11 @@ function parseLevelDefinition(lvlEl: Element): LevelDefinition {
       if (left) indentLeft = twipToPx(parseInt(left, 10))
       if (hanging) indentHanging = twipToPx(parseInt(hanging, 10))
     }
+    const jcEl = getFirstChildByTag(pPrEl, NS.w, 'jc')
+    if (jcEl) lvlJc = getWVal(jcEl) ?? undefined
   }
 
-  return { numFmt, lvlText, start, indentLeft, indentHanging }
+  return { numFmt, lvlText, start, indentLeft, indentHanging, lvlJc }
 }
 
 /**

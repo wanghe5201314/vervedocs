@@ -241,6 +241,8 @@ export interface BulletResult {
   text: string
   /** 是否是无序符号（用符号字体栈） */
   isSymbol: boolean
+  /** 编号在其"编号列"内的对齐方式（来自 numbering.lvlJc） */
+  lvlJc?: 'left' | 'center' | 'right'
 }
 
 export function resolveBullet(
@@ -260,13 +262,15 @@ export function resolveBullet(
     const raw = resolveUnorderedChar(list)
     const hasWD = detectWingdings()
     const ch = normalizeBulletChar(raw, hasWD)
-    return { text: ch, isSymbol: true }
+    return { text: ch, isSymbol: true, lvlJc: num?.lvlJc }
   }
 
   const fmt = num?.numFmt ?? list.listStyle ?? 'decimal'
   const start = num?.start ?? 1
   const tpl = num?.lvlText ?? '%1.'
-  const numId = num?.numId ?? list.listStyle ?? 'default'
+  // 计数隔离键：优先使用 listId（独立列表实例），回退 numId，再回退 listStyle
+  const groupId = list.listId ?? num?.numId ?? list.listStyle ?? 'default'
+  const numId = groupId
   const key = `${numId}:${level}`
 
   let current = start
@@ -288,7 +292,7 @@ export function resolveBullet(
     return formatCounter(val, fmt)
   })
 
-  return { text, isSymbol: false }
+  return { text, isSymbol: false, lvlJc: num?.lvlJc }
 }
 
 function isOrderedStyle(s?: string): boolean {

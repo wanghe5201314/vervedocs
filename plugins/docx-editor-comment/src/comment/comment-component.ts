@@ -1,4 +1,6 @@
 import type { IComment, IGroupColor } from '@vervedoc/docx-editor-schema'
+import { nanoid } from 'nanoid'
+import dayjs from 'dayjs'
 
 
 type Command = any
@@ -21,34 +23,14 @@ function getAvatarColor(name: string): string {
 
 function formatCommentDate(dateStr: string): string {
   if (!dateStr) return ''
-  try {
-    const d = new Date(dateStr)
-    if (isNaN(d.getTime())) return dateStr
-    const y = d.getFullYear()
-    const m = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    const h = String(d.getHours()).padStart(2, '0')
-    const min = String(d.getMinutes()).padStart(2, '0')
-    return `${y}-${m}-${day} ${h}:${min}`
-  } catch {
-    return dateStr
-  }
+  const d = dayjs(dateStr)
+  return d.isValid() ? d.format('YYYY-MM-DD HH:mm') : dateStr
 }
 
 function formatCommentDisplayDate(dateStr: string): string {
   if (!dateStr) return ''
-  try {
-    const d = new Date(dateStr)
-    if (isNaN(d.getTime())) return dateStr.replace(/-/g, '/')
-    const y = d.getFullYear()
-    const m = d.getMonth() + 1
-    const day = d.getDate()
-    const h = String(d.getHours()).padStart(2, '0')
-    const min = String(d.getMinutes()).padStart(2, '0')
-    return `${y}/${m}/${day} ${h}:${min}`
-  } catch {
-    return dateStr.replace(/-/g, '/')
-  }
+  const d = dayjs(dateStr)
+  return d.isValid() ? d.format('YYYY/M/D HH:mm') : dateStr.replace(/-/g, '/')
 }
 
 function extractCommentBody(content: string, rangeText: string): { sourceText: string; mainText: string } {
@@ -213,7 +195,7 @@ export class CommentComponent {
     if (!comment) return
     if (!comment.replies) comment.replies = []
     comment.replies.push({
-      id: `reply-${Date.now()}`,
+      id: `reply-${nanoid()}`,
       groupId: comment.groupId,
       content,
       userName,
@@ -363,16 +345,27 @@ export class CommentComponent {
   }
 
   private _computePositions(): void {
-    if (!this._command || this._comments.length === 0) return
-    const positionList = this._command.getPositionList?.()
-    if (!positionList || positionList.length === 0) return
+    if (!this._command || this._comments.length === 0) {
+      return
+    }
     const pageWidth = this._command.getDrawWidth?.() || 794
-
     const balloonLeft = pageWidth + 16
+    const positionList = this._command.getPositionList?.()
 
     for (const comment of this._comments) {
       const ctx = this._command?.getGroupContext?.(comment.groupId)
       if (!ctx) continue
+
+      // 新架构：getGroupContext 直接返回 _anchor 坐标，不依赖 positionList
+      if ((ctx as any)._anchor) {
+        const anchor = (ctx as any)._anchor as { startX: number; startY: number; endX: number; endY: number; lineHeight: number; glyphHeight: number; startGlyphTop: number; endGlyphTop: number }
+        comment.position = { top: anchor.startY, left: balloonLeft, lineWidth: 0, originalTop: anchor.startY }
+        comment.anchor = { startX: anchor.startX, startY: anchor.startY, endX: anchor.endX, endY: anchor.endY, lineHeight: anchor.lineHeight, glyphHeight: anchor.glyphHeight, startGlyphTop: anchor.startGlyphTop, endGlyphTop: anchor.endGlyphTop }
+        continue
+      }
+
+      // 旧架构：通过 positionList 查找坐标
+      if (!positionList || positionList.length === 0) continue
       const startIdx = ctx.isTable ? (ctx.index ?? -1) : (ctx.startIndex ?? -1)
       const endIdx = ctx.isTable ? ctx.index : ctx.endIndex
       if (startIdx == null || startIdx < 0 || startIdx >= positionList.length) continue
@@ -466,6 +459,8 @@ export class CommentComponent {
   }
 
   private _applyContainerWidth(container: HTMLDivElement, pageWidth: number): void {
+    // 新架构：容器宽度由 Draw 管理，overlay 以 overflow:visible 自然溢出，不需要强制改宽度
+    if ((container as any).__vervedocsNewLayout) return
     const commentWidth = (container as any).__commentNeededWidth || 0
     const revisionWidth = (container as any).__revisionNeededWidth || 0
     const neededWidth = Math.max(commentWidth, revisionWidth)
@@ -866,13 +861,17 @@ export class CommentComponent {
 
   private _showAnchorLines(comment: IComment): void {
     this._hideAnchorLines()
+    this._command?.setActiveGroup?.(comment.groupId)
     if (!comment.anchor || !this._overlayContainer) return
-    const { startX, startY, endX, endY } = comment.anchor
+    const { startX, endX } = comment.anchor
     const lineHeight = comment.anchor.lineHeight || 20
+    const glyphHeight = comment.anchor.glyphHeight || lineHeight
+    const startGlyphTop = comment.anchor.startGlyphTop ?? comment.anchor.startY
+    const endGlyphTop = comment.anchor.endGlyphTop ?? (comment.anchor.endY - glyphHeight)
     const color = this._annotationColor
-    for (const [x, y] of [[startX, startY], [endX, endY - lineHeight]]) {
+    for (const [x, y] of [[startX, startGlyphTop], [endX, endGlyphTop]]) {
       const line = document.createElement('div')
-      line.style.cssText = `position:absolute;left:${x - 1}px;top:${y}px;width:2px;height:${lineHeight}px;background:${color};pointer-events:none;z-index:11;opacity:0.7;`
+      line.style.cssText = `position:absolute;left:${x - 1}px;top:${y}px;width:2px;height:${glyphHeight}px;background:${color};pointer-events:none;z-index:11;opacity:0.7;`
       this._overlayContainer.append(line)
       this._anchorLineEls.push(line)
     }
@@ -881,6 +880,7 @@ export class CommentComponent {
   private _hideAnchorLines(): void {
     for (const el of this._anchorLineEls) el.remove()
     this._anchorLineEls = []
+    this._command?.setActiveGroup?.(null)
   }
 
   private _setupTextHover(): void {

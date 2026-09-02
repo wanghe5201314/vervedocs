@@ -1,3 +1,5 @@
+import dayjs from 'dayjs'
+
 type Command = any
 
 const PREFIX = 'ce'
@@ -15,6 +17,9 @@ interface RevisionBalloonData {
   anchorEndX: number
   anchorEndY: number
   pageRight: number
+  glyphHeight: number
+  startGlyphTop: number
+  endGlyphTop: number
 }
 
 export interface RevisionCallbacks {
@@ -55,18 +60,8 @@ export class RevisionComponent {
 
   private _formatDate(dateStr: string): string {
     if (!dateStr) return ''
-    try {
-      const d = new Date(dateStr)
-      if (isNaN(d.getTime())) return dateStr.replace(/-/g, '/')
-      const y = d.getFullYear()
-      const m = d.getMonth() + 1
-      const day = d.getDate()
-      const h = String(d.getHours()).padStart(2, '0')
-      const min = String(d.getMinutes()).padStart(2, '0')
-      return `${y}/${m}/${day} ${h}:${min}`
-    } catch {
-      return dateStr.replace(/-/g, '/')
-    }
+    const d = dayjs(dateStr)
+    return d.isValid() ? d.format('YYYY/M/D HH:mm') : dateStr.replace(/-/g, '/')
   }
 
   private _getTypeLabel(type: RevisionBalloonData['type']): string {
@@ -315,6 +310,7 @@ export class RevisionComponent {
     const balloonLeft = pageWidth + 16
 
     const balloons: RevisionBalloonData[] = []
+    const elementList = this._command.getElementList?.()
 
     for (const rev of revisions) {
       const startPosIdx = rev.firstIndex
@@ -340,6 +336,17 @@ export class RevisionComponent {
       }
       const pageRight = pageWidth
 
+      const startSize = elementList?.[rev.firstIndex]?.size || 0
+      const endSize = elementList?.[rev.lastIndex]?.size || startSize
+      const startLineHeight = startPos.lineHeight || 20
+      const startBaseline = startLineHeight * 0.82
+      const glyphHeight = startSize * 1.15 || startLineHeight
+      const startGlyphTop = top + startBaseline - startSize * 0.875
+      const endLineHeight = endPos?.lineHeight || startLineHeight
+      const endBaseline = endLineHeight * 0.82
+      const endTopY = endPos?.coordinate ? (this._getPageOffsetY(endPos.pageNo ?? 0) + (endPos.coordinate.leftTop?.[1] || 0)) : top
+      const endGlyphTop = endTopY + endBaseline - endSize * 0.875
+
       balloons.push({
         revisionId: rev.id,
         type: rev.type,
@@ -352,7 +359,10 @@ export class RevisionComponent {
         anchorStartY: anchorY,
         anchorEndX,
         anchorEndY,
-        pageRight
+        pageRight,
+        glyphHeight,
+        startGlyphTop,
+        endGlyphTop
       })
     }
 
@@ -381,6 +391,8 @@ export class RevisionComponent {
   }
 
   private _applyContainerWidth(container: HTMLDivElement, pageWidth: number): void {
+    // 新架构：容器宽度由 Draw 管理，overlay 以 overflow:visible 自然溢出，不需要强制改宽度
+    if ((container as any).__vervedocsNewLayout) return
     const commentWidth = (container as any).__commentNeededWidth || 0
     const revisionWidth = (container as any).__revisionNeededWidth || 0
     const neededWidth = Math.max(commentWidth, revisionWidth)
@@ -438,9 +450,12 @@ export class RevisionComponent {
     if (!this._overlayContainer) return
     const color = this._revisionColor
     const lineHeight = balloon.anchorEndY - balloon.anchorStartY || 20
-    for (const [x, y] of [[balloon.anchorStartX, balloon.anchorStartY], [balloon.anchorEndX, balloon.anchorStartY]]) {
+    const glyphHeight = balloon.glyphHeight || lineHeight
+    const startGlyphTop = balloon.startGlyphTop ?? balloon.anchorStartY
+    const endGlyphTop = balloon.endGlyphTop ?? balloon.anchorStartY
+    for (const [x, y] of [[balloon.anchorStartX, startGlyphTop], [balloon.anchorEndX, endGlyphTop]]) {
       const line = document.createElement('div')
-      line.style.cssText = `position:absolute;left:${x - 1}px;top:${y}px;width:2px;height:${lineHeight}px;background:${color};pointer-events:none;z-index:11;opacity:0.7;`
+      line.style.cssText = `position:absolute;left:${x - 1}px;top:${y}px;width:2px;height:${glyphHeight}px;background:${color};pointer-events:none;z-index:11;opacity:0.7;`
       this._overlayContainer.append(line)
       this._anchorLineEls.push(line)
     }

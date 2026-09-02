@@ -78,6 +78,19 @@ export function parseParagraph(
       paragraphStyle.listType = numInfo.listType
       paragraphStyle.listStyle = numInfo.listStyle
       paragraphStyle.listLevel = numInfo.level
+      paragraphStyle.listIndent = numInfo.indentLeft
+      paragraphStyle.listHanging = numInfo.indentHanging
+      paragraphStyle.listNumbering = {
+        numId: paragraphStyle.numId,
+        abstractNumId: numInfo.abstractNumId,
+        level: numInfo.level,
+        numFmt: numInfo.numFmt,
+        lvlText: numInfo.lvlText,
+        start: numInfo.start,
+        indentLeft: numInfo.indentLeft,
+        indentHanging: numInfo.indentHanging,
+        lvlJc: numInfo.lvlJc,
+      }
     }
   }
 

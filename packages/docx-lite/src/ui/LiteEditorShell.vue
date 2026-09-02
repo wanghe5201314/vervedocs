@@ -184,8 +184,8 @@
 </template>
 
 <script setup lang="ts">
-import type {IEditorData, IEditorOption, IElement} from '@vervedoc/core'
-import DocxEditor, {TitleLevel} from '@vervedoc/core'
+import type {IDocxDocumentMeta, IEditorOption, IElement, TitleLevel} from '@vervedoc/core'
+import DocxEditor, {TITLE_LEVEL} from '@vervedoc/core'
 import {computed, onBeforeUnmount, onMounted, reactive, ref} from 'vue'
 import type {ImportMode, LiteEditorShellExposed, SaveSnapshot, WordEditorOptions} from '../object/word-editor.types'
 import {useResponsive} from '../composables/useResponsive'
@@ -234,17 +234,17 @@ const PAPER_SIZES: PaperSizePreset[] = [
 ]
 
 const TITLE_LEVEL_MAP: Record<string, TitleLevel> = {
-  '1': TitleLevel.FIRST,
-  '2': TitleLevel.SECOND,
-  '3': TitleLevel.THIRD,
-  '4': TitleLevel.FOURTH,
-  '5': TitleLevel.FIFTH,
-  '6': TitleLevel.SIXTH
+  '1': TITLE_LEVEL.FIRST,
+  '2': TITLE_LEVEL.SECOND,
+  '3': TITLE_LEVEL.THIRD,
+  '4': TITLE_LEVEL.FOURTH,
+  '5': TITLE_LEVEL.FIFTH,
+  '6': TITLE_LEVEL.SIXTH
 }
 
-const normalizeData = (data?: IEditorData | IElement[]) => {
-  if (!data) return { main: [] }
-  return Array.isArray(data) ? { main: data } : data
+const normalizeData = (data?: IDocxDocumentMeta | IElement[]) => {
+  if (!data) return { success: true, elements: [] }
+  return Array.isArray(data) ? { success: true, elements: data } : data
 }
 
 const randomId = () =>
@@ -344,36 +344,36 @@ const updateMobileScale = () => {
 const createEditor = () => {
   if (!editorContainerRef.value) return
   editor.value = new DocxEditor(editorContainerRef.value, normalizeData(props.data), {
-    width: selectedPaperSize.value.width,
-    height: selectedPaperSize.value.height,
-    margins: isMobile.value ? [48, 60, 48, 60] : [96, 120, 96, 120],
+    pageWidth: selectedPaperSize.value.width,
+    pageHeight: selectedPaperSize.value.height,
+    pageMargins: isMobile.value ? [48, 60, 48, 60] : [96, 120, 96, 120],
     defaultFont: '微软雅黑',
     defaultSize: 14,
     marginIndicatorDisabled: isMobile.value,
     ...(props.options as IEditorOption | undefined)
   })
 
-  editor.value.listener.contentChange = () => {
+  editor.value.listener.on('contentChange', () => {
     void updateWordCount()
     refreshCatalogLater()
     props.onChange?.()
     if (isMobile.value) {
       requestAnimationFrame(() => updateMobileScale())
     }
-  }
+  })
 
-  editor.value.listener.pageSizeChange = (pageNo: number) => {
-    statusPageText.value = `共 ${pageNo} 页`
-    props.onPageChange?.(pageNo)
+  editor.value.listener.on('pageSizeChange', (size: { width: number; height: number }) => {
+    statusPageText.value = `共 ${Math.round(size.height / 1123) || 1} 页`
+    props.onPageChange?.(Math.round(size.height / 1123) || 1)
     if (isMobile.value) {
       requestAnimationFrame(() => updateMobileScale())
     }
-  }
+  })
 
-  editor.value.listener.pageScaleChange = (scale: number) => {
+  editor.value.listener.on('pageScaleChange', (scale: number) => {
     zoomText.value = `${Math.round(scale * 100)}%`
     props.onScaleChange?.(scale)
-  }
+  })
 
   props.onReady?.(editor.value)
 }
@@ -388,9 +388,10 @@ const runCommand = <T = any>(command: string, ...args: any[]): T | undefined => 
   if (!editor.value) return undefined
   try {
     focusEditorAgent()
-    const fn = (editor.value.command as any)?.[command]
+    const cmd = editor.value.command as any
+    const fn = cmd?.[command]
     if (typeof fn === 'function') {
-      return fn(...args) as T
+      return fn.call(cmd, ...args) as T
     }
   } catch (error) {
     console.error(`执行失败: ${command}`, error)
@@ -628,11 +629,11 @@ const handleImportDoc = () => {
           }
 
           if (mode === 'overwrite') {
-            runCommand('executeSetValue', { main: result.elements })
+            runCommand('executeSetValue', { elements: result.elements })
           } else {
             const current = runCommand<any>('getValue')
-            const currentElements = current?.data?.main || current?.main || []
-            runCommand('executeSetValue', { main: [...currentElements, ...result.elements] })
+            const currentElements = current?.elements || []
+            runCommand('executeSetValue', { elements: [...currentElements, ...result.elements] })
           }
 
           await updateWordCount()
@@ -692,7 +693,7 @@ const handleGlobalKeyDown = (event: KeyboardEvent) => {
   if (!(target instanceof Node) || !shellRef.value?.contains(target)) return
 
   const ctrl = event.ctrlKey || event.metaKey
-  const shift = event.shiftKey
+
   const key = event.key.toLowerCase()
 
   if (ctrl && key === 's') {
@@ -720,40 +721,7 @@ const handleGlobalKeyDown = (event: KeyboardEvent) => {
     showPopup('link')
     return
   }
-  if (ctrl && !shift && key === 'z') {
-    event.preventDefault()
-    runCommand('executeUndo')
-    return
-  }
-  if ((ctrl && shift && key === 'z') || (ctrl && key === 'y')) {
-    event.preventDefault()
-    runCommand('executeRedo')
-    return
-  }
-  if (ctrl && key === 'b') {
-    event.preventDefault()
-    runCommand('executeBold')
-    return
-  }
-  if (ctrl && key === 'i') {
-    event.preventDefault()
-    runCommand('executeItalic')
-    return
-  }
-  if (ctrl && key === 'u') {
-    event.preventDefault()
-    runCommand('executeUnderline')
-    return
-  }
-  if (ctrl && key === '\\') {
-    event.preventDefault()
-    runCommand('executeFormat')
-    return
-  }
-  if (ctrl && key === 'enter') {
-    event.preventDefault()
-    runCommand('executePageBreak')
-  }
+
 }
 
 const destroyShell = () => {

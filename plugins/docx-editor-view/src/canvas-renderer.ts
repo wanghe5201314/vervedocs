@@ -17,6 +17,7 @@ import type {
   BlockNode, DocumentLayout,
   ParagraphBlock, ImageBlock, TableBlock, InlineBox
 } from './layout-types'
+import type { IGroupColor } from '@vervedoc/docx-editor-schema'
 
 export interface RendererOptions {
   dpr: number
@@ -31,6 +32,10 @@ export interface RendererOptions {
   showMarginRuler: boolean
   /** 标尺颜色 */
   rulerColor: string
+  /** 批注/修订组颜色映射，用于高亮文档中带 groupIds 的文本 */
+  groupColors?: Record<string, IGroupColor>
+  /** 当前高亮的 group ID（鼠标悬浮批注气泡时设置） */
+  activeGroupId?: string | null
 }
 
 interface DrawCommand {
@@ -39,6 +44,7 @@ interface DrawCommand {
   x: number
   y: number
   text: string
+  letterSpacing?: number
 }
 
 interface BlockCache {
@@ -74,7 +80,7 @@ export class CanvasRenderer {
       pageOffsetX: options.pageOffsetX ?? 0,
       pageMargins: options.pageMargins ?? [100, 120, 100, 120],
       showMarginRuler: options.showMarginRuler ?? true,
-      rulerColor: options.rulerColor ?? '#3a7afe'
+      rulerColor: options.rulerColor ?? '#999999'
     }
 
     this.bgCanvas = this.createLayer('bg', 0)
@@ -114,7 +120,7 @@ export class CanvasRenderer {
 
   /** 更新可视化选项（页偏移 / margin / 是否显示标尺） */
   updateVisualOptions(patch: Partial<Pick<RendererOptions,
-    'pageOffsetX' | 'pageMargins' | 'showMarginRuler' | 'rulerColor' | 'pageBg' | 'pageShadow' | 'scale'
+    'pageOffsetX' | 'pageMargins' | 'showMarginRuler' | 'rulerColor' | 'pageBg' | 'pageShadow' | 'scale' | 'groupColors' | 'activeGroupId'
   >>): void {
     Object.assign(this.opts, patch)
   }
@@ -134,12 +140,12 @@ export class CanvasRenderer {
 
   /**
    * 绘制光标（overlay 层）。传入文档坐标，内部会应用 scrollY 与 pageOffsetX。
+   * 注意：不再自行 clearOverlay，由调用方先 clearOverlay 再画选区再画光标。
    * cx: 文档坐标 x；cy: 文档坐标 y；height: 光标高度；scrollY, visible: 闪烁开关
    */
   drawCaret(cx: number, cy: number, height: number, scrollY: number, visible: boolean): void {
-    const ov = this.overlayCtx
-    ov.clearRect(0, 0, this.cssWidth, this.cssHeight)
     if (!visible) return
+    const ov = this.overlayCtx
     const x = Math.round(cx + this.opts.pageOffsetX) + 0.5
     const y = Math.round(cy - scrollY)
     ov.save()
@@ -152,9 +158,61 @@ export class CanvasRenderer {
     ov.restore()
   }
 
+  /**
+   * 绘制选区高亮（overlay 层）。传入文档坐标矩形列表，内部应用 scrollY 与 pageOffsetX。
+   */
+  drawSelection(rects: { x: number; y: number; width: number; height: number }[], scrollY: number): void {
+    if (rects.length === 0) return
+    const ov = this.overlayCtx
+    ov.save()
+    ov.fillStyle = 'rgba(77, 146, 255, 0.3)'
+    for (const r of rects) {
+      const x = Math.round(r.x + this.opts.pageOffsetX)
+      const y = Math.round(r.y - scrollY)
+      ov.fillRect(x, y, Math.round(r.width), Math.round(r.height))
+    }
+    ov.restore()
+  }
+
   /** 清除 overlay 上的光标 / 选区 */
   clearOverlay(): void {
     this.overlayCtx.clearRect(0, 0, this.cssWidth, this.cssHeight)
+  }
+
+  /** 绘制页眉/页脚编辑区域的分隔虚线（一条横穿整页宽度的淡灰虚线） */
+  drawZoneBorder(
+    layout: DocumentLayout,
+    scrollY: number,
+    zone: 'header' | 'footer',
+    pageOffsetX: number
+  ): void {
+    const ov = this.overlayCtx
+    ov.save()
+    ov.strokeStyle = '#d9d9d9'
+    ov.lineWidth = 1
+    ov.setLineDash([4, 3])
+    for (const page of layout.pages) {
+      const rect = zone === 'header' ? page.headerRect : page.footerRect
+      if (!rect) continue
+      const pageBottom = page.rect.y + page.rect.height
+      if (pageBottom < scrollY || page.rect.y > scrollY + this.cssHeight) continue
+
+      // 横向范围：横穿整页宽度（含左右页边距）
+      const lineStartX = Math.round(page.rect.x + pageOffsetX) + 0.5
+      const lineEndX = lineStartX + Math.round(page.rect.width) - 1
+
+      // 页眉：分隔线在页眉区域下沿（正文顶部）
+      // 页脚：分隔线在页脚区域上沿（正文底部）
+      const lineY = zone === 'header'
+        ? Math.round(rect.y + rect.height - scrollY) + 0.5
+        : Math.round(rect.y - scrollY) + 0.5
+
+      ov.beginPath()
+      ov.moveTo(lineStartX, lineY)
+      ov.lineTo(lineEndX, lineY)
+      ov.stroke()
+    }
+    ov.restore()
   }
 
 
@@ -180,13 +238,17 @@ export class CanvasRenderer {
       const pageBottom = page.rect.y + page.rect.height
       if (pageBottom < viewTop || page.rect.y > viewBottom) continue
 
-      // 页背景（居中偏移 + 阴影）
+      // 页背景（居中偏移 + 柔和阴影）
       const px = Math.round(page.rect.x + this.opts.pageOffsetX)
       const py = Math.round(page.rect.y - scrollY)
-      bg.fillStyle = this.opts.pageShadow
-      bg.fillRect(px + 3, py + 3, page.rect.width, page.rect.height)
+      bg.save()
+      bg.shadowColor = this.opts.pageShadow
+      bg.shadowBlur = 12
+      bg.shadowOffsetX = 0
+      bg.shadowOffsetY = 4
       bg.fillStyle = this.opts.pageBg
       bg.fillRect(px, py, page.rect.width, page.rect.height)
+      bg.restore()
 
       // WPS 风格四角边距标尺
       if (this.opts.showMarginRuler) {
@@ -198,6 +260,24 @@ export class CanvasRenderer {
 
       for (const b of page.blocks) {
         this.renderBlockOnMain(ct, b, contentOriginX, contentOriginY, aliveIds)
+      }
+
+      // 页眉内容
+      if (page.headerBlocks && page.headerRect) {
+        const hx = page.headerRect.x + this.opts.pageOffsetX
+        const hy = page.headerRect.y - scrollY
+        for (const b of page.headerBlocks) {
+          this.renderBlockOnMain(ct, b, hx, hy, aliveIds)
+        }
+      }
+
+      // 页脚内容
+      if (page.footerBlocks && page.footerRect) {
+        const fx = page.footerRect.x + this.opts.pageOffsetX
+        const fy = page.footerRect.y - scrollY
+        for (const b of page.footerBlocks) {
+          this.renderBlockOnMain(ct, b, fx, fy, aliveIds)
+        }
       }
     }
 
@@ -263,9 +343,21 @@ export class CanvasRenderer {
     return c
   }
 
+  /** 将 hex/rgb 颜色转为半透明高亮色（用于批注/修订文本背景） */
+  private _groupHighlightColor(color: string): string {
+    const m = color.match(/^#([0-9a-f]{6})$/i)
+    if (m) {
+      const r = parseInt(m[1].slice(0, 2), 16)
+      const g = parseInt(m[1].slice(2, 4), 16)
+      const b = parseInt(m[1].slice(4, 6), 16)
+      return `rgba(${r},${g},${b},0.18)`
+    }
+    return color
+  }
+
   private drawParagraphInto(ctx: CanvasRenderingContext2D, b: ParagraphBlock): void {
-    // 项目符号 / 编号
-    if (b.paragraphKind === 'list' && b.bulletText) {
+    // 项目符号 / 编号（list 段落必有；title 段落若关联多级列表也会有）
+    if (b.bulletText) {
       const firstLine = b.lines[0]
       if (firstLine) {
         const size = b.bulletSize ?? 16
@@ -274,8 +366,9 @@ export class CanvasRenderer {
         ctx.font = `${bold} ${size}px ${family}`
         ctx.fillStyle = b.bulletColor ?? '#000000'
         ctx.textBaseline = 'alphabetic'
-        // 绘制位置：文本起点 - bulletWidth（含尾随间距），基线 = 行基线
-        const bx = firstLine.x - (b.bulletWidth ?? 0)
+        // 绘制位置：优先使用 bulletX 偏移（相对首行 x，支持 lvlJc 对齐）；
+        // 无偏移时回退到 "文本起点 - bulletWidth"（等价原行为）。
+        const bx = firstLine.x + (b.bulletX ?? -(b.bulletWidth ?? 0))
         const by = firstLine.y + firstLine.baseline
         ctx.fillText(b.bulletText, bx, by)
       }
@@ -284,17 +377,26 @@ export class CanvasRenderer {
     const buckets = new Map<string, DrawCommand[]>()
     const bgRects: { x: number; y: number; w: number; h: number; color: string }[] = []
     const strokes: { x1: number; y1: number; x2: number; y2: number; color: string; width: number }[] = []
+    const groupColors = this.opts.groupColors
     for (const line of b.lines) {
       for (const inl of line.inlines) {
         if (inl.bgColor) {
           bgRects.push({ x: inl.x, y: inl.y, w: inl.width, h: line.height, color: inl.bgColor })
+        }
+        const activeGroupId = this.opts.activeGroupId
+        if (activeGroupId && groupColors && inl.groupIds?.includes(activeGroupId)) {
+          const gc = groupColors[activeGroupId]
+          if (gc) {
+            bgRects.push({ x: inl.x, y: inl.y, w: inl.width, h: line.height, color: this._groupHighlightColor(gc.color) })
+          }
         }
         const font = fontOf(inl)
         const key = `${font}||${inl.color}`
         addBucket(buckets, key, {
           font, color: inl.color,
           x: inl.x, y: inl.baseline,
-          text: inl.text
+          text: inl.text,
+          letterSpacing: inl.letterSpacing
         })
         if (inl.underline) {
           strokes.push({
@@ -320,7 +422,19 @@ export class CanvasRenderer {
       const [font, color] = key.split('||')
       ctx.font = font
       ctx.fillStyle = color
-      for (const c of list) ctx.fillText(c.text, c.x, c.y)
+      for (const c of list) {
+        if (!c.letterSpacing) {
+          ctx.fillText(c.text, c.x, c.y)
+        } else {
+          // 逐字绘制以支持两端对齐字距
+          let cx = c.x
+          for (let i = 0; i < c.text.length; i++) {
+            const ch = c.text[i]
+            ctx.fillText(ch, cx, c.y)
+            cx += ctx.measureText(ch).width + c.letterSpacing
+          }
+        }
+      }
     }
     for (const s of strokes) {
       ctx.strokeStyle = s.color
@@ -390,8 +504,33 @@ export class CanvasRenderer {
         }
       }
     }
-    // 3) 统一绘制边框（每条边只画一次；共享边优先使用有样式的那一侧）
-    // 使用像素整数 + 0.5 对齐避免模糊；单条边分别绘制以尊重每格的 style/width/color
+    // 3) 统一绘制边框（每条网格边只画一次，避免共享边被重复描绘制造成"边框加深/重影"）
+    // 用"边端点 + 方向"做去重：相邻两个 cell 的共享边、跨行格下探边都会折叠为一条。
+    // 像素对齐沿用 strokeSide（奇数宽 +0.5）。
+    const drawnEdges = new Set<string>()
+    const edgeKey = (x1: number, y1: number, x2: number, y2: number): string => {
+      // 归一化端点（保证横边/竖边方向唯一），保留 0.5px 精度避免浮点抖动
+      const a1 = Math.round(x1 * 2) / 2, b1 = Math.round(y1 * 2) / 2
+      const a2 = Math.round(x2 * 2) / 2, b2 = Math.round(y2 * 2) / 2
+      if (a1 === a2 && b1 === b2) return ''
+      // 竖边：x 相同，按 y 排序；横边：y 相同，按 x 排序
+      if (a1 === a2) return `V${a1}:${Math.min(b1, b2)}-${Math.max(b1, b2)}`
+      return `H${b1}:${Math.min(a1, a2)}-${Math.max(a1, a2)}`
+    }
+    const drawOnce = (
+      x1: number, y1: number, x2: number, y2: number,
+      side?: { width: number; color: string; style: string }
+    ) => {
+      // 该侧无边框定义 → 不画且不占用去重 key（否则会挡住邻格共享边的绘制）
+      if (!side || side.style === 'none' || side.width <= 0) return
+      const key = edgeKey(x1, y1, x2, y2)
+      if (!key || drawnEdges.has(key)) return   // 已画过（共享边）→ 跳过
+      drawnEdges.add(key)
+      strokeSide(ctx, x1, y1, x2, y2, side)
+    }
+    // 每个 cell 四条边都尝试绘制（数据中共享边可能只由某一侧的格子定义，
+    // 例如附表5：水平分隔线只定义在上格的 bottom，下格无 top），
+    // 共享边由先遍历到的格子画出，后到的经 drawnEdges 去重跳过。
     for (const row of b.rows) {
       for (const cell of row.cells) {
         const cx = bx + cell.rect.x
@@ -399,10 +538,46 @@ export class CanvasRenderer {
         const cw = cell.rect.width
         const ch = cell.rect.height
         const bs = cell.cell.borderStyle
-        strokeSide(ctx, cx, cy, cx + cw, cy, bs.top)
-        strokeSide(ctx, cx + cw, cy, cx + cw, cy + ch, bs.right)
-        strokeSide(ctx, cx, cy + ch, cx + cw, cy + ch, bs.bottom)
-        strokeSide(ctx, cx, cy, cx, cy + ch, bs.left)
+        // borderTypes: [top,right,bottom,left]，值为 0 表示隐藏该侧（三线表等场景）
+        const bt = (cell.cell as unknown as { borderTypes?: number[] }).borderTypes
+        const showTop    = !bt || bt[0] !== 0
+        const showRight  = !bt || bt[1] !== 0
+        const showBottom = !bt || bt[2] !== 0
+        const showLeft   = !bt || bt[3] !== 0
+        if (showTop)    drawOnce(cx, cy, cx + cw, cy, bs.top)              // 顶边
+        if (showBottom) drawOnce(cx, cy + ch, cx + cw, cy + ch, bs.bottom) // 底边
+        if (showLeft)   drawOnce(cx, cy, cx, cy + ch, bs.left)             // 左边
+        if (showRight)  drawOnce(cx + cw, cy, cx + cw, cy + ch, bs.right)  // 右边
+        // slashTypes: 单元格斜线（斜表头）
+        const slashes = (cell.cell as unknown as { slashTypes?: string[] }).slashTypes
+        if (slashes && slashes.length > 0) {
+          const side = bs.top ?? bs.bottom ?? bs.left ?? bs.right
+          const color = side?.color ?? '#000000'
+          const width = side?.width ?? 1
+          ctx.save()
+          ctx.strokeStyle = color
+          ctx.lineWidth = width
+          for (const s of slashes) {
+            ctx.beginPath()
+            if (s === 'forward') {
+              // '/'：左下 -> 右上
+              ctx.moveTo(cx + 0.5, cy + ch + 0.5)
+              ctx.lineTo(cx + cw + 0.5, cy + 0.5)
+            } else if (s === 'backward') {
+              // '\'：左上 -> 右下
+              ctx.moveTo(cx + 0.5, cy + 0.5)
+              ctx.lineTo(cx + cw + 0.5, cy + ch + 0.5)
+            } else if (s === 'cross') {
+              // '×'：两条对角线
+              ctx.moveTo(cx + 0.5, cy + 0.5)
+              ctx.lineTo(cx + cw + 0.5, cy + ch + 0.5)
+              ctx.moveTo(cx + 0.5, cy + ch + 0.5)
+              ctx.lineTo(cx + cw + 0.5, cy + 0.5)
+            }
+            ctx.stroke()
+          }
+          ctx.restore()
+        }
       }
     }
   }
@@ -415,26 +590,27 @@ export class CanvasRenderer {
   ): void {
     const [mt, mr, mb, ml] = this.opts.pageMargins
     const color = this.opts.rulerColor
-    const L = 12  // 标尺短边长度
+    const L = 20 // 角标两臂等长
     ctx.save()
     ctx.strokeStyle = color
     ctx.lineWidth = 1
-    // 四个角，每个角画一个 "L" 形（内边距处）
+    // WPS 风格：内容区四角的角标朝"外"伸入页边距，
+    // 顶部指示器垂直臂朝上、底部指示器垂直臂朝下，水平臂分别朝左右外侧
     const drawCorner = (cx: number, cy: number, dx: number, dy: number) => {
       ctx.beginPath()
-      ctx.moveTo(cx + 0.5, cy + dy * L + 0.5)
+      ctx.moveTo(cx + dx * L + 0.5, cy + 0.5)
       ctx.lineTo(cx + 0.5, cy + 0.5)
-      ctx.lineTo(cx + dx * L + 0.5, cy + 0.5)
+      ctx.lineTo(cx + 0.5, cy + dy * L + 0.5)
       ctx.stroke()
     }
-    // 左上：内边距点 (px+ml, py+mt)
-    drawCorner(px + ml, py + mt, 1, 1)
-    // 右上：(px+pw-mr, py+mt)
-    drawCorner(px + pw - mr, py + mt, -1, 1)
-    // 左下：(px+ml, py+ph-mb)
-    drawCorner(px + ml, py + ph - mb, 1, -1)
-    // 右下：(px+pw-mr, py+ph-mb)
-    drawCorner(px + pw - mr, py + ph - mb, -1, -1)
+    // 左上：内边距点 (px+ml, py+mt)，水平臂朝左、垂直臂朝上
+    drawCorner(px + ml, py + mt, -1, -1)
+    // 右上：水平臂朝右、垂直臂朝上
+    drawCorner(px + pw - mr, py + mt, 1, -1)
+    // 左下：水平臂朝左、垂直臂朝下
+    drawCorner(px + ml, py + ph - mb, -1, 1)
+    // 右下：水平臂朝右、垂直臂朝下
+    drawCorner(px + pw - mr, py + ph - mb, 1, 1)
     ctx.restore()
   }
 

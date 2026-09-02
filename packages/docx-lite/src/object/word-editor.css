@@ -377,14 +377,14 @@
   justify-content: center;
   flex: 1;
   min-height: 0;
-  padding: 20px;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
 }
 
 .docx-editor-lite-host .editor-container {
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+
   transform-origin: top center;
 }
 
@@ -1144,8 +1144,7 @@
 /* ==================== Mobile Editor Wrapper ==================== */
 
 .docx-editor-lite-host .mobile-editor-wrapper {
-  padding: 12px !important;
-  overflow-x: hidden !important;
+  overflow: hidden !important;
 }
 
 /* ==================== Responsive Breakpoints ==================== */

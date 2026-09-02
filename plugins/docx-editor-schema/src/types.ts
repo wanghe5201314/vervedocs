@@ -111,6 +111,8 @@ export interface IListElement extends IParagraphContainer {
   listHanging?: number
   listIndent?: number
   listNumbering?: IListNumbering
+  /** 独立列表实例 ID（同 numId 下也能隔离计数） */
+  listId?: string
 }
 
 /* ========== 表格 ========== */
@@ -142,11 +144,24 @@ export interface ITd {
   merged?: boolean
   /** 单元格最小宽度（自适应内容用） */
   minWidth?: number
+  /**
+   * 单元格四边可见性开关（顺序 [top, right, bottom, left]，1=显示 0=隐藏）。
+   * 用于三线表等场景；若为空则按 borderStyle 全部显示。
+   */
+  borderTypes?: number[]
+  /**
+   * 单元格斜线方向：'forward'=/  'backward'=\  'cross'=×
+   */
+  slashTypes?: ('forward' | 'backward' | 'cross')[]
 }
 
 export interface ITr {
   height: number
   tdList: ITd[]
+  /** 行最小高度（w:trHeight rule=atLeast），有值时以 max(内容高, minHeight) 决定行高 */
+  minHeight?: number
+  /** 该行是否作为表头在跨页时重复显示（w:tblHeader） */
+  pagingRepeat?: boolean
 }
 
 export interface IColgroupItem {
@@ -212,7 +227,35 @@ export interface IDocxTheme {
 
 /* ========== 顶层文档 ========== */
 
-export interface IDocxDocument {
+export interface IDocxCommentMeta {
+  id: string
+  author?: string
+  date?: string
+  content: string
+}
+
+export interface IGroupColor {
+  color: string
+  status: number
+}
+
+export interface IComment {
+  id: string
+  groupId: string
+  content: string
+  userName: string
+  avatarColor?: string
+  createdDate: string
+  rangeText: string
+  status?: number
+  isEditing?: boolean
+  isReplying?: boolean
+  replies?: IComment[]
+  position?: { top: number; left?: number; lineWidth?: number; originalTop?: number }
+  anchor?: { startX: number; startY: number; endX: number; endY: number; lineHeight?: number; glyphHeight?: number; startGlyphTop?: number; endGlyphTop?: number }
+}
+
+export interface IDocxDocumentMeta {
   success: boolean
   elements: IElement[]
   sections?: {
@@ -230,6 +273,8 @@ export interface IDocxDocument {
   styles?: Record<string, IParagraphStyle>
   numbering?: Record<string, IListNumbering>
   theme?: IDocxTheme
+  /** 批注元数据，来自 comments.xml 解析或 JSON 导入 */
+  comments?: IDocxCommentMeta[]
 }
 
 /* ========== 路径寻址 ========== */
@@ -272,3 +317,15 @@ export interface IEditorOption {
   historyMaxRecordCount?: number
   [key: string]: unknown
 }
+
+/* ========== 导入 / 导出回调 ========== */
+
+export type DocxImportCallback = (
+  data: ArrayBuffer | File,
+  options?: { [key: string]: unknown }
+) => Promise<{ success: boolean; elements?: IElement[]; error?: string }>
+
+export type DocxExportCallback = (
+  data: IDocxDocumentMeta | IElement[],
+  options?: { defaultFont?: string; defaultSize?: number }
+) => Promise<{ success: boolean; data?: ArrayBuffer; error?: string }>

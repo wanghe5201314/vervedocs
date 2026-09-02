@@ -32,6 +32,10 @@ export interface InlineBox {
   underline?: boolean
   /** 相对块本地基线 y */
   baseline: number
+  /** 所属批注组 ID 列表（来自 run.groupIds） */
+  groupIds?: string[]
+  /** 两端对齐时按字分摊的额外字距（每个字符后附加的像素），默认 0 */
+  letterSpacing?: number
 }
 
 export interface LineBox {
@@ -60,6 +64,7 @@ export interface ParagraphBlock extends BlockBase {
   startIndex: number
   endIndex: number
   parentPath: Path
+
   lines: LineBox[]
   /** 项目符号 / 编号类型 */
   bulletKind?: 'symbol' | 'text'
@@ -72,6 +77,11 @@ export interface ParagraphBlock extends BlockBase {
   bulletSize?: number
   bulletColor?: string
   bulletBold?: boolean
+  /**
+   * 编号绘制起点相对首行 x 的偏移（含符号本身宽度）。
+   * 有值时优先于按 bulletWidth 计算（用于 lvlJc 对齐）。
+   */
+  bulletX?: number
 }
 
 export interface ImageBlock extends BlockBase {
@@ -125,6 +135,14 @@ export interface PageLayout {
   /** 页内容区（去 margin）在文档坐标系中的 rect */
   contentRect: Rect
   blocks: BlockNode[]
+  /** 页眉区域在文档坐标系中的 rect */
+  headerRect?: Rect
+  /** 页眉布局 blocks */
+  headerBlocks?: BlockNode[]
+  /** 页脚区域在文档坐标系中的 rect */
+  footerRect?: Rect
+  /** 页脚布局 blocks */
+  footerBlocks?: BlockNode[]
 }
 
 export interface DocumentLayout {

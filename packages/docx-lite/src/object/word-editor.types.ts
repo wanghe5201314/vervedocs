@@ -1,4 +1,4 @@
-import type { IEditorData, IEditorOption, IElement, DocxImportCallback, DocxExportCallback } from '@vervedoc/core'
+import type { IDocxDocumentMeta, IEditorOption, IElement, DocxImportCallback, DocxExportCallback } from '@vervedoc/core'
 
 export type ImportMode = 'overwrite' | 'append' | 'cancel'
 
@@ -26,8 +26,8 @@ export interface WordEditorOptions {
   container: string | HTMLElement
   /** 文档标题，显示在外壳标题栏 */
   title?: string
-  /** 初始化渲染数据，纯 JSON 结构（IEditorData 含 header/main/footer，或仅 main 元素数组） */
-  data?: IEditorData | IElement[]
+  /** 初始化渲染数据，纯 JSON 结构（IDocxDocumentMeta 含 elements/sections，或仅 elements 元素数组） */
+  data?: IDocxDocumentMeta | IElement[]
   /** 编辑器内部选项（页眉页脚、缩放、只读、分页等），与 IEditorOption 对齐 */
   options?: IEditorOption
   /**

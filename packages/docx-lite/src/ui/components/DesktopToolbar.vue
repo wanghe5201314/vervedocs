@@ -12,29 +12,11 @@
     </div>
     <div class="toolbar-divider"></div>
     <select class="toolbar-select" style="width: 120px;" title="字体" @change="$emit('fontChange', ($event.target as HTMLSelectElement).value)">
-      <option value="">字体</option>
-      <option value="宋体">宋体</option>
-      <option value="黑体">黑体</option>
-      <option value="微软雅黑" selected>微软雅黑</option>
-      <option value="楷体">楷体</option>
-      <option value="仿宋">仿宋</option>
-      <option value="Arial">Arial</option>
-      <option value="Times New Roman">Times New Roman</option>
+      <option v-for="f in FONT_FAMILY_LIST" :key="f" :value="FONT_FAMILY_VALUE[f] ?? f" :selected="(FONT_FAMILY_VALUE[f] ?? f) === 'Microsoft YaHei'">{{ f }}</option>
     </select>
     <button class="toolbar-btn" title="减小字号" @click="$emit('command', 'executeSizeMinus')"><span class="material-icons">remove_circle_outline</span></button>
-    <select class="toolbar-select" style="width: 60px;" title="字号" @change="$emit('fontSizeChange', Number(($event.target as HTMLSelectElement).value))">
-      <option value="10">10</option>
-      <option value="12">12</option>
-      <option value="14" selected>14</option>
-      <option value="16">16</option>
-      <option value="18">18</option>
-      <option value="20">20</option>
-      <option value="24">24</option>
-      <option value="28">28</option>
-      <option value="32">32</option>
-      <option value="36">36</option>
-      <option value="48">48</option>
-      <option value="72">72</option>
+    <select class="toolbar-select" style="width: 68px;" title="字号" @change="$emit('fontSizeChange', Number(($event.target as HTMLSelectElement).value))">
+      <option v-for="s in FONT_SIZE_LIST" :key="s" :value="FONT_SIZE[s] ?? Number(s)" :selected="(FONT_SIZE[s] ?? Number(s)) === 14">{{ s }}</option>
     </select>
     <button class="toolbar-btn" title="增大字号" @click="$emit('command', 'executeSizeAdd')"><span class="material-icons">add_circle_outline</span></button>
     <div class="toolbar-divider"></div>
@@ -57,10 +39,10 @@
       <option value="6">标题 6</option>
     </select>
     <div class="toolbar-divider"></div>
-    <button class="toolbar-btn" title="左对齐" @click="$emit('command', 'executeRowFlex', RowFlex.LEFT)"><span class="material-icons">format_align_left</span></button>
-    <button class="toolbar-btn" title="居中对齐" @click="$emit('command', 'executeRowFlex', RowFlex.CENTER)"><span class="material-icons">format_align_center</span></button>
-    <button class="toolbar-btn" title="右对齐" @click="$emit('command', 'executeRowFlex', RowFlex.RIGHT)"><span class="material-icons">format_align_right</span></button>
-    <button class="toolbar-btn" title="两端对齐" @click="$emit('command', 'executeRowFlex', RowFlex.JUSTIFY)"><span class="material-icons">format_align_justify</span></button>
+    <button class="toolbar-btn" title="左对齐" @click="$emit('command', 'executeRowFlex', ROW_FLEX.LEFT)"><span class="material-icons">format_align_left</span></button>
+    <button class="toolbar-btn" title="居中对齐" @click="$emit('command', 'executeRowFlex', ROW_FLEX.CENTER)"><span class="material-icons">format_align_center</span></button>
+    <button class="toolbar-btn" title="右对齐" @click="$emit('command', 'executeRowFlex', ROW_FLEX.RIGHT)"><span class="material-icons">format_align_right</span></button>
+    <button class="toolbar-btn" title="两端对齐" @click="$emit('command', 'executeRowFlex', ROW_FLEX.JUSTIFY)"><span class="material-icons">format_align_justify</span></button>
     <div class="toolbar-divider"></div>
     <select class="toolbar-select" title="行间距" @change="$emit('lineHeightChange', Number(($event.target as HTMLSelectElement).value))">
       <option value="1">单倍行距</option>
@@ -69,8 +51,8 @@
       <option value="2">双倍行距</option>
     </select>
     <div class="toolbar-divider"></div>
-    <button class="toolbar-btn" title="项目符号列表" @click="$emit('command', 'executeList', ListType.UL, ListStyle.DISC)"><span class="material-icons">format_list_bulleted</span></button>
-    <button class="toolbar-btn" title="编号列表" @click="$emit('command', 'executeList', ListType.OL, ListStyle.DECIMAL)"><span class="material-icons">format_list_numbered</span></button>
+    <button class="toolbar-btn" title="项目符号列表" @click="$emit('command', 'executeList', LIST_TYPE.UL, LIST_STYLE.DISC)"><span class="material-icons">format_list_bulleted</span></button>
+    <button class="toolbar-btn" title="编号列表" @click="$emit('command', 'executeList', LIST_TYPE.OL, LIST_STYLE.DECIMAL)"><span class="material-icons">format_list_numbered</span></button>
     <button class="toolbar-btn" title="清除格式" @click="$emit('command', 'executeFormat')"><span class="material-icons">format_clear</span></button>
   </div>
 
@@ -86,7 +68,7 @@
 </template>
 
 <script setup lang="ts">
-import { ListStyle, ListType, RowFlex } from '@vervedoc/core'
+import { ROW_FLEX, LIST_TYPE, LIST_STYLE, FONT_FAMILY_LIST, FONT_FAMILY_VALUE, FONT_SIZE, FONT_SIZE_LIST } from '@vervedoc/core'
 
 defineProps<{
   zoomText: string

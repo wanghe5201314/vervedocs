@@ -16,6 +16,7 @@
   <header>
     <button id="btn-load">重新加载 test-output.json</button>
     <button id="btn-export">Export JSON</button>
+    <button id="btn-bookmarks">查看书签</button>
     <span id="status">初始化…</span>
   </header>
   <div id="editor"></div>
@@ -38,6 +39,13 @@
       const json = await res.json()
       const tParsed = performance.now()
       const doc = Array.isArray(json?.elements) ? json : { success: true, elements: [] }
+      if (Array.isArray(json?.header) || Array.isArray(json?.footer)) {
+        doc.sections = {
+          ...(doc.sections || {}),
+          header: Array.isArray(json.header) ? json.header : [],
+          footer: Array.isArray(json.footer) ? json.footer : []
+        }
+      }
       editor.setDocument(doc)
       const layout = editor.draw.getLayout()
       status.textContent = `加载 ${(tParsed - t0).toFixed(0)}ms · 渲染 ${(performance.now() - tParsed).toFixed(0)}ms · 页数 ${layout?.pages.length}`
@@ -69,7 +77,42 @@
     document.getElementById('btn-export').onclick = () => {
       const out = editor.getDocument()
       console.log('Export:', out)
-      status.textContent = `导出 ${out.elements.length} 个元素`
+      const json = JSON.stringify(out, null, 2)
+      const blob = new Blob([json], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      const ts = new Date().toISOString().replace(/[:.]/g, '-')
+      a.href = url
+      a.download = `test-export-${ts}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      status.textContent = `导出 ${out.elements.length} 个元素 · ${(json.length / 1024).toFixed(1)} KB`
+    }
+
+    document.getElementById('btn-bookmarks').onclick = () => {
+      const doc = editor.getDocument()
+      const bookmarks = []
+      const walk = (list) => {
+        if (!Array.isArray(list)) return
+        for (const el of list) {
+          const marker = el?.extension?.bookmarkMarker
+          if (marker && marker.position === 'start') {
+            bookmarks.push({ name: marker.name, id: el.id ?? '' })
+          }
+          if (el.valueList) walk(el.valueList)
+          if (el.trList) {
+            for (const tr of el.trList) {
+              if (tr.tdList) for (const td of tr.tdList) walk(td.value)
+            }
+          }
+        }
+      }
+      walk(doc.elements)
+      walk(doc.sections?.header)
+      walk(doc.sections?.footer)
+      alert(`书签数量：${bookmarks.length}\n${JSON.stringify(bookmarks, null, 2)}`)
     }
 
     // 页面加载后立即加载

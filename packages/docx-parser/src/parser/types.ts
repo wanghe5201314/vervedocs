@@ -127,6 +127,19 @@ export interface ParagraphStyle {
   listStyle?: string
   listLevel?: number
   numId?: string
+  listIndent?: number
+  listHanging?: number
+  listNumbering?: {
+    numId: string
+    abstractNumId?: string
+    level: number
+    numFmt: string
+    lvlText: string
+    start: number
+    indentLeft?: number
+    indentHanging?: number
+    lvlJc?: string
+  }
   /** 制表符停止位 */
   tabStops?: Array<{ pos: number; type: string }>
 }

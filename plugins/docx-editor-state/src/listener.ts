@@ -2,8 +2,10 @@
  * VerveDocs State —— Listener
  *
  * 编辑器生命周期/交互事件的回调注册中心。
+ * 基于 eventemitter3 实现，保持 on/off/emit API 不变。
  */
 
+import { EventEmitter } from 'eventemitter3'
 import type { IPosition, IRange } from '@vervedoc/docx-editor-schema'
 
 export interface ListenerMap {
@@ -14,32 +16,25 @@ export interface ListenerMap {
   focus: () => void
   blur: () => void
   scaleChange: (scale: number) => void
+  pageScaleChange: (scale: number) => void
   pageSizeChange: (size: { width: number; height: number }) => void
+  zoneChange: (zone: 'main' | 'header' | 'footer') => void
 }
 
 export class Listener {
-  private map: Partial<{ [K in keyof ListenerMap]: Set<ListenerMap[K]> }> = {}
+  private emitter = new EventEmitter()
 
   on<K extends keyof ListenerMap>(event: K, handler: ListenerMap[K]): () => void {
-    let set = this.map[event] as Set<ListenerMap[K]> | undefined
-    if (!set) {
-      set = new Set<ListenerMap[K]>()
-      ;(this.map[event] as unknown as Set<ListenerMap[K]>) = set
-    }
-    set.add(handler)
-    return () => this.off(event, handler)
+    const fn = handler as (...args: any[]) => void
+    this.emitter.on(event, fn)
+    return () => this.emitter.off(event, fn)
   }
 
   off<K extends keyof ListenerMap>(event: K, handler: ListenerMap[K]): void {
-    const set = this.map[event] as Set<ListenerMap[K]> | undefined
-    set?.delete(handler)
+    this.emitter.off(event, handler as (...args: any[]) => void)
   }
 
   emit<K extends keyof ListenerMap>(event: K, ...args: Parameters<ListenerMap[K]>): void {
-    const set = this.map[event] as Set<ListenerMap[K]> | undefined
-    if (!set) return
-    for (const h of Array.from(set)) {
-      try { (h as (...a: unknown[]) => void)(...(args as unknown[])) } catch (e) { console.error('[Listener]', e) }
-    }
+    this.emitter.emit(event, ...args)
   }
 }

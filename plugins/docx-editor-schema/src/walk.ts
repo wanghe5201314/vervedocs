@@ -1,3 +1,4 @@
+
 /**
  * VerveDocs Schema —— 树遍历与路径寻址
  *
@@ -10,12 +11,7 @@ import type { IElement, Path, PathSegment, IPosition, ITableElement, ITd, ITr } 
 
 export function cloneTree<T>(node: T): T {
   if (node === null || typeof node !== 'object') return node
-  if (Array.isArray(node)) return (node.map(cloneTree) as unknown) as T
-  const out: Record<string, unknown> = {}
-  for (const key of Object.keys(node as object)) {
-    out[key] = cloneTree((node as Record<string, unknown>)[key])
-  }
-  return out as T
+  return structuredClone(node)
 }
 
 /* -------------------- 类型守卫 -------------------- */

@@ -53,9 +53,10 @@ function hitLine(line: LineBox, lx: number): IPosition | null {
   for (const inl of line.inlines) {
     if (lx >= inl.x && lx <= inl.x + inl.width) {
       let cursor = inl.x
+      const ls = inl.letterSpacing ?? 0
       for (let i = 0; i < inl.text.length; i++) {
         const ch = inl.text[i]
-        const cw = charWidthApprox(ch, inl.size, inl.bold)
+        const cw = charWidthApprox(ch, inl.size, inl.bold) + ls
         if (lx < cursor + cw / 2) return { path: inl.path, offset: inl.startOffset + i }
         cursor += cw
       }

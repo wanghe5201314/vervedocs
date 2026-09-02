@@ -33,5 +33,9 @@ export type {
 // 变换层
 export { Command, CommandAdapt } from '@vervedoc/docx-editor-transform'
 
+// 批注 / 修订
+export { CommentComponent, RevisionComponent } from '@vervedoc/docx-editor-comment'
+export type { DocxCommentMeta, RevisionCallbacks, CommentCallbacks } from '@vervedoc/docx-editor-comment'
+
 // version
 export const version = '4.0.0-tree'

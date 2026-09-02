@@ -4,11 +4,15 @@
  * 段落切分：将同层的 elements 按"段落分隔"划分成段落数组。
  * 规则：
  *  - title/list/table/image/pageBreak 各自独立成段。
- *  - 连续 text 归到同一段（普通段落），遇到分隔类型即断段。
+ *  - 连续 text 归到同一段，遇到"段落终止符"或块级节点即断段。
  *  - 段落容器（title/list）自身即为一段，其内 valueList 作为 runs。
  *
- * 空段过滤：docx-parser 常在块级元素之间插入 `{ type:'text', value:'\u200B' }`
- * 作为段落分隔标记。这些"独立零宽段"没有实际内容，直接跳过，避免视觉空行。
+ * 段落终止符：docx-parser 在每个段落末尾插入一个仅由零宽字符
+ * (`\u200B` / `\uFEFF`) 组成的 text run 作为段落结束标记。
+ *  - 遇到该标记就切段（不并入下一段）。
+ *  - 空段落载体（`{ type:'text', value:'', ...段落属性 }`）保留为一段的 run，
+ *    以维持视觉空行与其行高等属性。
+ *  - 若某段仅由终止符组成（无任何载体），才作为块间分隔符跳过。
  */
 
 import type { IElement } from './types'
@@ -26,12 +30,12 @@ export interface IParagraphGroup {
   runs: IElement[]
 }
 
-/** 判断某个 text 段是不是"纯零宽/空白"的分隔标记（应被跳过） */
-function isBlankParagraphMarker(el: IElement): boolean {
+/** 判断某个 text run 是否为"段落终止符"（仅由零宽字符构成的 text） */
+function isParagraphTerminator(el: IElement): boolean {
   if (el.type !== 'text') return false
   const v = (el as unknown as { value?: string }).value ?? ''
-  // 只允许零宽字符 U+200B / U+FEFF / 空白 → 视为分隔标记
-  return /^[\s\u200B\uFEFF]*$/.test(v)
+  if (!v) return false
+  return /^[\u200B\uFEFF]+$/.test(v)
 }
 
 export function splitParagraphs(elements: IElement[]): IParagraphGroup[] {
@@ -46,13 +50,20 @@ export function splitParagraphs(elements: IElement[]): IParagraphGroup[] {
       i++
       continue
     }
-    // 普通段落：连续收集非块级节点
+    // 普通段落：收集非块级节点，遇到段落终止符即切段
     const start = i
-    while (i < elements.length && !BLOCK_LEVEL_TYPES.has(elements[i].type)) i++
+    while (i < elements.length && !BLOCK_LEVEL_TYPES.has(elements[i].type)) {
+      if (isParagraphTerminator(elements[i])) {
+        i++ // 消费终止符
+        break
+      }
+      i++
+    }
+    // 段内 runs 保留原切片（含终止符），以保证 ri 与原 elements 索引对齐；
+    // 终止符在排版时跳过（不产出 inline），但占位以保持索引一致。
     const runs = elements.slice(start, i)
-    // 若整段全是"空白/零宽"文本，视为分隔标记，跳过
-    const allBlank = runs.every(isBlankParagraphMarker)
-    if (allBlank) continue
+    // 若段落仅有终止符（无任何载体/内容），视为块间分隔符，跳过
+    if (runs.every(isParagraphTerminator)) continue
     out.push({ kind: 'normal', block: null, start, end: i, runs })
   }
   return out

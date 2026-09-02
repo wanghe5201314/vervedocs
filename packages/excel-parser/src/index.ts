@@ -36,3 +36,4 @@ export type {
 export { parseExcel, readExcelFileToWorkbook } from './parser/excel.parser'
 export { writeExcel, writeWorkbookToExcelBuffer } from './writer/excel.writer'
 export { createExcelImportCallback, createExcelExportCallback } from './callbacks'
+export { normalizeFontFamily } from './utils/font-family'

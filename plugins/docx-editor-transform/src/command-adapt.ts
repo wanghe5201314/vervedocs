@@ -1,282 +1,324 @@
-import { IDrawContext } from './i-draw-context'
+/**
+ * VerveDocs Transform —— CommandAdapt
+ *
+ * 基于路径的树编辑命令。所有命令直接操作 IDocxDocument.elements 树。
+ * 通过 draw.setDocument 通知视图重排（避免直接依赖 view）。
+ */
+
+import type {
+  IDocxDocument, IElement, Path, ITextElement,
+  ITitleElement, ITableElement
+} from '@vervedoc/docx-editor-schema'
 import {
-  BaseAdapter,
-  TextStyleAdapter,
-  ParagraphAdapter,
-  TableAdapter,
-  PageAdapter,
-  HyperlinkAdapter,
-  BookmarkAdapter,
-  MediaAdapter,
-  SearchAdapter,
-  ElementAdapter,
-  ControlAdapter,
-  StructureAdapter,
-  ValueAdapter
-} from './adapters'
-import type { IAdapterContext } from './adapters'
+  getByPath, getParentContainer, cloneTree
+} from '@vervedoc/docx-editor-schema'
+import type { RangeManager } from '@vervedoc/docx-editor-state'
+
+export interface DrawLike {
+  getDocument(): IDocxDocument
+  setDocument(doc: IDocxDocument): void
+}
 
 export class CommandAdapt {
-  private _base: BaseAdapter
-  private _textStyle: TextStyleAdapter
-  private _paragraph: ParagraphAdapter
-  private _table: TableAdapter
-  private _page: PageAdapter
-  private _hyperlink: HyperlinkAdapter
-  private _bookmark: BookmarkAdapter
-  private _media: MediaAdapter
-  private _search: SearchAdapter
-  private _element: ElementAdapter
-  private _control: ControlAdapter
-  public _structure: StructureAdapter
-  private _value: ValueAdapter
+  constructor(
+    private draw: DrawLike,
+    private range: RangeManager
+  ) {}
 
-  constructor(draw: IDrawContext, externalFns?: { pasteByApi?: any; printImageBase64?: any }) {
-    const ctx: IAdapterContext = {
-      draw,
-      range: draw.getRange(),
-      position: draw.getPosition(),
-      historyManager: draw.getHistoryManager(),
-      canvasEvent: draw.getCanvasEvent(),
-      options: draw.getOptions(),
-      control: draw.getControl(),
-      workerManager: draw.getWorkerManager(),
-      searchManager: draw.getSearch(),
-      i18n: draw.getI18n(),
-      zone: draw.getZone(),
-      tableOperate: draw.getTableOperate(),
-      pasteByApi: externalFns?.pasteByApi,
-      printImageBase64: externalFns?.printImageBase64
+  /* -------------------- 文本编辑 -------------------- */
+
+  insertText(text: string): void {
+    const pos = this.range.getFocus()
+    if (!pos) return
+    const doc = this.draw.getDocument()
+    const node = getByPath(doc.elements, pos.path)
+    if (!node) return
+    if (node.type === 'text') {
+      const t = node as ITextElement
+      const before = t.value.slice(0, pos.offset)
+      const after = t.value.slice(pos.offset)
+      t.value = before + text + after
+      this.range.setCaret({ path: pos.path.slice() as Path, offset: pos.offset + text.length })
+      this.draw.setDocument(doc)
     }
-
-    this._base = new BaseAdapter(ctx)
-    this._textStyle = new TextStyleAdapter(ctx)
-    this._paragraph = new ParagraphAdapter(ctx)
-    this._table = new TableAdapter(ctx)
-    this._page = new PageAdapter(ctx)
-    this._hyperlink = new HyperlinkAdapter(ctx)
-    this._bookmark = new BookmarkAdapter(ctx)
-    this._media = new MediaAdapter(ctx)
-    this._search = new SearchAdapter(ctx)
-    this._element = new ElementAdapter(ctx)
-    this._control = new ControlAdapter(ctx)
-    this._structure = new StructureAdapter(ctx)
-    this._value = new ValueAdapter(ctx)
   }
 
-  // ---- BaseAdapter ----
-  public mode = (...a: any[]) => this._base.mode(...a as [any])
-  public cut = () => this._base.cut()
-  public copy = (...a: any[]) => this._base.copy(...a as [any])
-  public paste = (...a: any[]) => this._base.paste(...a as [any])
-  public selectAll = () => this._base.selectAll()
-  public backspace = () => this._base.backspace()
-  public setRange = (...a: any[]) => this._base.setRange(...a as [any, any, any?, any?, any?, any?, any?])
-  public replaceRange = (...a: any[]) => this._base.replaceRange(...a as [any])
-  public setPositionContext = (...a: any[]) => this._base.setPositionContext(...a as [any])
-  public forceUpdate = (...a: any[]) => this._base.forceUpdate(...a as [any])
-  public blur = () => this._base.blur()
-  public undo = () => this._base.undo()
-  public redo = () => this._base.redo()
-  public save = () => this._base.save()
-  public painter = (...a: any[]) => this._base.painter(...a as [any])
-  public applyPainterStyle = () => this._base.applyPainterStyle()
-  public format = (...a: any[]) => this._base.format(...a as [any])
-  public focus = (...a: any[]) => this._base.focus(...a as [any])
-  public locationCatalog = (...a: any[]) => this._base.locationCatalog(...a as [any])
-  public wordTool = () => this._base.wordTool()
+  deleteBackward(): void {
+    const pos = this.range.getFocus()
+    if (!pos) return
+    const doc = this.draw.getDocument()
+    const node = getByPath(doc.elements, pos.path)
+    if (!node) return
+    if (node.type === 'text') {
+      const t = node as ITextElement
+      if (pos.offset > 0) {
+        t.value = t.value.slice(0, pos.offset - 1) + t.value.slice(pos.offset)
+        this.range.setCaret({ path: pos.path.slice() as Path, offset: pos.offset - 1 })
+        this.draw.setDocument(doc)
+      } else {
+        // 与前一个 text run 合并
+        const parent = getParentContainer(doc.elements, pos.path)
+        const idx = pos.path[pos.path.length - 1] as number
+        if (parent && idx > 0) {
+          const prev = parent[idx - 1]
+          if (prev && prev.type === 'text') {
+            const p = prev as ITextElement
+            const newOffset = p.value.length > 0 ? p.value.length - 1 : 0
+            if (p.value.length > 0) p.value = p.value.slice(0, -1)
+            // 合并 current 到 prev
+            p.value += t.value
+            parent.splice(idx, 1)
+            const newPath = pos.path.slice() as Path
+            newPath[newPath.length - 1] = idx - 1
+            this.range.setCaret({ path: newPath, offset: newOffset })
+            this.draw.setDocument(doc)
+          }
+        }
+      }
+    }
+  }
 
-  // ---- TextStyleAdapter ----
-  public font = (...a: any[]) => this._textStyle.font(...a as [any, any?])
-  public size = (...a: any[]) => this._textStyle.size(...a as [any, any?])
-  public characterScale = (...a: any[]) => this._textStyle.characterScale(...a as [any, any?])
-  public sizeAdd = (...a: any[]) => this._textStyle.sizeAdd(...a as [any])
-  public sizeMinus = (...a: any[]) => this._textStyle.sizeMinus(...a as [any])
-  public bold = (...a: any[]) => this._textStyle.bold(...a as [any])
-  public italic = (...a: any[]) => this._textStyle.italic(...a as [any])
-  public underline = (...a: any[]) => this._textStyle.underline(...a as [any, any?])
-  public strikeout = (...a: any[]) => this._textStyle.strikeout(...a as [any])
-  public superscript = (...a: any[]) => this._textStyle.superscript(...a as [any])
-  public subscript = (...a: any[]) => this._textStyle.subscript(...a as [any])
-  public color = (...a: any[]) => this._textStyle.color(...a as [any, any?])
-  public highlight = (...a: any[]) => this._textStyle.highlight(...a as [any, any?])
-  public paragraphColor = (...a: any[]) => this._textStyle.paragraphColor(...a as [any])
+  deleteForward(): void {
+    const pos = this.range.getFocus()
+    if (!pos) return
+    const doc = this.draw.getDocument()
+    const node = getByPath(doc.elements, pos.path)
+    if (!node || node.type !== 'text') return
+    const t = node as ITextElement
+    if (pos.offset < t.value.length) {
+      t.value = t.value.slice(0, pos.offset) + t.value.slice(pos.offset + 1)
+      this.draw.setDocument(doc)
+    }
+  }
 
-  // ---- ParagraphAdapter ----
-  public title = (...a: any[]) => this._paragraph.title(...a as [any])
-  public list = (...a: any[]) => this._paragraph.list(...a as [any, any?])
-  public rowFlex = (...a: any[]) => this._paragraph.rowFlex(...a as [any])
-  public rowMargin = (...a: any[]) => this._paragraph.rowMargin(...a as [any])
-  public lineHeight = (...a: any[]) => this._paragraph.lineHeight(...a as [any])
-  public paragraphFirstLineIndent = (...a: any[]) => this._paragraph.paragraphFirstLineIndent(...a as [any])
-  public indentStep = (...a: any[]) => this._paragraph.indentStep(...a as [any])
-  public getFirstLineIndentPx = () => this._paragraph.getFirstLineIndentPx()
-  public getFirstLineIndent = () => this._paragraph.getFirstLineIndent()
+  /** Enter 换段：在当前 text run 内切成两半，第二半为新 run；对普通段落即插入零宽段分隔 */
+  splitParagraph(): void {
+    const pos = this.range.getFocus()
+    if (!pos) return
+    const doc = this.draw.getDocument()
+    const node = getByPath(doc.elements, pos.path)
+    const parent = getParentContainer(doc.elements, pos.path)
+    if (!node || !parent) return
+    if (node.type !== 'text') return
+    const t = node as ITextElement
+    const idx = pos.path[pos.path.length - 1] as number
+    const before = t.value.slice(0, pos.offset)
+    const after = t.value.slice(pos.offset)
+    t.value = before
+    // 插入段落分隔标记 + 后半 text
+    const sep: ITextElement = { type: 'text', value: '\u200B' } as ITextElement
+    const rest: ITextElement = { type: 'text', value: after } as ITextElement
+    // 继承字体/字号
+    const anyT = t as unknown as Record<string, unknown>
+    for (const k of ['font', 'size', 'bold', 'color']) {
+      if (anyT[k] != null) {
+        (rest as unknown as Record<string, unknown>)[k] = anyT[k]
+      }
+    }
+    parent.splice(idx + 1, 0, sep, rest)
+    const newPath = pos.path.slice() as Path
+    newPath[newPath.length - 1] = idx + 2
+    this.range.setCaret({ path: newPath, offset: 0 })
+    this.draw.setDocument(doc)
+  }
 
-  // ---- TableAdapter ----
-  public insertTable = (...a: any[]) => this._table.insertTable(...a as [any, any])
-  public insertTableTopRow = () => this._table.insertTableTopRow()
-  public insertTableBottomRow = () => this._table.insertTableBottomRow()
-  public insertTableLeftCol = () => this._table.insertTableLeftCol()
-  public insertTableRightCol = () => this._table.insertTableRightCol()
-  public deleteTableRow = () => this._table.deleteTableRow()
-  public deleteTableCol = () => this._table.deleteTableCol()
-  public deleteTable = () => this._table.deleteTable()
-  public mergeTableCell = () => this._table.mergeTableCell()
-  public cancelMergeTableCell = () => this._table.cancelMergeTableCell()
-  public splitVerticalTableCell = () => this._table.splitVerticalTableCell()
-  public splitHorizontalTableCell = () => this._table.splitHorizontalTableCell()
-  public tableTdVerticalAlign = (...a: any[]) => this._table.tableTdVerticalAlign(...a as [any])
-  public tableBorderType = (...a: any[]) => this._table.tableBorderType(...a as [any])
-  public tableBorderColor = (...a: any[]) => this._table.tableBorderColor(...a as [any])
-  public tableBorderWidth = (...a: any[]) => this._table.tableBorderWidth(...a as [any])
-  public tableBorderExternalWidth = (...a: any[]) => this._table.tableBorderExternalWidth(...a as [any])
-  public tableTdBorderType = (...a: any[]) => this._table.tableTdBorderType(...a as [any])
-  public tableTdSlashType = (...a: any[]) => this._table.tableTdSlashType(...a as [any])
-  public tableTdBackgroundColor = (...a: any[]) => this._table.tableTdBackgroundColor(...a as [any])
-  public tableSelectAll = () => this._table.tableSelectAll()
+  /* -------------------- 光标移动 -------------------- */
 
-  // ---- PageAdapter ----
-  public pageMode = (...a: any[]) => this._page.pageMode(...a as [any])
-  public pageScale = (...a: any[]) => this._page.pageScale(...a as [any])
-  public pageScaleRecovery = () => this._page.pageScaleRecovery()
-  public pageScaleMinus = () => this._page.pageScaleMinus()
-  public pageScaleAdd = () => this._page.pageScaleAdd()
-  public paperSize = (...a: any[]) => this._page.paperSize(...a as [any, any])
-  public paperDirection = (...a: any[]) => this._page.paperDirection(...a as [any])
-  public getPaperMargin = () => this._page.getPaperMargin()
-  public setPaperMargin = (...a: any[]) => this._page.setPaperMargin(...a as [any])
+  moveCaretLeft(): void {
+    const pos = this.range.getFocus()
+    if (!pos) return
+    if (pos.offset > 0) {
+      this.range.setCaret({ path: pos.path.slice() as Path, offset: pos.offset - 1 })
+      return
+    }
+    // 跨 run 向前
+    const doc = this.draw.getDocument()
+    const parent = getParentContainer(doc.elements, pos.path)
+    const idx = pos.path[pos.path.length - 1] as number
+    if (parent && idx > 0) {
+      for (let i = idx - 1; i >= 0; i--) {
+        const p = parent[i]
+        if (p && p.type === 'text') {
+          const newPath = pos.path.slice() as Path
+          newPath[newPath.length - 1] = i
+          const t = p as ITextElement
+          this.range.setCaret({ path: newPath, offset: t.value.length })
+          return
+        }
+      }
+    }
+  }
 
-  // ---- HyperlinkAdapter ----
-  public hyperlink = (...a: any[]) => this._hyperlink.hyperlink(...a as [any])
-  public deleteHyperlink = () => this._hyperlink.deleteHyperlink()
-  public cancelHyperlink = () => this._hyperlink.cancelHyperlink()
-  public editHyperlink = (...a: any[]) => this._hyperlink.editHyperlink(...a as [any])
+  moveCaretRight(): void {
+    const pos = this.range.getFocus()
+    if (!pos) return
+    const doc = this.draw.getDocument()
+    const node = getByPath(doc.elements, pos.path)
+    if (node && node.type === 'text') {
+      const t = node as ITextElement
+      if (pos.offset < t.value.length) {
+        this.range.setCaret({ path: pos.path.slice() as Path, offset: pos.offset + 1 })
+        return
+      }
+    }
+    // 跨 run 向后
+    const parent = getParentContainer(doc.elements, pos.path)
+    const idx = pos.path[pos.path.length - 1] as number
+    if (parent && idx < parent.length - 1) {
+      for (let i = idx + 1; i < parent.length; i++) {
+        const p = parent[i]
+        if (p && p.type === 'text') {
+          const newPath = pos.path.slice() as Path
+          newPath[newPath.length - 1] = i
+          this.range.setCaret({ path: newPath, offset: 0 })
+          return
+        }
+      }
+    }
+  }
 
-  // ---- BookmarkAdapter ----
-  public addBookmark = (...a: any[]) => this._bookmark.addBookmark(...a as [any])
-  public deleteBookmark = (...a: any[]) => this._bookmark.deleteBookmark(...a as [any])
-  public gotoBookmark = (...a: any[]) => this._bookmark.gotoBookmark(...a as [any])
-  public getBookmarks = () => this._bookmark.getBookmarks()
+  /* -------------------- 段落属性 -------------------- */
 
-  // ---- MediaAdapter ----
-  public image = (...a: any[]) => this._media.image(...a as [any])
-  public insertAudio = (...a: any[]) => this._media.insertAudio(...a as [any, any?])
-  public insertVideo = (...a: any[]) => this._media.insertVideo(...a as [any, any?])
-  public insertChart = (...a: any[]) => this._media.insertChart(...a as [any])
-  public updateChart = (...a: any[]) => this._media.updateChart(...a as [any, any])
-  public replaceImageElement = (...a: any[]) => this._media.replaceImageElement(...a as [any])
-  public saveAsImageElement = () => this._media.saveAsImageElement()
-  public changeImageDisplay = (...a: any[]) => this._media.changeImageDisplay(...a as [any, any])
+  setRowFlex(flex: 'left' | 'center' | 'right' | 'justify' | 'alignment'): void {
+    const pos = this.range.getFocus()
+    if (!pos) return
+    const doc = this.draw.getDocument()
+    const node = getByPath(doc.elements, pos.path)
+    if (!node) return
+    ;(node as unknown as Record<string, unknown>).rowFlex = flex
+    this.draw.setDocument(doc)
+  }
 
-  // ---- SearchAdapter ----
-  public search = (...a: any[]) => this._search.search(...a as [any])
-  public replace = (...a: any[]) => this._search.replace(...a as [any, any?])
-  public replaceAll = (...a: any[]) => this._search.replaceAll(...a as [any, any])
-  public locateSearchResult = (...a: any[]) => this._search.locateSearchResult(...a as [any])
+  setLineHeight(lh: number, rule: 'auto' | 'exact' | 'atLeast' = 'auto'): void {
+    const pos = this.range.getFocus()
+    if (!pos) return
+    const doc = this.draw.getDocument()
+    const node = getByPath(doc.elements, pos.path)
+    if (!node) return
+    const any = node as unknown as Record<string, unknown>
+    any.lineHeight = lh
+    any.lineHeightRule = rule
+    this.draw.setDocument(doc)
+  }
 
-  // ---- ElementAdapter ----
-  public insertElementList = (...a: any[]) => this._element.insertElementList(...a as [any, any?])
-  public appendElementList = (...a: any[]) => this._element.appendElementList(...a as [any, any?])
-  public updateElementById = (...a: any[]) => this._element.updateElementById(...a as [any])
-  public deleteElementById = (...a: any[]) => this._element.deleteElementById(...a as [any])
-  public getElementById = (...a: any[]) => this._element.getElementById(...a as [any])
-  public setValue = (...a: any[]) => this._element.setValue(...a as [any, any?])
-  public setHTML = (...a: any[]) => this._element.setHTML(...a as [any])
-  public insertControl = (...a: any[]) => this._element.insertControl(...a as [any])
-  public insertTitle = (...a: any[]) => this._element.insertTitle(...a as [any])
+  /* -------------------- run 样式 -------------------- */
 
-  // ---- ControlAdapter ----
-  public setControlValue = (...a: any[]) => this._control.setControlValue(...a as [any])
-  public setControlValueList = (...a: any[]) => this._control.setControlValueList(...a as [any])
-  public setControlExtension = (...a: any[]) => this._control.setControlExtension(...a as [any])
-  public setControlExtensionList = (...a: any[]) => this._control.setControlExtensionList(...a as [any])
-  public setControlProperties = (...a: any[]) => this._control.setControlProperties(...a as [any])
-  public setControlPropertiesList = (...a: any[]) => this._control.setControlPropertiesList(...a as [any])
-  public setControlHighlight = (...a: any[]) => this._control.setControlHighlight(...a as [any])
-  public getControlValue = (...a: any[]) => this._control.getControlValue(...a as [any])
-  public getControlList = () => this._control.getControlList()
-  public removeControl = (...a: any[]) => this._control.removeControl(...a as [any])
-  public locationControl = (...a: any[]) => this._control.locationControl(...a as [any, any?])
+  setBold(bold: boolean): void {
+    this.mutateRun(run => { run.bold = bold })
+  }
+  setColor(color: string): void {
+    this.mutateRun(run => { (run as unknown as Record<string, unknown>).color = color })
+  }
+  setFont(font: string): void {
+    this.mutateRun(run => { (run as unknown as Record<string, unknown>).font = font })
+  }
+  setSize(size: number): void {
+    this.mutateRun(run => { (run as unknown as Record<string, unknown>).size = size })
+  }
+  setHighlight(color: string): void {
+    this.mutateRun(run => { (run as unknown as Record<string, unknown>).highlight = color })
+  }
+  setStrikeout(v: boolean): void {
+    this.mutateRun(run => { (run as unknown as Record<string, unknown>).strikeout = v })
+  }
+  setUnderline(v: boolean): void {
+    this.mutateRun(run => { (run as unknown as Record<string, unknown>).underline = v })
+  }
 
-  // ---- StructureAdapter ----
-  public setGroup = () => this._structure.setGroup()
-  public deleteGroup = (...a: any[]) => this._structure.deleteGroup(...a as [any])
-  public locationGroup = (...a: any[]) => this._structure.locationGroup(...a as [any])
-  public insertArea = (...a: any[]) => this._structure.insertArea(...a as [any])
-  public setAreaProperties = (...a: any[]) => this._structure.setAreaProperties(...a as [any])
-  public locationArea = (...a: any[]) => this._structure.locationArea(...a as [any, any?])
-  public insertColumn = (...a: any[]) => this._structure.insertColumn(...a as [any, any?, any?])
-  public removeColumn = () => this._structure.removeColumn()
-  public columnBreak = () => this._structure.columnBreak()
-  public addWatermark = (...a: any[]) => this._structure.addWatermark(...a as [any])
-  public deleteWatermark = () => this._structure.deleteWatermark()
-  public setMainBadge = (...a: any[]) => this._structure.setMainBadge(...a as [any])
-  public setAreaBadge = (...a: any[]) => this._structure.setAreaBadge(...a as [any])
-  public setZone = (...a: any[]) => this._structure.setZone(...a as [any])
-  public separator = (...a: any[]) => this._structure.separator(...a as [any])
-  public pageBreak = () => this._structure.pageBreak()
-  public insertFootnote = (...a: any[]) => this._structure.insertFootnote(...a as [any?])
-  public deleteFootnote = (...a: any[]) => this._structure.deleteFootnote(...a as [any?])
-  public getFootnotes = () => this._structure.getFootnotes()
-  public print = () => this._structure.print()
-  public translate = (...a: any[]) => this._structure.translate(...a as [any])
-  public setLocale = (...a: any[]) => this._structure.setLocale(...a as [any])
-  public updateOptions = (...a: any[]) => this._structure.updateOptions(...a as [any])
-  public tocInsert = (...a: any[]) => this._structure.tocInsert(...a as [any])
-  public tocRemove = () => this._structure.tocRemove()
-  public insertShape = (...a: any[]) => this._structure.insertShape(...a as [any])
-  public qrcode = (...a: any[]) => this._structure.qrcode(...a as [any])
-  public barcode = (...a: any[]) => this._structure.barcode(...a as [any])
-  public exportDocx = (...a: any[]) => this._structure.exportDocx(...a as [any])
-  public previewHtml = (...a: any[]) => this._structure.previewHtml(...a as [any])
+  private mutateRun(fn: (run: ITextElement) => void): void {
+    const pos = this.range.getFocus()
+    if (!pos) return
+    const doc = this.draw.getDocument()
+    const node = getByPath(doc.elements, pos.path)
+    if (!node || node.type !== 'text') return
+    fn(node as ITextElement)
+    this.draw.setDocument(doc)
+  }
 
-  // ---- Revision Commands ----
-  public acceptRevision = (...a: any[]) => this._element.acceptRevision(...a as [any?])
-  public rejectRevision = (...a: any[]) => this._element.rejectRevision(...a as [any?])
-  public acceptAllRevisions = () => this._element.acceptAllRevisions()
-  public rejectAllRevisions = () => this._element.rejectAllRevisions()
-  public getRevisions = () => this._value.getRevisions()
-  public initRevisionOverlay = (...a: any[]) => this._value.initRevisionOverlay(...a as [any?])
-  public destroyRevisionOverlay = () => this._value.destroyRevisionOverlay()
+  /* -------------------- 标题 / 列表 -------------------- */
 
-  // ---- ValueAdapter ----
-  public getPaperWidth = () => this._value.getPaperWidth()
-  public getPaperHeight = () => this._value.getPaperHeight()
-  public getImage = (...a: any[]) => this._value.getImage(...a as [any?])
-  public getOptions = () => this._value.getOptions()
-  public getValue = (...a: any[]) => this._value.getValue(...a as [any?])
-  public getValueAsync = (...a: any[]) => this._value.getValueAsync(...a as [any?])
-  public getAreaValue = (...a: any[]) => this._value.getAreaValue(...a as [any?])
-  public getHTML = () => this._value.getHTML()
-  public getText = () => this._value.getText()
-  public getWordCount = () => this._value.getWordCount()
-  public getIsReadonly = () => this._value.getIsReadonly()
-  public getIsDisabled = () => this._value.getIsDisabled()
-  public getIsCanInput = () => this._value.canInput()
-  public getIsEditable = () => this._value.getIsEditable()
-  public getCursorPosition = () => this._value.getCursorPosition()
-  public getRange = () => this._value.getRange()
-  public getRangeText = () => this._value.getRangeText()
-  public getRangeContext = () => this._value.getRangeContext()
-  public getRangeRow = () => this._value.getRangeRow()
-  public getRangeParagraph = () => this._value.getRangeParagraph()
-  public getLocale = () => this._value.getLocale()
-  public getGroupIds = () => this._value.getGroupIds()
-  public getGroupContext = (...a: any[]) => this._value.getGroupContext(...a as [any])
-  public getPositionList = () => this._value.getPositionList()
-  public getEventBus = () => this._value.getEventBus()
-  public getContainer = () => this._value.getContainer()
-  public getRevisionOverlay = () => this._value.getRevisionOverlay()
-  public setRevisionOverlay = (...a: any[]) => this._value.setRevisionOverlay(...a as [any])
-  public setCommentOverlay = (...a: any[]) => this._value.setCommentOverlay(...a as [any])
-  public getTitleValue = (...a: any[]) => this._value.getTitleValue(...a as [any])
-  public getPositionContextByEvent = (...a: any[]) => this._value.getPositionContextByEvent(...a as [any, any?])
-  public getCatalog = () => this._value.getCatalog()
-  public getElementList = () => this._value.getElementList()
-  public spliceElementList = (...a: any[]) => this._value.spliceElementList(...a as [any, any, any?, any?, any?])
-  public getPageGap = () => this._value.getPageGap()
-  public getDrawWidth = () => this._value.getDrawWidth()
-  public getDrawHeight = () => this._value.getDrawHeight()
-  public renderDraw = (...a: any[]) => this._value.renderDraw(...a as [any?])
+  setTitle(level: ITitleElement['level']): void {
+    const pos = this.range.getFocus()
+    if (!pos) return
+    const doc = this.draw.getDocument()
+    const parent = getParentContainer(doc.elements, pos.path)
+    if (!parent) return
+    const idx = pos.path[pos.path.length - 1] as number
+    const cur = parent[idx]
+    if (!cur) return
+    // 将当前节点包装/替换为 title
+    if (cur.type === 'title') {
+      (cur as ITitleElement).level = level
+    } else if (cur.type === 'text') {
+      const wrap: ITitleElement = {
+        type: 'title', value: '', level,
+        valueList: [cloneTree(cur)]
+      }
+      parent[idx] = wrap
+    }
+    this.draw.setDocument(doc)
+  }
+
+  /* -------------------- 表格 -------------------- */
+
+  insertTable(rows: number, cols: number, availableWidth = 600): void {
+    const doc = this.draw.getDocument()
+    const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
+    const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
+    if (!parent) return
+    const idx = pos.path.length === 1 ? doc.elements.length : (pos.path[pos.path.length - 1] as number) + 1
+    const colWidth = availableWidth / cols
+    const table: ITableElement = {
+      type: 'table',
+      value: '',
+      colgroup: Array.from({ length: cols }, () => ({ width: colWidth })),
+      trList: Array.from({ length: rows }, () => ({
+        height: 32,
+        tdList: Array.from({ length: cols }, () => ({
+          width: colWidth,
+          colspan: 1,
+          rowspan: 1,
+          value: [{ type: 'text', value: '' } as IElement],
+          verticalAlign: 'top' as const,
+          borderStyle: {
+            top: { width: 1, color: '#000', style: 'solid' as const },
+            right: { width: 1, color: '#000', style: 'solid' as const },
+            bottom: { width: 1, color: '#000', style: 'solid' as const },
+            left: { width: 1, color: '#000', style: 'solid' as const }
+          },
+          padding: [5, 5, 5, 5] as [number, number, number, number]
+        }))
+      }))
+    }
+    parent.splice(idx, 0, table)
+    this.draw.setDocument(doc)
+  }
+
+  /* -------------------- 图片 / 分页 -------------------- */
+
+  insertImage(src: string, width: number, height: number): void {
+    const doc = this.draw.getDocument()
+    const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
+    const img: IElement = { type: 'image', value: src, width, height } as unknown as IElement
+    const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
+    if (!parent) return
+    const idx = pos.path.length === 1 ? doc.elements.length : (pos.path[pos.path.length - 1] as number) + 1
+    parent.splice(idx, 0, img)
+    this.draw.setDocument(doc)
+  }
+
+  insertPageBreak(): void {
+    const doc = this.draw.getDocument()
+    const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
+    const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
+    if (!parent) return
+    const idx = pos.path.length === 1 ? doc.elements.length : (pos.path[pos.path.length - 1] as number) + 1
+    parent.splice(idx, 0, { type: 'pageBreak', value: 'manual' } as IElement)
+    this.draw.setDocument(doc)
+  }
+
+  /* -------------------- 未实现命令占位（后续补） -------------------- */
+
+  undo(): void { /* 交由 history 插件 */ }
+  redo(): void { /* 交由 history 插件 */ }
 }

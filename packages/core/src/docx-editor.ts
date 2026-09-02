@@ -1,221 +1,100 @@
-import './assets/css/index.css'
-import { formatElementList, deepClone, mergeOption } from '@vervedoc/docx-editor-schema'
-import type { IComment, IEditorData, IEditorOption, IElement, EventBusMap, UsePlugin } from '@vervedoc/docx-editor-schema'
+/**
+ * VerveDocs Core —— DocxEditor
+ *
+ * 全新构造，零兼容：只接受 IDocxDocument。
+ */
 
-import { Draw, pasteByApi } from '@vervedoc/docx-editor-view'
-import { Command } from '@vervedoc/docx-editor-transform'
-import { CommandAdapt } from '@vervedoc/docx-editor-transform'
-import type {
-  ICommandSearchApi,
-  ICommandBookmarkApi,
-  ICommandRevisionApi,
-  ICommandCatalogApi
-} from '@vervedoc/docx-editor-transform'
-import { Listener } from '@vervedoc/docx-editor-state'
-import { Register } from '@vervedoc/docx-editor-view'
-import { FloatingBar } from '@vervedoc/docx-editor-view'
-import { Plugin } from '@vervedoc/docx-editor-view'
-import { EventBus } from '@vervedoc/docx-editor-state'
-import { Override } from '@vervedoc/docx-editor-view'
-import { HistoryComponent } from '@vervedoc/docx-editor-history'
-import { KeymapComponent, Shortcut } from '@vervedoc/docx-editor-keymap'
-import { BlockParticle, ControlComponent, GadgetComponent, LaTexParticle, DateParticle } from '@vervedoc/docx-editor-commands'
-import { CommentComponent, RevisionComponent } from '@vervedoc/docx-editor-comment'
-import { WorkerComponent } from './worker/worker-component'
-import { ExportComponent } from './export/export-component'
-import { TableContextMenuComponent } from './table-contextmenu/table-context-menu-component'
-import { printImageBase64 } from './utils/print'
-import { I18n } from './i18n/i18n'
+import type { IDocxDocument, IEditorOption } from '@vervedoc/docx-editor-schema'
+import { cloneTree, formatElementTree, mergeOption } from '@vervedoc/docx-editor-schema'
+import { EventBus, Listener, RangeManager } from '@vervedoc/docx-editor-state'
+import { Draw } from '@vervedoc/docx-editor-view'
+import { Command, CommandAdapt } from '@vervedoc/docx-editor-transform'
 
-export interface IDocxEditorApi {
-  search: ICommandSearchApi
-  bookmark: ICommandBookmarkApi
-  revision: ICommandRevisionApi
-  catalog: ICommandCatalogApi
-  comment: IDocxCommentApi
-}
-
-export interface IDocxCommentState {
-  list: IComment[]
-  activeGroupId: string
-}
-
-export interface IDocxCommentApi {
-  getState(): IDocxCommentState
-  create(userName?: string): IComment | null
-  remove(id: string): void
-  removeCurrent(groupId?: string): void
-  locate(id: string): void
-  refresh(): void
-}
-
-export default class DocxEditor {
-  public command: Command
-  public api: IDocxEditorApi
+export class DocxEditor {
   public listener: Listener
-  public eventBus: EventBus<EventBusMap>
-  public override: Override
-  public register: Register
-  public comment: CommentComponent
-  public revision: RevisionComponent
-  public destroy: () => void
-  public use: UsePlugin
-  public setLoading: (visible: boolean, text?: string) => void
+  public eventBus: EventBus
+  public range: RangeManager
+  public draw: Draw
+  public command: Command
 
   constructor(
     container: HTMLDivElement,
-    data: IEditorData | IElement[],
+    document: IDocxDocument,
     options: IEditorOption = {}
   ) {
+    if (!container || !(container instanceof HTMLDivElement)) {
+      throw new TypeError('[DocxEditor] container 必须是 HTMLDivElement')
+    }
+    if (!document || typeof document !== 'object' || !Array.isArray(document.elements)) {
+      throw new TypeError(
+        '[DocxEditor] document 必须是 IDocxDocument，且 elements 为数组。不再兼容 IElement[] / IEditorData 形态。'
+      )
+    }
+
     const editorOptions = mergeOption(options)
-    data = deepClone(data)
-    let headerElementList: IElement[] = []
-    let mainElementList: IElement[] = []
-    let footerElementList: IElement[] = []
-    if (Array.isArray(data)) {
-      mainElementList = data
-    } else {
-      headerElementList = data.header || []
-      mainElementList = data.main
-      footerElementList = data.footer || []
-    }
-    const pageComponentData = [
-      headerElementList,
-      mainElementList,
-      footerElementList
-    ]
-    pageComponentData.forEach(elementList => {
-      formatElementList(elementList, {
-        editorOptions,
-        isForceCompensation: true,
-        laTexToSVG: LaTexParticle.convertLaTextToSVG
-      })
-    })
-    this.listener = new Listener()
-    this.eventBus = new EventBus<EventBusMap>()
-    this.override = new Override()
-    const draw = new Draw(
-      container,
+    const doc: IDocxDocument = cloneTree(document)
+
+    formatElementTree(doc.elements, {
       editorOptions,
-      {
-        header: headerElementList,
-        main: mainElementList,
-        footer: footerElementList
+      styles: doc.styles,
+      numbering: doc.numbering
+    })
+    if (doc.sections?.header) formatElementTree(doc.sections.header, { editorOptions, styles: doc.styles, numbering: doc.numbering })
+    if (doc.sections?.footer) formatElementTree(doc.sections.footer, { editorOptions, styles: doc.styles, numbering: doc.numbering })
+    if (doc.sections?.footnotes) formatElementTree(doc.sections.footnotes, { editorOptions, styles: doc.styles, numbering: doc.numbering })
+    if (doc.sections?.endnotes) formatElementTree(doc.sections.endnotes, { editorOptions, styles: doc.styles, numbering: doc.numbering })
+
+    this.listener = new Listener()
+    this.eventBus = new EventBus()
+    this.range = new RangeManager(this.listener)
+
+    // 先声明适配器占位，以便在 Draw 构造时可以引用（onInput 回调需要 CommandAdapt）
+    let adapt: CommandAdapt | null = null
+
+    this.draw = new Draw(container, editorOptions, {
+      document: doc,
+      listener: this.listener,
+      eventBus: this.eventBus,
+      rangeManager: this.range,
+      onInput: (text: string) => {
+        adapt?.insertText(text)
       },
-      this.listener,
-      this.eventBus,
-      this.override
+      onKeyDown: (e: KeyboardEvent) => {
+        if (!adapt) return
+        if (e.key === 'Backspace') { e.preventDefault(); adapt.deleteBackward(); return }
+        if (e.key === 'Delete')    { e.preventDefault(); adapt.deleteForward(); return }
+        if (e.key === 'Enter')     { e.preventDefault(); adapt.splitParagraph(); return }
+        if (e.key === 'ArrowLeft') { e.preventDefault(); adapt.moveCaretLeft(); return }
+        if (e.key === 'ArrowRight'){ e.preventDefault(); adapt.moveCaretRight(); return }
+        // Tab / Escape 等其它按键暂不处理
+      }
+    })
+
+    adapt = new CommandAdapt(
+      { getDocument: () => this.draw.getDocument(), setDocument: (d: IDocxDocument) => this.draw.setDocument(d) },
+      this.range
     )
-    // Replace the view-layer stub with the real block particle renderer
-    // so audio/video/chart block elements can mount their DOM overlays.
-    const i18n = new I18n(editorOptions.locale)
-    ;(draw as any).i18n = i18n
+    this.command = new Command(adapt)
 
-    draw.setBlockParticle(new BlockParticle(draw as any) as any)
-    draw.setLaTexParticle(new LaTexParticle(draw as any) as any)
-    draw.setDateParticle(new DateParticle(draw as any) as any)
+    // 鼠标点击 -> hit + setCaret + focus 隐藏输入框
+    // 注意：Draw 内 mousedown 已处理 hit，这里不再重复绑定
+  }
 
-    const laTexToSVG = LaTexParticle.convertLaTextToSVG
-    const patchFormatElementListArgs = (elements: IElement[]) => {
-      for (const el of elements) {
-        if (el.type === 'latex' && el.value && !el.laTexSVG) {
-          const result = laTexToSVG(el.value)
-          el.laTexSVG = result.svg
-          el.width = el.width || result.width
-          el.height = el.height || result.height
-          el.id = el.id || `latex_${Date.now()}_${Math.random().toString(36).slice(2)}`
-        }
-      }
+  getDocument(): IDocxDocument { return this.draw.getDocument() }
+
+  setDocument(doc: IDocxDocument): void {
+    if (!doc || !Array.isArray(doc.elements)) {
+      throw new TypeError('[DocxEditor.setDocument] 需要 IDocxDocument')
     }
-    const origInsertElementList = draw.insertElementList.bind(draw)
-    ;(draw as any).insertElementList = (elements: IElement[], options?: any) => {
-      patchFormatElementListArgs(elements)
-      return origInsertElementList(elements, options)
-    }
-    const origAppendElementList = draw.appendElementList.bind(draw)
-    ;(draw as any).appendElementList = (elements: IElement[], options?: any) => {
-      patchFormatElementListArgs(elements)
-      return origAppendElementList(elements, options)
-    }
-    new HistoryComponent().install(draw)
-    new ControlComponent().install(draw)
-    const workerComponent = new WorkerComponent().install(draw)
+    this.draw.setDocument(doc)
+  }
 
-    const commandAdapt = new CommandAdapt(draw as any, {
-      pasteByApi,
-      printImageBase64
-    })
-    this.command = new Command(commandAdapt)
-
-    ;(draw as any).__structureAdapter = commandAdapt._structure
-    this.api = {
-      search: this.command.search,
-      bookmark: this.command.bookmark,
-      revision: this.command.revision,
-      catalog: this.command.catalog,
-      comment: {
-        getState: () => ({
-          list: [...this.comment.getComments()],
-          activeGroupId: ''
-        }),
-        create: (userName?: string) => {
-          const comment = this.comment.addComment(userName)
-          this.comment.render()
-          return comment
-        },
-        remove: (id: string) => {
-          this.comment.deleteComment(id)
-          this.comment.render()
-        },
-        removeCurrent: (groupId?: string) => {
-          const targetGroupId = groupId || ''
-          if (!targetGroupId) return
-          const currentComment = this.comment
-            .getComments()
-            .find(item => item.groupId === targetGroupId)
-          if (currentComment) {
-            this.comment.deleteComment(currentComment.id)
-          } else {
-            this.command.executeDeleteGroup(targetGroupId)
-          }
-          this.comment.render()
-        },
-        locate: (id: string) => {
-          this.comment.locateComment(id)
-        },
-        refresh: () => {
-          this.comment.render()
-        }
-      }
-    }
-
-    new GadgetComponent().install(draw, this.command)
-    new ExportComponent().install(draw, this.command)
-    new TableContextMenuComponent().install(draw)
-    this.comment = new CommentComponent().install(this.command)
-    this.revision = new RevisionComponent()
-
-    const keymapComponent = new KeymapComponent().install(draw, this.command)
-
-    const floatingBarEnabled = editorOptions.floatingBar?.enabled !== false
-    const floatingBar = floatingBarEnabled
-      ? new FloatingBar(draw, this.command)
-      : null
-
-    const shortcut = keymapComponent.getShortcut()! as Shortcut
-    this.register = new Register({
-      shortcut,
-      i18n: draw.getI18n()
-    })
-    draw.setRegister(this.register)
-    this.setLoading = (visible: boolean, text?: string) => draw.setLoading(visible, text)
-    this.destroy = () => {
-      draw.destroy()
-      shortcut.removeEvent()
-      floatingBar?.destroy()
-      workerComponent.getWorkerManager()?.terminate()
-    }
-    const plugin = new Plugin(this as any)
-    this.use = plugin.use.bind(plugin)
+  destroy(): void {
+    this.draw.destroy()
+    this.listener = new Listener()
+    this.eventBus.clear()
+    this.range.clear()
   }
 }
+
+export default DocxEditor

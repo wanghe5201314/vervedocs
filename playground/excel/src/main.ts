@@ -22,7 +22,6 @@ const color = COLORS[Math.floor(Math.random() * COLORS.length)]
 
 new ExcelEditor({
   container: '#app',
-  documentName: '协同测试',
   importCallback: createExcelImportCallback(),
   exportCallback: createExcelExportCallback(),
   collaboration: {

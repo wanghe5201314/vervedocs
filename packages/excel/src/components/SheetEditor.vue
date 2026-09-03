@@ -170,8 +170,8 @@
           <div v-else-if="activeMenuTab === 'edit'" class="ribbon-tab-panel">
             <div class="ribbon-group">
               <div class="ribbon-group-content">
-                <button class="ribbon-btn-lg" :disabled="readOnly || undoStack.length === 0" @click="handleUndo()" title="撤销 (Ctrl+Z)"><VIcon name="undo" /><span>撤销</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly || redoStack.length === 0" @click="handleRedo()" title="重做 (Ctrl+Y)"><VIcon name="redo" /><span>重做</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly || !canUndo" @click="handleUndo()" title="撤销 (Ctrl+Z)"><VIcon name="undo" /><span>撤销</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly || !canRedo" @click="handleRedo()" title="重做 (Ctrl+Y)"><VIcon name="redo" /><span>重做</span></button>
                 <button class="ribbon-btn-lg" :disabled="readOnly" @click="handleFormatPainter()" :class="{ active: formatPainterActive }" title="格式刷"><VIcon name="format-paint" /><span>格式刷</span></button>
               </div>
               <div class="ribbon-group-title">操作</div>
@@ -383,23 +383,7 @@
     <a-modal v-model:open="showShortcutsDialog" title="键盘快捷键" width="480px" :footer="null">
       <div class="shortcuts-list">
         <div class="shortcut-group">
-          <div class="shortcut-row"><span>撤销</span><kbd>Ctrl+Z</kbd></div>
-          <div class="shortcut-row"><span>重做</span><kbd>Ctrl+Y</kbd></div>
-          <div class="shortcut-row"><span>粗体</span><kbd>Ctrl+B</kbd></div>
-          <div class="shortcut-row"><span>斜体</span><kbd>Ctrl+I</kbd></div>
-          <div class="shortcut-row"><span>下划线</span><kbd>Ctrl+U</kbd></div>
-          <div class="shortcut-row"><span>复制</span><kbd>Ctrl+C</kbd></div>
-          <div class="shortcut-row"><span>剪切</span><kbd>Ctrl+X</kbd></div>
-          <div class="shortcut-row"><span>粘贴</span><kbd>Ctrl+V</kbd></div>
-          <div class="shortcut-row"><span>全选</span><kbd>Ctrl+A</kbd></div>
-          <div class="shortcut-row"><span>查找/替换</span><kbd>Ctrl+F / Ctrl+H</kbd></div>
-          <div class="shortcut-row"><span>打印</span><kbd>Ctrl+P</kbd></div>
-          <div class="shortcut-row"><span>编辑单元格</span><kbd>F2</kbd></div>
-          <div class="shortcut-row"><span>删除内容</span><kbd>Delete / Backspace</kbd></div>
-          <div class="shortcut-row"><span>移动选区</span><kbd>方向键</kbd></div>
-          <div class="shortcut-row"><span>切换单元格</span><kbd>Tab / Shift+Tab</kbd></div>
-          <div class="shortcut-row"><span>确认并下移</span><kbd>Enter</kbd></div>
-          <div class="shortcut-row"><span>行首/行尾</span><kbd>Home / End</kbd></div>
+          <div v-for="s in SHORTCUT_ENTRIES" :key="s.keys" class="shortcut-row"><span>{{ s.label }}</span><kbd>{{ s.keys }}</kbd></div>
         </div>
       </div>
     </a-modal>
@@ -433,48 +417,37 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
-import { BorderStyleTypes, BorderType, BooleanNumber, Direction } from '@univerjs/core'
 import type { Univer as UniverType } from '@univerjs/core'
 import type { FUniver } from '@univerjs/core/facade'
-import {
-  AddWorksheetMergeAllCommand,
-  ClearSelectionContentCommand,
-  ClearSelectionFormatCommand,
-  InsertColCommand,
-  InsertRowCommand,
-  RemoveColCommand,
-  RemoveRowCommand,
-  RemoveWorksheetMergeCommand,
-  SetBorderBasicCommand,
-  SetColHiddenCommand,
-  SetRowHiddenCommand,
-  SetSpecificColsVisibleCommand,
-  SetSpecificRowsVisibleCommand,
-  SetStyleCommand,
-} from '@univerjs/sheets'
-import { SetNumfmtCommand } from '@univerjs/sheets-numfmt'
 import type { FRange, FWorkbook, FWorksheet } from '@univerjs/sheets/facade'
 import { VIcon } from '@vervedoc/icons'
 import UnifiedTopHeader from './UnifiedTopHeader.vue'
-import type { Align, VerticalAlign, WrapMode, ICellStyle, IUiSheet, IWorkbook, UndoEntry } from '../types'
+import type { IWorkbook } from '../types'
 import type { ExcelExportCallback, ExcelImportCallback } from '@vervedoc/excel-parser'
+import { cellKey, columnLabel, createDefaultSheet, hasUsableWorkbookContent, normalizeWorkbook } from '@vervedoc/excel-parser'
 
 import type { ExcelI18nMessages, ExcelLocale } from '@/i18n'
 import { getAuthToken } from '../api/sheet.api'
 import { loadUniverRuntime } from '../utils/univer-runtime'
 import type { LoadedUniverRuntime } from '../utils/univer-runtime'
+import { createUniverInstance } from '../utils/univer-setup'
 import { ConnectionState, SyncState } from '@vervedoc/docx-editor-collaboration'
 import type { ExcelCollaborationConfig, UserInfo } from '@vervedoc/docx-editor-collaboration'
 import { useSheetCollaboration } from '@/composables/use-sheet-collaboration'
 import { useSheetI18n } from '@/composables/use-sheet-i18n'
 import { useSheetFilter } from '@/composables/use-sheet-filter'
+import { useSheetHistory } from '@/composables/use-sheet-history'
+import { useCellStyle } from '@/composables/use-cell-style'
+import { useSheetCommands } from '@/composables/use-sheet-commands'
+import type { SheetCommandContext, SheetCoreContext } from '@/composables/sheet-editor-context'
 import {
-  DEFAULT_FONT_FAMILY,
-  readFontFamilyFromSheetState,
-  readFontFamilyFromUniverCellData,
-  resolveToolbarFontFamily,
-  toUniverFontFamily,
-} from '@/utils/font-family'
+  COLOR_PALETTE,
+  FONT_OPTIONS,
+  MENU_TABS,
+  SHORTCUT_ENTRIES,
+  SIZE_OPTIONS,
+  resolveToolbarFont,
+} from '@/constants/toolbar-options'
 
 const props = withDefaults(defineProps<{
   initialContent?: any
@@ -497,18 +470,6 @@ const props = withDefaults(defineProps<{
 
 const { t } = useSheetI18n(props)
 
-const headerLastSaveTime = ref('')
-const localDocumentTitle = ref(String(props.documentName || '').trim())
-watch(() => props.documentName, (name) => {
-  localDocumentTitle.value = String(name || '').trim()
-}, { immediate: true })
-const headerTitle = computed(() => {
-  const documentName = String(localDocumentTitle.value || '').trim()
-  if (documentName) return documentName
-  const name = String(activeSheet.value?.name || '').trim()
-  return name || t('sheet.defaultTitle')
-})
-
 const emit = defineEmits<{
   (e: 'change', value: any): void
   (e: 'new-document', payload: { dbPayload: any; excelPayload: { fileName: string; mimeType: string; buffer: ArrayBuffer } }): void
@@ -518,171 +479,42 @@ const emit = defineEmits<{
   (e: 'collabError', payload: { code: string; message: string }): void
 }>()
 
-const fontOptions = [
-  { label: '宋体', value: 'SimSun', cssFamily: 'SimSun, serif' },
-  { label: '楷体', value: 'KaiTi', cssFamily: 'KaiTi, serif' },
-  { label: '仿宋', value: 'FangSong', cssFamily: 'FangSong, serif' },
-  { label: '黑体', value: 'SimHei', cssFamily: 'SimHei, sans-serif' },
-  { label: '微软雅黑', value: 'Microsoft YaHei', cssFamily: 'Microsoft YaHei, sans-serif' },
-  { label: '微软正黑体', value: 'Microsoft JhengHei', cssFamily: 'Microsoft JhengHei, sans-serif' },
-  { label: '华文新魏', value: 'STXinwei', cssFamily: 'STXinwei, serif' },
-  { label: '思源黑体', value: 'Source Han Sans CN', cssFamily: 'Source Han Sans CN, sans-serif' },
-  { label: '思源宋体', value: 'Source Han Serif CN', cssFamily: 'Source Han Serif CN, serif' },
-  { label: 'Arial', value: 'Arial', cssFamily: 'Arial, sans-serif' },
-  { label: 'Times New Roman', value: 'Times New Roman', cssFamily: 'Times New Roman, serif' },
-  { label: 'Segoe UI', value: 'Segoe UI', cssFamily: 'Segoe UI, sans-serif' },
-  { label: 'Courier New', value: 'Courier New', cssFamily: 'Courier New, monospace' },
-]
+// ===== 常量（模板别名） =====
+const fontOptions = FONT_OPTIONS
+const sizeOptions = SIZE_OPTIONS
+const colorPalette = COLOR_PALETTE
+const menuTabs = MENU_TABS
+
+const workbookStateOptions = {
+  defaultSheetName: (index: number) => t('sheet.defaultSheetName', { index: index + 1 }),
+  resolveFontFamily: resolveSheetFontFamily,
+}
 
 function resolveSheetFontFamily(fontFamily?: string): string {
-  return resolveToolbarFontFamily(fontFamily, fontOptions, DEFAULT_FONT_FAMILY)
+  return resolveToolbarFont(fontFamily)
 }
 
-function readRangeFontFamily(range: FRange, row: number, col: number): string | undefined {
-  const cellFont = (range as any).getFontFamily?.('cell')
-  if (cellFont) return String(cellFont)
-  const styleData = (range as any).getCellStyleData?.('cell')
-  if (styleData?.ff) return String(styleData.ff)
-  const cellDataFont = readFontFamilyFromUniverCellData((range as any).getCellData?.())
-  if (cellDataFont) return cellDataFont
-  const key = cellKey(row, col)
-  const sheetFont = readFontFamilyFromSheetState(
-    activeSheet.value?.styles,
-    activeSheet.value?.cellRichTexts,
-    key,
-  )
-  if (sheetFont) return sheetFont
-  return undefined
-}
+// ===== 头部状态 =====
+const headerLastSaveTime = ref('')
+const localDocumentTitle = ref(String(props.documentName || '').trim())
+watch(() => props.documentName, (name) => {
+  localDocumentTitle.value = String(name || '').trim()
+}, { immediate: true })
+const headerTitle = computed(() => {
+  const documentName = String(localDocumentTitle.value || '').trim()
+  return documentName || t('sheet.defaultTitle')
+})
 
-function readRangeCellStyleData(range: FRange, type: 'cell' | 'row' = 'cell') {
-  return (range as any).getCellStyleData?.(type) as Record<string, any> | null | undefined
-}
-
-function readRangeBooleanStyle(
-  range: FRange,
-  styleKey: 'bl' | 'it',
-  sheetKey: string,
-  sheetField: 'bold' | 'italic',
-): boolean {
-  const cellStyle = readRangeCellStyleData(range, 'cell')
-  if (cellStyle?.[styleKey] !== undefined) {
-    return cellStyle[styleKey] === BooleanNumber.TRUE
-  }
-  const composed = readRangeCellStyleData(range, 'row')
-  if (composed?.[styleKey] !== undefined) {
-    return composed[styleKey] === BooleanNumber.TRUE
-  }
-  return !!activeSheet.value?.styles?.[sheetKey]?.[sheetField]
-}
-
-function readRangeTextDecoration(
-  range: FRange,
-  styleKey: 'ul' | 'st',
-  sheetKey: string,
-  sheetField: 'underline' | 'strikethrough',
-): boolean {
-  const cellStyle = readRangeCellStyleData(range, 'cell')
-  if (cellStyle?.[styleKey]?.s !== undefined) {
-    return cellStyle[styleKey].s === BooleanNumber.TRUE
-  }
-  const composed = readRangeCellStyleData(range, 'row')
-  if (composed?.[styleKey]?.s !== undefined) {
-    return composed[styleKey].s === BooleanNumber.TRUE
-  }
-  return !!activeSheet.value?.styles?.[sheetKey]?.[sheetField]
-}
-
-function getToolbarCellRange(row: number, col: number): FRange | null {
-  const sheet = getActiveSheet()
-  if (!sheet) return null
-  return sheet.getRange(row, col, 1, 1)
-}
-
-function readRangeFontSize(range: FRange, row: number, col: number): number {
-  const key = cellKey(row, col)
-  const sheetSize = activeSheet.value?.styles?.[key]?.fontSize
-  if (Number.isFinite(sheetSize)) return Number(sheetSize)
-  const richTextSize = activeSheet.value?.cellRichTexts?.[key]?.find(run => Number.isFinite(run.fontSize))?.fontSize
-  if (Number.isFinite(richTextSize)) return Number(richTextSize)
-  const cellStyle = readRangeCellStyleData(range, 'cell')
-  if (cellStyle && Number.isFinite(cellStyle.fs)) return Number(cellStyle.fs)
-  const cellData = (range as any).getCellData?.()
-  const textRuns = cellData?.p?.body?.textRuns
-  if (Array.isArray(textRuns)) {
-    for (const run of textRuns) {
-      if (Number.isFinite(run?.ts?.fs)) return Number(run.ts.fs)
-    }
-  }
-  const cellSize = (range as any).getFontSize?.('cell')
-  if (Number.isFinite(cellSize)) return Number(cellSize)
-  const composedSize = (range as any).getFontSize?.()
-  if (Number.isFinite(composedSize)) return Number(composedSize)
-  return 12
-}
-
-function restoreSelectionCell(row: number, col: number) {
-  const sheet = getActiveSheet()
-  if (!sheet) return
-  const range = sheet.getRange(row, col, 1, 1)
-  sheet.setActiveSelection(range)
-  selected.row = row
-  selected.col = col
-  selectionEnd.row = row
-  selectionEnd.col = col
-}
-
-function toFacadeHorizontalAlignment(align: Align): 'left' | 'center' | 'normal' {
-  return align === 'center' ? 'center' : align === 'right' ? 'normal' : 'left'
-}
-
-const sizeOptions = [
-  { label: '八号', value: 5 },
-  { label: '七号', value: 5.5 },
-  { label: '6', value: 6 },
-  { label: '小六', value: 6.5 },
-  { label: '7', value: 7 },
-  { label: '六号', value: 7.5 },
-  { label: '8', value: 8 },
-  { label: '小五', value: 9 },
-  { label: '10', value: 10 },
-  { label: '五号', value: 10.5 },
-  { label: '11', value: 11 },
-  { label: '小四', value: 12 },
-  { label: '四号', value: 14 },
-  { label: '小三', value: 15 },
-  { label: '三号', value: 16 },
-  { label: '小二', value: 18 },
-  { label: '20', value: 20 },
-  { label: '二号', value: 22 },
-  { label: '小一', value: 24 },
-  { label: '一号', value: 26 },
-  { label: '28', value: 28 },
-  { label: '小初', value: 36 },
-  { label: '初号', value: 42 },
-  { label: '48', value: 48 },
-  { label: '72', value: 72 },
-]
-const colorPalette = [
-  '#000000', '#434343', '#666666', '#999999', '#b7b7b7', '#cccccc', '#d9d9d9', '#efefef', '#f3f3f3', '#ffffff',
-  '#980000', '#ff0000', '#ff9900', '#ffff00', '#00ff00', '#00ffff', '#4a86e8', '#0000ff', '#9900ff', '#ff00ff',
-  '#e6b8af', '#f4cccc', '#fce5cd', '#fff2cc', '#d9ead3', '#d0e0e3', '#c9daf8', '#cfe2f3', '#d9d2e9', '#ead1dc',
-  '#dd7e6b', '#ea9999', '#f9cb9c', '#ffe599', '#b6d7a8', '#a2c4c9', '#a4c2f4', '#9fc5e8', '#b4a7d6', '#d5a6bd',
-  '#cc4125', '#e06666', '#f6b26b', '#ffd966', '#93c47d', '#76a5af', '#6d9eeb', '#6fa8dc', '#8e7cc3', '#c27ba0',
-  '#a61c00', '#cc0000', '#e69138', '#f1c232', '#6aa84f', '#45818e', '#3c78d8', '#3d85c6', '#674ea7', '#a64d79',
-]
-
-const workbook = reactive<IWorkbook>(normalizeWorkbook(props.initialContent))
+// ===== 编辑器可变状态 =====
+const workbook = reactive<IWorkbook>(normalizeWorkbook(props.initialContent, workbookStateOptions))
 const activeSheetIndex = ref(0)
 const selected = reactive({ row: 0, col: 0 })
 const selectionEnd = reactive({ row: 0, col: 0 })
 
-const formulaValue = ref('')
 const formulaFocused = ref(false)
 const formulaInputRef = ref<HTMLInputElement | null>(null)
 const editingCell = ref<{ row: number; col: number } | null>(null)
 const pendingStyleTargetCell = ref<{ row: number; col: number } | null>(null)
-
 
 const sheetEditorRef = ref<HTMLElement | null>(null)
 const showGridlines = ref(true)
@@ -694,25 +526,8 @@ const formatPainterActive = ref(false)
 const colWidths = reactive<Record<number, number>>({})
 const rowHeights = reactive<Record<number, number>>({})
 
-
-
-const undoStack = ref<UndoEntry[]>([])
-const redoStack = ref<UndoEntry[]>([])
-
 const showShortcutsDialog = ref(false)
-
 const activeMenuTab = ref('home')
-const menuTabs = [
-  { key: 'file', label: '文件' },
-  { key: 'home', label: '开始' },
-  { key: 'edit', label: '编辑' },
-  { key: 'view', label: '视图' },
-  { key: 'insert', label: '插入' },
-  { key: 'format', label: '格式' },
-  { key: 'data', label: '数据' },
-  { key: 'collab', label: '协同' },
-  { key: 'help', label: '帮助' },
-]
 
 const importExcelInputRef = ref<HTMLInputElement | null>(null)
 
@@ -722,6 +537,7 @@ const showColWidthDialog = ref(false)
 const rowHeightValue = ref(20)
 const colWidthValue = ref(100)
 
+// ===== Univer 生命周期状态 =====
 const univerContainerId = 'vervedocs-univer-host'
 const univerHostRef = ref<HTMLElement | null>(null)
 let univerRenderTimer: number | undefined
@@ -733,24 +549,21 @@ let activeUniverWorkbook: FWorkbook | null = null
 let univerWorkbookDisposables: Array<{ dispose: () => void }> = []
 let lastUniverSnapshot = ''
 
+// ===== Computed =====
+const activeSheet = computed(() => workbook.sheets[activeSheetIndex.value] || workbook.sheets[0])
+const currentRows = computed(() => Array.from({ length: Math.max(1, activeSheet.value?.rowCount || 50) }, (_, i) => i))
+const currentColumns = computed(() => Array.from({ length: Math.max(1, activeSheet.value?.colCount || 26) }, (_, i) => i))
+const currentCellRef = computed(() => `${columnLabel(selected.col)}${selected.row + 1}`)
 
-const toolbarState = reactive<ICellStyle & { numberFormat: string; decimalPlaces: number; rotation: number; verticalAlign: VerticalAlign }>({
-  fontFamily: DEFAULT_FONT_FAMILY,
-  fontSize: 12,
-  align: 'left',
-  verticalAlign: 'bottom',
-  bold: false,
-  italic: false,
-  underline: false,
-  strikethrough: false,
-  fontColor: '#000000',
-  bgColor: '',
-  wrap: 'clip',
-  numberFormat: 'auto',
-  decimalPlaces: 2,
-  rotation: 0,
+const selectionRange = computed(() => {
+  const r1 = Math.min(selected.row, selectionEnd.row)
+  const r2 = Math.max(selected.row, selectionEnd.row)
+  const c1 = Math.min(selected.col, selectionEnd.col)
+  const c2 = Math.max(selected.col, selectionEnd.col)
+  return { r1, r2, c1, c2 }
 })
 
+// ===== Univer 基础访问 =====
 async function ensureUniverRuntime() {
   if (!univerRuntime) {
     univerRuntime = await loadUniverRuntime(props.locale)
@@ -773,17 +586,6 @@ function getSelectionRange(): FRange | null {
   return sheet.getRange(r1, c1, r2 - r1 + 1, c2 - c1 + 1)
 }
 
-const UNIVER_COMMANDS = {
-  addNote: 'sheet.operation.add-note-popup',
-  addThreadComment: 'sheet.operation.show-comment-modal',
-  dataValidation: 'data-validation.operation.open-validation-panel',
-  find: 'ui.operation.open-find-dialog',
-  hyperlink: 'sheet.operation.insert-hyper-link',
-  replace: 'ui.operation.open-replace-dialog',
-  sortRange: 'sheet.command.sort-range',
-  toggleFilter: 'sheet.command.smart-toggle-filter',
-} as const
-
 async function executeUniverCommand(commandId: string, params?: Record<string, any>) {
   if (!univerAPI) {
     message.warning('表格尚未初始化')
@@ -797,12 +599,74 @@ async function executeUniverCommand(commandId: string, params?: Record<string, a
   }
 }
 
+async function executeSheetCommand(commandId: string, params?: Record<string, any>) {
+  await commitActiveCellEdit()
+  syncUniverSelection()
+  const ok = await executeUniverCommand(commandId, params)
+  if (ok) {
+    await nextTick()
+    syncToolbarAndFormula()
+  }
+  return ok
+}
+
+function getActiveSheetCommandContext(): SheetCommandContext | null {
+  const wb = activeUniverWorkbook
+  const sheet = getActiveSheet()
+  if (!wb || !sheet) {
+    message.warning('表格尚未初始化')
+    return null
+  }
+  const { r1, r2, c1, c2 } = selectionRange.value
+  return {
+    unitId: wb.getId(),
+    subUnitId: sheet.getSheetId(),
+    range: {
+      startRow: r1,
+      endRow: r2,
+      startColumn: c1,
+      endColumn: c2,
+    },
+    rowRange: {
+      startRow: r1,
+      endRow: r2,
+      startColumn: 0,
+      endColumn: Math.max(0, (activeSheet.value?.colCount || 1) - 1),
+    },
+    colRange: {
+      startRow: 0,
+      endRow: Math.max(0, (activeSheet.value?.rowCount || 1) - 1),
+      startColumn: c1,
+      endColumn: c2,
+    },
+  }
+}
+
+function syncUniverSelection() {
+  const sheet = getActiveSheet()
+  if (!sheet) return
+  const { r1, r2, c1, c2 } = selectionRange.value
+  const range = sheet.getRange(r1, c1, r2 - r1 + 1, c2 - c1 + 1)
+  sheet.setActiveSelection(range)
+}
+
+function restoreSelectionCell(row: number, col: number) {
+  const sheet = getActiveSheet()
+  if (!sheet) return
+  const range = sheet.getRange(row, col, 1, 1)
+  sheet.setActiveSelection(range)
+  selected.row = row
+  selected.col = col
+  selectionEnd.row = row
+  selectionEnd.col = col
+}
+
 async function commitActiveCellEdit(target?: { row: number; col: number } | null) {
-  const workbook = activeUniverWorkbook
-  if (!workbook?.endEditingAsync) return
+  const wb = activeUniverWorkbook
+  if (!wb?.endEditingAsync) return
   const restoreTarget = target || pendingStyleTargetCell.value || editingCell.value
   try {
-    await workbook.endEditingAsync(true)
+    await wb.endEditingAsync(true)
   } catch {
     // 当前未处于编辑态时忽略
   }
@@ -817,8 +681,8 @@ async function handleRibbonStyleMouseDownCapture(event: MouseEvent) {
   if (!target?.closest('.ribbon-group-content')) return
   if (target.closest('button[disabled], .ant-select-disabled')) return
 
-  const workbook = activeUniverWorkbook
-  if (!workbook?.isCellEditing?.()) return
+  const wb = activeUniverWorkbook
+  if (!wb?.isCellEditing?.()) return
 
   pendingStyleTargetCell.value = editingCell.value || { row: selected.row, col: selected.col }
   // 阻止工具栏抢焦点，先提交单元格编辑内容，避免 A1/A2 等输入内容丢失
@@ -846,253 +710,139 @@ async function finishRangeStyleMutation() {
   commitUniverFacadeMutation()
 }
 
-async function applyRangeStyleType(range: FRange, type: string, value: unknown) {
-  const sheet = getActiveSheet()
-  const workbook = activeUniverWorkbook
-  if (!sheet || !workbook) return false
-  return executeUniverCommand(SetStyleCommand.id, {
-    unitId: workbook.getId(),
-    subUnitId: sheet.getSheetId(),
-    range: range.getRange(),
-    style: { type, value },
+// ===== Composable 接线 =====
+const ctx: SheetCoreContext = {
+  readOnly: () => props.readOnly === true,
+
+  getUiSheet: () => activeSheet.value,
+  getUniverSheet: getActiveSheet,
+  getUniverWorkbook: () => activeUniverWorkbook,
+  getUniverAPI: () => univerAPI,
+
+  selected,
+  selectionRange: () => selectionRange.value,
+
+  editingCell,
+  pendingStyleTargetCell,
+
+  getSelectionRange,
+  getPreparedSelectionRange,
+  commitActiveCellEdit,
+
+  executeUniverCommand,
+  executeSheetCommand,
+  getActiveSheetCommandContext,
+  finishRangeStyleMutation,
+
+  syncToolbarAndFormula: () => {},
+  saveUndoState: () => {},
+
+  zoomLevel,
+  frozenRows,
+  frozenCols,
+  rowHeightValue,
+  colWidthValue,
+  showRowHeightDialog,
+  showColWidthDialog,
+  syncDimensionStateToActiveSheet,
+}
+
+const {
+  canUndo,
+  canRedo,
+  saveUndoState,
+  clearHistory,
+  handleUndo,
+  handleRedo,
+  bindUndoRedoStatus,
+  unbindUndoRedoStatus,
+} = useSheetHistory({
+  readOnly: () => props.readOnly === true,
+  getUniverAPI: () => univerAPI,
+})
+
+const {
+  toolbarState,
+  formulaValue,
+  syncToolbarAndFormula,
+  updateCellStyle,
+  toggleStyle,
+  setAlign,
+  setVerticalAlign,
+  setWrap,
+  toggleWrap,
+  setFontColor,
+  setBgColor,
+  setRotation,
+  handleFontSelectMouseDown,
+  handleFontFamilyChange,
+  quickFormat,
+  changeDecimal,
+} = useCellStyle(ctx)
+ctx.saveUndoState = saveUndoState
+ctx.syncToolbarAndFormula = syncToolbarAndFormula
+
+const {
+  openUniverSort,
+  openUniverDataValidation,
+  toggleUniverFilter,
+  openUniverHyperlink,
+  openUniverNote,
+  openUniverThreadComment,
+  openUniverFindDialog,
+  openUniverReplaceDialog,
+  setBorders,
+  clearSelectedFormat,
+  deleteSelectedContent,
+  insertRow,
+  insertCol,
+  deleteRow,
+  deleteCol,
+  hideRow,
+  unhideRow,
+  hideCol,
+  unhideCol,
+  autoFitRowHeight,
+  autoFitColWidth,
+  applyRowHeight,
+  applyColWidth,
+  setZoom,
+  handleMergeCells,
+  handleUnmergeCells,
+  toggleFreezeRow,
+  toggleFreezeCol,
+  handleCopy,
+  handleCut,
+  handlePaste,
+  removeDuplicates,
+} = useSheetCommands(ctx)
+
+// ===== 筛选（仅保留 sheet 状态同步所需成员） =====
+const {
+  filterActive,
+  filterColumn,
+  filterKeyword,
+  filterSelectedValues,
+  resetFilterState,
+  prepareFilterPanel,
+  applyFilterRows,
+} = useSheetFilter({
+  getActiveSheet: activeSheet,
+  selected,
+  cellKey,
+  columnLabel,
+  syncFilterStateToActiveSheet,
+  emitChange,
+})
+
+// ===== Univer 初始化 / 渲染 =====
+function ensureUniverInitialized(host: HTMLElement) {
+  if (univerInstance && univerAPI) return Promise.resolve()
+  return ensureUniverRuntime().then(runtime => {
+    univerInstance = createUniverInstance(runtime, host, getUniverLocaleType(runtime))
+    univerAPI = runtime.facade.FUniver.newAPI(univerInstance)
+    bindUndoRedoStatus(univerInstance)
   })
-}
-
-function getActiveSheetCommandContext() {
-  const workbook = activeUniverWorkbook
-  const sheet = getActiveSheet()
-  if (!workbook || !sheet) {
-    message.warning('表格尚未初始化')
-    return null
-  }
-  const { r1, r2, c1, c2 } = selectionRange.value
-  return {
-    unitId: workbook.getId(),
-    subUnitId: sheet.getSheetId(),
-    range: {
-      startRow: r1,
-      endRow: r2,
-      startColumn: c1,
-      endColumn: c2,
-    },
-    rowRange: {
-      startRow: r1,
-      endRow: r2,
-      startColumn: 0,
-      endColumn: Math.max(0, (activeSheet.value?.colCount || 1) - 1),
-    },
-    colRange: {
-      startRow: 0,
-      endRow: Math.max(0, (activeSheet.value?.rowCount || 1) - 1),
-      startColumn: c1,
-      endColumn: c2,
-    },
-  }
-}
-
-async function executeSheetCommand(commandId: string, params?: Record<string, any>) {
-  await commitActiveCellEdit()
-  syncUniverSelection()
-  const ok = await executeUniverCommand(commandId, params)
-  if (ok) {
-    await nextTick()
-    syncToolbarAndFormula()
-  }
-  return ok
-}
-
-function syncUniverSelection() {
-  const sheet = getActiveSheet()
-  if (!sheet) return
-  const { r1, r2, c1, c2 } = selectionRange.value
-  const range = sheet.getRange(r1, c1, r2 - r1 + 1, c2 - c1 + 1)
-  sheet.setActiveSelection(range)
-}
-
-async function openUniverSort(order: 'asc' | 'desc') {
-  if (props.readOnly) return false
-  const sheet = getActiveSheet()
-  const workbook = activeUniverWorkbook
-  if (!sheet || !workbook) {
-    message.warning('表格尚未初始化')
-    return false
-  }
-
-  const { r1, r2, c1, c2 } = selectionRange.value
-  const sortWholeSheet = r1 === r2 && c1 === c2
-  const startRow = sortWholeSheet ? 0 : r1
-  const endRow = sortWholeSheet ? Math.max(0, (activeSheet.value?.rowCount || 1) - 1) : r2
-  const startColumn = sortWholeSheet ? 0 : c1
-  const endColumn = sortWholeSheet ? Math.max(0, (activeSheet.value?.colCount || 1) - 1) : c2
-  const colIndex = selected.col
-
-  return executeUniverCommand(UNIVER_COMMANDS.sortRange, {
-    unitId: workbook.getId(),
-    subUnitId: sheet.getSheetId(),
-    range: {
-      startRow,
-      endRow,
-      startColumn,
-      endColumn,
-    },
-    orderRules: [{
-      colIndex,
-      type: order,
-    }],
-    hasTitle: false,
-  })
-}
-
-async function openUniverDataValidation() {
-  if (props.readOnly) return false
-  return executeUniverCommand(UNIVER_COMMANDS.dataValidation)
-}
-
-async function toggleUniverFilter() {
-  if (props.readOnly) return false
-  return executeUniverCommand(UNIVER_COMMANDS.toggleFilter)
-}
-
-async function openUniverHyperlink() {
-  if (props.readOnly) return false
-  return executeUniverCommand(UNIVER_COMMANDS.hyperlink)
-}
-
-async function openUniverNote() {
-  if (props.readOnly) return false
-  return executeUniverCommand(UNIVER_COMMANDS.addNote)
-}
-
-async function openUniverThreadComment() {
-  if (props.readOnly) return false
-  return executeUniverCommand(UNIVER_COMMANDS.addThreadComment)
-}
-
-async function openUniverFindDialog() {
-  return executeUniverCommand(UNIVER_COMMANDS.find)
-}
-
-async function openUniverReplaceDialog() {
-  return executeUniverCommand(UNIVER_COMMANDS.replace)
-}
-
-function clearUniverWorkbookDisposables() {
-  univerWorkbookDisposables.forEach(disposable => disposable.dispose())
-  univerWorkbookDisposables = []
-}
-
-async function ensureUniverInitialized(host: HTMLElement) {
-  if (univerInstance && univerAPI) return
-  const runtime = await ensureUniverRuntime()
-
-  univerInstance = new runtime.core.Univer({
-    locale: getUniverLocaleType(runtime),
-    locales: {
-      [runtime.core.LocaleType.ZH_CN]: runtime.core.mergeLocales(
-        runtime.locales.conditionalFormattingUI,
-        runtime.locales.crosshairHighlight,
-        runtime.locales.dataValidation,
-        runtime.locales.dataValidationUI,
-        runtime.locales.design,
-        runtime.locales.ui,
-        runtime.locales.docsUI,
-        runtime.locales.drawingUI,
-        runtime.locales.findReplace,
-        runtime.locales.sheets,
-        runtime.locales.sheetsFilter,
-        runtime.locales.sheetsFilterUI,
-        runtime.locales.sheetsHyperLink,
-        runtime.locales.sheetsHyperLinkUI,
-        runtime.locales.sheetsUI,
-        runtime.locales.sheetsFormulaUI,
-        runtime.locales.sheetsNoteUI,
-        runtime.locales.sheetsNumfmtUI,
-        runtime.locales.sheetsSortUI,
-        runtime.locales.sheetsTable,
-        runtime.locales.sheetsTableUI,
-        runtime.locales.sheetsThreadCommentUI,
-        runtime.locales.threadCommentUI,
-        runtime.locales.zenEditor,
-      ),
-      [runtime.core.LocaleType.EN_US]: runtime.core.mergeLocales(
-        runtime.locales.conditionalFormattingUI,
-        runtime.locales.crosshairHighlight,
-        runtime.locales.dataValidation,
-        runtime.locales.dataValidationUI,
-        runtime.locales.design,
-        runtime.locales.ui,
-        runtime.locales.docsUI,
-        runtime.locales.drawingUI,
-        runtime.locales.findReplace,
-        runtime.locales.sheets,
-        runtime.locales.sheetsFilter,
-        runtime.locales.sheetsFilterUI,
-        runtime.locales.sheetsHyperLink,
-        runtime.locales.sheetsHyperLinkUI,
-        runtime.locales.sheetsUI,
-        runtime.locales.sheetsFormulaUI,
-        runtime.locales.sheetsNoteUI,
-        runtime.locales.sheetsNumfmtUI,
-        runtime.locales.sheetsSortUI,
-        runtime.locales.sheetsTable,
-        runtime.locales.sheetsTableUI,
-        runtime.locales.sheetsThreadCommentUI,
-        runtime.locales.threadCommentUI,
-        runtime.locales.zenEditor,
-      ),
-    },
-  })
-  univerInstance.registerPlugin(runtime.plugins.UniverRenderEnginePlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverFormulaEnginePlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverUIPlugin, {
-    container: host,
-    header: false,
-    toolbar: false,
-    footer: true,
-    contextMenu: true,
-  })
-  univerInstance.registerPlugin(runtime.plugins.UniverDocsPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverDocsUIPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsGraphicsPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsDrawingPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsTablePlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsDataValidationPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsConditionalFormattingPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsFilterPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsSortPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsHyperLinkPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsNotePlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverThreadCommentPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsThreadCommentPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverFindReplacePlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsFindReplacePlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsUIPlugin, {
-    footer: {
-      addSheetButtonConfig: {
-        show: true,
-        defaultRowCount: 50,
-        defaultColumnCount: 26,
-      }
-    }
-  })
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsFormulaPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsFormulaUIPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsNumfmtPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsNumfmtUIPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsDrawingUIPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsTableUIPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsDataValidationUIPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsConditionalFormattingUIPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsFilterUIPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsSortUIPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsHyperLinkUIPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsNoteUIPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverThreadCommentUIPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsThreadCommentUIPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsCrosshairHighlightPlugin)
-  univerInstance.registerPlugin(runtime.plugins.UniverSheetsZenEditorPlugin)
-  univerAPI = runtime.facade.FUniver.newAPI(univerInstance)
 }
 
 function bindUniverEvents() {
@@ -1139,11 +889,57 @@ function disposeActiveUniverWorkbook() {
   univerAPI.disposeUnit(unitId)
 }
 
+function clearUniverWorkbookDisposables() {
+  univerWorkbookDisposables.forEach(disposable => disposable.dispose())
+  univerWorkbookDisposables = []
+}
+
 function clearUniverRenderTimer() {
   if (univerRenderTimer !== undefined) {
     window.clearTimeout(univerRenderTimer)
     univerRenderTimer = undefined
   }
+}
+
+// ===== 状态同步（Univer ↔ 内部 workbook） =====
+function syncWorkbookFromUniver() {
+  const snapshot = activeUniverWorkbook?.save()
+  if (!snapshot || !univerRuntime) return false
+  const serialized = JSON.stringify(snapshot)
+  const changed = serialized !== lastUniverSnapshot
+  lastUniverSnapshot = serialized
+  const extracted = univerRuntime.adapter.univerWorkbookToInternal(snapshot)
+  const currentSheets = workbook.sheets || []
+  workbook.version = extracted.version || workbook.version || 1
+  workbook.resources = extracted.resources && typeof extracted.resources === 'object'
+    ? JSON.parse(JSON.stringify(extracted.resources))
+    : undefined
+  workbook.sheets = extracted.sheets.map((sheet, index) => {
+    const currentById = currentSheets.find(item => item.id === sheet.id)
+    const current = currentById || currentSheets[index]
+    // comment 以 Univer SHEET_NOTE_PLUGIN（已写入 extracted.cellMeta）为准，避免删除后残留
+    const mergedMeta: Record<string, any> = { ...(current?.cellMeta || {}) }
+    for (const [key, meta] of Object.entries(mergedMeta)) {
+      if (!meta || typeof meta !== 'object' || meta.comment === undefined) continue
+      const rest = { ...meta }
+      delete rest.comment
+      if (Object.keys(rest).length) mergedMeta[key] = rest
+      else delete mergedMeta[key]
+    }
+    for (const [key, meta] of Object.entries(sheet.cellMeta || {})) {
+      mergedMeta[key] = { ...(mergedMeta[key] || {}), ...(meta || {}) }
+    }
+    return {
+      ...sheet,
+      cellMeta: mergedMeta,
+      images: current?.images ?? sheet.images,
+      filterColumn: current?.filterColumn ?? null,
+      filterKeyword: current?.filterKeyword || '',
+      filterSelectedValues: { ...(current?.filterSelectedValues || {}) },
+      filterActive: !!current?.filterActive
+    }
+  })
+  return changed
 }
 
 function syncDimensionStateFromActiveSheet() {
@@ -1220,99 +1016,42 @@ function syncFilterStateToActiveSheet() {
   sheet.filterSelectedValues = selectedValues
 }
 
-watch(
-  () => props.initialContent,
-  next => {
-    if (!hasUsableWorkbookContent(next)) return
-    const normalized = normalizeWorkbook(next)
-    applyWorkbookState(normalized)
-    scheduleUniverRender()
-  },
-  { deep: true }
-)
-
-const activeSheet = computed(() => workbook.sheets[activeSheetIndex.value] || workbook.sheets[0])
-const currentRows = computed(() => Array.from({ length: Math.max(1, activeSheet.value?.rowCount || 50) }, (_, i) => i))
-const currentColumns = computed(() => Array.from({ length: Math.max(1, activeSheet.value?.colCount || 26) }, (_, i) => i))
-const currentCellRef = computed(() => `${columnLabel(selected.col)}${selected.row + 1}`)
-
-const selectionRange = computed(() => {
-  const r1 = Math.min(selected.row, selectionEnd.row)
-  const r2 = Math.max(selected.row, selectionEnd.row)
-  const c1 = Math.min(selected.col, selectionEnd.col)
-  const c2 = Math.max(selected.col, selectionEnd.col)
-  return { r1, r2, c1, c2 }
-})
-
-
-
-watch([activeSheetIndex, () => selected.row, () => selected.col], () => {
+function applyWorkbookState(next: IWorkbook) {
+  workbook.version = next.version
+  workbook.resources = next.resources
+  workbook.sheets = next.sheets
+  resetFilterState()
+  activeSheetIndex.value = 0
+  selected.row = 0
+  selected.col = 0
+  selectionEnd.row = 0
+  selectionEnd.col = 0
   syncDimensionStateFromActiveSheet()
-  syncToolbarAndFormula()
-})
-
-watch(activeSheetIndex, () => {
   loadFilterStateFromActiveSheet()
-  const nextSheet = activeUniverWorkbook?.getSheets()?.[activeSheetIndex.value]
-  if (nextSheet) {
-    activeUniverWorkbook?.setActiveSheet(nextSheet)
-    applySelectionToUniver()
-  }
-})
-
-function updateSelectionFromUniver() {
-  const activeSheet = activeUniverWorkbook?.getActiveSheet()
-  const activeRange = activeSheet?.getActiveRange()
-  if (!activeSheet || !activeRange) return
-  const nextIndex = workbook.sheets.findIndex(sheet => sheet.id === activeSheet.getSheetId())
-  if (nextIndex >= 0) {
-    activeSheetIndex.value = nextIndex
-  }
-  selected.row = activeRange.getRow()
-  selectionEnd.row = activeRange.getLastRow()
-  selected.col = activeRange.getColumn()
-  selectionEnd.col = activeRange.getLastColumn()
+  clearHistory()
   syncToolbarAndFormula()
 }
 
-function syncWorkbookFromUniver() {
-  const snapshot = activeUniverWorkbook?.save()
-  if (!snapshot || !univerRuntime) return false
-  const serialized = JSON.stringify(snapshot)
-  const changed = serialized !== lastUniverSnapshot
-  lastUniverSnapshot = serialized
-  const extracted = univerRuntime.adapter.univerWorkbookToInternal(snapshot)
-  const currentSheets = workbook.sheets || []
-  workbook.version = extracted.version || workbook.version || 1
-  workbook.resources = extracted.resources && typeof extracted.resources === 'object'
-    ? JSON.parse(JSON.stringify(extracted.resources))
-    : undefined
-  workbook.sheets = extracted.sheets.map((sheet, index) => {
-    const currentById = currentSheets.find(item => item.id === sheet.id)
-    const current = currentById || currentSheets[index]
-    // comment 以 Univer SHEET_NOTE_PLUGIN（已写入 extracted.cellMeta）为准，避免删除后残留
-    const mergedMeta: Record<string, any> = { ...(current?.cellMeta || {}) }
-    for (const [key, meta] of Object.entries(mergedMeta)) {
-      if (!meta || typeof meta !== 'object' || meta.comment === undefined) continue
-      const rest = { ...meta }
-      delete rest.comment
-      if (Object.keys(rest).length) mergedMeta[key] = rest
-      else delete mergedMeta[key]
-    }
-    for (const [key, meta] of Object.entries(sheet.cellMeta || {})) {
-      mergedMeta[key] = { ...(mergedMeta[key] || {}), ...(meta || {}) }
-    }
-    return {
-      ...sheet,
-      cellMeta: mergedMeta,
-      images: current?.images ?? sheet.images,
-      filterColumn: current?.filterColumn ?? null,
-      filterKeyword: current?.filterKeyword || '',
-      filterSelectedValues: { ...(current?.filterSelectedValues || {}) },
-      filterActive: !!current?.filterActive
-    }
+async function loadWorkbookFromDocumentUrl(url: string) {
+  const token = String(getAuthToken() || '').trim()
+  const headers: Record<string, string> = {}
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  const resp = await fetch(url, { headers })
+  if (!resp.ok) throw new Error(`请求失败: ${resp.status}`)
+  const buffer = await resp.arrayBuffer()
+  if (!buffer || buffer.byteLength === 0) throw new Error('远程文件内容为空')
+  const result = await props.importCallback(buffer, {
+    defaultSheetName: index => t('sheet.defaultSheetName', { index: index + 1 }),
   })
-  return changed
+  if (!result.success || !result.workbook) {
+    throw new Error(result.error || t('message.importFailed'))
+  }
+  applyWorkbookState(result.workbook)
+  if (!String(localDocumentTitle.value || '').trim()) {
+    const fromUrl = fileNameFromUrl(url)
+    if (fromUrl) localDocumentTitle.value = fromUrl
+  }
+  emitChange()
 }
 
 async function waitForLuckysheetHost(host: HTMLElement) {
@@ -1334,6 +1073,21 @@ function applySelectionToUniver() {
   activeUniverWorkbook?.setActiveSheet(targetSheet)
   const range = targetSheet.getRange(r1, c1, r2 - r1 + 1, c2 - c1 + 1)
   targetSheet.setActiveRange(range)
+}
+
+function updateSelectionFromUniver() {
+  const univerActiveSheet = activeUniverWorkbook?.getActiveSheet()
+  const activeRange = univerActiveSheet?.getActiveRange()
+  if (!univerActiveSheet || !activeRange) return
+  const nextIndex = workbook.sheets.findIndex(sheet => sheet.id === univerActiveSheet.getSheetId())
+  if (nextIndex >= 0) {
+    activeSheetIndex.value = nextIndex
+  }
+  selected.row = activeRange.getRow()
+  selectionEnd.row = activeRange.getLastRow()
+  selected.col = activeRange.getColumn()
+  selectionEnd.col = activeRange.getLastColumn()
+  syncToolbarAndFormula()
 }
 
 async function renderLuckysheet() {
@@ -1383,199 +1137,32 @@ function scheduleUniverRender() {
   }, 0)
 }
 
-// ===== Normalization =====
-function hasUsableWorkbookContent(input: any): boolean {
-  if (!input || typeof input !== 'object') return false
-  if (Array.isArray(input?.data)) {
-    return input.data.length > 0
-  }
-  if (input?.data && typeof input.data === 'object' && Array.isArray(input.data?.sheets)) {
-    return input.data.sheets.length > 0
-  }
-  if (Array.isArray(input?.sheets)) {
-    return input.sheets.length > 0
-  }
-  return false
-}
+watch(
+  () => props.initialContent,
+  next => {
+    if (!hasUsableWorkbookContent(next)) return
+    const normalized = normalizeWorkbook(next, workbookStateOptions)
+    applyWorkbookState(normalized)
+    scheduleUniverRender()
+  },
+  { deep: true }
+)
 
-function applyWorkbookState(next: IWorkbook) {
-  workbook.version = next.version
-  workbook.resources = next.resources
-  workbook.sheets = next.sheets
-  resetFilterState()
-  activeSheetIndex.value = 0
-  selected.row = 0
-  selected.col = 0
-  selectionEnd.row = 0
-  selectionEnd.col = 0
+watch([activeSheetIndex, () => selected.row, () => selected.col], () => {
   syncDimensionStateFromActiveSheet()
-  loadFilterStateFromActiveSheet()
-  undoStack.value = []
-  redoStack.value = []
   syncToolbarAndFormula()
-}
+})
 
-function normalizeWorkbook(input: any): IWorkbook {
-  if (input && typeof input === 'object') {
-    if (Array.isArray(input?.data)) {
-      return {
-        version: Number(input?.version || 1),
-        resources: undefined,
-        sheets: input.data.map((sheet: any, i: number) => fromFortuneSheetRecord(sheet, i))
-      }
-    }
-    if (input?.data && typeof input.data === 'object' && Array.isArray(input.data?.sheets)) {
-      return {
-        version: Number(input?.version || 1),
-        resources: input.data?.resources && typeof input.data.resources === 'object'
-          ? JSON.parse(JSON.stringify(input.data.resources))
-          : undefined,
-        sheets: input.data.sheets.map((sheet: any, i: number) => fromInternalSheet(sheet, i))
-      }
-    }
-    if (Array.isArray(input?.sheets)) {
-      return {
-        version: Number(input?.version || 1),
-        resources: input?.resources && typeof input.resources === 'object'
-          ? JSON.parse(JSON.stringify(input.resources))
-          : undefined,
-        sheets: input.sheets.map((sheet: any, i: number) => fromInternalSheet(sheet, i))
-      }
-    }
+watch(activeSheetIndex, () => {
+  loadFilterStateFromActiveSheet()
+  const nextSheet = activeUniverWorkbook?.getSheets()?.[activeSheetIndex.value]
+  if (nextSheet) {
+    activeUniverWorkbook?.setActiveSheet(nextSheet)
+    applySelectionToUniver()
   }
-  return { version: 1, resources: undefined, sheets: [createDefaultSheet(0)] }
-}
+})
 
-async function loadWorkbookFromDocumentUrl(url: string) {
-  const token = String(getAuthToken() || '').trim()
-  const headers: Record<string, string> = {}
-  if (token) headers['Authorization'] = `Bearer ${token}`
-  const resp = await fetch(url, { headers })
-  if (!resp.ok) throw new Error(`请求失败: ${resp.status}`)
-  const buffer = await resp.arrayBuffer()
-  if (!buffer || buffer.byteLength === 0) throw new Error('远程文件内容为空')
-  const result = await props.importCallback(buffer, {
-    defaultSheetName: index => t('sheet.defaultSheetName', { index: index + 1 }),
-  })
-  if (!result.success || !result.workbook) {
-    throw new Error(result.error || t('message.importFailed'))
-  }
-  applyWorkbookState(result.workbook)
-  emitChange()
-}
-
-function fromInternalSheet(sheet: any, i: number): IUiSheet {
-  return {
-    id: String(sheet?.id || sheet?.meta?.id || i),
-    name: String(sheet?.name || sheet?.meta?.name || t('sheet.defaultSheetName', { index: i + 1 })),
-    rowCount: Number(sheet?.rowCount || sheet?.meta?.rowCount || 50),
-    colCount: Number(sheet?.colCount || sheet?.meta?.colCount || 26),
-    cells: { ...(sheet?.cells || {}) },
-    styles: { ...(sheet?.styles || {}) },
-    cellRichTexts: sheet?.cellRichTexts
-      ? JSON.parse(JSON.stringify(sheet.cellRichTexts))
-      : undefined,
-    cellMeta: { ...(sheet?.cellMeta || {}) },
-    merges: Array.isArray(sheet?.merges) ? [...sheet.merges] : [],
-    colWidths: { ...(sheet?.colWidths || {}) },
-    rowHeights: { ...(sheet?.rowHeights || {}) },
-    hiddenCols: { ...(sheet?.hiddenCols || {}) },
-    hiddenRows: { ...(sheet?.hiddenRows || {}) },
-    frozenCols: Number(sheet?.frozenCols || 0),
-    frozenRows: Number(sheet?.frozenRows || 0),
-    images: Array.isArray(sheet?.images) ? JSON.parse(JSON.stringify(sheet.images)) : undefined,
-    filterColumn: Number.isFinite(sheet?.filterColumn) ? Number(sheet.filterColumn) : null,
-    filterKeyword: String(sheet?.filterKeyword || ''),
-    filterSelectedValues: { ...(sheet?.filterSelectedValues || {}) },
-    filterActive: !!sheet?.filterActive
-  }
-}
-
-function fromFortuneSheetRecord(sheet: any, i: number): IUiSheet {
-  const cells: Record<string, string> = {}
-  const styles: Record<string, ICellStyle> = {}
-  const celldata = Array.isArray(sheet?.celldata) ? sheet.celldata : []
-  celldata.forEach((item: any) => {
-    const r = Number(item?.r)
-    const c = Number(item?.c)
-    const cell = item?.v
-    if (!Number.isFinite(r) || !Number.isFinite(c)) return
-    const key = cellKey(r, c)
-    cells[key] = String(cell?.m ?? cell?.v ?? '')
-    styles[key] = {
-      bold: !!cell?.bl,
-      italic: !!cell?.it,
-      underline: !!cell?.un,
-      align: (cell?.ht || 'left') as Align,
-      fontFamily: resolveSheetFontFamily(String(cell?.ff || DEFAULT_FONT_FAMILY)),
-      fontSize: Number(cell?.fs || 12)
-    }
-  })
-  return {
-    id: String(sheet?.id || sheet?.index || i),
-    name: String(sheet?.name || t('sheet.defaultSheetName', { index: i + 1 })),
-    rowCount: Number(sheet?.row || 50),
-    colCount: Number(sheet?.column || 26),
-    cells,
-    styles,
-    cellMeta: {},
-    colWidths: {},
-    rowHeights: {},
-    hiddenCols: {},
-    hiddenRows: {},
-    frozenCols: 0,
-    frozenRows: 0,
-    filterColumn: null,
-    filterKeyword: '',
-    filterSelectedValues: {},
-    filterActive: false
-  }
-}
-
-function createDefaultSheet(i: number): IUiSheet {
-  return {
-    id: String(i),
-    name: t('sheet.defaultSheetName', { index: i + 1 }),
-    rowCount: 50,
-    colCount: 26,
-    cells: {},
-    styles: {},
-    cellMeta: {},
-    merges: [],
-    colWidths: {},
-    rowHeights: {},
-    hiddenCols: {},
-    hiddenRows: {},
-    frozenCols: 0,
-    frozenRows: 0,
-    filterColumn: null,
-    filterKeyword: '',
-    filterSelectedValues: {},
-    filterActive: false
-  }
-}
-
-// ===== Helpers =====
-function columnLabel(index: number): string {
-  let n = index + 1
-  let label = ''
-  while (n > 0) {
-    const rem = (n - 1) % 26
-    label = String.fromCharCode(65 + rem) + label
-    n = Math.floor((n - 1) / 26)
-  }
-  return label
-}
-
-function cellKey(row: number, col: number): string {
-  return `${row}:${col}`
-}
-
-function cellValue(row: number, col: number): string {
-  return activeSheet.value?.cells[cellKey(row, col)] || ''
-}
-
-// ===== Selection =====
+// ===== 选区 / 编辑栏 =====
 function selectCell(row: number, col: number) {
 
   selected.row = row
@@ -1586,7 +1173,6 @@ function selectCell(row: number, col: number) {
   syncToolbarAndFormula()
 }
 
-
 function selectAll() {
   selected.row = 0
   selected.col = 0
@@ -1595,12 +1181,10 @@ function selectAll() {
   syncUniverSelection()
 }
 
-
 function selectCellRefInput() {
   formulaInputRef.value?.focus()
   formulaInputRef.value?.select()
 }
-
 
 function onFormulaInput(e: Event) {
   const val = (e.target as HTMLInputElement).value
@@ -1634,7 +1218,13 @@ function commitUniverFacadeMutation() {
   }
 }
 
-
+function moveSelection(dr: number, dc: number) {
+  const maxR = currentRows.value.length - 1
+  const maxC = currentColumns.value.length - 1
+  const newR = Math.max(0, Math.min(maxR, selected.row + dr))
+  const newC = Math.max(0, Math.min(maxC, selected.col + dc))
+  selectCell(newR, newC)
+}
 
 function handleGlobalKeydown(e: KeyboardEvent) {
   if (formulaFocused.value) return
@@ -1664,634 +1254,9 @@ function handleGlobalKeydown(e: KeyboardEvent) {
   }
 }
 
-function moveSelection(dr: number, dc: number) {
-  const maxR = currentRows.value.length - 1
-  const maxC = currentColumns.value.length - 1
-  const newR = Math.max(0, Math.min(maxR, selected.row + dr))
-  const newC = Math.max(0, Math.min(maxC, selected.col + dc))
-  selectCell(newR, newC)
-}
-
-function getRangeFormulaBarValue(range: FRange): string {
-  const formula = String((range as any).getFormula?.() || '').trim()
-  if (formula) return formula.startsWith('=') ? formula : `=${formula}`
-  const cellFormula = String((range as any).getCellData?.()?.f || '').trim()
-  if (cellFormula) return cellFormula.startsWith('=') ? cellFormula : `=${cellFormula}`
-  const value = range.getValue()
-  if (value !== null && value !== undefined && value !== '') return String(value)
-  return ''
-}
-
-// ===== Toolbar sync =====
-function syncToolbarAndFormula() {
-  const sheet = getActiveSheet()
-  const activeRange = sheet?.getActiveRange?.() || null
-  const range = activeRange || getSelectionRange()
-  const row = activeRange?.getRow?.() ?? selected.row
-  const col = activeRange?.getColumn?.() ?? selected.col
-  const cellRange = getToolbarCellRange(row, col) || range
-  if (cellRange) {
-    const key = cellKey(row, col)
-    formulaValue.value = getRangeFormulaBarValue(cellRange) || activeSheet.value?.cells[key] || ''
-    toolbarState.bold = readRangeBooleanStyle(cellRange, 'bl', key, 'bold')
-    toolbarState.italic = readRangeBooleanStyle(cellRange, 'it', key, 'italic')
-    toolbarState.underline = readRangeTextDecoration(cellRange, 'ul', key, 'underline')
-    toolbarState.strikethrough = readRangeTextDecoration(cellRange, 'st', key, 'strikethrough')
-    const hAlign = String((cellRange as any).getHorizontalAlignment?.() || 'left')
-    toolbarState.align = (hAlign === 'center' ? 'center' : hAlign === 'right' || hAlign === 'normal' ? 'right' : 'left') as Align
-    const vAlign = String((cellRange as any).getVerticalAlignment?.() || 'bottom')
-    toolbarState.verticalAlign = (vAlign === 'top' ? 'top' : vAlign === 'middle' ? 'middle' : 'bottom') as VerticalAlign
-    toolbarState.fontFamily = resolveSheetFontFamily(
-      readRangeFontFamily(cellRange, row, col)
-      || readFontFamilyFromSheetState(activeSheet.value?.styles, activeSheet.value?.cellRichTexts, key)
-      || DEFAULT_FONT_FAMILY,
-    )
-    toolbarState.fontSize = readRangeFontSize(cellRange, row, col)
-    const fontColor = String((cellRange as any).getFontColor?.() || '#000000')
-    toolbarState.fontColor = fontColor === 'null' ? '#000000' : fontColor
-    const bgColor = String((cellRange as any).getBackground?.() || '')
-    toolbarState.bgColor = bgColor === 'null' ? '' : bgColor
-    const wrapStrategy = Number((cellRange as any).getWrapStrategy?.() ?? 0)
-    toolbarState.wrap = (wrapStrategy === 2 ? 'wrap' : wrapStrategy === 1 ? 'overflow' : 'clip') as WrapMode
-    const textRotation = Number((cellRange as any).getTextRotation?.() ?? 0)
-    toolbarState.rotation = textRotation
-  } else {
-    const key = cellKey(selected.row, selected.col)
-    formulaValue.value = activeSheet.value?.cells[key] || ''
-    const style = activeSheet.value?.styles[key] || {}
-    toolbarState.bold = !!style.bold
-    toolbarState.italic = !!style.italic
-    toolbarState.underline = !!style.underline
-    toolbarState.strikethrough = !!style.strikethrough
-    toolbarState.align = (style.align || 'left') as Align
-    toolbarState.fontFamily = resolveSheetFontFamily(style.fontFamily || DEFAULT_FONT_FAMILY)
-    toolbarState.fontSize = Number(style.fontSize || 12)
-    toolbarState.fontColor = style.fontColor || '#000000'
-    toolbarState.bgColor = style.bgColor || ''
-    toolbarState.wrap = style.wrap || 'clip'
-    toolbarState.numberFormat = style.numberFormat || 'auto'
-    toolbarState.verticalAlign = (style.verticalAlign || 'bottom') as VerticalAlign
-    toolbarState.decimalPlaces = Number(style.decimalPlaces ?? 2)
-    toolbarState.rotation = Number(style.rotation ?? 0)
-  }
-}
-
-// ===== Style operations =====
-function saveUndoState() {
-  const sheet = activeSheet.value
-  if (!sheet) return
-  undoStack.value.push({
-    sheetIndex: activeSheetIndex.value,
-    cells: { ...sheet.cells },
-    styles: JSON.parse(JSON.stringify(sheet.styles)),
-    cellMeta: JSON.parse(JSON.stringify(sheet.cellMeta || {}))
-  })
-  if (undoStack.value.length > 50) undoStack.value.shift()
-  redoStack.value = []
-}
-
-async function handleFontSelectMouseDown() {
-  if (props.readOnly) return
-  const workbook = activeUniverWorkbook
-  if (!workbook?.isCellEditing?.()) return
-  pendingStyleTargetCell.value = editingCell.value || { row: selected.row, col: selected.col }
-  await commitActiveCellEdit(pendingStyleTargetCell.value)
-}
-
-async function handleFontFamilyChange() {
-  await updateCellStyle()
-}
-
-async function updateCellStyle() {
-  if (props.readOnly) return
-  const range = await getPreparedSelectionRange()
-  if (!range) return
-  saveUndoState()
-
-  range.setFontWeight(toolbarState.bold ? 'bold' : null)
-  range.setFontStyle(toolbarState.italic ? 'italic' : null)
-  await applyRangeStyleType(range, 'ul', toolbarState.underline ? { s: BooleanNumber.TRUE } : null)
-  await applyRangeStyleType(range, 'st', toolbarState.strikethrough ? { s: BooleanNumber.TRUE } : null)
-  range.setHorizontalAlignment(toFacadeHorizontalAlignment(toolbarState.align || 'left'))
-  range.setVerticalAlignment(toolbarState.verticalAlign)
-  range.setFontFamily(toUniverFontFamily(toolbarState.fontFamily))
-  range.setFontSize(Number(toolbarState.fontSize || 12))
-  if (toolbarState.fontColor) {
-    range.setFontColor(toolbarState.fontColor)
-  } else {
-    await applyRangeStyleType(range, 'cl', null)
-  }
-  if (toolbarState.bgColor) {
-    range.setBackgroundColor(toolbarState.bgColor)
-  } else {
-    await applyRangeStyleType(range, 'bg', null)
-  }
-  range.setWrapStrategy(toolbarState.wrap === 'wrap' ? 2 : toolbarState.wrap === 'overflow' ? 1 : 0)
-  range.setTextRotation(Number(toolbarState.rotation ?? 0))
-  await finishRangeStyleMutation()
-}
-
-
-async function toggleStyle(style: 'bold' | 'italic' | 'underline' | 'strikethrough') {
-  if (props.readOnly) return
-  toolbarState[style] = !toolbarState[style]
-  const range = await getPreparedSelectionRange()
-  if (!range) return
-  saveUndoState()
-  if (style === 'bold') {
-    range.setFontWeight(toolbarState.bold ? 'bold' : null)
-  } else if (style === 'italic') {
-    range.setFontStyle(toolbarState.italic ? 'italic' : null)
-  } else if (style === 'underline') {
-    await applyRangeStyleType(range, 'ul', toolbarState.underline ? { s: BooleanNumber.TRUE } : null)
-  } else if (style === 'strikethrough') {
-    await applyRangeStyleType(range, 'st', toolbarState.strikethrough ? { s: BooleanNumber.TRUE } : null)
-  }
-  await finishRangeStyleMutation()
-}
-
-async function setAlign(align: Align) {
-  if (props.readOnly) return
-  toolbarState.align = align
-  const range = await getPreparedSelectionRange()
-  if (!range) return
-  saveUndoState()
-  range.setHorizontalAlignment(toFacadeHorizontalAlignment(align))
-  await finishRangeStyleMutation()
-}
-
-async function setWrap(wrap: WrapMode) {
-  if (props.readOnly) return
-  toolbarState.wrap = wrap
-  const range = await getPreparedSelectionRange()
-  if (!range) return
-  saveUndoState()
-  range.setWrapStrategy(wrap === 'wrap' ? 2 : wrap === 'overflow' ? 1 : 0)
-  await finishRangeStyleMutation()
-}
-
-function toggleWrap() {
-  setWrap(toolbarState.wrap === 'wrap' ? 'clip' : 'wrap')
-}
-
-async function setFontColor(color: string) {
-  if (props.readOnly) return
-  toolbarState.fontColor = color
-  const range = await getPreparedSelectionRange()
-  if (!range) return
-  saveUndoState()
-  range.setFontColor(color || '#000000')
-  await finishRangeStyleMutation()
-}
-
-async function setBgColor(color: string) {
-  if (props.readOnly) return
-  toolbarState.bgColor = color
-  const range = await getPreparedSelectionRange()
-  if (!range) return
-  saveUndoState()
-  if (color) {
-    range.setBackgroundColor(color)
-  } else {
-    await applyRangeStyleType(range, 'bg', null)
-  }
-  await finishRangeStyleMutation()
-}
-
-async function setBorders(type: string) {
-  if (props.readOnly) return
-  saveUndoState()
-  const borderTypeMap: Record<string, BorderType> = {
-    all: BorderType.ALL,
-    outer: BorderType.OUTSIDE,
-    none: BorderType.NONE,
-    top: BorderType.TOP,
-    bottom: BorderType.BOTTOM,
-    left: BorderType.LEFT,
-    right: BorderType.RIGHT,
-  }
-  const borderInfo = {
-    type: borderTypeMap[type] ?? BorderType.ALL,
-    color: type === 'none' ? undefined : '#000000',
-    style: type === 'none' ? BorderStyleTypes.NONE : BorderStyleTypes.THIN,
-    activeBorderType: type !== 'none',
-  }
-  await executeSheetCommand(SetBorderBasicCommand.id, {
-    value: borderInfo,
-  })
-}
-
-async function clearSelectedFormat() {
-  if (props.readOnly) return
-  const context = getActiveSheetCommandContext()
-  if (!context) return
-  saveUndoState()
-  await executeSheetCommand(ClearSelectionFormatCommand.id, {
-    unitId: context.unitId,
-    subUnitId: context.subUnitId,
-    ranges: [context.range],
-  })
-}
-
-async function deleteSelectedContent() {
-  if (props.readOnly) return
-  const context = getActiveSheetCommandContext()
-  if (!context) return
-  saveUndoState()
-  await executeSheetCommand(ClearSelectionContentCommand.id, {
-    unitId: context.unitId,
-    subUnitId: context.subUnitId,
-    ranges: [context.range],
-  })
-}
-
-
-// ===== Undo/Redo =====
-function handleHeaderCommand(command: string) {
-  switch (command) {
-    case 'import': return triggerImportExcel()
-    case 'save': return handleSave()
-    case 'undo': return handleUndo()
-    case 'redo': return handleRedo()
-  }
-}
-
-function handleUndo() {
-  if (props.readOnly || undoStack.value.length === 0) return
-  const sheet = activeSheet.value
-  if (!sheet) return
-  redoStack.value.push({
-    sheetIndex: activeSheetIndex.value,
-    cells: { ...sheet.cells },
-    styles: JSON.parse(JSON.stringify(sheet.styles)),
-    cellMeta: JSON.parse(JSON.stringify(sheet.cellMeta || {}))
-  })
-  const entry = undoStack.value.pop()!
-  if (entry.sheetIndex !== activeSheetIndex.value) {
-    activeSheetIndex.value = entry.sheetIndex
-  }
-  const target = workbook.sheets[entry.sheetIndex]
-  if (target) {
-    target.cells = entry.cells
-    target.styles = entry.styles
-    target.cellMeta = entry.cellMeta ? JSON.parse(JSON.stringify(entry.cellMeta)) : {}
-  }
-  syncToolbarAndFormula()
-  emitChange()
-}
-
-function handleRedo() {
-  if (props.readOnly || redoStack.value.length === 0) return
-  const sheet = activeSheet.value
-  if (!sheet) return
-  undoStack.value.push({
-    sheetIndex: activeSheetIndex.value,
-    cells: { ...sheet.cells },
-    styles: JSON.parse(JSON.stringify(sheet.styles)),
-    cellMeta: JSON.parse(JSON.stringify(sheet.cellMeta || {}))
-  })
-  const entry = redoStack.value.pop()!
-  if (entry.sheetIndex !== activeSheetIndex.value) {
-    activeSheetIndex.value = entry.sheetIndex
-  }
-  const target = workbook.sheets[entry.sheetIndex]
-  if (target) {
-    target.cells = entry.cells
-    target.styles = entry.styles
-    target.cellMeta = entry.cellMeta ? JSON.parse(JSON.stringify(entry.cellMeta)) : {}
-  }
-  syncToolbarAndFormula()
-  emitChange()
-}
-
-// ===== Clipboard =====
-function handleCopy() {
-  const { r1, r2, c1, c2 } = selectionRange.value
-  const rows: string[] = []
-  for (let r = r1; r <= r2; r++) {
-    const cols: string[] = []
-    for (let c = c1; c <= c2; c++) {
-      cols.push(cellValue(r, c))
-    }
-    rows.push(cols.join('\t'))
-  }
-  navigator.clipboard?.writeText(rows.join('\n')).catch(() => {})
-}
-
-function handleCut() {
-  if (props.readOnly) return
-  handleCopy()
-  deleteSelectedContent()
-}
-
-async function handlePaste() {
-  if (props.readOnly) return
-  try {
-    const text = await navigator.clipboard?.readText()
-    if (!text) return
-    const range = getSelectionRange()
-    if (!range) return
-    saveUndoState()
-    const rows = text.split('\n')
-    for (let ri = 0; ri < rows.length; ri++) {
-      const cols = rows[ri].split('\t')
-      for (let ci = 0; ci < cols.length; ci++) {
-        const r = selected.row + ri
-        const c = selected.col + ci
-        const sheet = getActiveSheet()
-        if (sheet) {
-          const cell = sheet.getRange(r, c, 1, 1)
-          if (cell) {
-            cell.setValue(cols[ci])
-          }
-        }
-      }
-    }
-  } catch { /* clipboard access denied */ }
-}
-
-
-// ===== Format Painter =====
-function handleFormatPainter() {
-  if (props.readOnly) return
-  formatPainterActive.value = !formatPainterActive.value
-}
-
-// ===== Row/Col operations =====
-async function insertRow(position: 'above' | 'below') {
-  if (props.readOnly) return
-  saveUndoState()
-  const context = getActiveSheetCommandContext()
-  if (!context) return
-  const insertAt = position === 'above' ? selected.row : selected.row + 1
-  await executeSheetCommand(InsertRowCommand.id, {
-    unitId: context.unitId,
-    subUnitId: context.subUnitId,
-    direction: position === 'above' ? Direction.UP : Direction.DOWN,
-    range: {
-      startRow: insertAt,
-      endRow: insertAt,
-      startColumn: 0,
-      endColumn: Math.max(0, (activeSheet.value?.colCount || 1) - 1),
-    },
-  })
-}
-
-
-async function insertCol(position: 'left' | 'right') {
-  if (props.readOnly) return
-  saveUndoState()
-  const context = getActiveSheetCommandContext()
-  if (!context) return
-  const insertAt = position === 'left' ? selected.col : selected.col + 1
-  await executeSheetCommand(InsertColCommand.id, {
-    unitId: context.unitId,
-    subUnitId: context.subUnitId,
-    direction: position === 'left' ? Direction.LEFT : Direction.RIGHT,
-    range: {
-      startRow: 0,
-      endRow: Math.max(0, (activeSheet.value?.rowCount || 1) - 1),
-      startColumn: insertAt,
-      endColumn: insertAt,
-    },
-  })
-}
-
-async function deleteRow() {
-  if (props.readOnly) return
-  saveUndoState()
-  const context = getActiveSheetCommandContext()
-  if (!context) return
-  await executeSheetCommand(RemoveRowCommand.id, {
-    unitId: context.unitId,
-    subUnitId: context.subUnitId,
-    range: context.rowRange,
-  })
-}
-
-async function deleteCol() {
-  if (props.readOnly) return
-  saveUndoState()
-  const context = getActiveSheetCommandContext()
-  if (!context) return
-  await executeSheetCommand(RemoveColCommand.id, {
-    unitId: context.unitId,
-    subUnitId: context.subUnitId,
-    range: context.colRange,
-  })
-}
-
-async function hideRow() {
-  if (props.readOnly) return
-  saveUndoState()
-  const context = getActiveSheetCommandContext()
-  if (!context) return
-  await executeSheetCommand(SetRowHiddenCommand.id, {
-    unitId: context.unitId,
-    subUnitId: context.subUnitId,
-    ranges: [context.rowRange],
-  })
-}
-
-async function unhideRow() {
-  if (props.readOnly) return
-  saveUndoState()
-  const context = getActiveSheetCommandContext()
-  if (!context) return
-  await executeSheetCommand(SetSpecificRowsVisibleCommand.id, {
-    unitId: context.unitId,
-    subUnitId: context.subUnitId,
-    ranges: [context.rowRange],
-  })
-}
-
-async function hideCol() {
-  if (props.readOnly) return
-  saveUndoState()
-  const context = getActiveSheetCommandContext()
-  if (!context) return
-  await executeSheetCommand(SetColHiddenCommand.id, {
-    unitId: context.unitId,
-    subUnitId: context.subUnitId,
-    ranges: [context.colRange],
-  })
-}
-
-async function unhideCol() {
-  if (props.readOnly) return
-  saveUndoState()
-  const context = getActiveSheetCommandContext()
-  if (!context) return
-  await executeSheetCommand(SetSpecificColsVisibleCommand.id, {
-    unitId: context.unitId,
-    subUnitId: context.subUnitId,
-    ranges: [context.colRange],
-  })
-}
-
-function autoFitRowHeight() {
-  if (props.readOnly) return
-  const sheet = getActiveSheet()
-  if (!sheet) return
-  const { r1, r2 } = selectionRange.value
-  for (let r = r1; r <= r2; r++) {
-    ;(sheet as any).autoFitRowHeight?.(r)
-  }
-}
-
-function autoFitColWidth() {
-  if (props.readOnly) return
-  const sheet = getActiveSheet()
-  if (!sheet) return
-  const { c1, c2 } = selectionRange.value
-  for (let c = c1; c <= c2; c++) {
-    ;(sheet as any).autoFitColumnWidth?.(c)
-  }
-}
-
-function setZoom(level: number) {
-  zoomLevel.value = level
-  applyZoom()
-}
-
-function applyZoom() {
-  const sheet = getActiveSheet()
-  if (!sheet) return
-  ;(activeUniverWorkbook as any)?.setZoomRatio?.(zoomLevel.value / 100)
-}
-
-
-// ===== Merge cells =====
-async function handleMergeCells() {
-  if (props.readOnly) return
-  const { r1, r2, c1, c2 } = selectionRange.value
-  if (r1 === r2 && c1 === c2) return
-  saveUndoState()
-  await executeSheetCommand(AddWorksheetMergeAllCommand.id)
-}
-
-
-async function handleUnmergeCells() {
-  if (props.readOnly) return
-  saveUndoState()
-  await executeSheetCommand(RemoveWorksheetMergeCommand.id)
-}
-
-// ===== View operations =====
-function toggleGridlines() { showGridlines.value = !showGridlines.value }
-async function toggleFreezeRow() {
-  const target = univerAPI?.getActiveSheet?.()
-  const worksheet = target?.worksheet
-  if (!worksheet) return
-  frozenRows.value = frozenRows.value > 0 ? 0 : 1
-  syncDimensionStateToActiveSheet()
-  if (frozenRows.value === 0 && frozenCols.value === 0) {
-    worksheet.cancelFreeze()
-    return
-  }
-  worksheet.setFreeze({
-    startRow: frozenRows.value,
-    startColumn: frozenCols.value,
-    ySplit: frozenRows.value,
-    xSplit: frozenCols.value,
-  })
-}
-async function toggleFreezeCol() {
-  const target = univerAPI?.getActiveSheet?.()
-  const worksheet = target?.worksheet
-  if (!worksheet) return
-  frozenCols.value = frozenCols.value > 0 ? 0 : 1
-  syncDimensionStateToActiveSheet()
-  if (frozenRows.value === 0 && frozenCols.value === 0) {
-    worksheet.cancelFreeze()
-    return
-  }
-  worksheet.setFreeze({
-    startRow: frozenRows.value,
-    startColumn: frozenCols.value,
-    ySplit: frozenRows.value,
-    xSplit: frozenCols.value,
-  })
-}
-
-// ===== Sort =====
-function sortColumn(order: 'asc' | 'desc') {
-  if (props.readOnly) return
-  saveUndoState()
-  void openUniverSort(order)
-}
-
-// ===== Remove Duplicates =====
-function removeDuplicates() {
-  if (props.readOnly) return
-  const { r1, r2, c1, c2 } = selectionRange.value
-  if (r1 === r2 && c1 === c2) {
-    message.warning('请选择包含数据的区域')
-    return
-  }
-  saveUndoState()
-  const sheet = getActiveSheet()
-  if (!sheet) return
-  
-  const seen = new Set<string>()
-  const rowsToDelete: number[] = []
-  
-  for (let r = r1; r <= r2; r++) {
-    const rowData: string[] = []
-    for (let c = c1; c <= c2; c++) {
-      const value = String(sheet.getRange(r, c, 1, 1).getValue() || '')
-      rowData.push(value)
-    }
-    const rowKey = rowData.join('\t')
-    if (seen.has(rowKey)) {
-      rowsToDelete.push(r)
-    } else {
-      seen.add(rowKey)
-    }
-  }
-  
-  if (rowsToDelete.length === 0) {
-    message.info('未找到重复值')
-    return
-  }
-  
-  rowsToDelete.sort((a, b) => b - a)
-  for (const r of rowsToDelete) {
-    sheet.deleteRows(r, 1)
-  }
-  
-  message.success(`已删除 ${rowsToDelete.length} 个重复行`)
-}
-
-// ===== Row Height & Column Width =====
-function applyRowHeight() {
-  if (props.readOnly) return
-  saveUndoState()
-  const sheet = getActiveSheet()
-  if (!sheet) return
-  const { r1, r2 } = selectionRange.value
-  for (let r = r1; r <= r2; r++) {
-    ;(sheet as any).setRowHeight?.(r, rowHeightValue.value)
-  }
-  showRowHeightDialog.value = false
-}
-
-function applyColWidth() {
-  if (props.readOnly) return
-  saveUndoState()
-  const sheet = getActiveSheet()
-  if (!sheet) return
-  const { c1, c2 } = selectionRange.value
-  for (let c = c1; c <= c2; c++) {
-    ;(sheet as any).setColumnWidth?.(c, colWidthValue.value)
-  }
-  showColWidthDialog.value = false
-}
-
-// ===== 协同功能 =====
+// ===== 协同 =====
 const {
   collabConnectionState,
-  collabSyncState,
   collabOnlineUsers,
   syncSelectionEnabled,
   syncFilterEnabled,
@@ -2309,43 +1274,81 @@ const {
   sheetEditorRef,
 })
 
+// ===== 视图开关 / 格式刷 =====
+function toggleGridlines() { showGridlines.value = !showGridlines.value }
 
+function handleFormatPainter() {
+  if (props.readOnly) return
+  formatPainterActive.value = !formatPainterActive.value
+}
 
-onMounted(async () => {
-  if (hasUsableWorkbookContent(props.initialContent)) {
-    console.log('[ExcelEditor] 文档加载方式: JSON 加载', props.initialContent)
-  } else if (props.documentUrl) {
-    console.log('[ExcelEditor] 文档加载方式: 远程文件加载', props.documentUrl)
-    try {
-      await loadWorkbookFromDocumentUrl(props.documentUrl)
-    } catch (e) {
-      message.error(e instanceof Error ? e.message : t('message.importFailed'))
-    }
-  } else {
-    console.log('[ExcelEditor] 文档加载方式: 空白文档')
+function handleHeaderCommand(command: string) {
+  switch (command) {
+    case 'import': return triggerImportExcel()
+    case 'save': return handleSave()
+    case 'undo': return handleUndo()
+    case 'redo': return handleRedo()
   }
-  await nextTick()
-  scheduleUniverRender()
-})
-onUnmounted(() => {
+}
 
-  destroyCollaboration()
-  clearUniverRenderTimer()
-  clearUniverWorkbookDisposables()
-  disposeActiveUniverWorkbook()
-  univerAPI?.dispose()
-  univerAPI = null
-  univerInstance?.dispose()
-  univerInstance = null
-})
+// ===== 插入内容 =====
+function insertImage() {
+  if (props.readOnly) return
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = 'image/*'
+  input.onchange = () => {
+    const file = input.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const range = getSelectionRange()
+      if (!range) return
+      saveUndoState()
+      range.setValue(`[image:${file.name}]`)
+      commitUniverFacadeMutation()
+    }
+    reader.readAsDataURL(file)
+  }
+  input.click()
+}
 
+function insertFunction(fn: string) {
+  if (props.readOnly) return
+  const range = getSelectionRange()
+  if (!range) return
+  saveUndoState()
+  range.setValue(`=${fn}()`)
+  formulaValue.value = `=${fn}()`
+  syncToolbarAndFormula()
+  commitUniverFacadeMutation()
+  selectCellRefInput()
+}
 
-// ===== Misc =====
+// ===== 导入 / 导出 / 新建 =====
+function stripSpreadsheetExtension(name: string): string {
+  return String(name || '').trim().replace(/\.(xlsx|xlsm|xls|csv)$/i, '')
+}
+
+function fileNameFromUrl(url: string): string {
+  try {
+    const pathname = new URL(url, window.location.origin).pathname
+    const last = decodeURIComponent(pathname.split('/').filter(Boolean).pop() || '')
+    return stripSpreadsheetExtension(last)
+  } catch {
+    const last = decodeURIComponent(String(url).split('?')[0].split('#')[0].split('/').filter(Boolean).pop() || '')
+    return stripSpreadsheetExtension(last)
+  }
+}
+
+function currentWorkbookFileName(): string {
+  const name = stripSpreadsheetExtension(headerTitle.value) || t('sheet.defaultTitle')
+  return `${name}.xlsx`
+}
 
 function handlePrint() {
   window.print()
 }
-
 
 function triggerImportExcel() {
   if (props.readOnly) return
@@ -2367,6 +1370,7 @@ async function handleImportExcelChange(e: Event) {
       throw new Error(result.error || t('message.importFailed'))
     }
     applyWorkbookState(result.workbook)
+    localDocumentTitle.value = stripSpreadsheetExtension(file.name) || t('sheet.defaultTitle')
     scheduleUniverRender()
     emitChange()
     message.success(t('message.importSuccess', { name: file.name }))
@@ -2392,9 +1396,7 @@ async function handleExportExcel() {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     })
     const link = document.createElement('a')
-    const now = new Date()
-    const text = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`
-    link.download = `${t('sheet.defaultWorkbookName')}-${text}.xlsx`
+    link.download = currentWorkbookFileName()
     link.href = URL.createObjectURL(blob)
     link.click()
     URL.revokeObjectURL(link.href)
@@ -2408,7 +1410,7 @@ async function handleExportExcel() {
 function resetWorkbookForNewDocument() {
   workbook.version = 1
   workbook.resources = undefined
-  workbook.sheets = [createDefaultSheet(0)]
+  workbook.sheets = [createDefaultSheet(0, workbookStateOptions)]
   activeSheetIndex.value = 0
   selected.row = 0
   selected.col = 0
@@ -2417,8 +1419,7 @@ function resetWorkbookForNewDocument() {
   syncDimensionStateFromActiveSheet()
   loadFilterStateFromActiveSheet()
   syncToolbarAndFormula()
-  undoStack.value = []
-  redoStack.value = []
+  clearHistory()
 }
 
 async function handleCreateNewWorkbook() {
@@ -2440,9 +1441,8 @@ async function handleCreateNewWorkbook() {
     if (!result.success || !result.data) {
       throw new Error(result.error || t('message.exportFailed'))
     }
-    const now = new Date()
-    const fileName = `${t('sheet.defaultWorkbookName')}-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}.xlsx`
-    localDocumentTitle.value = fileName.replace(/\.xlsx$/i, '')
+    localDocumentTitle.value = t('sheet.defaultTitle')
+    const fileName = currentWorkbookFileName()
     const excelPayload = {
       fileName,
       mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -2456,158 +1456,6 @@ async function handleCreateNewWorkbook() {
     const msg = error instanceof Error ? error.message : t('message.createFailed')
     message.error(msg)
   }
-}
-
-// ===== 字号增减 =====
-async function changeFontSize(delta: number) {
-  if (props.readOnly) return
-  const numericSizes = sizeOptions.map(s => s.value).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b)
-  const current = toolbarState.fontSize || 12
-  const idx = numericSizes.findIndex(s => s >= current)
-  let newIdx: number
-  if (delta > 0) {
-    newIdx = idx < 0 ? numericSizes.length - 1 : Math.min(idx + 1, numericSizes.length - 1)
-  } else {
-    newIdx = idx <= 0 ? 0 : idx - 1
-  }
-  toolbarState.fontSize = numericSizes[newIdx]
-  const range = await getPreparedSelectionRange()
-  if (!range) return
-  saveUndoState()
-  range.setFontSize(numericSizes[newIdx])
-  await finishRangeStyleMutation()
-}
-
-// ===== 快捷格式按钮 =====
-async function quickFormat(fmt: 'currency' | 'percent') {
-  if (props.readOnly) return
-  toolbarState.numberFormat = fmt
-  const context = getActiveSheetCommandContext()
-  if (!context) return
-  saveUndoState()
-  const pattern = fmt === 'currency' ? '¥#,##0.00' : '0.00%'
-  const values = []
-  for (let row = context.range.startRow; row <= context.range.endRow; row++) {
-    for (let col = context.range.startColumn; col <= context.range.endColumn; col++) {
-      values.push({ row, col, pattern })
-    }
-  }
-  await executeSheetCommand(SetNumfmtCommand.id, {
-    unitId: context.unitId,
-    subUnitId: context.subUnitId,
-    values,
-  })
-}
-
-async function changeDecimal(delta: number) {
-  if (props.readOnly) return
-  toolbarState.decimalPlaces = Math.max(0, Math.min(10, (toolbarState.decimalPlaces ?? 2) + delta))
-  const context = getActiveSheetCommandContext()
-  if (!context) return
-  saveUndoState()
-  const fmt = toolbarState.numberFormat || 'auto'
-  let pattern = ''
-  if (fmt === 'currency') {
-    pattern = `¥#,##0.${'#'.repeat(toolbarState.decimalPlaces)}`
-  } else if (fmt === 'percent') {
-    pattern = `0.${'#'.repeat(toolbarState.decimalPlaces)}%`
-  }
-  if (!pattern) return
-  const values = []
-  for (let row = context.range.startRow; row <= context.range.endRow; row++) {
-    for (let col = context.range.startColumn; col <= context.range.endColumn; col++) {
-      values.push({ row, col, pattern })
-    }
-  }
-  await executeSheetCommand(SetNumfmtCommand.id, {
-    unitId: context.unitId,
-    subUnitId: context.subUnitId,
-    values,
-  })
-}
-
-// ===== 垂直对齐 =====
-async function setVerticalAlign(va: VerticalAlign) {
-  if (props.readOnly) return
-  toolbarState.verticalAlign = va
-  const range = await getPreparedSelectionRange()
-  if (!range) return
-  saveUndoState()
-  range.setVerticalAlignment(va)
-  await finishRangeStyleMutation()
-}
-
-// ===== 文字旋转 =====
-async function setRotation(deg: number) {
-  if (props.readOnly) return
-  toolbarState.rotation = deg
-  const range = await getPreparedSelectionRange()
-  if (!range) return
-  saveUndoState()
-  range.setTextRotation(deg)
-  await finishRangeStyleMutation()
-}
-
-// ===== 筛选 =====
-const {
-  FILTER_EMPTY_TOKEN,
-  filterActive,
-  filterColumn,
-  filterKeyword,
-  filteredRows,
-  filterPopoverVisible,
-  filterValueOptions,
-  filterSelectedValues,
-  resetFilterState,
-  prepareFilterPanel,
-  isFilterValueSelected,
-  onFilterValueChange,
-  toggleAllFilterValues,
-  applyFilterRows,
-  applyFilterAndClose,
-  clearFilter,
-} = useSheetFilter({
-  getActiveSheet: activeSheet,
-  selected,
-  cellKey,
-  columnLabel,
-  syncFilterStateToActiveSheet,
-  emitChange,
-})
-
-// ===== 插入图片 =====
-function insertImage() {
-  if (props.readOnly) return
-  const input = document.createElement('input')
-  input.type = 'file'
-  input.accept = 'image/*'
-  input.onchange = () => {
-    const file = input.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      const range = getSelectionRange()
-      if (!range) return
-      saveUndoState()
-      range.setValue(`[image:${file.name}]`)
-      commitUniverFacadeMutation()
-    }
-    reader.readAsDataURL(file)
-  }
-  input.click()
-}
-
-// ===== 快速函数 =====
-function insertFunction(fn: string) {
-  if (props.readOnly) return
-  const range = getSelectionRange()
-  if (!range) return
-  saveUndoState()
-  range.setValue(`=${fn}()`)
-  formulaValue.value = `=${fn}()`
-  syncToolbarAndFormula()
-  commitUniverFacadeMutation()
-  selectCellRefInput()
 }
 
 // ===== Emit =====
@@ -2630,10 +1478,35 @@ function emitChange(source: 'internal' | 'univer' = 'internal') {
       sheets: workbook.sheets
     }
   }
-  console.log('[ExcelEditor] 保存后的JSON:', payload)
   emit('change', payload)
 }
+
+// ===== 生命周期 =====
+onMounted(async () => {
+  if (!hasUsableWorkbookContent(props.initialContent) && props.documentUrl) {
+    try {
+      await loadWorkbookFromDocumentUrl(props.documentUrl)
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : t('message.importFailed'))
+    }
+  }
+  await nextTick()
+  scheduleUniverRender()
+})
+onUnmounted(() => {
+
+  destroyCollaboration()
+  clearUniverRenderTimer()
+  clearUniverWorkbookDisposables()
+  unbindUndoRedoStatus()
+  disposeActiveUniverWorkbook()
+  univerAPI?.dispose()
+  univerAPI = null
+  univerInstance?.dispose()
+  univerInstance = null
+})
 </script>
+
 
 <style scoped>
 .sheet-editor {
@@ -2712,79 +1585,6 @@ function emitChange(source: 'internal' | 'univer' = 'internal') {
   flex-wrap: nowrap;
 }
 
-.ribbon-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 28px;
-  padding: 0 8px;
-  border: 1px solid transparent;
-  background: transparent;
-  border-radius: 3px;
-  cursor: pointer;
-  font-size: 12px;
-  color: #3c4043;
-  white-space: nowrap;
-  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
-}
-
-.ribbon-btn:hover:not(:disabled) {
-  background: #dadce0;
-  color: #202124;
-}
-
-.ribbon-btn.active {
-  background: #d3e3fd;
-  color: #1a73e8;
-}
-
-.ribbon-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.ribbon-btn-sm {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 6px;
-  border: 1px solid transparent;
-  background: transparent;
-  border-radius: 3px;
-  cursor: pointer;
-  font-size: 12px;
-  color: #3c4043;
-  white-space: nowrap;
-  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
-}
-
-.ribbon-btn-sm:hover:not(:disabled) {
-  background: #dadce0;
-  color: #202124;
-}
-
-.ribbon-btn-sm.active {
-  background: #d3e3fd;
-  color: #1a73e8;
-}
-
-.ribbon-btn-sm:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.ribbon-divider {
-  display: inline-block;
-  width: 1px;
-  height: 20px;
-  background: #dadce0;
-  margin: 0 4px;
-  flex-shrink: 0;
-}
-
 /* ===== Ribbon 分组 ===== */
 .ribbon-group {
   display: flex;
@@ -2852,83 +1652,6 @@ function emitChange(source: 'internal' | 'univer' = 'internal') {
   line-height: 1.2;
   text-align: center;
 }
-
-/* ===== 工具栏 ===== */
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  padding: 4px 12px;
-  border-bottom: 1px solid #e2e6ed;
-  background: #f1f1f1;
-  flex-wrap: wrap;
-  font-size: 14px;
-}
-
-.toolbar-divider {
-  display: inline-block;
-  width: 1px;
-  height: 20px;
-  background: #dadce0;
-  margin: 0 4px;
-  flex-shrink: 0;
-}
-
-.toolbar-select {
-  width: 130px;
-}
-
-.toolbar-size {
-  width: 70px;
-}
-
-.tb {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 6px;
-  border: 1px solid transparent;
-  background: transparent;
-  border-radius: 3px;
-  cursor: pointer;
-  color: #3c4043;
-  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
-  flex-shrink: 0;
-}
-
-.tb:hover:not(:disabled) {
-  background: #dadce0;
-  border-color: transparent;
-  color: #202124;
-}
-
-.tb:active:not(:disabled) {
-  background: #d3e3fd;
-}
-
-.tb.active {
-  background: #d3e3fd;
-  color: #1a73e8;
-  border-color: transparent;
-}
-
-.tb:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.tb .v-icon {
-  flex-shrink: 0;
-}
-
-.tb > .v-icon + .v-icon {
-  font-size: 12px;
-  color: #80868b;
-  margin-left: -2px;
-}
-
 
 /* 颜色按钮 */
 .color-btn {
@@ -3128,134 +1851,6 @@ function emitChange(source: 'internal' | 'univer' = 'internal') {
   height: 100%;
   position: relative;
 
-}
-
-
-/* ===== 查找替换面板 ===== */
-.search-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px 12px;
-  border-bottom: 1px solid #e2e6ed;
-  background: #f8f9fa;
-}
-
-.search-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.search-input {
-  flex: 1;
-  height: 28px;
-  border: 1px solid #dadce0;
-  border-radius: 4px;
-  padding: 0 8px;
-  font-size: 13px;
-  color: #202124;
-  outline: none;
-  background: #fff;
-}
-
-.search-input:focus {
-  border-color: #1a73e8;
-  box-shadow: 0 0 0 1px #1a73e8 inset;
-}
-
-.search-count {
-  font-size: 12px;
-  color: #5f6368;
-  white-space: nowrap;
-  min-width: 40px;
-  text-align: center;
-}
-
-.tb-sm {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 24px;
-  height: 24px;
-  padding: 0 4px;
-  border: none;
-  background: transparent;
-  border-radius: 4px;
-  cursor: pointer;
-  color: #5f6368;
-  font-size: 11px;
-}
-
-.tb-sm:hover:not(:disabled) {
-  background: #e8eaed;
-}
-
-.tb-sm:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.replace-btn {
-  font-size: 12px;
-  color: #1a73e8;
-  padding: 0 8px;
-  white-space: nowrap;
-}
-
-.replace-btn:hover:not(:disabled) {
-  background: #e8f0fe;
-}
-
-.filter-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.filter-title {
-  font-size: 12px;
-  color: #3c4043;
-  font-weight: 600;
-}
-
-.filter-input {
-  height: 28px;
-  border: 1px solid #dadce0;
-  border-radius: 4px;
-  padding: 0 8px;
-  font-size: 12px;
-  outline: none;
-}
-
-.filter-input:focus {
-  border-color: #1a73e8;
-  box-shadow: 0 0 0 1px #1a73e8 inset;
-}
-
-.filter-values {
-  max-height: 180px;
-  overflow-y: auto;
-  border: 1px solid #eceff3;
-  border-radius: 4px;
-  padding: 4px;
-  background: #fff;
-}
-
-.filter-value-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: #3c4043;
-  line-height: 1.6;
-}
-
-.filter-actions-inline {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  justify-content: flex-end;
 }
 
 /* ===== Ant Design Vue 覆盖 ===== */

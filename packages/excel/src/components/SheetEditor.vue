@@ -1899,8 +1899,13 @@ onUnmounted(() => {
 
 </style>
 
-<!-- 全局样式：弹出菜单（teleport 到 body，scoped 无法影响）-->
+<!-- 全局样式：弹出层 teleport 到 body，scoped 无法影响 -->
 <style>
+html,
+body {
+  overflow: hidden;
+}
+
 .sheet-editor .menu-card {
   width: 100%;
   margin: 0;

@@ -30,22 +30,44 @@ editor.setDocumentName('示例表格.xlsx')
 interface Options {
   container: string | HTMLElement
   initialContent?: any
+  documentUrl?: string
+  collaboration?: ExcelCollaborationConfig
   readOnly?: boolean
   locale?: ExcelLocale
   i18n?: Partial<ExcelI18nMessages>
+  apiBaseUrl?: string
+  authToken?: string
+  authTokenGetter?: AuthTokenProvider
+  sheetApi?: SheetDocumentApi
+  requestConfig?: SheetRequestConfig
   /** xlsx → IWorkbook；未注入则导入不可用 */
   importCallback?: ExcelImportCallback
   /** IWorkbook → xlsx；未注入则导出不可用 */
   exportCallback?: ExcelExportCallback
-  onChange?: (content: any) => void
+  onReady?: (payload: any) => void
+  onChange?: (payload: any) => void
+  onNewDocument?: (payload: any) => void
+  onCollabConnectionChange?: (payload: { state: string }) => void
+  onCollabSyncStateChange?: (payload: { state: string }) => void
+  onCollabUsersChange?: (payload: UserInfo[]) => void
+  onCollabError?: (payload: { code: string; message: string }) => void
 }
 
 class ExcelEditor {
   constructor(options: Options)
-  setContent(content: any): void
-  setDocumentName(name: string): void
-  setReadOnly(readOnly: boolean): void
+  setInitialContent(content?: any): void
+  setDocumentName(name?: string): void
+  setCollaboration(collaboration?: ExcelCollaborationConfig): void
+  setReadOnly(readOnly?: boolean): void
+  setLocale(locale?: ExcelLocale): void
+  setI18n(i18n?: Partial<ExcelI18nMessages>): void
   destroy(): void
+
+  static setApi(api: SheetDocumentApi): void
+  static setAuthProvider(provider: AuthTokenProvider | null): void
+  static setRequestConfig(config: SheetRequestConfig | null): void
+  static createHttpApi(baseUrl: string): SheetDocumentApi
+  static getVersion(): string
 }
 ```
 

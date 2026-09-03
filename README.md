@@ -30,7 +30,9 @@ vervedocs/
 │   ├── core/                    # 核心编辑器库
 │   ├── docx/                    # Word 文档编辑器完整版 UI
 │   ├── docx-lite/               # Word 文档编辑器轻量版
+│   ├── docx-parser/             # 本地 JS 实现的 .docx 导入/导出
 │   ├── excel/                   # Excel 表格编辑器
+│   ├── excel-parser/            # 本地 JS 实现的 .xlsx 导入/导出
 │   ├── ppt/                     # PPT 演示文稿编辑器
 │   └── icons/                   # 图标库
 ├── plugins/                     # 编辑器扩展库
@@ -45,9 +47,11 @@ vervedocs/
 │   ├── docx-editor-state/       # 状态管理
 │   ├── docx-editor-transform/   # 文档转换
 │   └── docx-editor-view/        # 视图层
+├── playground/                  # 各编辑器演示项目
 ├── apps/
 │   ├── collaboration-server/    # 协作服务器
-│   └── collaboration-server-monitor/  # 协作服务器监控
+│   ├── collaboration-server-monitor/  # 协作服务器监控
+│   └── vervedocs-for-node/      # Node 端文档处理
 ├── package.json
 ├── pnpm-workspace.yaml
 └── pnpm-lock.yaml
@@ -83,10 +87,26 @@ npm install @vervedoc/docx
 
 ### @vervedoc/excel
 
-Excel 表格编辑器，支持电子表格的在线编辑。
+Excel 表格编辑器，支持电子表格的在线编辑。`.xlsx` 导入/导出需宿主注入回调，本地实现见 `@vervedoc/excel-parser`。
 
 ```bash
 npm install @vervedoc/excel
+```
+
+### @vervedoc/excel-parser
+
+本地 JS 实现的 `.xlsx` 导入/导出，满足编辑器的 `importCallback` / `exportCallback` 契约，可替换为服务端或其他引擎。
+
+```bash
+npm install @vervedoc/excel-parser
+```
+
+### @vervedoc/docx-parser
+
+本地 JS 实现的 `.docx` 导入/导出，满足 Word 编辑器的导入/导出契约，可替换为服务端或其他引擎。
+
+```bash
+npm install @vervedoc/docx-parser
 ```
 
 ### @vervedoc/ppt
@@ -110,6 +130,12 @@ npm install @vervedoc/docx
 
 # 安装 Excel 编辑器
 npm install @vervedoc/excel
+
+# 安装 Excel 导入/导出（可选；未注入回调时 xlsx 导入导出不可用）
+npm install @vervedoc/excel-parser
+
+# 安装 Word 导入/导出（可选）
+npm install @vervedoc/docx-parser
 
 # 安装 PPT 编辑器
 npm install @vervedoc/ppt
@@ -135,12 +161,28 @@ editor.command.executeBold()  // 加粗
 editor.command.executeUndo()  // 撤销
 ```
 
+#### Excel 表格编辑器
+
+```typescript
+import { ExcelEditor } from '@vervedoc/excel'
+import {
+  createExcelImportCallback,
+  createExcelExportCallback
+} from '@vervedoc/excel-parser'
+
+const editor = new ExcelEditor({
+  container: '#app',
+  importCallback: createExcelImportCallback(),
+  exportCallback: createExcelExportCallback()
+})
+```
+
 ## 开发指南
 
 ### 环境要求
 
 - Node.js >= 18.0.0
-- pnpm >= 9.0.0
+- pnpm >= 10.0.0
 
 ### 本地开发
 

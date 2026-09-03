@@ -1,31 +1,34 @@
-import type { IRowElement } from '@vervedoc/docx-editor-schema'
-import { EventBus } from '@vervedoc/docx-editor-state'
-import { EventBusMap } from '@vervedoc/docx-editor-schema'
-import type { IChartRenderer } from '@vervedoc/docx-editor-schema'
+import type { IElement } from '@vervedoc/docx-editor-schema'
+
+/** 图表渲染器接口（verve schema 未导出，在此本地定义） */
+export interface IChartRenderer {
+  renderToDataUrl(option: any, width: number, height: number, dpr: number): string
+  generateOption(chartType: string, data: any, config: any, subtype?: string): any
+  extractTableData(tableElement: any, range: any): any
+}
 
 export class ChartBlock {
-  private element: IRowElement
+  private element: IElement
   private chartContainer: HTMLDivElement | null = null
   private chartImg: HTMLImageElement | null = null
   private draw: any
   private resizeObserver: ResizeObserver | null = null
-  private eventBus: EventBus<EventBusMap & { chartClick: (payload: { chartId?: string; chartType?: string; dataSource?: any; config?: any }) => void }>
 
-  constructor(element: IRowElement, draw: any) {
+  constructor(element: IElement, draw: any) {
     this.element = element
     this.draw = draw
-    this.eventBus = draw.getEventBus()
   }
 
   /**
    * 获取图表渲染器
    */
   private getChartRenderer(): IChartRenderer | null {
-    return this.draw.getRegister()?.getChartRenderer() || null
+    const register = (this.draw as any)?.getRegister?.()
+    return register?.getChartRenderer?.() || null
   }
 
   public render(blockItemContainer: HTMLDivElement) {
-    const block = this.element.block
+    const block = (this.element as any).block
     if (!block?.chartBlock) return
 
     // 检查是否有图表渲染器
@@ -38,7 +41,7 @@ export class ChartBlock {
 
     // 创建图表容器
     this.chartContainer = document.createElement('div')
-    this.chartContainer.setAttribute('data-id', this.element.id!)
+    this.chartContainer.setAttribute('data-id', (this.element as any).id ?? '')
     this.chartContainer.style.width = '100%'
     this.chartContainer.style.height = '100%'
     blockItemContainer.append(this.chartContainer)
@@ -58,15 +61,16 @@ export class ChartBlock {
       this.updateChart()
     })
     this.resizeObserver.observe(blockItemContainer)
-    
+
     // 添加点击事件监听器，用于激活图表配置面板
     this.chartContainer.addEventListener('click', (e: Event) => {
       e.stopPropagation()
-      this.eventBus.emit('chartClick', {
-        chartId: this.element.id,
-        chartType: this.element.block?.chartBlock?.chartType,
-        dataSource: this.element.block?.chartBlock?.dataSource,
-        config: this.element.block?.chartBlock?.config
+      const eventBus = (this.draw as any)?.getEventBus?.()
+      eventBus?.emit?.('chartClick', {
+        chartId: (this.element as any).id,
+        chartType: block?.chartBlock?.chartType,
+        dataSource: block?.chartBlock?.dataSource,
+        config: block?.chartBlock?.config
       })
     })
   }
@@ -98,7 +102,7 @@ export class ChartBlock {
     const renderer = this.getChartRenderer()
     if (!renderer) return
 
-    const chartBlock = this.element.block?.chartBlock
+    const chartBlock = (this.element as any).block?.chartBlock
     if (!chartBlock) return
 
     const option = this.getChartOption(chartBlock, renderer)
@@ -122,7 +126,7 @@ export class ChartBlock {
 
     if (dataSource.type === 'table' && dataSource.tableId) {
       // 从表格提取数据
-      const elementList = this.draw.getElementList()
+      const elementList: IElement[] = this.draw.getElementList()
       const tableElement = elementList.find(
         (el: any) => el.type === 'table' && el.id === dataSource.tableId
       )

@@ -1,7 +1,6 @@
-import { EDITOR_PREFIX } from '@vervedoc/docx-editor-schema'
-import { BlockType } from '@vervedoc/docx-editor-schema'
-import { IRowElement } from '@vervedoc/docx-editor-schema'
-import { Draw } from '@vervedoc/docx-editor-view'
+import { EDITOR_PREFIX, BlockType } from '../../../constants'
+import type { IElement } from '@vervedoc/docx-editor-schema'
+import type { Draw } from '@vervedoc/docx-editor-view'
 import { BlockParticle } from '../block-particle'
 import { IFrameBlock } from './i-frame-block'
 import { VideoBlock } from './video-block'
@@ -10,12 +9,12 @@ import { ChartBlock } from './chart-block'
 
 export class BaseBlock {
   private draw: Draw
-  private element: IRowElement
+  private element: IElement
   private block: IFrameBlock | VideoBlock | AudioBlock | ChartBlock | null
   private blockContainer: HTMLDivElement
   private blockItem: HTMLDivElement
 
-  constructor(blockParticle: BlockParticle, element: IRowElement) {
+  constructor(blockParticle: BlockParticle, element: IElement) {
     this.draw = blockParticle.getDraw()
     this.blockContainer = blockParticle.getBlockContainer()
     this.element = element
@@ -24,7 +23,7 @@ export class BaseBlock {
     this.blockContainer.append(this.blockItem)
   }
 
-  public getBlockElement(): IRowElement {
+  public getBlockElement(): IElement {
     return this.element
   }
 
@@ -35,7 +34,8 @@ export class BaseBlock {
   }
 
   public render() {
-    const block = this.element.block!
+    const block = (this.element as any).block
+    if (!block) return
     if (block.type === BlockType.IFRAME) {
       this.block = new IFrameBlock(this.element)
       this.block.render(this.blockItem)
@@ -52,14 +52,20 @@ export class BaseBlock {
   }
 
   public setClientRects(pageNo: number, x: number, y: number) {
-    const height = this.draw.getHeight()
-    const pageGap = this.draw.getPageGap()
-    const preY = pageNo * (height + pageGap)
+    const layout = (this.draw as any).getLayout?.()
+    const pageHeight = layout?.pages?.[0]?.rect?.height
+      ?? (this.draw as any).getOptions?.()?.pageHeight
+      ?? 1123
+    const pageGap = (this.draw as any).getOptions?.()?.pageGap ?? 24
+    const preY = pageNo * (pageHeight + pageGap)
     // 尺寸
-    const { metrics } = this.element
-    this.blockItem.style.width = `${metrics.width}px`
-    this.blockItem.style.height = `${metrics.height}px`
+    const metrics = (this.element as any).metrics
+    if (metrics) {
+      this.blockItem.style.width = `${metrics.width}px`
+      this.blockItem.style.height = `${metrics.height}px`
+    }
     // 位置
+    this.blockItem.style.position = 'absolute'
     this.blockItem.style.left = `${x}px`
     this.blockItem.style.top = `${preY + y}px`
   }

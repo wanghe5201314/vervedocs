@@ -1,7 +1,8 @@
-import { EDITOR_PREFIX } from '@vervedoc/docx-editor-schema'
-import { ElementType } from '@vervedoc/docx-editor-schema'
-import { IRowElement } from '@vervedoc/docx-editor-schema'
-import { Draw } from '@vervedoc/docx-editor-view'
+import { EDITOR_PREFIX } from '../../constants'
+
+import { walkTree } from '@vervedoc/docx-editor-schema'
+import type { IElement } from '@vervedoc/docx-editor-schema'
+import type { Draw } from '@vervedoc/docx-editor-view'
 import { BaseBlock } from './modules/base-block'
 import '../../assets/css/block/block.css'
 
@@ -22,6 +23,9 @@ export class BlockParticle {
   private _createBlockContainer(): HTMLDivElement {
     const blockContainer = document.createElement('div')
     blockContainer.classList.add(`${EDITOR_PREFIX}-block-container`)
+    blockContainer.style.position = 'absolute'
+    blockContainer.style.inset = '0'
+    blockContainer.style.pointerEvents = 'auto'
     return blockContainer
   }
 
@@ -33,8 +37,9 @@ export class BlockParticle {
     return this.blockContainer
   }
 
-  public render(pageNo: number, element: IRowElement, x: number, y: number) {
-    const id = element.id!
+  public render(pageNo: number, element: IElement, x: number, y: number) {
+    const id = (element as any).id
+    if (!id) return
     const cacheBlock = this.blockMap.get(id)
     if (cacheBlock) {
       cacheBlock.setClientRects(pageNo, x, y)
@@ -50,15 +55,15 @@ export class BlockParticle {
     if (!this.blockMap.size) return
     const elementList = this.draw.getElementList()
     const blockElementIds: string[] = []
-    for (let e = 0; e < elementList.length; e++) {
-      const element = elementList[e]
-      if (element.type === ElementType.BLOCK) {
-        blockElementIds.push(element.id!)
+    walkTree(elementList, (node) => {
+      if (node.type === 'block') {
+        const id = (node as any).id
+        if (id) blockElementIds.push(id)
       }
-    }
+    })
     this.blockMap.forEach(block => {
-      const id = block.getBlockElement().id!
-      if (!blockElementIds.includes(id)) {
+      const id = (block.getBlockElement() as any).id
+      if (id && !blockElementIds.includes(id)) {
         block.remove()
         this.blockMap.delete(id)
       }

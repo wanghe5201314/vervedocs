@@ -1,10 +1,10 @@
 import {
   EDITOR_COMPONENT,
-  EDITOR_PREFIX
-} from '@vervedoc/docx-editor-schema'
-import { EditorComponent } from '@vervedoc/docx-editor-schema'
-import { IElementPosition } from '@vervedoc/docx-editor-schema'
-import { Draw } from '@vervedoc/docx-editor-view'
+  EDITOR_PREFIX,
+  EditorComponent,
+  type IElementPosition
+} from '../../constants'
+import type { Draw } from '@vervedoc/docx-editor-view'
 
 export interface IDatePickerLang {
   now: string
@@ -271,9 +271,12 @@ export class DatePicker {
         pageNo
       }
     } = this.renderOptions
-    const height = this.draw.getHeight()
-    const pageGap = this.draw.getPageGap()
-    const currentPageNo = pageNo ?? this.draw.getPageNo()
+    const layout = (this.draw as any).getLayout?.()
+    const height = layout?.pages?.[0]?.rect?.height
+      ?? (this.draw as any).getOptions?.()?.pageHeight
+      ?? 1123
+    const pageGap = (this.draw as any).getOptions?.()?.pageGap ?? 24
+    const currentPageNo = pageNo ?? 0
     const preY = currentPageNo * (height + pageGap)
     // 位置
     this.dom.container.style.left = `${left}px`
@@ -296,8 +299,26 @@ export class DatePicker {
   }
 
   private _getLang() {
-    const i18n = this.draw.getI18n()
-    const t = i18n.t.bind(i18n)
+    const i18n = (this.draw as any).getI18n?.()
+    const defaults: Record<string, string> = {
+      'datePicker.now': '现在',
+      'datePicker.confirm': '确定',
+      'datePicker.return': '返回',
+      'datePicker.timeSelect': '选择时间',
+      'datePicker.weeks.sun': '日',
+      'datePicker.weeks.mon': '一',
+      'datePicker.weeks.tue': '二',
+      'datePicker.weeks.wed': '三',
+      'datePicker.weeks.thu': '四',
+      'datePicker.weeks.fri': '五',
+      'datePicker.weeks.sat': '六',
+      'datePicker.year': '年',
+      'datePicker.month': '月',
+      'datePicker.hour': '时',
+      'datePicker.minute': '分',
+      'datePicker.second': '秒'
+    }
+    const t = i18n?.t ? i18n.t.bind(i18n) : (key: string) => defaults[key] ?? key
     return {
       now: t('datePicker.now'),
       confirm: t('datePicker.confirm'),

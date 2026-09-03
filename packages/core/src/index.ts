@@ -37,5 +37,23 @@ export { Command, CommandAdapt } from '@vervedoc/docx-editor-transform'
 export { CommentComponent, RevisionComponent } from '@vervedoc/docx-editor-comment'
 export type { DocxCommentMeta, RevisionCallbacks, CommentCallbacks } from '@vervedoc/docx-editor-comment'
 
+// commands 扩展（搜索 / 块级媒体 / 日期 / LaTeX / 小工具）
+export {
+  Search,
+  BlockParticle,
+  DateParticle,
+  LaTexParticle,
+  GadgetComponent,
+  ControlComponent,
+  generateShapeSvg,
+  svgToDataUrl
+} from '@vervedoc/docx-editor-commands'
+export type {
+  ISearchResult,
+  IReplaceOption,
+  INavigateInfo,
+  ShapeDefinition
+} from '@vervedoc/docx-editor-commands'
+
 // version
 export const version = '4.0.0-tree'

@@ -984,6 +984,21 @@ export class Draw {
     return this.scroller
   }
 
+  /** 供 commands 组件（BlockParticle 等）挂载 DOM 的容器（随文档滚动） */
+  getContainer(): HTMLDivElement {
+    return this.scroller
+  }
+
+  /** 供 commands 组件获取当前活动区域元素列表 */
+  getElementList(): import('@vervedoc/docx-editor-schema').IElement[] {
+    return this.getActiveDocument().elements
+  }
+
+  /** 供 commands 组件访问 RangeManager（路径接口） */
+  getRange(): RangeManager | null {
+    return this.range ?? null
+  }
+
   /** 供批注/修订组件查询：新架构下容器宽度由 Draw 管理，外部不应修改 */
   isNewLayoutEngine(): boolean { return true }
 

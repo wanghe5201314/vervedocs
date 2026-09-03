@@ -1,92 +1,49 @@
-import { ElementType } from '@vervedoc/docx-editor-schema'
-import { DeepRequired } from '@vervedoc/docx-editor-schema'
-import { IEditorOption } from '@vervedoc/docx-editor-schema'
-import { IElement, IElementPosition } from '@vervedoc/docx-editor-schema'
-import { formatElementContext } from '@vervedoc/docx-editor-schema'
-import { RangeManager } from '@vervedoc/docx-editor-state'
-import { Draw } from '@vervedoc/docx-editor-view'
+import type { IElement } from '@vervedoc/docx-editor-schema'
+import { getByPath } from '@vervedoc/docx-editor-schema'
+import type { RangeManager } from '@vervedoc/docx-editor-state'
+import type { Draw } from '@vervedoc/docx-editor-view'
+import type { IElementPosition } from '../../constants'
 import { DatePicker } from './date-picker'
 
 export class DateParticle {
   private draw: Draw
-  private range: RangeManager
+  private range: RangeManager | null
   private datePicker: DatePicker
-  private options: DeepRequired<IEditorOption>
 
   constructor(draw: Draw) {
     this.draw = draw
-    this.options = draw.getOptions()
     this.range = draw.getRange()
     this.datePicker = new DatePicker(draw, {
       onSubmit: this._setValue.bind(this)
     })
   }
 
-  private _setValue(date: string) {
-    if (!date) return
-    const range = this.getDateElementRange()
-    if (!range) return
-    const [leftIndex, rightIndex] = range
+  /**
+   * 获取当前光标所在的 date 元素（基于路径寻址）
+   */
+  private getDateElement(): IElement | null {
+    if (!this.range) return null
+    const focus = this.range.getFocus()
+    if (!focus) return null
     const elementList = this.draw.getElementList()
-    const startElement = elementList[leftIndex + 1]
-    // 删除旧时间
-    this.draw.spliceElementList(
-      elementList,
-      leftIndex + 1,
-      rightIndex - leftIndex
-    )
-    this.range.setRange(leftIndex, leftIndex)
-    // 插入新时间
-    const dateElement: IElement = {
-      type: ElementType.DATE,
-      value: '',
-      dateFormat: startElement.dateFormat,
-      valueList: [
-        {
-          value: date
-        }
-      ]
-    }
-    formatElementContext(elementList, [dateElement], leftIndex, {
-      editorOptions: this.options
-    })
-    this.draw.insertElementList([dateElement])
+    return getByPath(elementList, focus.path)
   }
 
-  public getDateElementRange(): [number, number] | null {
-    let leftIndex = -1
-    let rightIndex = -1
-    const { startIndex, endIndex } = this.range.getRange()
-    if (!~startIndex && !~endIndex) return null
-    const elementList = this.draw.getElementList()
-    const startElement = elementList[startIndex]
-    if (startElement.type !== ElementType.DATE) return null
-    // 向左查找
-    let preIndex = startIndex
-    while (preIndex >= 0) {
-      const preElement = elementList[preIndex]
-      if (preElement.dateId !== startElement.dateId) {
-        leftIndex = preIndex
-        break
-      }
-      preIndex--
+  /**
+   * 用户选择日期后写回：直接修改 date 元素的 valueList[0].value，再刷新文档
+   */
+  private _setValue(date: string) {
+    if (!date) return
+    const element = this.getDateElement()
+    if (!element || element.type !== 'date') return
+    const el = element as IElement & { valueList?: { value: string }[]; dateFormat?: string }
+    if (!el.valueList) {
+      el.valueList = [{ value: date }]
+    } else {
+      el.valueList[0] = { value: date }
     }
-    // 向右查找
-    let nextIndex = startIndex + 1
-    while (nextIndex < elementList.length) {
-      const nextElement = elementList[nextIndex]
-      if (nextElement.dateId !== startElement.dateId) {
-        rightIndex = nextIndex - 1
-        break
-      }
-      nextIndex++
-    }
-    // 控件在最后
-    if (nextIndex === elementList.length) {
-      rightIndex = nextIndex - 1
-    }
-    if (!~leftIndex || !~rightIndex) return null
-    return [leftIndex, rightIndex]
+    // 刷新文档渲染
+    this.draw.setDocument(this.draw.getDocument())
   }
 
   public clearDatePicker() {
@@ -94,18 +51,12 @@ export class DateParticle {
   }
 
   public renderDatePicker(element: IElement, position: IElementPosition) {
-    const elementList = this.draw.getElementList()
-    const range = this.getDateElementRange()
-    const value = range
-      ? elementList
-          .slice(range[0] + 1, range[1] + 1)
-          .map(el => el.value)
-          .join('')
-      : ''
+    const el = element as IElement & { valueList?: { value: string }[]; dateFormat?: string }
+    const value = el.valueList?.[0]?.value ?? ''
     this.datePicker.render({
       value,
       position,
-      dateFormat: element.dateFormat
+      dateFormat: el.dateFormat
     })
   }
 }

@@ -1,4 +1,4 @@
-import { IRowElement } from '@vervedoc/docx-editor-schema'
+import type { IElement } from '@vervedoc/docx-editor-schema'
 
 const ALLOWED_SRC_PROTOCOLS = ['https:', 'http:']
 
@@ -13,9 +13,9 @@ function isAllowedSrc(url: string): boolean {
 
 export class IFrameBlock {
   public static readonly sandbox = ['allow-scripts']
-  private element: IRowElement
+  private element: IElement
 
-  constructor(element: IRowElement) {
+  constructor(element: IElement) {
     this.element = element
   }
 
@@ -36,17 +36,17 @@ export class IFrameBlock {
   }
 
   public render(blockItemContainer: HTMLDivElement) {
-    const block = this.element.block!
+    const block = (this.element as any).block
     const iframe = document.createElement('iframe')
-    iframe.setAttribute('data-id', this.element.id!)
+    iframe.setAttribute('data-id', (this.element as any).id ?? '')
     iframe.sandbox.add(...IFrameBlock.sandbox)
     iframe.style.border = 'none'
     iframe.style.width = '100%'
     iframe.style.height = '100%'
-    if (block.iframeBlock?.src) {
+    if (block?.iframeBlock?.src) {
       if (!isAllowedSrc(block.iframeBlock.src)) return
       iframe.src = block.iframeBlock.src
-    } else if (block.iframeBlock?.srcdoc) {
+    } else if (block?.iframeBlock?.srcdoc) {
       iframe.srcdoc = block.iframeBlock.srcdoc
     }
     iframe.addEventListener('load', () => {

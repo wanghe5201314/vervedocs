@@ -1,6 +1,6 @@
 import Plyr from 'plyr'
 import 'plyr/dist/plyr.css'
-import { IRowElement } from '@vervedoc/docx-editor-schema'
+import type { IElement } from '@vervedoc/docx-editor-schema'
 
 const ALLOWED_MEDIA_PROTOCOLS = ['https:', 'http:', 'blob:', 'data:']
 
@@ -14,16 +14,16 @@ function isAllowedMediaUrl(url: string): boolean {
 }
 
 export class VideoBlock {
-  private element: IRowElement
+  private element: IElement
   private player: Plyr | null = null
-  
-  constructor(element: IRowElement) {
+
+  constructor(element: IElement) {
     this.element = element
   }
 
   public render(blockItemContainer: HTMLDivElement) {
-    const block = this.element.block!
-    const videoBlock = block.videoBlock
+    const block = (this.element as any).block
+    const videoBlock = block?.videoBlock
 
     if (!videoBlock) return
 
@@ -52,7 +52,7 @@ export class VideoBlock {
     video.src = videoBlock.src
     video.controls = false // Plyr 会接管控制
     video.preload = 'metadata'
-    
+
     // 设置封面图
     if (videoBlock.poster) {
       video.poster = videoBlock.poster
@@ -119,23 +119,23 @@ export class VideoBlock {
           --plyr-menu-color: #fff;
           border-radius: 8px;
         }
-        
+
         .plyr__control--overlaid {
           background: rgba(64, 158, 255, 0.9);
         }
-        
+
         .plyr__control--overlaid:hover {
           background: rgba(64, 158, 255, 1);
         }
-        
+
         .plyr__control:hover {
           background: rgba(64, 158, 255, 0.1);
         }
-        
+
         .plyr__menu__container {
           border-radius: 4px;
         }
-        
+
         .plyr--video {
           border-radius: 8px;
           overflow: hidden;

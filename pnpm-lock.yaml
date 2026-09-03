@@ -182,6 +182,9 @@ importers:
 
   packages/core:
     dependencies:
+      '@vervedoc/docx-editor-commands':
+        specifier: workspace:^
+        version: link:../../plugins/docx-editor-commands
       '@vervedoc/docx-editor-comment':
         specifier: workspace:^
         version: link:../../plugins/docx-editor-comment

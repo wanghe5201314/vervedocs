@@ -1,4 +1,4 @@
-import { IRowElement } from '@vervedoc/docx-editor-schema'
+import type { IElement } from '@vervedoc/docx-editor-schema'
 
 const ALLOWED_MEDIA_PROTOCOLS = ['https:', 'http:', 'blob:', 'data:']
 
@@ -12,16 +12,16 @@ function isAllowedMediaUrl(url: string): boolean {
 }
 
 export class AudioBlock {
-  private element: IRowElement
+  private element: IElement
   private audio: HTMLAudioElement | null = null
-  
-  constructor(element: IRowElement) {
+
+  constructor(element: IElement) {
     this.element = element
   }
 
   public render(blockItemContainer: HTMLDivElement) {
-    const block = this.element.block!
-    const audioBlock = block.audioBlock
+    const block = (this.element as any).block
+    const audioBlock = block?.audioBlock
 
     if (!audioBlock) return
 

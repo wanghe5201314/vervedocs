@@ -29,15 +29,16 @@ export class LaTexParticle {
     y: number
   ) {
     const { scale = DEFAULT_SCALE } = this.draw?.getOptions?.() || {}
-    const width = element.width! * scale
-    const height = element.height! * scale
+    const el = element as any
+    const width = el.width * scale
+    const height = el.height * scale
     if (this.imageCache.has(element.value)) {
       const img = this.imageCache.get(element.value)!
       ctx.drawImage(img, x, y, width, height)
     } else {
       const laTexLoadPromise = new Promise((resolve, reject) => {
         const img = new Image()
-        img.src = element.laTexSVG!
+        img.src = el.laTexSVG
         img.onload = () => {
           ctx.drawImage(img, x, y, width, height)
           this.imageCache.set(element.value, img)

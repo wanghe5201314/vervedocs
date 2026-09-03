@@ -37,3 +37,14 @@ export { parseExcel, readExcelFileToWorkbook } from './parser/excel.parser'
 export { writeExcel, writeWorkbookToExcelBuffer } from './writer/excel.writer'
 export { createExcelImportCallback, createExcelExportCallback } from './callbacks'
 export { normalizeFontFamily } from './utils/font-family'
+export { cellKey, columnLabel } from './utils/cell'
+export {
+  DEFAULT_SHEET_ROWS,
+  DEFAULT_SHEET_COLS,
+  hasUsableWorkbookContent,
+  normalizeWorkbook,
+  fromInternalSheet,
+  fromFortuneSheetRecord,
+  createDefaultSheet,
+} from './utils/workbook-state'
+export type { IWorkbookStateOptions } from './utils/workbook-state'

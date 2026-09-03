@@ -7,7 +7,7 @@ export default {
     cancel: '取消',
   },
   sheet: {
-    defaultTitle: '未命名表格',
+    defaultTitle: '新建文件',
     newSheet: '工作表',
     sheet: '工作表',
     defaultSheetName: '工作表{index}',

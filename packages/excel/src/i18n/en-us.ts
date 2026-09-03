@@ -7,7 +7,7 @@ export default {
     cancel: 'Cancel',
   },
   sheet: {
-    defaultTitle: 'Untitled Spreadsheet',
+    defaultTitle: 'New File',
     newSheet: 'Sheet',
     sheet: 'Sheet',
     defaultSheetName: 'Sheet{index}',

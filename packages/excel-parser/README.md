@@ -13,6 +13,17 @@
 
 ## 用法
 
+单独转换：
+
+```ts
+import { parseExcel, writeExcel } from '@vervedoc/excel-parser'
+
+const imported = await parseExcel(file)
+const exported = await writeExcel(workbook)
+```
+
+注入编辑器（需同时安装 `@vervedoc/excel`）：
+
 ```ts
 import { ExcelEditor } from '@vervedoc/excel'
 import {
@@ -25,13 +36,4 @@ new ExcelEditor({
   importCallback: createExcelImportCallback(),
   exportCallback: createExcelExportCallback()
 })
-```
-
-也可直接使用底层 API：
-
-```ts
-import { parseExcel, writeExcel } from '@vervedoc/excel-parser'
-
-const imported = await parseExcel(file)
-const exported = await writeExcel(workbook)
 ```

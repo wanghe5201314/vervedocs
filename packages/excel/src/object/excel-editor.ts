@@ -7,11 +7,7 @@ import '@/assets/iconfont/iconfont.js'
 import type { ExcelLocale, ExcelI18nMessages } from '@/i18n'
 import type { SheetDocumentApi, AuthTokenProvider, SheetRequestConfig } from '@/api/sheet.api'
 import type { ExcelCollaborationConfig, UserInfo } from '@vervedoc/docx-editor-collaboration'
-import type { ExcelExportCallback, ExcelImportCallback } from '@vervedoc/excel-parser'
-import {
-  createExcelExportCallback,
-  createExcelImportCallback,
-} from '@vervedoc/excel-parser'
+import type { ExcelExportCallback, ExcelImportCallback } from '@/types'
 import {
   setSheetDocumentApi,
   setAuthProvider as setSheetAuthProvider,
@@ -35,9 +31,9 @@ export interface Options {
   authTokenGetter?: AuthTokenProvider
   sheetApi?: SheetDocumentApi
   requestConfig?: SheetRequestConfig
-  /** xlsx → IWorkbook，默认使用 @vervedoc/excel-parser */
+  /** xlsx → IWorkbook；未注入则导入不可用。实现示例：createExcelImportCallback() */
   importCallback?: ExcelImportCallback
-  /** IWorkbook → xlsx，默认使用 @vervedoc/excel-parser */
+  /** IWorkbook → xlsx；未注入则导出不可用。实现示例：createExcelExportCallback() */
   exportCallback?: ExcelExportCallback
   onReady?: (payload: any) => void
   onChange?: (payload: any) => void
@@ -94,8 +90,8 @@ export class ExcelEditor {
     readOnly?: boolean
     locale?: ExcelLocale
     i18n?: Partial<ExcelI18nMessages>
-    importCallback: ExcelImportCallback
-    exportCallback: ExcelExportCallback
+    importCallback?: ExcelImportCallback
+    exportCallback?: ExcelExportCallback
   }
 
   static version: string = PKG_VERSION
@@ -124,8 +120,8 @@ export class ExcelEditor {
       readOnly: options.readOnly,
       locale: options.locale,
       i18n: options.i18n,
-      importCallback: options.importCallback ?? createExcelImportCallback(),
-      exportCallback: options.exportCallback ?? createExcelExportCallback(),
+      importCallback: options.importCallback,
+      exportCallback: options.exportCallback,
     })
     const root = defineComponent(() => () => h(SheetEditorComponent as any, {
       ref: (el: any) => {

@@ -16,7 +16,7 @@ import {
   SetSpecificRowsVisibleCommand,
 } from '@univerjs/sheets'
 import { Direction } from '@univerjs/core'
-import { cellKey } from '@vervedoc/excel-parser'
+import { cellKey } from '../utils/cell'
 import type { SheetCoreContext } from './sheet-editor-context'
 
 export const UNIVER_COMMANDS = {

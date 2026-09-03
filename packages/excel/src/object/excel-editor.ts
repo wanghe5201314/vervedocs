@@ -26,7 +26,6 @@ export interface Options {
   container: string | HTMLElement
   initialContent?: any
   documentUrl?: string
-  documentName?: string
   collaboration?: ExcelCollaborationConfig
   readOnly?: boolean
   locale?: ExcelLocale
@@ -61,13 +60,12 @@ const resolveTarget = (target: string | HTMLElement): HTMLElement => {
 
 const normalizeCollaborationOptions = (
   input?: ExcelCollaborationConfig,
-  fallbackDocId?: string,
 ): ExcelCollaborationConfig | undefined => {
   if (!input) return undefined
 
   const source = input as Partial<ExcelCollaborationConfig>
   const serverUrl = String(source.serverUrl || '').trim() || 'ws://127.0.0.1:1234'
-  const docId = String(source.docId || '').trim() || String(fallbackDocId || '').trim() || 'local'
+  const docId = String(source.docId || '').trim() || 'local'
   const user = (source.user || {}) as Partial<UserInfo>
   const userId = String(user.userId || '').trim() || `user-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const userName = String(user.userName || '').trim() || '当前用户'
@@ -121,8 +119,8 @@ export class ExcelEditor {
     this.state = reactive({
       initialContent: options.initialContent,
       documentUrl: options.documentUrl,
-      documentName: options.documentName,
-      collaboration: normalizeCollaborationOptions(options.collaboration, options.documentName),
+      documentName: undefined,
+      collaboration: normalizeCollaborationOptions(options.collaboration),
       readOnly: options.readOnly,
       locale: options.locale,
       i18n: options.i18n,
@@ -164,7 +162,7 @@ export class ExcelEditor {
   }
 
   setCollaboration(collaboration?: ExcelCollaborationConfig) {
-    this.state.collaboration = normalizeCollaborationOptions(collaboration, this.state.documentName)
+    this.state.collaboration = normalizeCollaborationOptions(collaboration)
   }
 
   setReadOnly(readOnly?: boolean) {

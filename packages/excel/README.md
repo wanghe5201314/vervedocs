@@ -8,12 +8,12 @@ import { ExcelEditor } from '@wanghe1995/excel-editor-ui'
 const editor = new ExcelEditor({
   container: '#app',
   initialContent: null,
-  documentName: '示例表格.xlsx',
   readOnly: false,
   onChange: (content) => {
     console.log('excel change', content)
   }
 })
+editor.setDocumentName('示例表格.xlsx')
 ```
 
 ## 对外 API（仅对象式）
@@ -22,7 +22,6 @@ const editor = new ExcelEditor({
 interface Options {
   container: string | HTMLElement
   initialContent?: any
-  documentName?: string
   readOnly?: boolean
   locale?: ExcelLocale
   i18n?: Partial<ExcelI18nMessages>

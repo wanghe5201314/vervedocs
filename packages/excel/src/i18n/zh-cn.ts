@@ -33,8 +33,10 @@ export default {
   message: {
     importSuccess: '导入成功: {name}',
     importFailed: '导入失败',
+    importCallbackMissing: '未注入导入回调 importCallback，无法导入 .xlsx',
     exportSuccess: '导出成功',
     exportFailed: '导出失败',
+    exportCallbackMissing: '未注入导出回调 exportCallback，无法导出 .xlsx',
     createSuccess: '创建成功',
     createFailed: '创建失败',
   },

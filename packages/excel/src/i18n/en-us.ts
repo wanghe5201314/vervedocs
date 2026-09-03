@@ -33,8 +33,10 @@ export default {
   message: {
     importSuccess: 'Import successful: {name}',
     importFailed: 'Import failed',
+    importCallbackMissing: 'importCallback is not provided; cannot import .xlsx',
     exportSuccess: 'Export successful',
     exportFailed: 'Export failed',
+    exportCallbackMissing: 'exportCallback is not provided; cannot export .xlsx',
     createSuccess: 'Created successfully',
     createFailed: 'Create failed',
   },

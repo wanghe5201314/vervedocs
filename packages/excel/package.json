@@ -30,10 +30,8 @@
     "build": "vue-tsc --noEmit && vite build",
     "lint": "eslint ."
   },
-  "dependencies": {
-    "@vervedoc/excel-parser": "workspace:^"
-  },
   "peerDependencies": {
+    "@vervedoc/excel-parser": "workspace:^",
     "@mdi/js": "catalog:",
     "@univerjs/core": "^0.25.1",
     "@univerjs/design": "^0.25.1",
@@ -75,6 +73,11 @@
     "@univerjs/ui": "^0.25.1",
     "@vervedoc/icons": "workspace:^",
     "vue": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "@vervedoc/excel-parser": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@eslint/js": "catalog:",

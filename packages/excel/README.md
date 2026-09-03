@@ -3,18 +3,26 @@
 ## 快速开始（仅对象式接入）
 
 ```ts
-import { ExcelEditor } from '@wanghe1995/excel-editor-ui'
+import { ExcelEditor } from '@vervedoc/excel'
+import {
+  createExcelImportCallback,
+  createExcelExportCallback
+} from '@vervedoc/excel-parser'
 
 const editor = new ExcelEditor({
   container: '#app',
   initialContent: null,
   readOnly: false,
+  importCallback: createExcelImportCallback(),
+  exportCallback: createExcelExportCallback(),
   onChange: (content) => {
     console.log('excel change', content)
   }
 })
 editor.setDocumentName('示例表格.xlsx')
 ```
+
+`.xlsx` 导入/导出由宿主注入的 `importCallback` / `exportCallback` 完成。未注入时对应功能不可用。本地 JS 实现见 `@vervedoc/excel-parser`。
 
 ## 对外 API（仅对象式）
 
@@ -25,9 +33,9 @@ interface Options {
   readOnly?: boolean
   locale?: ExcelLocale
   i18n?: Partial<ExcelI18nMessages>
-  /** xlsx → IWorkbook，默认 @vervedoc/excel-parser */
+  /** xlsx → IWorkbook；未注入则导入不可用 */
   importCallback?: ExcelImportCallback
-  /** IWorkbook → xlsx，默认 @vervedoc/excel-parser */
+  /** IWorkbook → xlsx；未注入则导出不可用 */
   exportCallback?: ExcelExportCallback
   onChange?: (content: any) => void
 }
@@ -45,4 +53,4 @@ class ExcelEditor {
 
 - 统一采用 `new ExcelEditor(...)` 接入。
 - 宿主负责数据请求与持久化；编辑器仅负责渲染与变更回调。
-- `.xlsx` 导入/导出由 `@vervedoc/excel-parser` 提供（可通过 `importCallback` / `exportCallback` 替换）。
+- `@vervedoc/excel-parser` 是可选 peer，与编辑器独立发布。

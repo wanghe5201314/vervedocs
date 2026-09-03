@@ -1,4 +1,4 @@
-import type { IUiSheet, IWorkbook } from '@vervedoc/excel-parser'
+import type { IUiSheet, IWorkbook } from '../types'
 
 export const SHEET_NOTE_PLUGIN = 'SHEET_NOTE_PLUGIN'
 

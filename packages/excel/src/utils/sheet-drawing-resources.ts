@@ -1,5 +1,5 @@
 import { DrawingTypeEnum, ImageSourceType } from '@univerjs/core'
-import type { ISheetFloatingImage, ISheetImageAnchor, IUiSheet, IWorkbook } from '@vervedoc/excel-parser'
+import type { ISheetFloatingImage, ISheetImageAnchor, IUiSheet, IWorkbook } from '../types'
 
 export const SHEET_DRAWING_PLUGIN = 'SHEET_DRAWING_PLUGIN'
 

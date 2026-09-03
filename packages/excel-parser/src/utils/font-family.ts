@@ -1,3 +1,6 @@
+/**
+ * TODO: 与 @vervedoc/excel 的 FONT_FAMILY_ALIASES / normalizeFontFamily 双份维护，后续抽到独立 types 包统一。
+ */
 const FONT_FAMILY_ALIASES: Record<string, string> = {
   '宋体': 'SimSun',
   'Song Ti': 'SimSun',

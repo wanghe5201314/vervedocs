@@ -1,3 +1,7 @@
+/**
+ * TODO: 与 @vervedoc/excel 的 IWorkbook 等交换类型双份维护，后续抽到独立 types 包统一。
+ */
+
 export type Align = 'left' | 'center' | 'right'
 export type VerticalAlign = 'top' | 'middle' | 'bottom'
 export type WrapMode = 'clip' | 'overflow' | 'wrap'

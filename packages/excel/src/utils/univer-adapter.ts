@@ -12,14 +12,13 @@ import {
   VerticalAlign,
 } from '@univerjs/core'
 import type { ICellMeta, ICellRichTextRun, ICellStyle, IUiSheet, IWorkbook } from '../types'
-import { normalizeFontFamily } from '@vervedoc/excel-parser'
+import { normalizeFontFamily } from './font-family'
 import { buildSheetDrawingResources, mergeWorkbookResources } from './sheet-drawing-resources'
 import { applyNoteResourcesToSheets, buildSheetNoteResources } from './sheet-note-resources'
 import { internalRichTextToUniver, stripRunLevelFontStyle, univerRichTextToInternal } from './rich-text'
+import { DEFAULT_SHEET_COLS, DEFAULT_SHEET_ROWS } from './workbook-state'
 
 const DEFAULT_WORKBOOK_ID = 'vervedocs-excel'
-const DEFAULT_SHEET_ROWS = 50
-const DEFAULT_SHEET_COLS = 26
 const DEFAULT_COL_WIDTH = 73
 const DEFAULT_ROW_HEIGHT = 19
 

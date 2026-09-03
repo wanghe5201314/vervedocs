@@ -1,5 +1,5 @@
 import { BooleanNumber, type IDocumentData, type ITextRun } from '@univerjs/core'
-import type { ICellRichTextRun, ICellStyle } from '@vervedoc/excel-parser'
+import type { ICellRichTextRun, ICellStyle } from '../types'
 
 function normalizeColor(color?: string): string | undefined {
   const value = String(color || '').trim()

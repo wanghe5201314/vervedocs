@@ -1,7 +1,7 @@
 {
   "name": "@vervedoc/excel-parser",
   "version": "1.0.0",
-  "description": "VerveDoc 本地 JS 实现：Excel 导入/导出（符合 ExcelImportCallback / ExcelExportCallback 契约）",
+  "description": "VerveDoc本地JS实现Excel 导入/导出",
   "author": "wanghe",
   "license": "MIT",
   "type": "module",
@@ -32,6 +32,7 @@
     "package.json"
   ],
   "scripts": {
+    "build": "pnpm run clean && vite build",
     "clean": "node -e \"const fs = require('fs'); if(fs.existsSync('dist')) fs.rmSync('dist', {recursive: true})\"",
     "type:check": "tsc --noEmit"
   },
@@ -40,7 +41,9 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-plugin-dts": "catalog:"
   },
   "engines": {
     "node": ">=16.0.0"

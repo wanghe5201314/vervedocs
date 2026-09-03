@@ -35,8 +35,10 @@ export interface ExcelI18nMessages {
   message: {
     importSuccess: string
     importFailed: string
+    importCallbackMissing: string
     exportSuccess: string
     exportFailed: string
+    exportCallbackMissing: string
     createSuccess: string
     createFailed: string
   }

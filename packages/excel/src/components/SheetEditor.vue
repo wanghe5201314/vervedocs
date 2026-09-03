@@ -422,9 +422,10 @@ import type { FUniver } from '@univerjs/core/facade'
 import type { FRange, FWorkbook, FWorksheet } from '@univerjs/sheets/facade'
 import { VIcon } from '@vervedoc/icons'
 import UnifiedTopHeader from './UnifiedTopHeader.vue'
-import type { IWorkbook } from '../types'
-import type { ExcelExportCallback, ExcelImportCallback } from '@vervedoc/excel-parser'
-import { cellKey, columnLabel, createDefaultSheet, hasUsableWorkbookContent, normalizeWorkbook } from '@vervedoc/excel-parser'
+import type { ExcelExportCallback, ExcelImportCallback, IWorkbook } from '../types'
+import { cellKey, columnLabel } from '../utils/cell'
+import { createDefaultSheet, hasUsableWorkbookContent, normalizeWorkbook } from '../utils/workbook-state'
+import { applyNoteResourcesToSheets } from '../utils/sheet-note-resources'
 
 import type { ExcelI18nMessages, ExcelLocale } from '@/i18n'
 import { getAuthToken } from '../api/sheet.api'
@@ -457,8 +458,8 @@ const props = withDefaults(defineProps<{
   locale?: ExcelLocale
   i18n?: Partial<ExcelI18nMessages>
   collaboration?: ExcelCollaborationConfig
-  importCallback: ExcelImportCallback
-  exportCallback: ExcelExportCallback
+  importCallback?: ExcelImportCallback
+  exportCallback?: ExcelExportCallback
 }>(), {
   initialContent: undefined,
   documentUrl: undefined,
@@ -469,6 +470,22 @@ const props = withDefaults(defineProps<{
 })
 
 const { t } = useSheetI18n(props)
+
+function requireImportCallback(): ExcelImportCallback | null {
+  if (!props.importCallback) {
+    message.error(t('message.importCallbackMissing'))
+    return null
+  }
+  return props.importCallback
+}
+
+function requireExportCallback(): ExcelExportCallback | null {
+  if (!props.exportCallback) {
+    message.error(t('message.exportCallbackMissing'))
+    return null
+  }
+  return props.exportCallback
+}
 
 const emit = defineEmits<{
   (e: 'change', value: any): void
@@ -507,6 +524,11 @@ const headerTitle = computed(() => {
 
 // ===== 编辑器可变状态 =====
 const workbook = reactive<IWorkbook>(normalizeWorkbook(props.initialContent, workbookStateOptions))
+
+function prepareWorkbookForExport() {
+  applyNoteResourcesToSheets(workbook.sheets, workbook.resources)
+}
+
 const activeSheetIndex = ref(0)
 const selected = reactive({ row: 0, col: 0 })
 const selectionEnd = reactive({ row: 0, col: 0 })
@@ -1040,7 +1062,9 @@ async function loadWorkbookFromDocumentUrl(url: string) {
   if (!resp.ok) throw new Error(`请求失败: ${resp.status}`)
   const buffer = await resp.arrayBuffer()
   if (!buffer || buffer.byteLength === 0) throw new Error('远程文件内容为空')
-  const result = await props.importCallback(buffer, {
+  const importCallback = requireImportCallback()
+  if (!importCallback) return
+  const result = await importCallback(buffer, {
     defaultSheetName: index => t('sheet.defaultSheetName', { index: index + 1 }),
   })
   if (!result.success || !result.workbook) {
@@ -1362,8 +1386,10 @@ async function handleImportExcelChange(e: Event) {
   const input = e.target as HTMLInputElement | null
   const file = input?.files?.[0]
   if (!file) return
+  const importCallback = requireImportCallback()
+  if (!importCallback) return
   try {
-    const result = await props.importCallback(file, {
+    const result = await importCallback(file, {
       defaultSheetName: index => t('sheet.defaultSheetName', { index: index + 1 }),
     })
     if (!result.success || !result.workbook) {
@@ -1384,9 +1410,12 @@ async function handleImportExcelChange(e: Event) {
 
 async function handleExportExcel() {
   if (!workbook.sheets.length) return
+  const exportCallback = requireExportCallback()
+  if (!exportCallback) return
   try {
     syncWorkbookFromUniver()
-    const result = await props.exportCallback(workbook, {
+    prepareWorkbookForExport()
+    const result = await exportCallback(workbook, {
       defaultSheetName: index => t('sheet.defaultSheetName', { index: index + 1 }),
     })
     if (!result.success || !result.data) {
@@ -1424,6 +1453,8 @@ function resetWorkbookForNewDocument() {
 
 async function handleCreateNewWorkbook() {
   if (props.readOnly) return
+  const exportCallback = requireExportCallback()
+  if (!exportCallback) return
   try {
     resetWorkbookForNewDocument()
     const dbPayload = {
@@ -1435,7 +1466,8 @@ async function handleCreateNewWorkbook() {
         sheets: workbook.sheets
       }
     }
-    const result = await props.exportCallback(workbook, {
+    prepareWorkbookForExport()
+    const result = await exportCallback(workbook, {
       defaultSheetName: index => t('sheet.defaultSheetName', { index: index + 1 }),
     })
     if (!result.success || !result.data) {

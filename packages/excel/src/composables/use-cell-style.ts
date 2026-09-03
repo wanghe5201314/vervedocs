@@ -3,7 +3,7 @@ import { BooleanNumber } from '@univerjs/core'
 import type { FRange } from '@univerjs/sheets/facade'
 import { SetNumfmtCommand } from '@univerjs/sheets-numfmt'
 import { SetStyleCommand } from '@univerjs/sheets'
-import { cellKey } from '@vervedoc/excel-parser'
+import { cellKey } from '../utils/cell'
 import type { Align, ICellStyle, VerticalAlign, WrapMode } from '../types'
 import {
   DEFAULT_FONT_FAMILY,

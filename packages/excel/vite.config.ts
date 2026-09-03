@@ -26,6 +26,9 @@ export default defineConfig(() => {
     if (id === '@vervedoc/docx-editor-collaboration' || id.startsWith('@vervedoc/docx-editor-collaboration/')) {
       return true
     }
+    if (id === '@vervedoc/excel-parser' || id.startsWith('@vervedoc/excel-parser/')) {
+      return true
+    }
     if (id === '@vervedoc/icons' || id.startsWith('@vervedoc/icons/')) {
       return true
     }
@@ -98,12 +101,6 @@ export default defineConfig(() => {
           },
           chunkFileNames: 'chunks/[name]-[hash].js',
           assetFileNames: 'assets/[name]-[hash][extname]',
-          manualChunks(id) {
-            if (id.includes('node_modules/exceljs')) {
-              return 'exceljs'
-            }
-            return undefined
-          },
           dir: 'dist'
         }
       },

@@ -10,6 +10,7 @@
           @toggle-dropdown="toggleDropdown"
           @save="handleSave"
           @import-doc="handleImportDoc"
+          @export-doc="handleExportDoc"
           @command="runCommand"
           @show-popup="showPopup"
         />
@@ -37,6 +38,7 @@
         @save="handleSave"
         @toggle-more="moreMenuOpen = !moreMenuOpen"
         @import-doc="handleImportDoc"
+        @export-doc="handleExportDoc"
         @command="runCommand"
         @show-popup="showPopup"
       />
@@ -647,6 +649,41 @@ const handleImportDoc = () => {
     }
   }
   input.click()
+}
+
+const handleExportDoc = () => {
+  closeDropdowns()
+  if (!props.exportCallback) {
+    alert('未注入文档导出回调 exportCallback，无法导出 .docx 文件')
+    return
+  }
+  try {
+    const value = runCommand<any>('getValue')
+    const json = value?.data ?? value
+    props.exportCallback(json)
+      .then(result => {
+        if (!result.success || !result.data) {
+          alert(`导出失败: ${result.error || '未知错误'}`)
+          return
+        }
+        const blob = new Blob([result.data], {
+          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${documentMeta.name || '文档'}.docx`
+        a.click()
+        URL.revokeObjectURL(url)
+      })
+      .catch(error => {
+        console.error('导出失败:', error)
+        alert(`导出失败: ${(error as Error)?.message || '未知错误'}`)
+      })
+  } catch (error) {
+    console.error('导出失败:', error)
+    alert(`导出失败: ${(error as Error)?.message || '未知错误'}`)
+  }
 }
 
 const resolveImportMode = (mode: ImportMode) => {

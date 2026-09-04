@@ -82,8 +82,6 @@ export default defineConfig({
         '@mdi/js',
         'echarts',
         /^echarts\//,
-        'docx',
-        'jszip',
         'qrcode',
         'plyr',
         'prismjs',
@@ -104,8 +102,6 @@ export default defineConfig({
 
           '@mdi/js': 'mdiJs',
           echarts: 'echarts',
-          docx: 'docx',
-          jszip: 'JSZip',
           qrcode: 'QRCode',
           plyr: 'Plyr',
           prismjs: 'Prism',

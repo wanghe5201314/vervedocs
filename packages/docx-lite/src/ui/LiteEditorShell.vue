@@ -147,6 +147,41 @@
         </div>
       </div>
 
+      <div class="popup-panel catalog-popup" :class="{ show: activePopup === 'catalog', 'mobile-popup': isMobile }">
+        <div class="popup-title">插入自动目录</div>
+        <div class="catalog-type-options">
+          <label class="catalog-type-option" :class="{ active: autoCatalogType === 1 }">
+            <input type="radio" v-model="autoCatalogType" :value="1" />
+            <span>仅一级标题</span>
+          </label>
+          <label class="catalog-type-option" :class="{ active: autoCatalogType === 2 }">
+            <input type="radio" v-model="autoCatalogType" :value="2" />
+            <span>一至二级标题</span>
+          </label>
+          <label class="catalog-type-option" :class="{ active: autoCatalogType === 3 }">
+            <input type="radio" v-model="autoCatalogType" :value="3" />
+            <span>一至三级标题</span>
+          </label>
+        </div>
+        <div class="catalog-preview">
+          <div v-if="autoCatalogLoading" class="catalog-preview-empty">加载中...</div>
+          <div v-else-if="!autoCatalogPreview.length" class="catalog-preview-empty">暂无标题内容</div>
+          <div
+            v-for="item in autoCatalogPreview"
+            :key="item.id"
+            class="catalog-preview-item"
+            :class="`level-${item.level}`"
+          >
+            <span class="catalog-preview-name">{{ item.name }}</span>
+            <span class="catalog-preview-page">第 {{ item.pageNo }} 页</span>
+          </div>
+        </div>
+        <div class="popup-actions">
+          <button class="popup-btn popup-btn-secondary" @click="closePopup">取消</button>
+          <button class="popup-btn popup-btn-primary" :disabled="!autoCatalogPreview.length" @click="confirmInsertCatalog">插入</button>
+        </div>
+      </div>
+
       <div class="popup-panel shortcuts-popup" :class="{ show: activePopup === 'shortcuts', 'mobile-popup': isMobile }">
         <div class="popup-title">键盘快捷键</div>
         <div class="shortcuts-content">
@@ -185,7 +220,7 @@
 
 <script setup lang="ts">
 import type {IDocxDocumentMeta, IEditorOption, IElement, TitleLevel} from '@vervedoc/core'
-import DocxEditor, {TITLE_LEVEL} from '@vervedoc/core'
+import DocxEditor, {TITLE_LEVEL, PAPER_SIZE_LIST, DEFAULT_PAPER_SIZE} from '@vervedoc/core'
 import {computed, onBeforeUnmount, onMounted, reactive, ref} from 'vue'
 import type {ImportMode, LiteEditorShellExposed, SaveSnapshot, WordEditorOptions} from '../object/word-editor.types'
 import {useResponsive} from '../composables/useResponsive'
@@ -199,11 +234,6 @@ import MobileBottomBar from './components/MobileBottomBar.vue'
 import MobileCatalogDrawer from './components/MobileCatalogDrawer.vue'
 
 
-interface PaperSizePreset {
-  label: string
-  width: number
-  height: number
-}
 
 interface CatalogItem {
   id?: string
@@ -222,16 +252,7 @@ const props = defineProps<Omit<WordEditorOptions, 'container'>>()
 
 const { isMobile, isDesktop } = useResponsive()
 
-const PAPER_SIZES: PaperSizePreset[] = [
-  { label: 'A4 (21×29.7cm)', width: 794, height: 1123 },
-  { label: 'A3 (29.7×42cm)', width: 1190, height: 1684 },
-  { label: 'A5 (14.8×21cm)', width: 559, height: 794 },
-  { label: 'A6 (10.5×14.8cm)', width: 396, height: 559 },
-  { label: 'B4 (25×35.3cm)', width: 709, height: 1000 },
-  { label: 'B5 (17.6×25cm)', width: 498, height: 709 },
-  { label: 'Letter (21.6×27.9cm)', width: 612, height: 792 },
-  { label: 'Legal (21.6×35.6cm)', width: 612, height: 1008 }
-]
+const PAPER_SIZES = PAPER_SIZE_LIST
 
 const TITLE_LEVEL_MAP: Record<string, TitleLevel> = {
   '1': TITLE_LEVEL.FIRST,
@@ -257,10 +278,10 @@ const editorContainerRef = ref<HTMLDivElement | null>(null)
 const editor = ref<DocxEditor | null>(null)
 const catalogRefreshTimer = ref<number | null>(null)
 const activeDropdown = ref<string | null>(null)
-const activePopup = ref<'table' | 'link' | 'search' | 'shortcuts' | null>(null)
+const activePopup = ref<'table' | 'link' | 'search' | 'shortcuts' | 'catalog' | null>(null)
 const catalogOpen = ref(false)
 const paperDirection = ref<'vertical' | 'horizontal'>('vertical')
-const selectedPaperSizeIndex = ref(0)
+const selectedPaperSizeIndex = ref(PAPER_SIZE_LIST.findIndex(p => p.key === DEFAULT_PAPER_SIZE.key))
 const paperSizeMenuOpen = ref(false)
 const moreMenuOpen = ref(false)
 const zoomText = ref('100%')
@@ -278,6 +299,21 @@ const searchText = ref('')
 const replaceText = ref('')
 const importModeResolver = ref<((mode: ImportMode) => void) | null>(null)
 const catalogItems = ref<CatalogItem[]>([])
+
+interface AutoCatalogItem {
+  id: string
+  level: number
+  name: string
+  pageNo: number
+}
+interface AutoCatalogResult {
+  catalog1: AutoCatalogItem[]
+  catalog2: AutoCatalogItem[]
+  catalog3: AutoCatalogItem[]
+}
+const autoCatalogData = ref<AutoCatalogResult | null>(null)
+const autoCatalogType = ref<1 | 2 | 3>(1)
+const autoCatalogLoading = ref(false)
 
 useTouch(editorContainerRef, {
   minScale: 0.5,
@@ -421,9 +457,12 @@ const toggleDropdown = (name: string) => {
   activeDropdown.value = activeDropdown.value === name ? null : name
 }
 
-const showPopup = (name: 'table' | 'link' | 'search' | 'shortcuts') => {
+const showPopup = (name: 'table' | 'link' | 'search' | 'shortcuts' | 'catalog') => {
   closeDropdowns()
   activePopup.value = name
+  if (name === 'catalog') {
+    void loadAutoCatalog()
+  }
 }
 
 const closePopup = () => {
@@ -445,6 +484,29 @@ const refreshCatalog = async () => {
   if (!catalogOpen.value) return
   const catalog = await Promise.resolve(runCommand<CatalogItem[]>('getCatalog'))
   catalogItems.value = Array.isArray(catalog) ? catalog : []
+}
+
+const loadAutoCatalog = async () => {
+  autoCatalogLoading.value = true
+  try {
+    const result = await Promise.resolve(runCommand<AutoCatalogResult>('getAutoCatalog'))
+    autoCatalogData.value = result || null
+  } catch {
+    autoCatalogData.value = null
+  }
+  autoCatalogLoading.value = false
+}
+
+const autoCatalogPreview = computed<AutoCatalogItem[]>(() => {
+  if (!autoCatalogData.value) return []
+  if (autoCatalogType.value === 1) return autoCatalogData.value.catalog1
+  if (autoCatalogType.value === 2) return autoCatalogData.value.catalog2
+  return autoCatalogData.value.catalog3
+})
+
+const confirmInsertCatalog = () => {
+  runCommand('executeInsertAutoCatalog', autoCatalogType.value)
+  closePopup()
 }
 
 const refreshCatalogLater = (delay = 1000) => {

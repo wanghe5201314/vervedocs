@@ -16,23 +16,44 @@ function injectStyle(): void {
 .${PREFIX}__item:hover{background-color:#f5f7fa}
 .${PREFIX}__item.disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
 .${PREFIX}__item.disabled:hover{background-color:transparent}
-.${PREFIX}__item.danger .${PREFIX}__label,.${PREFIX}__item.danger .${PREFIX}__icon svg{color:#d14343}
+.${PREFIX}__item.danger .${PREFIX}__label,.${PREFIX}__item.danger .${PREFIX}__icon{color:#d14343}
 .${PREFIX}__main,.${PREFIX}__meta{display:inline-flex;align-items:center}
 .${PREFIX}__main{gap:10px;min-width:0;flex:1 1 auto}
 .${PREFIX}__meta{gap:8px;flex:0 0 auto}
-.${PREFIX}__icon{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;flex-shrink:0}
-.${PREFIX}__icon svg{width:16px;height:16px;color:#646a73}
-.${PREFIX}__item:hover .${PREFIX}__icon svg{color:#303133}
+.${PREFIX}__icon{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;flex-shrink:0;font-size:16px;color:#646a73}
+.${PREFIX}__item:hover .${PREFIX}__icon{color:#303133}
 .${PREFIX}__label{font-size:12px;color:#303133;font-weight:400}
 .${PREFIX}__shortcut{color:#909399;font-size:11px}
-.${PREFIX}__arrow{color:#909399;font-size:12px;display:inline-flex;align-items:center}
-.${PREFIX}__arrow svg{width:14px;height:14px}
+.${PREFIX}__arrow{color:#909399;font-size:14px;display:inline-flex;align-items:center}
 .${PREFIX}__divider{height:1px;background-color:#ebeef5;margin:6px 0}
 .${PREFIX}--sub{min-width:190px}
+.${PREFIX}__input-wrap{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto}
+.${PREFIX}__input{width:42px;height:22px;border:1px solid #dcdfe6;border-radius:2px;text-align:center;font-size:12px;color:#303133;background:#fff;outline:none;cursor:default}
+.${PREFIX}__input:focus{border-color:#409eff}
+.${PREFIX}__input-unit{font-size:11px;color:#909399;white-space:nowrap}
+.${PREFIX}__item--with-input{padding-right:8px}
+.${PREFIX}__color-wrap{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto}
+.${PREFIX}__color-input{width:28px;height:22px;border:1px solid #dcdfe6;border-radius:2px;cursor:pointer;padding:0;background:#fff;overflow:hidden}
+.${PREFIX}__color-input::-webkit-color-swatch-wrapper{padding:1px}
+.${PREFIX}__color-input::-webkit-color-swatch{border:none;border-radius:1px}
+.${PREFIX}__color-clear{font-size:11px;color:#909399;cursor:pointer;padding:2px 4px;border-radius:2px;white-space:nowrap}
+.${PREFIX}__color-clear:hover{background:#f5f7fa;color:#303133}
 `
   const el = document.createElement('style')
   el.textContent = css
   document.head.appendChild(el)
+}
+
+export interface MenuItemInput {
+  defaultValue: number
+  unit: string
+  min?: number
+  max?: number
+}
+
+export interface MenuItemColorPicker {
+  defaultColor?: string
+  allowClear?: boolean
 }
 
 export interface MenuItem {
@@ -42,24 +63,33 @@ export interface MenuItem {
   danger?: boolean
   disabled?: boolean
   submenu?: MenuItem[]
-  onClick?: () => void
+  input?: MenuItemInput
+  colorPicker?: MenuItemColorPicker
+  onClick?: (value?: number | string) => void
 }
 
 const SVG = {
-  insertRowAbove: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="6" width="12" height="8" rx="1"/><line x1="2" y1="10" x2="14" y2="10"/><path d="M8 1v4M6 3l2-2 2 2" stroke-linecap="round"/></svg>',
-  insertRowBelow: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="12" height="8" rx="1"/><line x1="2" y1="6" x2="14" y2="6"/><path d="M8 11v4M6 13l2 2 2-2" stroke-linecap="round"/></svg>',
-  insertColLeft: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="6" y="2" width="8" height="12" rx="1"/><line x1="10" y1="2" x2="10" y2="14"/><path d="M1 8h4M3 6l-2 2 2 2" stroke-linecap="round"/></svg>',
-  insertColRight: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="8" height="12" rx="1"/><line x1="6" y1="2" x2="6" y2="14"/><path d="M11 8h4M13 6l2 2-2 2" stroke-linecap="round"/></svg>',
-  deleteRow: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="5" width="12" height="6" rx="1"/><line x1="4" y1="8" x2="12" y2="8" stroke-dasharray="2 1.5"/></svg>',
-  deleteCol: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="5" y="2" width="6" height="12" rx="1"/><line x1="8" y1="4" x2="8" y2="12" stroke-dasharray="2 1.5"/></svg>',
-  splitCell: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="12" height="12" rx="1"/><line x1="8" y1="2" x2="8" y2="14" stroke-dasharray="2 1.5"/></svg>',
-  selectAll: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="12" height="12" rx="1"/><line x1="2" y1="6" x2="14" y2="6"/><line x1="2" y1="10" x2="14" y2="10"/><line x1="6" y1="2" x2="6" y2="14"/><line x1="10" y1="2" x2="10" y2="14"/></svg>',
-  alignLeft: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="10" y2="8"/><line x1="2" y1="12" x2="12" y2="12"/></svg>',
-  alignCenter: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><line x1="2" y1="4" x2="14" y2="4"/><line x1="4" y1="8" x2="12" y2="8"/><line x1="3" y1="12" x2="13" y2="12"/></svg>',
-  alignRight: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><line x1="2" y1="4" x2="14" y2="4"/><line x1="6" y1="8" x2="14" y2="8"/><line x1="4" y1="12" x2="14" y2="12"/></svg>',
-  link: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M6 10l4-4M4 8a2 2 0 012-2h2M12 8a2 2 0 01-2 2H8" stroke-linecap="round"/></svg>',
-  tableProp: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="12" height="12" rx="1"/><line x1="2" y1="6" x2="14" y2="6"/><line x1="2" y1="10" x2="14" y2="10"/><line x1="6" y1="2" x2="6" y2="14"/><line x1="10" y1="2" x2="10" y2="14"/></svg>',
-  arrow: '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M6 4l4 4-4 4z"/></svg>'
+  insertRowAbove: 'table_rows',
+  insertRowBelow: 'table_rows',
+  insertColLeft: 'view_column',
+  insertColRight: 'view_column',
+  deleteRow: 'delete',
+  deleteCol: 'delete',
+  splitCell: 'split',
+  selectAll: 'select_all',
+  alignLeft: 'format_align_left',
+  alignCenter: 'format_align_center',
+  alignRight: 'format_align_right',
+  link: 'link',
+  tableProp: 'settings',
+  mergeCell: 'merge',
+  valignTop: 'vertical_align_top',
+  valignMiddle: 'vertical_align_center',
+  valignBottom: 'vertical_align_bottom',
+  cellBackground: 'format_color_fill',
+  repeatHeader: 'repeat',
+  deleteTable: 'delete',
+  arrow: 'chevron_right'
 }
 
 export class ContextMenu {
@@ -103,15 +133,15 @@ export class ContextMenu {
 
   private buildItem(item: MenuItem): HTMLDivElement {
     const el = document.createElement('div')
-    el.className = `${PREFIX}__item${item.danger ? ' danger' : ''}${item.disabled ? ' disabled' : ''}`
+    el.className = `${PREFIX}__item${item.danger ? ' danger' : ''}${item.disabled ? ' disabled' : ''}${item.input ? ` ${PREFIX}__item--with-input` : ''}`
 
     const main = document.createElement('span')
     main.className = `${PREFIX}__main`
 
     if (item.icon) {
       const icon = document.createElement('span')
-      icon.className = `${PREFIX}__icon`
-      icon.innerHTML = item.icon
+      icon.className = `material-icons ${PREFIX}__icon`
+      icon.textContent = item.icon
       main.appendChild(icon)
     }
 
@@ -133,16 +163,103 @@ export class ContextMenu {
 
     if (item.submenu) {
       const arrow = document.createElement('span')
-      arrow.className = `${PREFIX}__arrow`
-      arrow.innerHTML = SVG.arrow
+      arrow.className = `material-icons ${PREFIX}__arrow`
+      arrow.textContent = SVG.arrow
       meta.appendChild(arrow)
     }
 
     el.appendChild(meta)
 
-    if (!item.disabled && item.onClick) {
+    let inputValue: number | undefined
+
+    if (item.input) {
+      const wrap = document.createElement('span')
+      wrap.className = `${PREFIX}__input-wrap`
+
+      const input = document.createElement('input')
+      input.type = 'number'
+      input.className = `${PREFIX}__input`
+      input.value = String(item.input.defaultValue)
+      const min = item.input.min ?? 1
+      const max = item.input.max ?? 99
+      input.min = String(min)
+      input.max = String(max)
+      inputValue = item.input.defaultValue
+
+      input.addEventListener('mousedown', (e) => {
+        e.stopPropagation()
+      })
+      input.addEventListener('click', (e) => {
+        e.stopPropagation()
+      })
+      input.addEventListener('input', () => {
+        const v = parseInt(input.value, 10)
+        inputValue = isNaN(v) ? item.input!.defaultValue : Math.max(min, Math.min(max, v))
+      })
+      input.addEventListener('keydown', (e) => {
+        e.stopPropagation()
+        if (e.key === 'Enter') {
+          if (!item.disabled && item.onClick) {
+            item.onClick(inputValue)
+            this.hide()
+          }
+        }
+      })
+
+      wrap.appendChild(input)
+
+      const unit = document.createElement('span')
+      unit.className = `${PREFIX}__input-unit`
+      unit.textContent = item.input.unit
+      wrap.appendChild(unit)
+
+      meta.appendChild(wrap)
+    }
+
+    let colorValue: string | undefined
+
+    if (item.colorPicker) {
+      const wrap = document.createElement('span')
+      wrap.className = `${PREFIX}__color-wrap`
+
+      const colorInput = document.createElement('input')
+      colorInput.type = 'color'
+      colorInput.className = `${PREFIX}__color-input`
+      colorInput.value = item.colorPicker.defaultColor ?? '#ffffff'
+      colorValue = colorInput.value
+
+      colorInput.addEventListener('mousedown', (e) => { e.stopPropagation() })
+      colorInput.addEventListener('click', (e) => { e.stopPropagation() })
+      colorInput.addEventListener('input', () => { colorValue = colorInput.value })
+      colorInput.addEventListener('change', () => {
+        if (!item.disabled && item.onClick) {
+          item.onClick(colorValue)
+          this.hide()
+        }
+      })
+      wrap.appendChild(colorInput)
+
+      if (item.colorPicker.allowClear) {
+        const clear = document.createElement('span')
+        clear.className = `${PREFIX}__color-clear`
+        clear.textContent = '无'
+        clear.addEventListener('mousedown', (e) => { e.stopPropagation() })
+        clear.addEventListener('click', (e) => {
+          e.stopPropagation()
+          if (!item.disabled && item.onClick) {
+            item.onClick('')
+            this.hide()
+          }
+        })
+        wrap.appendChild(clear)
+      }
+
+      meta.appendChild(wrap)
+    }
+
+    if (!item.disabled && item.onClick && !item.colorPicker) {
       el.addEventListener('click', () => {
-        item.onClick!()
+        item.onClick!(inputValue ?? colorValue)
         this.hide()
       })
     }
@@ -165,6 +282,14 @@ export class ContextMenu {
   private showSubmenu(parentEl: HTMLDivElement, items: MenuItem[]): void {
     if (this.submenuEl) { this.submenuEl.remove(); this.submenuEl = null }
     this.submenuEl = this.buildMenu(items, true)
+    this.submenuEl.addEventListener('mouseenter', () => {
+      if (this.hideTimer) { clearTimeout(this.hideTimer); this.hideTimer = null }
+    })
+    this.submenuEl.addEventListener('mouseleave', () => {
+      this.hideTimer = window.setTimeout(() => {
+        if (this.submenuEl) { this.submenuEl.remove(); this.submenuEl = null }
+      }, 200)
+    })
     const rect = parentEl.getBoundingClientRect()
     const x = rect.right
     const y = rect.top

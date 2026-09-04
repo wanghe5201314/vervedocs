@@ -59,6 +59,7 @@
     "@vervedoc/docx-editor-transform": "workspace:^",
     "@vervedoc/docx-editor-view": "workspace:^",
     "@vervedoc/docx-editor-comment": "workspace:^",
-    "@vervedoc/docx-editor-commands": "workspace:^"
+    "@vervedoc/docx-editor-commands": "workspace:^",
+    "@vervedoc/docx-editor-history": "workspace:^"
   }
 }

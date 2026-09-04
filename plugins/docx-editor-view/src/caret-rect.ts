@@ -10,6 +10,7 @@ import { isSamePath, comparePosition } from '@vervedoc/docx-editor-schema'
 import type {
   BlockNode, DocumentLayout, ParagraphBlock, TableBlock, InlineBox
 } from './layout-types'
+import { getSharedMeasure } from './text-measure'
 
 export interface CaretRect {
   /** 文档坐标（未减 scrollY） */
@@ -58,11 +59,11 @@ function locateInParagraph(b: ParagraphBlock, pos: IPosition, bx: number, by: nu
       if (!isSamePath(inl.path, pos.path)) continue
       if (pos.offset < inl.startOffset || pos.offset > inl.endOffset) continue
       const localX = charOffsetToX(inl, pos.offset - inl.startOffset)
-      // 光标高度按字形（字号 * 1.15），顶部对齐文字 ascent，上下各多延伸一点，符合 Word 风格
+      // 光标高度按行高，顶部对齐行顶
       return {
         x: bx + localX,
-        y: by + line.y + line.baseline - inl.size * 0.875,
-        height: inl.size * 1.15
+        y: by + line.y,
+        height: line.height
       }
     }
   }
@@ -96,23 +97,18 @@ function pathStartsWith(path: Path, prefix: Path): boolean {
 
 /**
  * 在 inline 内部按 offset 求 x（相对块本地）。
- * 简化：按字符累加 charWidthApprox
+ * 使用真实 measureText 度量（与 layout 阶段一致），避免估算错位。
  */
 function charOffsetToX(inl: InlineBox, offsetInInline: number): number {
   if (offsetInInline <= 0) return inl.x
   if (offsetInInline >= inl.text.length) return inl.x + inl.width
+  const measure = getSharedMeasure()
   let x = inl.x
   const ls = inl.letterSpacing ?? 0
   for (let i = 0; i < offsetInInline; i++) {
-    x += charWidthApprox(inl.text[i], inl.size, inl.bold) + ls
+    x += measure.charWidth(inl.text[i], inl.font, inl.size, inl.bold, inl.italic) + ls
   }
   return x
-}
-
-function charWidthApprox(ch: string, size: number, bold?: boolean): number {
-  const isCJK = /[\u3000-\u9fff\uac00-\ud7af\uf900-\ufaff]/.test(ch)
-  const base = isCJK ? size : size * 0.55
-  return bold ? base * 1.02 : base
 }
 
 /* -------------------- 选区矩形 -------------------- */

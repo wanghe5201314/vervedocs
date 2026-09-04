@@ -229,3 +229,60 @@ export const FONT_SIZE_LIST = [
   '5', '5.5', '6.5', '7.5', '8', '9', '10', '10.5', '11', '12', '14', '15', '16',
   '18', '20', '22', '24', '26', '28', '30', '36', '42', '48', '54', '60', '72'
 ] as const
+
+/* ========== 纸张大小（对齐 WPS/Office，96 DPI） ========== */
+
+export interface PaperSize {
+  /** 纸张标识（唯一 key） */
+  key: string
+  /** 显示名称 */
+  label: string
+  /** 纸张宽度（px @ 96dpi） */
+  width: number
+  /** 纸张高度（px @ 96dpi） */
+  height: number
+  /** 分类 */
+  category: 'a-series' | 'b-series' | 'us' | 'cn' | 'envelope' | 'other'
+}
+
+/**
+ * WPS/Office 纸张预设列表（覆盖 80%+ 常用纸张）
+ * 像素值按 96 DPI 换算：px = mm * 96 / 25.4
+ */
+export const PAPER_SIZE_LIST: PaperSize[] = [
+  // A 系列（ISO 216）
+  { key: 'a0', label: 'A0 (84.1×118.9cm)', width: 3179, height: 4494, category: 'a-series' },
+  { key: 'a1', label: 'A1 (59.4×84.1cm)', width: 2245, height: 3179, category: 'a-series' },
+  { key: 'a2', label: 'A2 (42×59.4cm)', width: 1587, height: 2245, category: 'a-series' },
+  { key: 'a3', label: 'A3 (29.7×42cm)', width: 1123, height: 1587, category: 'a-series' },
+  { key: 'a4', label: 'A4 (21×29.7cm)', width: 794, height: 1123, category: 'a-series' },
+  { key: 'a5', label: 'A5 (14.8×21cm)', width: 559, height: 794, category: 'a-series' },
+  { key: 'a6', label: 'A6 (10.5×14.8cm)', width: 397, height: 559, category: 'a-series' },
+  // B 系列（JIS）
+  { key: 'b4', label: 'B4 (25.7×36.4cm)', width: 971, height: 1376, category: 'b-series' },
+  { key: 'b5', label: 'B5 (18.2×25.7cm)', width: 688, height: 971, category: 'b-series' },
+  { key: 'b6', label: 'B6 (12.8×18.2cm)', width: 484, height: 688, category: 'b-series' },
+  // 美式
+  { key: 'letter', label: 'Letter (21.6×27.9cm)', width: 816, height: 1056, category: 'us' },
+  { key: 'legal', label: 'Legal (21.6×35.6cm)', width: 816, height: 1344, category: 'us' },
+  { key: 'tabloid', label: 'Tabloid (27.9×43.2cm)', width: 1056, height: 1633, category: 'us' },
+  { key: 'executive', label: 'Executive (18.4×26.7cm)', width: 696, height: 1009, category: 'us' },
+  { key: 'statement', label: 'Statement (14×21.6cm)', width: 529, height: 816, category: 'us' },
+  { key: 'folio', label: 'Folio (21.6×33cm)', width: 816, height: 1247, category: 'us' },
+  // 中式
+  { key: '16k', label: '16K (19.5×27cm)', width: 737, height: 1020, category: 'cn' },
+  { key: '32k', label: '32K (13×19cm)', width: 491, height: 718, category: 'cn' },
+  { key: '32k-large', label: '大32K (14×20.3cm)', width: 529, height: 767, category: 'cn' },
+  // 信封
+  { key: 'env-10', label: '信封 #10 (10.5×24.1cm)', width: 397, height: 910, category: 'envelope' },
+  { key: 'env-dl', label: '信封 DL (11×22cm)', width: 416, height: 831, category: 'envelope' },
+  { key: 'env-c5', label: '信封 C5 (16.2×22.9cm)', width: 612, height: 865, category: 'envelope' },
+  { key: 'env-c6', label: '信封 C6 (11.4×16.2cm)', width: 430, height: 612, category: 'envelope' },
+  { key: 'env-monarch', label: '信封 Monarch (9.8×19cm)', width: 370, height: 718, category: 'envelope' },
+  // 其他
+  { key: 'photo-4x6', label: '照片 4×6 (10.2×15.2cm)', width: 386, height: 574, category: 'other' },
+  { key: 'postcard', label: '明信片 (10×14.8cm)', width: 378, height: 559, category: 'other' }
+]
+
+/** 默认纸张大小（A4） */
+export const DEFAULT_PAPER_SIZE: PaperSize = PAPER_SIZE_LIST[4]

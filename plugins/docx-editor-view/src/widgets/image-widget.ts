@@ -12,7 +12,7 @@
 import type { DocumentLayout, ImageBlock } from '../layout-types'
 import type { RangeManager } from '@vervedoc/docx-editor-state'
 import type { IPosition, Path } from '@vervedoc/docx-editor-schema'
-import { ContextMenu, type MenuItem } from '../context-menu'
+import { ContextMenu } from '../context-menu'
 
 export interface ImageWidgetDeps {
   getLayout: () => DocumentLayout | null
@@ -21,6 +21,7 @@ export interface ImageWidgetDeps {
   getScrollY: () => number
   getPageOffsetX: () => number
   onCommand: (cmd: string, ...args: any[]) => void
+  onUpdateImageSizeLive: (path: Path, width: number, height: number) => void
   hit: (clientX: number, clientY: number) => IPosition | null
   focusInput: () => void
 }
@@ -48,9 +49,10 @@ const HANDLES = [
 export class ImageWidget {
   private selectionBox: HTMLDivElement | null = null
   private handleEls: HTMLDivElement[] = []
+  private toolbar: HTMLDivElement | null = null
   private selection: ImageSelection | null = null
   private contextMenu = new ContextMenu()
-  private dragging: { dir: string; startX: number; startY: number; origW: number; origH: number } | null = null
+  private dragging: { dir: string; startX: number; startY: number; origW: number; origH: number; lastW: number; lastH: number } | null = null
 
   constructor(private deps: ImageWidgetDeps) {}
 
@@ -67,6 +69,9 @@ export class ImageWidget {
       document.body.appendChild(el)
       this.handleEls.push(el)
     }
+
+    this.toolbar = this.createToolbar()
+    document.body.appendChild(this.toolbar)
   }
 
   private cursorFor(dir: string): string {
@@ -76,6 +81,92 @@ export class ImageWidget {
     }
     return map[dir] || 'default'
   }
+
+  private createToolbar(): HTMLDivElement {
+    const bar = document.createElement('div')
+    bar.style.cssText = 'position:fixed;display:none;z-index:102;background:#f5f5f5;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.15);padding:4px 6px;display:none;align-items:center;gap:2px;font-family:sans-serif;'
+
+    const mkBtn = (icon: string, title: string, onClick: () => void): HTMLButtonElement => {
+      const btn = document.createElement('button')
+      btn.title = title
+      btn.style.cssText = 'border:none;background:transparent;cursor:pointer;padding:5px;border-radius:4px;display:flex;align-items:center;justify-content:center;transition:background .15s;'
+      const sp = document.createElement('span')
+      sp.className = 'material-icons'
+      sp.textContent = icon
+      sp.style.cssText = 'font-size:18px;color:#333;'
+      btn.appendChild(sp)
+      btn.addEventListener('mouseenter', () => { btn.style.background = '#e0e0e0' })
+      btn.addEventListener('mouseleave', () => { btn.style.background = 'transparent' })
+      btn.addEventListener('mousedown', (e) => { e.preventDefault(); e.stopPropagation() })
+      btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); onClick() })
+      return btn
+    }
+    const mkSep = (): HTMLDivElement => {
+      const sep = document.createElement('div')
+      sep.style.cssText = 'width:1px;height:20px;background:#ccc;margin:0 3px;'
+      return sep
+    }
+
+    bar.appendChild(mkBtn('restore', '重置大小', () => this.fire('executeResetImageSize')))
+    bar.appendChild(mkBtn('rotate_right', '旋转 90°', () => this.fire('executeRotateImage')))
+    bar.appendChild(mkBtn('zoom_in', '预览', () => this.showPreview()))
+    bar.appendChild(mkSep())
+    bar.appendChild(mkBtn('format_align_left', '左对齐', () => this.fire('executeImageAlign', 'left')))
+    bar.appendChild(mkBtn('format_align_center', '居中对齐', () => this.fire('executeImageAlign', 'center')))
+    bar.appendChild(mkBtn('format_align_right', '右对齐', () => this.fire('executeImageAlign', 'right')))
+    bar.appendChild(mkSep())
+    bar.appendChild(mkBtn('wrap_text', '文字环绕', () => this.fire('executeImageWrap', 'surround')))
+    bar.appendChild(mkBtn('flip_to_front', '浮于文字上方', () => this.fire('executeImageWrap', 'floatTop')))
+    bar.appendChild(mkBtn('flip_to_back', '浮于文字下方', () => this.fire('executeImageWrap', 'floatBottom')))
+    bar.appendChild(mkSep())
+    bar.appendChild(mkBtn('image', '替换图片', () => this.fire('executeReplaceImage')))
+    bar.appendChild(mkBtn('download', '保存图片', () => this.fire('executeSaveImage')))
+    const delBtn = mkBtn('delete', '删除图片', () => this.fire('executeDeleteImage'))
+    const delIcon = delBtn.querySelector('.material-icons') as HTMLElement
+    delBtn.addEventListener('mouseenter', () => { delIcon.style.color = '#e53935' })
+    delBtn.addEventListener('mouseleave', () => { delIcon.style.color = '#333' })
+    bar.appendChild(delBtn)
+
+    return bar
+  }
+
+  private fire(cmd: string, ...args: any[]): void {
+    if (!this.selection) return
+    this.deps.onCommand(cmd, this.selection.path, ...args)
+  }
+
+  private showPreview(): void {
+    if (!this.selection) return
+    const src = String((this.selection.block.block as unknown as { value?: string }).value ?? '')
+    if (!src) return
+    const rotate = Number((this.selection.block.block as unknown as { rotate?: number }).rotate ?? 0) % 360
+
+    const overlay = document.createElement('div')
+    Object.assign(overlay.style, {
+      position: 'fixed', inset: '0', zIndex: '10000',
+      background: 'rgba(0,0,0,.75)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      cursor: 'zoom-out'
+    } as CSSStyleDeclaration)
+
+    const img = document.createElement('img')
+    img.src = src
+    Object.assign(img.style, {
+      maxWidth: '90vw', maxHeight: '90vh',
+      objectFit: 'contain',
+      boxShadow: '0 8px 32px rgba(0,0,0,.5)',
+      borderRadius: '4px',
+      transform: `rotate(${rotate}deg)`
+    } as CSSStyleDeclaration)
+    overlay.appendChild(img)
+
+    const close = () => overlay.remove()
+    overlay.addEventListener('mousedown', (e) => { if (e.target === overlay) close() })
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey) } }
+    document.addEventListener('keydown', onKey)
+    document.body.appendChild(overlay)
+  }
+
 
   /** 处理 mousedown，返回 true 表示点击了图片（已拦截），false 表示未处理 */
   handleMouseDown(e: MouseEvent): boolean {
@@ -103,12 +194,21 @@ export class ImageWidget {
       const pageOriginX = rect.left + pageOffsetX + page.contentRect.x
       const pageOriginY = rect.top - scrollY + page.contentRect.y
       for (const b of page.blocks) {
-        if (b.kind !== 'image') continue
-        const bx = pageOriginX + b.rect.x
-        const by = pageOriginY + b.rect.y
-        if (clientX >= bx && clientX <= bx + b.rect.width && clientY >= by && clientY <= by + b.rect.height) {
-          const path = [...b.parentPath, b.indexInParent] as Path
-          return { path, block: b, pageOriginX, pageOriginY }
+        if (b.kind === 'image') {
+          const bx = pageOriginX + b.rect.x
+          const by = pageOriginY + b.rect.y
+          if (clientX >= bx && clientX <= bx + b.rect.width && clientY >= by && clientY <= by + b.rect.height) {
+            const path = [...b.parentPath, b.indexInParent] as Path
+            return { path, block: b, pageOriginX, pageOriginY }
+          }
+        } else if (b.kind === 'paragraph' && b.surroundImage) {
+          const si = b.surroundImage
+          const bx = pageOriginX + b.rect.x + si.rect.x
+          const by = pageOriginY + b.rect.y
+          if (clientX >= bx && clientX <= bx + si.rect.width && clientY >= by && clientY <= by + si.rect.height) {
+            const path = [...si.parentPath, si.indexInParent] as Path
+            return { path, block: si, pageOriginX: pageOriginX + b.rect.x, pageOriginY: pageOriginY + b.rect.y }
+          }
         }
       }
     }
@@ -124,6 +224,7 @@ export class ImageWidget {
     this.selection = null
     if (this.selectionBox) this.selectionBox.style.display = 'none'
     for (const el of this.handleEls) el.style.display = 'none'
+    if (this.toolbar) this.toolbar.style.display = 'none'
   }
 
   update(): void {
@@ -147,10 +248,17 @@ export class ImageWidget {
       const pageOriginX = rect.left + pageOffsetX + page.contentRect.x
       const pageOriginY = rect.top - scrollY + page.contentRect.y
       for (const b of page.blocks) {
-        if (b.kind !== 'image') continue
-        const bp = [...b.parentPath, b.indexInParent] as Path
-        if (bp.length === path.length && bp.every((seg, i) => seg === path[i])) {
-          return { path, block: b, pageOriginX, pageOriginY }
+        if (b.kind === 'image') {
+          const bp = [...b.parentPath, b.indexInParent] as Path
+          if (bp.length === path.length && bp.every((seg, i) => seg === path[i])) {
+            return { path, block: b, pageOriginX, pageOriginY }
+          }
+        } else if (b.kind === 'paragraph' && b.surroundImage) {
+          const si = b.surroundImage
+          const bp = [...si.parentPath, si.indexInParent] as Path
+          if (bp.length === path.length && bp.every((seg, i) => seg === path[i])) {
+            return { path, block: si, pageOriginX: pageOriginX + b.rect.x, pageOriginY: pageOriginY + b.rect.y }
+          }
         }
       }
     }
@@ -177,6 +285,19 @@ export class ImageWidget {
       el.style.left = `${Math.round(x + w * hd.x - HANDLE_OFFSET)}px`
       el.style.top = `${Math.round(y + h * hd.y - HANDLE_OFFSET)}px`
     }
+
+    // 悬浮工具栏：定位在图片上方居中，空间不足时放下方
+    if (this.toolbar) {
+      const barW = this.toolbar.offsetWidth || 280
+      const barH = 36
+      let barX = x + w / 2 - barW / 2
+      barX = Math.max(4, Math.min(barX, window.innerWidth - barW - 4))
+      let barY = y - barH - 6
+      if (barY < 4) barY = y + h + 6
+      this.toolbar.style.display = 'flex'
+      this.toolbar.style.left = `${Math.round(barX)}px`
+      this.toolbar.style.top = `${Math.round(barY)}px`
+    }
   }
 
   private onHandleMouseDown(e: MouseEvent, dir: string): void {
@@ -184,7 +305,7 @@ export class ImageWidget {
     e.preventDefault()
     e.stopPropagation()
     const { block } = this.selection
-    this.dragging = { dir, startX: e.clientX, startY: e.clientY, origW: block.rect.width, origH: block.rect.height }
+    this.dragging = { dir, startX: e.clientX, startY: e.clientY, origW: block.rect.width, origH: block.rect.height, lastW: block.rect.width, lastH: block.rect.height }
     window.addEventListener('mousemove', this.onDragMove)
     window.addEventListener('mouseup', this.onDragEnd)
   }
@@ -203,42 +324,23 @@ export class ImageWidget {
     if (dir.includes('n')) h = Math.max(20, origH - dy)
     if (dir === 'n' || dir === 's') w = h * ratio
     if (dir === 'e' || dir === 'w') h = w / ratio
-    this.deps.onCommand('executeUpdateImageSize', this.selection.path, w, h)
+    this.dragging.lastW = w
+    this.dragging.lastH = h
+    this.deps.onUpdateImageSizeLive(this.selection.path, w, h)
   }
 
   private onDragEnd = (): void => {
+    if (this.dragging && this.selection) {
+      this.deps.onCommand('executeUpdateImageSize', this.selection.path, this.dragging.lastW, this.dragging.lastH)
+    }
     this.dragging = null
     window.removeEventListener('mousemove', this.onDragMove)
     window.removeEventListener('mouseup', this.onDragEnd)
   }
 
-  showContextMenu(clientX: number, clientY: number): boolean {
-    const hit = this.findImageAt(clientX, clientY)
-    if (!hit) return false
-    this.selectImage(hit)
-
-    const icons = ContextMenu.getIcons()
-    const fire = (cmd: string, ...args: any[]) => { this.deps.onCommand(cmd, ...args) }
-    const path = hit.path
-
-    const items: MenuItem[] = [
-      { label: '重置大小', icon: icons.selectAll, onClick: () => fire('executeResetImageSize', path) },
-      {
-        label: '对齐方式',
-        icon: icons.alignLeft,
-        submenu: [
-          { label: '左对齐', icon: icons.alignLeft, onClick: () => fire('executeImageAlign', path, 'left') },
-          { label: '居中对齐', icon: icons.alignCenter, onClick: () => fire('executeImageAlign', path, 'center') },
-          { label: '右对齐', icon: icons.alignRight, onClick: () => fire('executeImageAlign', path, 'right') },
-        ]
-      },
-      { label: '---' },
-      { label: '替换图片', icon: icons.link, onClick: () => fire('executeReplaceImage', path) },
-      { label: '删除图片', icon: icons.deleteRow, danger: true, onClick: () => fire('executeDeleteImage', path) },
-    ]
-
-    this.contextMenu.show(clientX, clientY, items)
-    return true
+  showContextMenu(_clientX: number, _clientY: number): boolean {
+    // 图片不再使用右键菜单，改为点击时显示悬浮工具栏
+    return false
   }
 
   hideContextMenu(): void {
@@ -253,5 +355,6 @@ export class ImageWidget {
     if (this.selectionBox) { this.selectionBox.remove(); this.selectionBox = null }
     for (const el of this.handleEls) el.remove()
     this.handleEls = []
+    if (this.toolbar) { this.toolbar.remove(); this.toolbar = null }
   }
 }

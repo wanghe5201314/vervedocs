@@ -172,11 +172,44 @@ export class LayoutEngine {
   private layoutBlocks(elements: IElement[], parentPath: Path, availableWidth: number): BlockNode[] {
     const paragraphs = splitParagraphs(elements)
     const blocks: BlockNode[] = []
-    for (const g of paragraphs) {
+    for (let gi = 0; gi < paragraphs.length; gi++) {
+      const g = paragraphs[gi]
       if (g.kind === 'table') {
         blocks.push(this.layoutTable(g.block as ITableElement, parentPath, g.start, availableWidth))
       } else if (g.kind === 'image') {
-        blocks.push(this.layoutImage(g.block as IElement, parentPath, g.start, availableWidth))
+        const imgEl = g.block as IElement
+        const imgDisplay = String((imgEl as unknown as Record<string, unknown>).imgDisplay ?? 'block')
+        if (imgDisplay === 'surround' || imgDisplay === 'floatTop' || imgDisplay === 'floatBottom') {
+          const imgBlock = this.layoutImage(imgEl, parentPath, g.start, availableWidth)
+          const next = paragraphs[gi + 1]
+          if (next && (next.kind === 'normal' || next.kind === 'title' || next.kind === 'list')) {
+            const kind: ParagraphBlock['paragraphKind'] = next.kind === 'normal' ? 'normal' : next.kind
+            const runsParentPath: Path = (kind === 'normal')
+              ? parentPath
+              : [...parentPath, next.start, 'valueList']
+            const pb = this.layoutParagraph({
+              paragraphKind: kind,
+              block: next.block,
+              runs: next.runs,
+              runsParentPath,
+              startIndex: next.start,
+              endIndex: next.end,
+              parentPath,
+              availableWidth,
+              runStartIndex: next.runStartIndex ?? 0
+            })
+            pb.surroundImage = imgBlock
+            if (imgBlock.rect.height > pb.rect.height) {
+              pb.rect.height = imgBlock.rect.height
+            }
+            blocks.push(pb)
+            gi++
+            continue
+          }
+          blocks.push(imgBlock)
+        } else {
+          blocks.push(this.layoutImage(imgEl, parentPath, g.start, availableWidth))
+        }
       } else if (g.kind === 'pageBreak') {
         blocks.push({
           kind: 'pageBreak',
@@ -199,7 +232,8 @@ export class LayoutEngine {
           startIndex: g.start,
           endIndex: g.end,
           parentPath,
-          availableWidth
+          availableWidth,
+          runStartIndex: g.runStartIndex ?? 0
         }))
       }
     }
@@ -215,10 +249,12 @@ export class LayoutEngine {
     endIndex: number
     parentPath: Path
     availableWidth: number
+    runStartIndex?: number
   }): ParagraphBlock {
     const {
       paragraphKind, block, runs, runsParentPath,
-      startIndex, endIndex, parentPath, availableWidth
+      startIndex, endIndex, parentPath, availableWidth,
+      runStartIndex = 0
     } = input
 
     // 段落属性优先级：block（title/list 容器） > 段内任一 run（docx-parser 会把 pPr 附在 run 上，未必是第 1 个）
@@ -417,11 +453,11 @@ export class LayoutEngine {
       if (/^[\u200B\uFEFF]+$/.test(value)) continue
 
       // normal 段落用 elements 原索引（startIndex + ri）作为 path 末段，保证 path 唯一；
-      // title/list 的 runsParentPath 已含段索引，ri 是 valueList 内索引，直接用。
+      // title/list 的 runsParentPath 已含段索引，ri 是 valueList 切片内索引，需加 runStartIndex 还原原 valueList 索引。
       // 表格单元格内 normal 段落需拼上 runsParentPath（contentPath）以保证 path 全局唯一。
       const runPath: Path = paragraphKind === 'normal'
         ? [...runsParentPath, startIndex + ri]
-        : [...runsParentPath, ri]
+        : [...runsParentPath, runStartIndex + ri]
       let cursorInRun = 0
 
       while (cursorInRun < value.length) {
@@ -492,6 +528,55 @@ export class LayoutEngine {
         }
       }
     }
+    // 空段兜底：若整个段落未产出任何 inline（所有 text run 为空字符串或零宽占位），
+    // 为首个空 text run 生成零宽 caret 承载 inline，确保光标可定位、行高不塌陷。
+    if (currentInlines.length === 0 && lines.length === 0) {
+      let placeholderRun: IElement | null = null
+      let placeholderRi = -1
+      // 优先选空字符串 run（光标通常落在 rest run），跳过零宽分隔符 run
+      for (let ri = 0; ri < runs.length; ri++) {
+        if (runs[ri].type !== 'text') continue
+        const v = String((runs[ri] as unknown as Record<string, unknown>).value ?? '')
+        if (v === '') { placeholderRun = runs[ri]; placeholderRi = ri; break }
+      }
+      // 退而求其次：用首个 text run（可能是零宽分隔符）
+      if (!placeholderRun) {
+        for (let ri = 0; ri < runs.length; ri++) {
+          if (runs[ri].type === 'text') { placeholderRun = runs[ri]; placeholderRi = ri; break }
+        }
+      }
+      if (placeholderRun) {
+        const pr = placeholderRun as unknown as Record<string, unknown>
+        const rawFont = String(pr.font ?? this.opts.defaultFont)
+        const font = FONT_FAMILY_CSS[rawFont] ?? rawFont
+        const size = Number(pr.size ?? this.opts.defaultSize)
+        const runPath: Path = paragraphKind === 'normal'
+          ? [...runsParentPath, startIndex + placeholderRi]
+          : [...runsParentPath, runStartIndex + placeholderRi]
+        currentInlines.push({
+          run: placeholderRun,
+          path: runPath,
+          startOffset: 0,
+          endOffset: 0,
+          text: '',
+          x: 0,
+          y: 0,
+          width: 0,
+          height: size,
+          font,
+          size,
+          bold: !!pr.bold,
+          italic: !!pr.italic,
+          color: String(pr.color ?? '#000000'),
+          bgColor: undefined,
+          strikeout: false,
+          underline: false,
+          baseline: 0,
+          groupIds: undefined
+        })
+        currentMaxSize = size
+      }
+    }
     if (currentInlines.length > 0 || lines.length === 0) finalizeLine(true)
 
     // 分配行 y 与 inline y/baseline（相对块本地坐标）
@@ -544,12 +629,16 @@ export class LayoutEngine {
     const anyEl = el as unknown as Record<string, unknown>
     const w = Math.max(1, Number(anyEl.width ?? 200))
     const h = Math.max(1, Number(anyEl.height ?? 150))
+    const rotate = Number(anyEl.rotate ?? 0) % 360
+    // 旋转 90/270 时，占位宽高互换
+    const occupiedW = (rotate === 90 || rotate === 270) ? h : w
+    const occupiedH = (rotate === 90 || rotate === 270) ? w : h
     // 水平对齐：rowFlex 决定 x 位置
     const rowFlex = String(anyEl.rowFlex ?? 'left')
     let x = 0
-    if (w < availableWidth) {
-      if (rowFlex === 'center' || rowFlex === 'alignment') x = (availableWidth - w) / 2
-      else if (rowFlex === 'right') x = availableWidth - w
+    if (occupiedW < availableWidth) {
+      if (rowFlex === 'center' || rowFlex === 'alignment') x = (availableWidth - occupiedW) / 2
+      else if (rowFlex === 'right') x = availableWidth - occupiedW
     }
     return {
       kind: 'image',
@@ -557,7 +646,7 @@ export class LayoutEngine {
       block: el,
       parentPath,
       indexInParent: index,
-      rect: { x, y: 0, width: w, height: h }
+      rect: { x, y: 0, width: occupiedW, height: occupiedH }
     }
   }
 

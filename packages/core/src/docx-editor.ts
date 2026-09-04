@@ -11,12 +11,8 @@ import { Draw } from '@vervedoc/docx-editor-view'
 import { Command, CommandAdapt } from '@vervedoc/docx-editor-transform'
 import { CommentComponent, RevisionComponent } from '@vervedoc/docx-editor-comment'
 import type { DocxCommentMeta, RevisionCallbacks, CommentCallbacks } from '@vervedoc/docx-editor-comment'
-import { Search } from '@vervedoc/docx-editor-commands'
-import { BlockParticle } from '@vervedoc/docx-editor-commands'
-import { DateParticle } from '@vervedoc/docx-editor-commands'
-import { LaTexParticle } from '@vervedoc/docx-editor-commands'
-import { GadgetComponent } from '@vervedoc/docx-editor-commands'
-import { ControlComponent } from '@vervedoc/docx-editor-commands'
+import { Search, BlockParticle, DateParticle, LaTexParticle, GadgetComponent, ControlComponent } from '@vervedoc/docx-editor-commands'
+import { HistoryComponent } from '@vervedoc/docx-editor-history'
 import { ShortcutHandler } from './shortcut'
 
 export type { DocxCommentMeta, RevisionCallbacks, CommentCallbacks }
@@ -35,6 +31,7 @@ export class DocxEditor {
   public laTex: LaTexParticle
   public gadget: GadgetComponent
   public control: ControlComponent
+  public history: HistoryComponent
 
   constructor(
     container: HTMLDivElement,
@@ -93,6 +90,7 @@ export class DocxEditor {
         this.comment.render()
         this.revision.update()
         this.block?.clear()
+        this.control?.clear()
       },
       onCommand: (command: string, ...args: any[]) => {
         const fn = (this.command as unknown as Record<string, ((...a: any[]) => void) | undefined>)[command]
@@ -107,6 +105,7 @@ export class DocxEditor {
       {
         getDocument: () => this.draw.getDocument(),
         setDocument: (d: IDocxDocumentMeta) => this.draw.setDocument(d),
+        getLayout: () => this.draw.getLayout(),
         getActiveDocument: () => {
           const doc = this.draw.getDocument()
           const zone = this.draw.getZone()
@@ -132,12 +131,23 @@ export class DocxEditor {
         },
         setScale: (s: number) => this.draw.setScale(s),
         setPageSize: (w: number, h: number) => this.draw.setPageSize(w, h),
+        setRulerVisible: (visible: boolean) => this.draw.setRulerVisible(visible),
+        setPaperMargins: (margins: [number, number, number, number]) => this.draw.setPaperMargins(margins),
         getOptions: () => this.draw.getOptions(),
         print: () => this.draw.print()
       },
       this.range
     )
     this.command = new Command(adapt)
+
+    // 历史管理：创建 HistoryManager 注入 CommandAdapt
+    this.history = new HistoryComponent()
+    const historyManager = this.history.install({
+      maxRecordCount: Number(editorOptions.historyMaxRecordCount ?? 50),
+      coalesceMs: 300
+    })
+    adapt.setHistoryManager(historyManager)
+    adapt.pushInitialHistory()
 
     // commands 组件实例化（基于 verve 树模型）
     this.search = new Search(this.draw)
@@ -214,6 +224,8 @@ export class DocxEditor {
   destroy(): void {
     this.block?.destroy()
     this.date?.clearDatePicker()
+    this.control?.destroy()
+    this.history?.destroy()
     this.comment.destroy()
     this.revision.destroy()
     this.draw.destroy()

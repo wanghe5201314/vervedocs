@@ -26,8 +26,10 @@ export interface IParagraphGroup {
   /** 段落包含的顶层节点在父数组中的索引区间 [start, end)（含 start 不含 end） */
   start: number
   end: number
-  /** 段落使用的 runs（对 normal 是原数组切片，对 title/list 是 valueList） */
+  /** 段落使用的 runs（对 normal 是原数组切片，对 title/list 是 valueList 切片） */
   runs: IElement[]
+  /** runs 在原数组中的起始索引（对 title/list valueList 切片，用于 path 计算；normal 默认 0） */
+  runStartIndex?: number
 }
 
 /** 判断某个 text run 是否为"段落终止符"（仅由零宽字符构成的 text） */
@@ -45,8 +47,16 @@ export function splitParagraphs(elements: IElement[]): IParagraphGroup[] {
     const node = elements[i]
     if (BLOCK_LEVEL_TYPES.has(node.type)) {
       const kind = node.type as IParagraphGroup['kind']
-      const runs = (node as unknown as { valueList?: IElement[] }).valueList ?? []
-      out.push({ kind, block: node, start: i, end: i + 1, runs })
+      const valueList = (node as unknown as { valueList?: IElement[] }).valueList ?? []
+      // title/list 内部也按零宽分隔符切段（与普通段落一致），支持段内换行
+      if (kind === 'title' || kind === 'list') {
+        const segs = splitValueList(valueList)
+        for (const { runs, startIndex } of segs) {
+          out.push({ kind, block: node, start: i, end: i + 1, runs, runStartIndex: startIndex })
+        }
+      } else {
+        out.push({ kind, block: node, start: i, end: i + 1, runs: valueList })
+      }
       i++
       continue
     }
@@ -67,4 +77,27 @@ export function splitParagraphs(elements: IElement[]): IParagraphGroup[] {
     out.push({ kind: 'normal', block: null, start, end: i, runs })
   }
   return out
+}
+
+/** 将 valueList 按零宽分隔符切成多段（与顶层 elements 切段逻辑一致） */
+function splitValueList(valueList: IElement[]): { runs: IElement[]; startIndex: number }[] {
+  const result: { runs: IElement[]; startIndex: number }[] = []
+  let vi = 0
+  while (vi < valueList.length) {
+    const vStart = vi
+    while (vi < valueList.length) {
+      if (isParagraphTerminator(valueList[vi])) {
+        vi++
+        break
+      }
+      vi++
+    }
+    const runs = valueList.slice(vStart, vi)
+    if (runs.every(isParagraphTerminator)) continue
+    result.push({ runs, startIndex: vStart })
+  }
+  if (result.length === 0) {
+    result.push({ runs: [], startIndex: 0 })
+  }
+  return result
 }

@@ -183,6 +183,7 @@ export interface IImageElement extends IElementBase {
   width: number
   height: number
   imgDisplay?: ImgDisplay
+  rotate?: number
 }
 
 /* ========== 分页 ========== */
@@ -329,3 +330,18 @@ export type DocxExportCallback = (
   data: IDocxDocumentMeta | IElement[],
   options?: { defaultFont?: string; defaultSize?: number }
 ) => Promise<{ success: boolean; data?: ArrayBuffer; error?: string }>
+
+/* ========== 自动目录 ========== */
+
+export interface IAutoCatalogItem {
+  id: string
+  level: number
+  name: string
+  pageNo: number
+}
+
+export interface IAutoCatalogResult {
+  catalog1: IAutoCatalogItem[]
+  catalog2: IAutoCatalogItem[]
+  catalog3: IAutoCatalogItem[]
+}

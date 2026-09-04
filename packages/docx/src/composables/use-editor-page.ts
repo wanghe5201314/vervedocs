@@ -73,6 +73,13 @@ export function useEditorPage(options: { getEditorInstance: () => EditorInstance
     instance.command.executePageScaleMinus()
   }
 
+  /** 设置标尺显示/隐藏 */
+  function setRulerVisible(visible: boolean) {
+    const instance = getEditorInstance()
+    if (!instance) return
+    instance.command.executeSetRulerVisible(visible)
+  }
+
   /**
    * 设置纸张尺寸
    * @param width 纸张宽度
@@ -119,10 +126,32 @@ export function useEditorPage(options: { getEditorInstance: () => EditorInstance
     instance.command.executeColumns?.(value)
   }
 
+  /**
+   * 获取自动目录数据（含页码），返回三种级别的目录
+   * catalog1: 仅一级标题，catalog2: 一至二级标题，catalog3: 一至三级标题
+   */
+  function getAutoCatalog() {
+    const instance = getEditorInstance()
+    if (!instance) return null
+    return instance.command.getAutoCatalog()
+  }
+
+  /**
+   * 在当前光标位置插入自动目录
+   * @param type 目录类型：1=仅一级，2=一至二级，3=一至三级
+   */
+  function insertAutoCatalog(type: 1 | 2 | 3) {
+    const instance = getEditorInstance()
+    if (!instance) return
+    instance.command.executeInsertAutoCatalog(type)
+  }
+
   return {
     pageJump, pageMode,
     pageScale, pageScaleRecovery, pageScaleAdd, pageScaleMinus,
+    setRulerVisible,
     paperSize, paperDirection, setPaperMargin, setPaperBackground,
-    columns
+    columns,
+    getAutoCatalog, insertAutoCatalog
   }
 }

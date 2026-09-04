@@ -7,7 +7,8 @@
 
 import type {
   IDocxDocumentMeta, IElement, Path, ITextElement,
-  ITitleElement, ITableElement, IListElement, ListTypeName, IPosition, ITd
+  ITitleElement, ITableElement, IListElement, ListTypeName, IPosition, IRange, ITd, VerticalAlign,
+  IAutoCatalogItem, IAutoCatalogResult, DocumentLayout
 } from '@vervedoc/docx-editor-schema'
 import {
   getByPath, getParentContainer, cloneTree, walkTree, isSamePath, splitParagraphs
@@ -17,25 +18,75 @@ import type { RangeManager } from '@vervedoc/docx-editor-state'
 export interface DrawLike {
   getDocument(): IDocxDocumentMeta
   setDocument(doc: IDocxDocumentMeta): void
-  /** 获取当前活动区域的文档（zone=header/footer 时 elements 指向对应区域） */
   getActiveDocument(): IDocxDocumentMeta
-  /** 将修改后的活动文档写回对应区域并触发重渲染 */
   applyActiveDocument(doc: IDocxDocumentMeta): void
+  getLayout(): DocumentLayout | null
   setScale(scale: number): void
   setPageSize(width: number, height: number): void
+  setRulerVisible(visible: boolean): void
+  setPaperMargins(margins: [number, number, number, number]): void
   getOptions(): { pageWidth?: number; pageHeight?: number; scale?: number; [key: string]: unknown }
   print(): void
+}
+
+export interface HistorySnapshot {
+  doc: IDocxDocumentMeta
+  range: IRange | null
+}
+
+export interface IHistoryManager {
+  pushInitial(snapshot: HistorySnapshot): void
+  push(snapshot: HistorySnapshot, coalesceKey?: string): void
+  undo(current: HistorySnapshot): HistorySnapshot | null
+  redo(current: HistorySnapshot): HistorySnapshot | null
+  canUndo(): boolean
+  canRedo(): boolean
+  clear(): void
+  destroy(): void
 }
 
 export class CommandAdapt {
   private _paintFmt: Partial<Pick<ITextElement, 'bold' | 'italic' | 'underline' | 'strikeout' | 'color' | 'highlight' | 'font' | 'size'>> | null = null
   private _searchHits: { path: Path; start: number; end: number }[] = []
   private _searchIdx = 0
+  private _historyManager: IHistoryManager | null = null
 
   constructor(
     private draw: DrawLike,
     private range: RangeManager
   ) {}
+
+  setHistoryManager(hm: IHistoryManager): void {
+    this._historyManager = hm
+  }
+
+  /** 计算当前页面内容区宽度（pageWidth - 左右边距） */
+  private getContentWidth(): number {
+    const opts = this.draw.getOptions()
+    const pageWidth = Number(opts.pageWidth ?? 794)
+    const margins = (opts.pageMargins as [number, number, number, number] | undefined) ?? [96, 120, 96, 120]
+    return Math.max(100, pageWidth - margins[0] - margins[2])
+  }
+
+  /** 初始化历史首快照（编辑器就绪后调用一次） */
+  pushInitialHistory(): void {
+    if (!this._historyManager) return
+    this._historyManager.pushInitial({
+      doc: cloneTree(this.draw.getDocument()),
+      range: this.range.getRange()
+    })
+  }
+
+  /** 提交变更并推送历史快照 */
+  private _commit(doc: IDocxDocumentMeta, coalesceKey?: string): void {
+    this.draw.applyActiveDocument(doc)
+    if (this._historyManager) {
+      this._historyManager.push(
+        { doc: cloneTree(this.draw.getDocument()), range: this.range.getRange() },
+        coalesceKey
+      )
+    }
+  }
 
   /* -------------------- 文本编辑 -------------------- */
 
@@ -54,7 +105,7 @@ export class CommandAdapt {
       const after = t.value.slice(pos.offset)
       t.value = before + text + after
       this.range.setCaret({ path: pos.path.slice() as Path, offset: pos.offset + text.length })
-      this.draw.applyActiveDocument(doc)
+      this._commit(doc, 'text')
     }
   }
 
@@ -86,7 +137,7 @@ export class CommandAdapt {
         const t = node as ITextElement
         t.value = t.value.slice(0, start.offset) + t.value.slice(end.offset)
         this.range.setCaret({ path: start.path.slice() as Path, offset: start.offset })
-        this.draw.applyActiveDocument(doc)
+        this._commit(doc, 'text')
         return true
       }
       return false
@@ -115,7 +166,7 @@ export class CommandAdapt {
     }
 
     this.range.setCaret({ path: start.path.slice() as Path, offset: start.offset })
-    this.draw.applyActiveDocument(doc)
+    this._commit(doc, 'text')
     return true
   }
 
@@ -166,7 +217,7 @@ export class CommandAdapt {
       if (pos.offset > 0) {
         t.value = t.value.slice(0, pos.offset - 1) + t.value.slice(pos.offset)
         this.range.setCaret({ path: pos.path.slice() as Path, offset: pos.offset - 1 })
-        this.draw.applyActiveDocument(doc)
+        this._commit(doc, 'text')
       } else {
         // 与前一个 text run 合并
         const parent = getParentContainer(doc.elements, pos.path)
@@ -183,7 +234,7 @@ export class CommandAdapt {
             const newPath = pos.path.slice() as Path
             newPath[newPath.length - 1] = idx - 1
             this.range.setCaret({ path: newPath, offset: newOffset })
-            this.draw.applyActiveDocument(doc)
+            this._commit(doc, 'text')
           }
         }
       }
@@ -200,7 +251,7 @@ export class CommandAdapt {
     const t = node as ITextElement
     if (pos.offset < t.value.length) {
       t.value = t.value.slice(0, pos.offset) + t.value.slice(pos.offset + 1)
-      this.draw.applyActiveDocument(doc)
+      this._commit(doc, 'text')
     }
   }
 
@@ -216,6 +267,7 @@ export class CommandAdapt {
     if (node.type !== 'text') return
     const t = node as ITextElement
     const idx = pos.path[pos.path.length - 1] as number
+
     const before = t.value.slice(0, pos.offset)
     const after = t.value.slice(pos.offset)
     t.value = before
@@ -233,7 +285,7 @@ export class CommandAdapt {
     const newPath = pos.path.slice() as Path
     newPath[newPath.length - 1] = idx + 2
     this.range.setCaret({ path: newPath, offset: 0 })
-    this.draw.applyActiveDocument(doc)
+    this._commit(doc, 'text')
   }
 
   /* -------------------- 光标移动 -------------------- */
@@ -310,7 +362,7 @@ export class CommandAdapt {
       for (const r of g.runs) {
         ;(r as unknown as Record<string, unknown>).rowFlex = flex
       }
-      this.draw.applyActiveDocument(doc)
+      this._commit(doc)
       return
     }
   }
@@ -331,7 +383,7 @@ export class CommandAdapt {
         any.lineHeight = lh
         any.lineHeightRule = rule
       }
-      this.draw.applyActiveDocument(doc)
+      this._commit(doc)
       return
     }
   }
@@ -353,7 +405,7 @@ export class CommandAdapt {
         any.paragraphSpacingBefore = margin
         any.paragraphSpacingAfter = margin
       }
-      this.draw.applyActiveDocument(doc)
+      this._commit(doc)
       return
     }
   }
@@ -434,7 +486,7 @@ export class CommandAdapt {
     const node = getByPath(doc.elements, pos.path)
     if (!node || node.type !== 'text') return
     fn(node as ITextElement)
-    this.draw.applyActiveDocument(doc)
+    this._commit(doc)
   }
 
   /**
@@ -450,7 +502,7 @@ export class CommandAdapt {
       const node = getByPath(doc.elements, pos.path)
       if (!node || node.type !== 'text') return
       fn(node as ITextElement)
-      this.draw.applyActiveDocument(doc)
+      this._commit(doc)
       return
     }
     const { start, end } = ordered
@@ -464,7 +516,7 @@ export class CommandAdapt {
       const node = getByPath(doc.elements, pos.path)
       if (!node || node.type !== 'text') return
       fn(node as ITextElement)
-      this.draw.applyActiveDocument(doc)
+      this._commit(doc)
       return
     }
     if (toggleKey) {
@@ -478,7 +530,7 @@ export class CommandAdapt {
     } else {
       for (const r of selectedRuns) fn(r)
     }
-    this.draw.applyActiveDocument(doc)
+    this._commit(doc)
   }
 
   /**
@@ -576,7 +628,7 @@ export class CommandAdapt {
         const t = cur as ITitleElement
         const firstChild = (t.valueList ?? [])[0]
         parent[idx] = firstChild ?? { type: 'text', value: '' } as IElement
-        this.draw.applyActiveDocument(doc)
+        this._commit(doc)
       }
       return
     }
@@ -589,7 +641,7 @@ export class CommandAdapt {
       }
       parent[idx] = wrap
     }
-    this.draw.applyActiveDocument(doc)
+    this._commit(doc)
   }
 
   /** 设置/取消列表 */
@@ -618,18 +670,19 @@ export class CommandAdapt {
       }
       parent[idx] = wrap
     }
-    this.draw.applyActiveDocument(doc)
+    this._commit(doc)
   }
 
   /* -------------------- 表格 -------------------- */
 
-  insertTable(rows: number, cols: number, availableWidth = 600): void {
+  insertTable(rows: number, cols: number, availableWidth?: number): void {
     const doc = this.draw.getActiveDocument()
     const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
     const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
     if (!parent) return
-    const idx = pos.path.length === 1 ? doc.elements.length : (pos.path[pos.path.length - 1] as number) + 1
-    const colWidth = availableWidth / cols
+    const idx = (pos.path[pos.path.length - 1] as number) + 1
+    const contentWidth = availableWidth ?? this.getContentWidth()
+    const colWidth = contentWidth / cols
     const table: ITableElement = {
       type: 'table',
       value: '',
@@ -653,7 +706,7 @@ export class CommandAdapt {
       }))
     }
     parent.splice(idx, 0, table)
-    this.draw.applyActiveDocument(doc)
+    this._commit(doc)
   }
 
   private getTableContext(): { doc: IDocxDocumentMeta; table: ITableElement; tableIndex: number; trIndex: number; tdIndex: number } | null {
@@ -687,35 +740,41 @@ export class CommandAdapt {
     }
   }
 
-  insertTableRow(position: 'above' | 'below'): void {
+  insertTableRow(position: 'above' | 'below', count = 1): void {
     const ctx = this.getTableContext()
     if (!ctx) return
     const { doc, table, trIndex } = ctx
-    const newRow = cloneTree(table.trList[trIndex])
-    for (const td of newRow.tdList) {
-      td.value = [{ type: 'text', value: '' } as IElement]
-    }
     const insertAt = position === 'above' ? trIndex : trIndex + 1
-    table.trList.splice(insertAt, 0, newRow)
-    this.draw.applyActiveDocument(doc)
+    for (let i = 0; i < count; i++) {
+      const newRow = cloneTree(table.trList[trIndex])
+      for (const td of newRow.tdList) {
+        td.value = [{ type: 'text', value: '' } as IElement]
+      }
+      table.trList.splice(insertAt + i, 0, newRow)
+    }
+    this._commit(doc)
   }
 
-  insertTableCol(position: 'left' | 'right'): void {
+  insertTableCol(position: 'left' | 'right', count = 1): void {
     const ctx = this.getTableContext()
     if (!ctx) return
     const { doc, table, tdIndex } = ctx
     const totalWidth = table.colgroup.reduce((s, c) => s + c.width, 0)
-    const newColCount = table.colgroup.length + 1
+    const newColCount = table.colgroup.length + count
     const colWidth = totalWidth / newColCount
     const insertAt = position === 'left' ? tdIndex : tdIndex + 1
+    for (let i = 0; i < count; i++) {
+      for (const tr of table.trList) {
+        const newTd = this.makeEmptyTd(colWidth)
+        tr.tdList.splice(insertAt + i, 0, newTd)
+      }
+      table.colgroup.splice(insertAt + i, 0, { width: colWidth })
+    }
     for (const tr of table.trList) {
-      const newTd = this.makeEmptyTd(colWidth)
-      tr.tdList.splice(insertAt, 0, newTd)
       for (const td of tr.tdList) td.width = colWidth
     }
-    table.colgroup.splice(insertAt, 0, { width: colWidth })
     for (const c of table.colgroup) c.width = colWidth
-    this.draw.applyActiveDocument(doc)
+    this._commit(doc)
   }
 
   deleteTableRow(): void {
@@ -724,7 +783,7 @@ export class CommandAdapt {
     const { doc, table, trIndex } = ctx
     if (table.trList.length <= 1) return
     table.trList.splice(trIndex, 1)
-    this.draw.applyActiveDocument(doc)
+    this._commit(doc)
   }
 
   deleteTableCol(): void {
@@ -736,7 +795,7 @@ export class CommandAdapt {
       tr.tdList.splice(tdIndex, 1)
     }
     table.colgroup.splice(tdIndex, 1)
-    this.draw.applyActiveDocument(doc)
+    this._commit(doc)
   }
 
   splitTableCell(): void {
@@ -753,7 +812,7 @@ export class CommandAdapt {
       const totalWidth = table.colgroup[tdIndex].width
       table.colgroup.splice(tdIndex, 1, { width: colWidth }, { width: totalWidth - colWidth })
     }
-    this.draw.applyActiveDocument(doc)
+    this._commit(doc)
   }
 
   selectTable(): void {
@@ -775,6 +834,125 @@ export class CommandAdapt {
     this.range.setRange({ anchor, focus })
   }
 
+  /** 合并选区内单元格 */
+  mergeTableCells(): void {
+    const ctx = this.getTableContext()
+    if (!ctx) return
+    const { doc, table } = ctx
+
+    const ordered = this.range.getOrdered()
+    if (!ordered) return
+    const { start, end } = ordered
+    if (start.path.length < 5 || end.path.length < 5) return
+    if (start.path[0] !== end.path[0]) return
+
+    const minRow = Math.min(start.path[2] as number, end.path[2] as number)
+    const maxRow = Math.max(start.path[2] as number, end.path[2] as number)
+    const minCol = Math.min(start.path[4] as number, end.path[4] as number)
+    const maxCol = Math.max(start.path[4] as number, end.path[4] as number)
+
+    if (minRow === maxRow && minCol === maxCol) return
+
+    const firstTd = table.trList[minRow]?.tdList[minCol]
+    if (!firstTd) return
+
+    const allContent: IElement[] = []
+    for (let r = minRow; r <= maxRow; r++) {
+      for (let c = minCol; c <= maxCol; c++) {
+        const td = table.trList[r]?.tdList[c]
+        if (td && !td.merged) {
+          for (const el of td.value) allContent.push(el)
+        }
+      }
+    }
+
+    firstTd.colspan = maxCol - minCol + 1
+    firstTd.rowspan = maxRow - minRow + 1
+    firstTd.value = allContent.length > 0 ? allContent : [{ type: 'text', value: '' } as IElement]
+    firstTd.width = table.colgroup.slice(minCol, maxCol + 1).reduce((s, c) => s + c.width, 0)
+
+    for (let r = minRow; r <= maxRow; r++) {
+      for (let c = minCol; c <= maxCol; c++) {
+        if (r === minRow && c === minCol) continue
+        const td = table.trList[r]?.tdList[c]
+        if (td) {
+          td.merged = true
+          td.value = []
+        }
+      }
+    }
+
+    this._commit(doc)
+  }
+
+  /** 删除整个表格 */
+  deleteTable(): void {
+    const ctx = this.getTableContext()
+    if (!ctx) return
+    const { doc, tableIndex } = ctx
+    doc.elements.splice(tableIndex, 1)
+    this._commit(doc)
+  }
+
+  /** 设置当前单元格垂直对齐 */
+  setCellVerticalAlign(align: VerticalAlign): void {
+    const ctx = this.getTableContext()
+    if (!ctx) return
+    const { doc, table, trIndex, tdIndex } = ctx
+    const td = table.trList[trIndex]?.tdList[tdIndex]
+    if (!td) return
+    td.verticalAlign = align
+    this._commit(doc)
+  }
+
+  /** 设置当前单元格底纹颜色 */
+  setCellBackground(color: string): void {
+    const ctx = this.getTableContext()
+    if (!ctx) return
+    const { doc, table, trIndex, tdIndex } = ctx
+    const td = table.trList[trIndex]?.tdList[tdIndex]
+    if (!td) return
+    td.backgroundColor = color
+    this._commit(doc)
+  }
+
+  /** 切换当前行重复表头 */
+  toggleRepeatHeader(): void {
+    const ctx = this.getTableContext()
+    if (!ctx) return
+    const { doc, table, trIndex } = ctx
+    const tr = table.trList[trIndex]
+    if (!tr) return
+    tr.pagingRepeat = !tr.pagingRepeat
+    this._commit(doc)
+  }
+
+  setTableColWidth(tableIndex: number, colIndex: number, width: number): void {
+    const doc = this.draw.getDocument()
+    const table = doc.elements[tableIndex]
+    if (!table || table.type !== 'table') return
+    const t = table as ITableElement
+    if (colIndex < 0 || colIndex >= t.colgroup.length) return
+    const w = Math.max(20, Math.round(width))
+    t.colgroup[colIndex].width = w
+    for (const tr of t.trList) {
+      const td = tr.tdList[colIndex]
+      if (td && !td.merged) td.width = w
+    }
+    this._commit(doc)
+  }
+
+  setTableRowHeight(tableIndex: number, rowIndex: number, height: number): void {
+    const doc = this.draw.getDocument()
+    const table = doc.elements[tableIndex]
+    if (!table || table.type !== 'table') return
+    const t = table as ITableElement
+    if (rowIndex < 0 || rowIndex >= t.trList.length) return
+    const h = Math.max(20, Math.round(height))
+    t.trList[rowIndex].height = h
+    this._commit(doc)
+  }
+
   /* -------------------- 图片 / 分页 -------------------- */
 
   insertImage(src: string | { value: string; width: number; height: number }, width?: number, height?: number): void {
@@ -786,9 +964,9 @@ export class CommandAdapt {
     const img: IElement = { type: 'image', value: imgSrc, width: imgW, height: imgH } as unknown as IElement
     const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
     if (!parent) return
-    const idx = pos.path.length === 1 ? doc.elements.length : (pos.path[pos.path.length - 1] as number) + 1
+    const idx = (pos.path[pos.path.length - 1] as number) + 1
     parent.splice(idx, 0, img)
-    this.draw.applyActiveDocument(doc)
+    this._commit(doc)
   }
 
   updateImageSize(path: Path, width: number, height: number): void {
@@ -797,7 +975,7 @@ export class CommandAdapt {
     if (!el || el.type !== 'image') return
     ;(el as unknown as { width: number; height: number }).width = Math.max(1, Math.round(width))
     ;(el as unknown as { width: number; height: number }).height = Math.max(1, Math.round(height))
-    this.draw.applyActiveDocument(doc)
+    this._commit(doc)
   }
 
   deleteImage(path: Path): void {
@@ -808,7 +986,7 @@ export class CommandAdapt {
     if (typeof idx !== 'number' || idx < 0 || idx >= parent.length) return
     if (parent[idx].type !== 'image') return
     parent.splice(idx, 1)
-    this.draw.applyActiveDocument(doc)
+    this._commit(doc)
   }
 
   resetImageSize(path: Path): void {
@@ -819,7 +997,7 @@ export class CommandAdapt {
     img.onload = () => {
       el.width = img.naturalWidth
       el.height = img.naturalHeight
-      this.draw.applyActiveDocument(doc)
+      this._commit(doc)
     }
     img.src = el.value
   }
@@ -829,7 +1007,7 @@ export class CommandAdapt {
     const el = getByPath(doc.elements, path)
     if (!el || el.type !== 'image') return
     ;(el as unknown as { rowFlex: string }).rowFlex = align
-    this.draw.applyActiveDocument(doc)
+    this._commit(doc)
   }
 
   replaceImage(path: Path): void {
@@ -851,7 +1029,7 @@ export class CommandAdapt {
           el.value = value
           el.width = img.naturalWidth
           el.height = img.naturalHeight
-          this.draw.applyActiveDocument(doc)
+          this._commit(doc)
         }
         img.src = value
       }
@@ -860,14 +1038,44 @@ export class CommandAdapt {
     input.click()
   }
 
+  rotateImage(path: Path): void {
+    const doc = this.draw.getActiveDocument()
+    const el = getByPath(doc.elements, path) as unknown as { type: string; rotate?: number; width: number; height: number } | null
+    if (!el || el.type !== 'image') return
+    const cur = el.rotate ?? 0
+    el.rotate = (cur + 90) % 360
+    this._commit(doc)
+  }
+
+  saveImage(path: Path): void {
+    const doc = this.draw.getActiveDocument()
+    const el = getByPath(doc.elements, path) as unknown as { type: string; value: string } | null
+    if (!el || el.type !== 'image' || !el.value) return
+    const a = document.createElement('a')
+    a.href = el.value
+    a.download = `image-${Date.now()}.png`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+  }
+
+  imageWrap(path: Path, mode: 'block' | 'surround' | 'floatTop' | 'floatBottom'): void {
+    const doc = this.draw.getActiveDocument()
+    const el = getByPath(doc.elements, path) as unknown as { type: string; imgDisplay?: string; rowFlex?: string } | null
+    if (!el || el.type !== 'image') return
+    el.imgDisplay = mode
+    if (mode === 'surround' || mode === 'floatTop' || mode === 'floatBottom') el.rowFlex = 'center'
+    this._commit(doc)
+  }
+
   insertPageBreak(): void {
     const doc = this.draw.getActiveDocument()
     const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
     const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
     if (!parent) return
-    const idx = pos.path.length === 1 ? doc.elements.length : (pos.path[pos.path.length - 1] as number) + 1
+    const idx = (pos.path[pos.path.length - 1] as number) + 1
     parent.splice(idx, 0, { type: 'pageBreak', value: 'manual' } as IElement)
-    this.draw.applyActiveDocument(doc)
+    this._commit(doc)
   }
 
   /** 插入超链接 */
@@ -876,11 +1084,11 @@ export class CommandAdapt {
     const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
     const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
     if (!parent) return
-    const idx = pos.path.length === 1 ? doc.elements.length : (pos.path[pos.path.length - 1] as number) + 1
+    const idx = (pos.path[pos.path.length - 1] as number) + 1
     const link: IElement = { type: 'hyperlink', value: payload.url } as unknown as IElement
     ;(link as unknown as Record<string, unknown>).valueList = [{ type: 'text', value: payload.value } as IElement]
     parent.splice(idx, 0, link)
-    this.draw.applyActiveDocument(doc)
+    this._commit(doc)
   }
 
   /** 插入分隔线 */
@@ -889,9 +1097,9 @@ export class CommandAdapt {
     const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
     const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
     if (!parent) return
-    const idx = pos.path.length === 1 ? doc.elements.length : (pos.path[pos.path.length - 1] as number) + 1
+    const idx = (pos.path[pos.path.length - 1] as number) + 1
     parent.splice(idx, 0, { type: 'separator', value: '' } as IElement)
-    this.draw.applyActiveDocument(doc)
+    this._commit(doc)
   }
 
   /* -------------------- 内容读写 / 目录 -------------------- */
@@ -903,7 +1111,7 @@ export class CommandAdapt {
   setValue(payload: { elements: IElement[] }): void {
     const doc = this.draw.getActiveDocument()
     doc.elements = payload.elements
-    this.draw.applyActiveDocument(doc)
+    this._commit(doc)
   }
 
   getWordCount(): number {
@@ -936,6 +1144,56 @@ export class CommandAdapt {
     } catch { /* invalid id */ }
   }
 
+  getAutoCatalog(): IAutoCatalogResult {
+    const layout = this.draw.getLayout()
+    const empty: IAutoCatalogResult = { catalog1: [], catalog2: [], catalog3: [] }
+    if (!layout) return empty
+
+    const levelMap: Record<string, number> = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6 }
+    const all: IAutoCatalogItem[] = []
+
+    for (const page of layout.pages) {
+      const pageNo = page.index + 1
+      for (const b of page.blocks) {
+        if (b.kind !== 'paragraph' || b.paragraphKind !== 'title' || !b.block) continue
+        const titleEl = b.block as unknown as ITitleElement
+        const level = levelMap[titleEl.level] ?? 1
+        const name = (titleEl.valueList ?? []).map(v => v.type === 'text' ? (v as ITextElement).value : '').join('')
+        const id = JSON.stringify(b.parentPath.concat(b.startIndex))
+        all.push({ id, level, name, pageNo })
+      }
+    }
+
+    return {
+      catalog1: all.filter(i => i.level <= 1),
+      catalog2: all.filter(i => i.level <= 2),
+      catalog3: all.filter(i => i.level <= 3)
+    }
+  }
+
+  insertAutoCatalog(type: 1 | 2 | 3): void {
+    const result = this.getAutoCatalog()
+    const items = type === 1 ? result.catalog1 : type === 2 ? result.catalog2 : result.catalog3
+    if (items.length === 0) return
+
+    const doc = this.draw.getActiveDocument()
+    const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
+    const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
+    if (!parent) return
+    const idx = (pos.path[pos.path.length - 1] as number) + 1
+
+    const tocElements: IElement[] = items.map(item => ({
+      type: 'text',
+      valueList: [{
+        type: 'text',
+        value: '  '.repeat(item.level - 1) + item.name + ' ' + '\u00b7'.repeat(Math.max(3, 50 - item.name.length - item.level * 2)) + ' ' + String(item.pageNo)
+      }]
+    } as unknown as IElement))
+
+    parent.splice(idx, 0, ...tocElements)
+    this._commit(doc)
+  }
+
   /* -------------------- 页面 / 打印 -------------------- */
 
   setPaperSize(width: number, height: number): void {
@@ -963,6 +1221,20 @@ export class CommandAdapt {
     const opts = this.draw.getOptions()
     const scale = Math.max(0.5, Number(opts.scale ?? 1) - 0.1)
     this.draw.setScale(scale)
+  }
+
+  setRulerVisible(visible: boolean): void {
+    this.draw.setRulerVisible(visible)
+  }
+
+  setPaperMargin(margins: number[]): void {
+    const m = [
+      Math.max(0, Math.round(margins[0] ?? 0)),
+      Math.max(0, Math.round(margins[1] ?? 0)),
+      Math.max(0, Math.round(margins[2] ?? 0)),
+      Math.max(0, Math.round(margins[3] ?? 0))
+    ] as [number, number, number, number]
+    this.draw.setPaperMargins(m)
   }
 
   print(): void {
@@ -1006,7 +1278,7 @@ export class CommandAdapt {
         const h = this._searchHits[i]
         if (isSamePath(h.path, hit.path)) { h.start += delta; h.end += delta }
       }
-      this.draw.applyActiveDocument(doc)
+      this._commit(doc)
     }
     this._searchIdx++
     if (this._searchIdx < this._searchHits.length) {
@@ -1025,8 +1297,31 @@ export class CommandAdapt {
     })
   }
 
-  /* -------------------- 未实现命令占位（后续补） -------------------- */
+  /* -------------------- 撤销 / 重做 -------------------- */
 
-  undo(): void { /* 交由 history 插件 */ }
-  redo(): void { /* 交由 history 插件 */ }
+  undo(): void {
+    if (!this._historyManager) return
+    const current: HistorySnapshot = {
+      doc: cloneTree(this.draw.getDocument()),
+      range: this.range.getRange()
+    }
+    const prev = this._historyManager.undo(current)
+    if (prev) {
+      this.draw.setDocument(prev.doc)
+      if (prev.range) this.range.setRange(prev.range)
+    }
+  }
+
+  redo(): void {
+    if (!this._historyManager) return
+    const current: HistorySnapshot = {
+      doc: cloneTree(this.draw.getDocument()),
+      range: this.range.getRange()
+    }
+    const next = this._historyManager.redo(current)
+    if (next) {
+      this.draw.setDocument(next.doc)
+      if (next.range) this.range.setRange(next.range)
+    }
+  }
 }

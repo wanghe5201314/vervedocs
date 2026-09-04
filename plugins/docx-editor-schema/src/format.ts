@@ -168,6 +168,7 @@ function normalizeImage(node: IElement, ctx: FormatTreeContext): void {
   const anyNode = node as unknown as Record<string, unknown>
   if (typeof anyNode.width !== 'number' || (anyNode.width as number) <= 0) anyNode.width = 200
   if (typeof anyNode.height !== 'number' || (anyNode.height as number) <= 0) anyNode.height = 150
+  if (typeof anyNode.rotate !== 'number') anyNode.rotate = 0
   applyParagraphStyleId(node, ctx)
 }
 

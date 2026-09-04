@@ -1,3 +1,5 @@
+import './assets/fonts/material-icons/material-icons.css'
+
 export * from './text-measure'
 export * from './layout-types'
 export * from './layout-engine'

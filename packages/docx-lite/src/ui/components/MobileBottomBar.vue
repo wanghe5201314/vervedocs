@@ -13,6 +13,10 @@
         <span class="material-icons">table_chart</span>
         <span class="mobile-tool-label">表格</span>
       </button>
+      <button class="mobile-tool-btn" @click="$emit('showPopup', 'catalog')">
+        <span class="material-icons">format_list_bulleted</span>
+        <span class="mobile-tool-label">目录</span>
+      </button>
       <button class="mobile-tool-btn" @click="$emit('showPopup', 'link')">
         <span class="material-icons">link</span>
         <span class="mobile-tool-label">链接</span>
@@ -143,7 +147,7 @@ defineEmits<{
   highlightChange: [value: string]
   titleLevelChange: [value: string]
   lineHeightChange: [value: number]
-  showPopup: [name: 'table' | 'link' | 'search' | 'shortcuts']
+  showPopup: [name: 'table' | 'link' | 'search' | 'shortcuts' | 'catalog']
   insertImage: []
 }>()
 

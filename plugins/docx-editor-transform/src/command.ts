@@ -3,7 +3,7 @@
  */
 
 import type { CommandAdapt } from './command-adapt'
-import type { IElement, Path } from '@vervedoc/docx-editor-schema'
+import type { IElement, Path, IAutoCatalogResult } from '@vervedoc/docx-editor-schema'
 
 export class Command {
   constructor(public adapt: CommandAdapt) {}
@@ -34,11 +34,18 @@ export class Command {
   executeTitle(l: 'first' | 'second' | 'third' | 'fourth' | 'fifth' | 'sixth' | null): void { this.adapt.setTitle(l) }
   executeList(type: Parameters<CommandAdapt['setList']>[0], style: Parameters<CommandAdapt['setList']>[1]): void { this.adapt.setList(type, style) }
   executeInsertTable(rows: number, cols: number, availableWidth?: number): void { this.adapt.insertTable(rows, cols, availableWidth) }
-  executeInsertTableRow(position: 'above' | 'below'): void { this.adapt.insertTableRow(position) }
-  executeInsertTableCol(position: 'left' | 'right'): void { this.adapt.insertTableCol(position) }
+  executeInsertTableRow(position: 'above' | 'below', count?: number): void { this.adapt.insertTableRow(position, count) }
+  executeInsertTableCol(position: 'left' | 'right', count?: number): void { this.adapt.insertTableCol(position, count) }
   executeDeleteTableRow(): void { this.adapt.deleteTableRow() }
   executeDeleteTableCol(): void { this.adapt.deleteTableCol() }
   executeSplitTableCell(): void { this.adapt.splitTableCell() }
+  executeMergeTableCells(): void { this.adapt.mergeTableCells() }
+  executeDeleteTable(): void { this.adapt.deleteTable() }
+  executeSetCellVerticalAlign(align: 'top' | 'middle' | 'bottom'): void { this.adapt.setCellVerticalAlign(align) }
+  executeSetCellBackground(color: string): void { this.adapt.setCellBackground(color) }
+  executeToggleRepeatHeader(): void { this.adapt.toggleRepeatHeader() }
+  executeSetTableColWidth(tableIndex: number, colIndex: number, width: number): void { this.adapt.setTableColWidth(tableIndex, colIndex, width) }
+  executeSetTableRowHeight(tableIndex: number, rowIndex: number, height: number): void { this.adapt.setTableRowHeight(tableIndex, rowIndex, height) }
   executeSelectTable(): void { this.adapt.selectTable() }
   executeImage(src: string | { value: string; width: number; height: number }, w?: number, h?: number): void { this.adapt.insertImage(src, w, h) }
   executeUpdateImageSize(path: Path, width: number, height: number): void { this.adapt.updateImageSize(path, width, height) }
@@ -46,6 +53,9 @@ export class Command {
   executeResetImageSize(path: Path): void { this.adapt.resetImageSize(path) }
   executeImageAlign(path: Path, align: 'left' | 'center' | 'right'): void { this.adapt.imageAlign(path, align) }
   executeReplaceImage(path: Path): void { this.adapt.replaceImage(path) }
+  executeRotateImage(path: Path): void { this.adapt.rotateImage(path) }
+  executeSaveImage(path: Path): void { this.adapt.saveImage(path) }
+  executeImageWrap(path: Path, mode: 'block' | 'surround' | 'floatTop' | 'floatBottom'): void { this.adapt.imageWrap(path, mode) }
   executePageBreak(): void { this.adapt.insertPageBreak() }
   executeHyperlink(payload: { value: string; url: string }): void { this.adapt.insertHyperlink(payload) }
   executeSeparator(): void { this.adapt.insertSeparator() }
@@ -55,12 +65,16 @@ export class Command {
   executePaperDirection(d: 'vertical' | 'horizontal'): void { this.adapt.setPaperDirection(d) }
   executePageScaleAdd(): void { this.adapt.pageScaleAdd() }
   executePageScaleMinus(): void { this.adapt.pageScaleMinus() }
+  executeSetRulerVisible(visible: boolean): void { this.adapt.setRulerVisible(visible) }
+  executeSetPaperMargin(margins: number[]): void { this.adapt.setPaperMargin(margins) }
   executePrint(): void { this.adapt.print() }
   getValue(): IElement[] { return this.adapt.getValue() }
   executeSetValue(payload: { elements: IElement[] }): void { this.adapt.setValue(payload) }
   getWordCount(): number { return this.adapt.getWordCount() }
   getCatalog(): { id: string; level: number; name: string }[] { return this.adapt.getCatalog() }
   executeLocationCatalog(id: string): void { this.adapt.locationCatalog(id) }
+  getAutoCatalog(): IAutoCatalogResult { return this.adapt.getAutoCatalog() }
+  executeInsertAutoCatalog(type: 1 | 2 | 3): void { this.adapt.insertAutoCatalog(type) }
   executeUndo(): void { this.adapt.undo() }
   executeRedo(): void { this.adapt.redo() }
 }

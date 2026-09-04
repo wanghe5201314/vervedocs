@@ -5,13 +5,16 @@
  * 所有遍历严格保持树形语义，不做扁平化。
  */
 
+import rfdc from 'rfdc'
 import type { IElement, Path, PathSegment, IPosition, ITableElement, ITd, ITr } from './types'
 
 /* -------------------- 深拷贝 -------------------- */
 
+const _clone = rfdc({ proto: false, circles: false })
+
 export function cloneTree<T>(node: T): T {
   if (node === null || typeof node !== 'object') return node
-  return structuredClone(node)
+  return _clone(node)
 }
 
 /* -------------------- 类型守卫 -------------------- */

@@ -10,7 +10,7 @@
  *  - 未匹配的旧块 id 由 renderer.render 内的 GC 淘汰。
  */
 
-import type { IDocxDocumentMeta, IEditorOption, IPosition } from '@vervedoc/docx-editor-schema'
+import type { IDocxDocumentMeta, IEditorOption, IPosition, Path } from '@vervedoc/docx-editor-schema'
 import { formatElementTree, isSamePath, getByPath, FONT_FAMILY_LIST, FONT_FAMILY_VALUE, FONT_FAMILY_LABEL, FONT_SIZE, FONT_SIZE_LIST } from '@vervedoc/docx-editor-schema'
 import type { Listener, RangeManager, EventBus } from '@vervedoc/docx-editor-state'
 import { LayoutEngine, type LayoutOptions } from './layout-engine'
@@ -20,7 +20,9 @@ import { hitTest } from './hit-test'
 import { locateCaret, computeSelectionRects } from './caret-rect'
 import { TableWidget } from './widgets/table-widget'
 import { ImageWidget } from './widgets/image-widget'
+import { ParagraphWidget } from './widgets/paragraph-widget'
 import { HeaderFooterWidget, type Zone } from './widgets/header-footer-widget'
+import { RulerWidget } from './widgets/ruler-widget'
 
 export interface DrawDeps {
   document: IDocxDocumentMeta
@@ -92,8 +94,12 @@ export class Draw {
   private tableWidget: TableWidget | null = null
   /** 图片交互 widget（选中 + 缩放手柄 + 右键菜单） */
   private imageWidget: ImageWidget | null = null
+  /** 段落格式悬浮 widget */
+  private paragraphWidget: ParagraphWidget | null = null
   /** 页眉页脚交互 widget */
   private headerFooterWidget: HeaderFooterWidget | null = null
+  /** 标尺 widget */
+  private rulerWidget: RulerWidget | null = null
 
   constructor(container: HTMLDivElement, options: IEditorOption, deps: DrawDeps) {
     this.container = container
@@ -159,9 +165,13 @@ export class Draw {
       deps.listener.on('rangeChange', () => {
         this.caretVisible = true
         this.renderCaretIfAny()
-        this.updateSelectionToolbar()
-        this.tableWidget?.update()
-        this.imageWidget?.update()
+        // 拖拽过程中不更新悬浮工具栏，等 mouseup 再触发，避免工具栏跟随拖拽闪烁
+        if (!this.isDragging) {
+          this.updateSelectionToolbar()
+          this.tableWidget?.update()
+          this.imageWidget?.update()
+          this.paragraphWidget?.update()
+        }
       })
     }
 
@@ -209,7 +219,8 @@ export class Draw {
       },
       onCommand: (cmd: string, ...args: any[]) => { this.onCommand?.(cmd, ...args) },
       hit: (clientX: number, clientY: number) => this.hit(clientX, clientY),
-      focusInput: () => this.focusInput()
+      focusInput: () => this.focusInput(),
+      setCursor: (cursor: string) => { this.wrapper.style.cursor = cursor }
     })
     this.tableWidget.create()
     this.headerFooterWidget = new HeaderFooterWidget({
@@ -240,10 +251,45 @@ export class Draw {
         return Math.max(0, (wrapperWidth - (this.layout?.pageWidth ?? 0)) / 2) - scrollLeft
       },
       onCommand: (cmd: string, ...args: any[]) => { this.onCommand?.(cmd, ...args) },
+      onUpdateImageSizeLive: (path: Path, width: number, height: number) => this.updateImageSizeLive(path, width, height),
       hit: (clientX: number, clientY: number) => this.hit(clientX, clientY),
       focusInput: () => this.focusInput()
     })
     this.imageWidget.create()
+    this.paragraphWidget = new ParagraphWidget({
+      getLayout: () => this.layout,
+      getRange: () => this.range ?? null,
+      getContainerRect: () => this.canvasHost.getBoundingClientRect(),
+      getScrollY: () => this.scrollY,
+      getPageOffsetX: () => {
+        const wrapperWidth = this.wrapper.clientWidth
+        const scrollLeft = this.wrapper.scrollLeft
+        return Math.max(0, (wrapperWidth - (this.layout?.pageWidth ?? 0)) / 2) - scrollLeft
+      },
+      onCommand: (cmd: string, ...args: any[]) => { this.onCommand?.(cmd, ...args) },
+      hit: (clientX: number, clientY: number) => this.hit(clientX, clientY)
+    })
+    this.paragraphWidget.create()
+    this.rulerWidget = new RulerWidget({
+      container: container,
+      getLayout: () => this.layout,
+      getScrollY: () => this.scrollY,
+      getWrapperWidth: () => this.wrapper.clientWidth,
+      getWrapperHeight: () => this.wrapper.clientHeight,
+      getPageOffsetX: () => {
+        const wrapperWidth = this.wrapper.clientWidth
+        const scrollLeft = this.wrapper.scrollLeft
+        return Math.max(0, (wrapperWidth - (this.layout?.pageWidth ?? 0)) / 2) - scrollLeft
+      },
+      getScale: () => Number(this.options.scale ?? 1),
+      getPageMargins: () => (this.options.pageMargins as [number, number, number, number]) ?? [100, 120, 100, 120],
+      getPageGap: () => Number((this.options as unknown as { pageGap?: number }).pageGap ?? 24),
+      onCommand: (cmd: string, ...args: any[]) => { this.onCommand?.(cmd, ...args) }
+    })
+    this.rulerWidget.create()
+    if ((options as unknown as { showRuler?: boolean }).showRuler) {
+      this.rulerWidget.setVisible(true)
+    }
   }
 
   /* -------------------- 输入 / 键盘事件 -------------------- */
@@ -288,6 +334,9 @@ export class Draw {
     // 阻止 mousedown 默认行为抢走隐藏输入框的焦点
     e.preventDefault()
 
+    // 表格边框拖拽
+    if (this.tableWidget?.handleMouseDown(e)) return
+
     // 图片选中/缩放
     if (this.imageWidget?.handleMouseDown(e)) return
 
@@ -313,6 +362,7 @@ export class Draw {
   }
 
   private onMouseMove = (e: MouseEvent): void => {
+    this.tableWidget?.handleMouseMove(e)
     if (!this.isDragging || !this.range || !this.dragAnchor || !this.layout) return
     const pos = this.hit(e.clientX, e.clientY)
     if (!pos) return
@@ -328,11 +378,17 @@ export class Draw {
     }
   }
 
-  private onMouseUp = (): void => {
+  private onMouseUp = (e: MouseEvent): void => {
+    this.tableWidget?.handleMouseUp(e)
     this.isDragging = false
     this.dragAnchor = null
     this.dragPendingPos = null
     if (this.dragRafId != null) { cancelAnimationFrame(this.dragRafId); this.dragRafId = null }
+    // 松开鼠标后才显示悬浮工具栏
+    this.updateSelectionToolbar()
+    this.tableWidget?.update()
+    this.imageWidget?.update()
+    this.paragraphWidget?.update()
   }
 
   private finishMouseSelect(): void {
@@ -702,15 +758,54 @@ export class Draw {
     // 选区高亮（非折叠时）
     const ordered = this.range.getOrdered()
     if (ordered && !this.range.isCollapsed()) {
-      const selRects = computeSelectionRects(this.layout, ordered.start, ordered.end)
-
-      this.renderer.drawSelection(selRects, this.scrollY)
+      const tableRects = this.computeTableSelectionRects(ordered)
+      if (tableRects) {
+        this.renderer.drawSelection(tableRects, this.scrollY)
+      } else {
+        const selRects = computeSelectionRects(this.layout, ordered.start, ordered.end)
+        this.renderer.drawSelection(selRects, this.scrollY)
+      }
     }
     // 光标
     const pos = this.range.getFocus()
     if (!pos) return
     const rect = locateCaret(this.layout, pos)
     if (rect) this.renderer.drawCaret(rect.x, rect.y, rect.height, this.scrollY, this.caretVisible)
+  }
+
+  private computeTableSelectionRects(ordered: { start: IPosition; end: IPosition }): { x: number; y: number; width: number; height: number }[] | null {
+    if (!this.layout) return null
+    const { start, end } = ordered
+    if (start.path.length < 5 || end.path.length < 5) return null
+    if (start.path[1] !== 'trList' || end.path[1] !== 'trList') return null
+    if (start.path[0] !== end.path[0]) return null
+    const tableIndex = start.path[0] as number
+    for (const page of this.layout.pages) {
+      const block = page.blocks.find(b => b.kind === 'table' && b.indexInParent === tableIndex)
+      if (!block || block.kind !== 'table') continue
+      const rowCount = block.rows.length
+      const lastRow = block.rows[rowCount - 1]
+      if (!lastRow) return null
+      const lastColIdx = lastRow.cells.length - 1
+      const startRow = start.path[2] as number
+      const startCol = start.path[4] as number
+      const endRow = end.path[2] as number
+      const endCol = end.path[4] as number
+      if (startRow !== 0 || startCol !== 0 || endRow !== rowCount - 1 || endCol !== lastColIdx) return null
+      const rects: { x: number; y: number; width: number; height: number }[] = []
+      for (const row of block.rows) {
+        for (const cell of row.cells) {
+          rects.push({
+            x: page.contentRect.x + block.rect.x + cell.rect.x,
+            y: page.contentRect.y + block.rect.y + cell.rect.y,
+            width: cell.rect.width,
+            height: cell.rect.height
+          })
+        }
+      }
+      return rects
+    }
+    return null
   }
 
 
@@ -738,19 +833,9 @@ export class Draw {
 
     const fire = (cmd: string, ...args: any[]) => { this.onCommand?.(cmd, ...args) }
 
-    const SVG_BOLD = '<svg width="20" height="20" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8.131 6.9c2.035 0 2.569-.9 2.569-1.869 0-.968-.64-1.831-2.623-1.831H5.2v3.7h2.931zm.524 5.9c2.045 0 2.545-1.305 2.545-2.3 0-.985-.506-2.4-2.81-2.4H5.2v4.7h3.455zM4 2h4.71c2.367 0 3.19 1.583 3.19 3s-.325 1.852-1.1 2.5c1.2.5 1.569 1.379 1.6 3 .03 1.606-.586 3.5-3.769 3.5H4V2z" fill="#3D4757" fill-rule="evenodd"/></svg>'
-    const SVG_ITALIC = '<svg width="20" height="20" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M10.017 3L8.08 13H9v1H6v-1h1.182L9 3H8V2h3v1h-.983z" fill="#3D4757"/></svg>'
-    const SVG_UNDERLINE = '<svg width="20" height="20" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M5 2v6a3 3 0 106 0V2h1v6a4 4 0 11-8 0V2h1zM4 13h8v1H4z" fill="#3D4757"/></svg>'
-    const SVG_STRIKE = '<svg width="20" height="20" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><g fill="#3D4757" fill-rule="evenodd"><path d="M10.42 7.903H6.692a9.182 9.182 0 01-.41-.172 5.54 5.54 0 01-.814-.447 2.955 2.955 0 01-.655-.595 2.728 2.728 0 01-.44-.777 2.877 2.877 0 01-.162-1.006c0-.472.094-.888.282-1.25.188-.36.453-.663.793-.907s.747-.43 1.22-.558A5.97 5.97 0 018.063 2c.504 0 .95.049 1.337.147.387.097.725.23 1.013.398.287.169.53.365.73.59a3.337 3.337 0 01.772 1.486c.03.13.054.255.073.379h-1.276a2.393 2.393 0 00-.22-.615 2.315 2.315 0 00-.59-.724 2.467 2.467 0 00-.834-.44 3.376 3.376 0 00-1.005-.146 4.69 4.69 0 00-.958.097 2.77 2.77 0 00-.839.314 1.765 1.765 0 00-.597.566c-.152.233-.229.518-.229.854 0 .348.086.642.258.884.171.241.401.449.689.622.287.174.615.323.983.448s.749.247 1.142.367c.31.097.62.196.934.297a8.439 8.439 0 01.973.38zm1.376 1c.175.217.315.466.418.746.105.285.158.612.158.98 0 .554-.104 1.041-.312 1.462-.207.42-.496.772-.867 1.054-.37.282-.81.495-1.32.64A6.12 6.12 0 018.205 14c-.543 0-1.071-.09-1.586-.273a4.44 4.44 0 01-1.374-.773 3.873 3.873 0 01-.97-1.217 3.695 3.695 0 01-.395-1.612h1.27c.028.407.122.78.282 1.12a2.835 2.835 0 001.581 1.465c.363.138.76.207 1.192.207.387 0 .758-.042 1.112-.126a2.85 2.85 0 00.938-.399 2.01 2.01 0 00.647-.708c.16-.29.241-.642.241-1.054 0-.337-.087-.623-.261-.86a2.333 2.333 0 00-.69-.61 4.651 4.651 0 00-.495-.257h2.099z"/><path d="M3 7h10v1H3z"/></g></svg>'
-    const SVG_LEFT = '<svg width="20" height="20" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M2 13h12v1H2zm0-3h8v1H2zm0-3h12v1H2zm0-6h12v1H2zm0 3h8v1H2z" fill="#3d4757" fill-rule="evenodd"/></svg>'
-    const SVG_CENTER = '<svg width="20" height="20" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M2 13h12v1H2v-1zm2-3h8v1H4v-1zM2 7h12v1H2V7zm0-6h12v1H2V1zm2 3h8v1H4V4z" fill="#3D4757" fill-rule="evenodd"/></svg>'
-    const SVG_RIGHT = '<svg width="20" height="20" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M2 13h12v1H2v-1zm4-3h8v1H6v-1zM2 7h12v1H2V7zm0-6h12v1H2V1zm4 3h8v1H6V4z" fill="#3D4757" fill-rule="evenodd"/></svg>'
-    const SVG_JUSTIFY = '<svg width="20" height="20" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M2 3h12v1H2zM2 6h12v1H2zM2 9h12v1H2zM2 12h12v1H2z" fill="#3D4757"/></svg>'
-    const SVG_FORMAT = '<svg width="20" height="20" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><g fill="#3D4757" fill-rule="evenodd"><path d="M8.213 13H6.8l6.636-6.636-4.243-4.243-7.07 7.071L5.928 13H4.515L1.06 9.546a.5.5 0 010-.707L8.839 1.06a.5.5 0 01.707 0l4.95 4.95a.5.5 0 010 .707L8.213 13z" fill-rule="nonzero"/><path d="M4.536 6.364l4.95 4.95-.707.707-4.95-4.95zM4.521 13h10.03v1H5.496z"/></g></svg>'
 
-    const mkBtn = (svg: string, cmd: string, args: any[] = [], title = ''): HTMLButtonElement => {
+    const mkBtn = (icon: string, cmd: string, args: any[] = [], title = ''): HTMLButtonElement => {
       const el = document.createElement('button')
-      el.innerHTML = svg
       el.title = title
       el.dataset.cmd = cmd
       el.dataset.args = JSON.stringify(args)
@@ -759,6 +844,11 @@ export class Draw {
         padding: '4px', cursor: 'pointer', display: 'flex',
         alignItems: 'center', justifyContent: 'center', lineHeight: '0',
       } as CSSStyleDeclaration)
+      const sp = document.createElement('span')
+      sp.className = 'material-icons'
+      sp.textContent = icon
+      sp.style.cssText = 'font-size:18px;color:#3D4757;'
+      el.appendChild(sp)
       el.addEventListener('mousedown', (e) => { e.preventDefault(); e.stopPropagation() })
       el.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); fire(cmd, ...args) })
       return el
@@ -808,10 +898,10 @@ export class Draw {
     tb.appendChild(mkSep())
 
     // B I U S
-    tb.appendChild(mkBtn(SVG_BOLD, 'executeBold', [], '加粗'))
-    tb.appendChild(mkBtn(SVG_ITALIC, 'executeItalic', [], '斜体'))
-    tb.appendChild(mkBtn(SVG_UNDERLINE, 'executeUnderline', [], '下划线'))
-    tb.appendChild(mkBtn(SVG_STRIKE, 'executeStrikeout', [], '删除线'))
+    tb.appendChild(mkBtn('format_bold', 'executeBold', [], '加粗'))
+    tb.appendChild(mkBtn('format_italic', 'executeItalic', [], '斜体'))
+    tb.appendChild(mkBtn('format_underlined', 'executeUnderline', [], '下划线'))
+    tb.appendChild(mkBtn('format_strikethrough', 'executeStrikeout', [], '删除线'))
 
     tb.appendChild(mkSep())
 
@@ -844,15 +934,15 @@ export class Draw {
     tb.appendChild(mkSep())
 
     // 对齐
-    tb.appendChild(mkBtn(SVG_LEFT, 'executeRowFlex', ['left'], '左对齐'))
-    tb.appendChild(mkBtn(SVG_CENTER, 'executeRowFlex', ['center'], '居中'))
-    tb.appendChild(mkBtn(SVG_RIGHT, 'executeRowFlex', ['right'], '右对齐'))
-    tb.appendChild(mkBtn(SVG_JUSTIFY, 'executeRowFlex', ['justify'], '两端对齐'))
+    tb.appendChild(mkBtn('format_align_left', 'executeRowFlex', ['left'], '左对齐'))
+    tb.appendChild(mkBtn('format_align_center', 'executeRowFlex', ['center'], '居中'))
+    tb.appendChild(mkBtn('format_align_right', 'executeRowFlex', ['right'], '右对齐'))
+    tb.appendChild(mkBtn('format_align_justify', 'executeRowFlex', ['justify'], '两端对齐'))
 
     tb.appendChild(mkSep())
 
     // 清除格式
-    tb.appendChild(mkBtn(SVG_FORMAT, 'executeFormat', [], '清除格式'))
+    tb.appendChild(mkBtn('format_clear', 'executeFormat', [], '清除格式'))
 
     this.container.appendChild(tb)
     this.selectionToolbar = tb
@@ -945,6 +1035,25 @@ export class Draw {
 
   setScale(scale: number): void {
     this.options.scale = scale
+    this.engine.updateOptions(this.toLayoutOptions())
+    this.renderer.invalidateAll()
+    this.reformatAndRender()
+  }
+
+  setRulerVisible(visible: boolean): void {
+    this.rulerWidget?.setVisible(visible)
+  }
+
+  updateImageSizeLive(path: Path, width: number, height: number): void {
+    const el = getByPath(this.document.elements, path)
+    if (!el || el.type !== 'image') return
+    ;(el as unknown as { width: number; height: number }).width = Math.max(1, Math.round(width))
+    ;(el as unknown as { width: number; height: number }).height = Math.max(1, Math.round(height))
+    this.reformatAndRender()
+  }
+
+  setPaperMargins(margins: [number, number, number, number]): void {
+    this.options.pageMargins = margins
     this.engine.updateOptions(this.toLayoutOptions())
     this.renderer.invalidateAll()
     this.reformatAndRender()
@@ -1134,7 +1243,9 @@ export class Draw {
     if (this.caretTimer != null) { clearInterval(this.caretTimer); this.caretTimer = null }
     this.tableWidget?.destroy()
     this.imageWidget?.destroy()
+    this.paragraphWidget?.destroy()
     this.headerFooterWidget?.destroy()
+    this.rulerWidget?.destroy()
 
     if (this.inputEl && this.inputEl.parentElement === this.container) {
       this.container.removeChild(this.inputEl)
@@ -1221,6 +1332,7 @@ export class Draw {
       pageMargins: (this.options.pageMargins as [number, number, number, number]) ?? [100, 120, 100, 120],
       groupColors: (this.options as unknown as { group?: { groupColors?: Record<string, import('@vervedoc/docx-editor-schema').IGroupColor> } }).group?.groupColors
     })
+    this.rulerWidget?.update()
   }
 
   private onResize = (): void => {
@@ -1239,6 +1351,7 @@ export class Draw {
     this.updateSelectionToolbar()
     this.tableWidget?.update()
     this.imageWidget?.update()
+    this.paragraphWidget?.update()
   }
 
   private scheduleRender(): void {
@@ -1258,7 +1371,10 @@ export class Draw {
 
 function signBlock(b: BlockNode): string {
   if (b.kind === 'paragraph') return signParagraph(b)
-  if (b.kind === 'image') return `img|${(b.block as unknown as { value?: string }).value ?? ''}|${b.rect.width}x${b.rect.height}`
+  if (b.kind === 'image') {
+    const img = b.block as unknown as { value?: string; rotate?: number; imgDisplay?: string }
+    return `img|${img.value ?? ''}|${b.rect.width}x${b.rect.height}|r${img.rotate ?? 0}|d${img.imgDisplay ?? 'block'}`
+  }
   if (b.kind === 'pageBreak') return `pb|${b.parentPath.join('.')}|${b.indexInParent}`
   return `unk`
 }
@@ -1278,5 +1394,9 @@ function signParagraph(b: ParagraphBlock): string {
   const bulletKey = b.bulletText
     ? `~b:${b.bulletKind ?? ''}|${b.bulletText ?? ''}|${b.bulletFont ?? ''}|${b.bulletSize ?? ''}|${b.bulletColor ?? ''}|${b.bulletBold ? 1 : 0}|bx=${b.bulletX ?? ''}`
     : ''
-  return `p|${b.paragraphKind}|w=${Math.round(b.rect.width)}|${paraKey}|${runsKey.join('~')}${bulletKey}`
+  const si = b.surroundImage
+  const surroundKey = si
+    ? `~si:${(si.block as unknown as { value?: string }).value ?? ''}|${si.rect.width}x${si.rect.height}|r${(si.block as unknown as { rotate?: number }).rotate ?? 0}`
+    : ''
+  return `p|${b.paragraphKind}|w=${Math.round(b.rect.width)}|${paraKey}|${runsKey.join('~')}${bulletKey}${surroundKey}`
 }

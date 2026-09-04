@@ -338,7 +338,26 @@ export class CanvasRenderer {
     c.height = Math.max(1, Math.round(h * dpr))
     const ctx = c.getContext('2d')!
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    if (b.kind === 'paragraph') this.drawParagraphInto(ctx, b)
+    if (b.kind === 'paragraph') {
+      if (b.surroundImage) {
+        const si = b.surroundImage
+        const sx = si.rect.x
+        const sy = 0
+        const mode = String((si.block as unknown as { imgDisplay?: string }).imgDisplay ?? 'surround')
+        if (mode === 'floatBottom') {
+          this.drawImageInto(ctx, si, sx, sy)
+          this.drawParagraphInto(ctx, b)
+        } else {
+          this.drawParagraphInto(ctx, b)
+          if (mode === 'surround') {
+            ctx.clearRect(sx, sy, si.rect.width, si.rect.height)
+          }
+          this.drawImageInto(ctx, si, sx, sy)
+        }
+      } else {
+        this.drawParagraphInto(ctx, b)
+      }
+    }
     else if (b.kind === 'image') this.drawImageInto(ctx, b, 0, 0)
     return c
   }
@@ -461,8 +480,23 @@ export class CanvasRenderer {
       img.src = url
       this.imageCache.set(url, img)
     }
+    const rotate = Number((b.block as unknown as { rotate?: number }).rotate ?? 0) % 360
     if (img.complete && img.naturalWidth > 0) {
-      try { ctx.drawImage(img, x, y, b.rect.width, b.rect.height) } catch { /* ignore CORS */ }
+      try {
+        if (rotate === 0) {
+          ctx.drawImage(img, x, y, b.rect.width, b.rect.height)
+        } else {
+          const cx = x + b.rect.width / 2
+          const cy = y + b.rect.height / 2
+          ctx.save()
+          ctx.translate(cx, cy)
+          ctx.rotate((rotate * Math.PI) / 180)
+          const dw = (rotate === 90 || rotate === 270) ? b.rect.height : b.rect.width
+          const dh = (rotate === 90 || rotate === 270) ? b.rect.width : b.rect.height
+          ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh)
+          ctx.restore()
+        }
+      } catch { /* ignore CORS */ }
     } else {
       ctx.strokeStyle = '#cccccc'
       ctx.strokeRect(x + 0.5, y + 0.5, b.rect.width - 1, b.rect.height - 1)

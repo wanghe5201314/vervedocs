@@ -7,6 +7,7 @@
 
 import type { IPosition, Path } from '@vervedoc/docx-editor-schema'
 import type { BlockNode, DocumentLayout, LineBox, ParagraphBlock, TableBlock } from './layout-types'
+import { getSharedMeasure } from './text-measure'
 
 export function hitTest(layout: DocumentLayout, docX: number, docY: number): IPosition | null {
   for (const page of layout.pages) {
@@ -25,6 +26,14 @@ function hitBlocks(blocks: BlockNode[], x: number, y: number, ox: number, oy: nu
     const by = oy + b.rect.y
     if (y < by || y > by + b.rect.height) continue
     if (b.kind === 'paragraph') {
+      if (b.surroundImage) {
+        const si = b.surroundImage
+        const six = bx + si.rect.x
+        if (x >= six && x <= six + si.rect.width && y >= by && y <= by + si.rect.height) {
+          const p: Path = [...si.parentPath, si.indexInParent]
+          return { path: p, offset: 0 }
+        }
+      }
       const r = hitParagraph(b, x - bx, y - by, b)
       if (r) return r
     } else if (b.kind === 'table') {
@@ -50,13 +59,14 @@ function hitParagraph(b: ParagraphBlock, lx: number, ly: number, _pb: ParagraphB
 
 function hitLine(line: LineBox, lx: number): IPosition | null {
   if (line.inlines.length === 0) return null
+  const measure = getSharedMeasure()
   for (const inl of line.inlines) {
     if (lx >= inl.x && lx <= inl.x + inl.width) {
       let cursor = inl.x
       const ls = inl.letterSpacing ?? 0
       for (let i = 0; i < inl.text.length; i++) {
         const ch = inl.text[i]
-        const cw = charWidthApprox(ch, inl.size, inl.bold) + ls
+        const cw = measure.charWidth(ch, inl.font, inl.size, inl.bold, inl.italic) + ls
         if (lx < cursor + cw / 2) return { path: inl.path, offset: inl.startOffset + i }
         cursor += cw
       }
@@ -86,8 +96,3 @@ function hitTable(b: TableBlock, x: number, y: number, tbx: number, tby: number)
   return null
 }
 
-function charWidthApprox(ch: string, size: number, bold?: boolean): number {
-  const isCJK = /[\u3000-\u9fff\uac00-\ud7af\uf900-\ufaff]/.test(ch)
-  const base = isCJK ? size : size * 0.55
-  return bold ? base * 1.02 : base
-}

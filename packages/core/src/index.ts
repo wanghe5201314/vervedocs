@@ -32,6 +32,11 @@ export type {
 
 // 变换层
 export { Command, CommandAdapt } from '@vervedoc/docx-editor-transform'
+export type { IHistoryManager, HistorySnapshot } from '@vervedoc/docx-editor-transform'
+
+// 历史管理
+export { HistoryManager, HistoryComponent, createSnapshot } from '@vervedoc/docx-editor-history'
+export type { HistorySnapshot as HistorySnapshotType } from '@vervedoc/docx-editor-history'
 
 // 批注 / 修订
 export { CommentComponent, RevisionComponent } from '@vervedoc/docx-editor-comment'
@@ -44,15 +49,12 @@ export {
   DateParticle,
   LaTexParticle,
   GadgetComponent,
-  ControlComponent,
-  generateShapeSvg,
-  svgToDataUrl
+  ControlComponent
 } from '@vervedoc/docx-editor-commands'
 export type {
   ISearchResult,
   IReplaceOption,
-  INavigateInfo,
-  ShapeDefinition
+  INavigateInfo
 } from '@vervedoc/docx-editor-commands'
 
 // version

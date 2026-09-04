@@ -34,7 +34,7 @@
   "scripts": {
     "clean": "node -e \"const fs = require('fs'); if(fs.existsSync('dist')) fs.rmSync('dist', {recursive: true})\"",
     "type:check": "tsc --noEmit",
-    "build": "pnpm run clean && tsc && vite build"
+    "build": "pnpm run clean && vite build"
   },
   "dependencies": {
     "@vervedoc/docx-editor-schema": "workspace:^",

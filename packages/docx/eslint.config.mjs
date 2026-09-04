@@ -68,6 +68,7 @@ export default [
         HTMLDivElement: 'readonly',
         HTMLInputElement: 'readonly',
         HTMLCanvasElement: 'readonly',
+        CanvasRenderingContext2D: 'readonly',
         Location: 'readonly',
         URLSearchParams: 'readonly'
       }
@@ -153,6 +154,7 @@ export default [
         HTMLDivElement: 'readonly',
         HTMLInputElement: 'readonly',
         HTMLCanvasElement: 'readonly',
+        CanvasRenderingContext2D: 'readonly',
         Location: 'readonly',
         URLSearchParams: 'readonly'
       }

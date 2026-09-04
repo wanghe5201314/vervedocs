@@ -44,11 +44,9 @@ DocxEditor UI 是一款基于 Vue 3 + Element Plus 构建的现代化文档编�
 - **AI 插件**: [@wanghe1995/docx-editor-ai](../docx-editor-libs/docx-editor-ai) ^1.0.1
 - **协同编辑**: [@wanghe1995/docx-editor-collaboration](../docx-editor-libs/docx-editor-collaboration) ^1.0.0
 - **图表**: [@wanghe1995/docx-editor-chart](../docx-editor-libs/docx-editor-chart)
-- **文档处理**: docx ^9.5.1
 - **代码高亮**: PrismJS 1.30.0
 - **视频播放**: Plyr ^3.7.8
 - **二维码**: qrcode ^1.5.4
-- **压缩工具**: JSZip ^3.10.1
 
 ## 📦 安装
 
@@ -146,9 +144,9 @@ interface DocxEditorUiInitialDocument {
 
 ### 导入 / 导出契约
 
-本包**不内置** DOCX 解析与生成。宿主注入符合契约的实现即可：
+本包**不内置** DOCX 解析与生成，也不依赖 `@vervedoc/docx-parser`。宿主自行安装并注入符合契约的实现即可：
 
-- 本地 JS：`@vervedoc/docx-parser`（`createDocxImportCallback` / `createDocxExportCallback`）
+- 本地 JS（独立包）：`@vervedoc/docx-parser`（`createDocxImportCallback` / `createDocxExportCallback`）
 - 服务端：对接 `@vervedoc/for-node` 的 `/documents/translate/word`、`/documents/render`
 - 其他自定义引擎：自行包装为 `DocxImportCallback` / `DocxExportCallback`
 

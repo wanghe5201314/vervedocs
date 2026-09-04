@@ -43,8 +43,7 @@ export default defineConfig({
       external: [
         'vue',
         '@vervedoc/core',
-        /^@vervedoc\/docx-editor-/,
-        'jszip'
+        /^@vervedoc\/docx-editor-/
       ],
       output: {
         exports: 'named',
@@ -58,8 +57,7 @@ export default defineConfig({
           '@vervedoc/docx-editor-history': 'DocxEditorHistory',
           '@vervedoc/docx-editor-keymap': 'DocxEditorKeymap',
           '@vervedoc/docx-editor-commands': 'DocxEditorCommands',
-          '@vervedoc/docx-editor-comment': 'DocxEditorComment',
-          'jszip': 'JSZip'
+          '@vervedoc/docx-editor-comment': 'DocxEditorComment'
         }
       }
     }

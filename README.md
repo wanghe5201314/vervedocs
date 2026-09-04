@@ -79,7 +79,7 @@ npm install @vervedoc/core
 
 ### @vervedoc/docx
 
-Word 文档编辑器完整版，提供完整的 UI 界面和交互。
+Word 文档编辑器完整版，提供完整的 UI 界面和交互。`.docx` 导入/导出需宿主注入回调，本地实现见 `@vervedoc/docx-parser`。
 
 ```bash
 npm install @vervedoc/docx
@@ -103,7 +103,7 @@ npm install @vervedoc/excel-parser
 
 ### @vervedoc/docx-parser
 
-本地 JS 实现的 `.docx` 导入/导出，满足 Word 编辑器的导入/导出契约，可替换为服务端或其他引擎。
+本地 JS 实现的 `.docx` 导入/导出，与 `@vervedoc/docx` / `@vervedoc/docx-lite` 解耦，由宿主注入 `importCallback` / `exportCallback`。可替换为服务端或其他引擎。
 
 ```bash
 npm install @vervedoc/docx-parser
@@ -134,7 +134,7 @@ npm install @vervedoc/excel
 # 安装 Excel 导入/导出（可选；未注入回调时 xlsx 导入导出不可用）
 npm install @vervedoc/excel-parser
 
-# 安装 Word 导入/导出（可选）
+# 安装 Word 导入/导出（可选；未注入回调时 docx 导入导出不可用）
 npm install @vervedoc/docx-parser
 
 # 安装 PPT 编辑器
@@ -146,19 +146,17 @@ npm install @vervedoc/ppt
 #### Word 文档编辑器
 
 ```typescript
-import DocxEditor from '@vervedoc/core'
+import { WordEditor } from '@vervedoc/docx'
+import {
+  createDocxImportCallback,
+  createDocxExportCallback
+} from '@vervedoc/docx-parser'
 
-const container = document.getElementById('editor') as HTMLDivElement
-
-const editor = new DocxEditor(container, {
-  main: [
-    { value: '欢迎使用 VerveDocs！' }
-  ]
+const editor = new WordEditor({
+  container: '#app',
+  importCallback: createDocxImportCallback(),
+  exportCallback: createDocxExportCallback()
 })
-
-// 使用命令 API
-editor.command.executeBold()  // 加粗
-editor.command.executeUndo()  // 撤销
 ```
 
 #### Excel 表格编辑器

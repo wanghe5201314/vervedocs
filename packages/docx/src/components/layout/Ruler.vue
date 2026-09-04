@@ -57,7 +57,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 
-interface IPageMetrics {
+export interface IPageMetrics {
   width: number
   height: number
   margins: number[]

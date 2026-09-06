@@ -10,11 +10,14 @@ import type {
   IEditorOption,
   IListNumbering,
   IParagraphStyle,
+  IBookmark,
   ITitleElement,
   IListElement,
   ITableElement,
   ITd,
-  ITr
+  ITr,
+  Path,
+  PathSegment
 } from './types'
 import { DEFAULT_EDITOR_OPTION } from './constants'
 
@@ -28,6 +31,10 @@ export interface FormatTreeContext {
   numbering?: Record<string, IListNumbering>
   /** 供 LaTeX / 公式等扩展使用的转换钩子 */
   laTexToSVG?: (latex: string) => string
+  /** 书签标记收集器（遍历时填充，调用方配对 start/end 构建 bookmarks） */
+  bookmarkMarkers?: { name: string; position: string; path: Path }[]
+  /** 内部路径栈（递归时 push/pop，不暴露给外部） */
+  _pathStack?: PathSegment[]
 }
 
 /**
@@ -61,8 +68,19 @@ export function formatElementTree(
       size: ctx.editorOptions.defaultSize
     } as unknown as IElement)
   }
+  const stack = ctx._pathStack ??= []
   for (let i = 0; i < elements.length; i++) {
+    stack.push(i)
+    const ext = (elements[i] as unknown as { extension?: { bookmarkMarker?: { name: string; position: string } } }).extension
+    if (ext?.bookmarkMarker && ctx.bookmarkMarkers) {
+      ctx.bookmarkMarkers.push({
+        name: ext.bookmarkMarker.name,
+        position: ext.bookmarkMarker.position,
+        path: [...stack]
+      })
+    }
     normalizeNode(elements[i], ctx)
+    stack.pop()
   }
   return elements
 }
@@ -98,7 +116,9 @@ function normalizeNode(node: IElement, ctx: FormatTreeContext): void {
       // 兜底：拥有 valueList/tdList/value 数组的容器一律递归
       const anyNode = node as unknown as Record<string, unknown>
       if (Array.isArray(anyNode.valueList)) {
+        ctx._pathStack?.push('valueList')
         formatElementTree(anyNode.valueList as IElement[], ctx)
+        ctx._pathStack?.pop()
       }
       break
   }
@@ -126,7 +146,9 @@ function normalizeTitle(node: ITitleElement, ctx: FormatTreeContext): void {
   if (!Array.isArray(node.valueList)) node.valueList = []
   if (!node.level) node.level = 'first'
   applyParagraphStyleId(node, ctx)
+  ctx._pathStack?.push('valueList')
   formatElementTree(node.valueList, ctx)
+  ctx._pathStack?.pop()
   // 段落级属性下沉到 valueList 内每个 run 上（若 run 未指定则继承）
   inheritParagraphAttrsToChildren(node)
 }
@@ -148,7 +170,9 @@ function normalizeList(node: IListElement, ctx: FormatTreeContext): void {
     if (numId && ctx.numbering[numId]) node.listNumbering = ctx.numbering[numId]
   }
   applyParagraphStyleId(node, ctx)
+  ctx._pathStack?.push('valueList')
   formatElementTree(node.valueList, ctx)
+  ctx._pathStack?.pop()
   inheritParagraphAttrsToChildren(node)
 }
 
@@ -162,7 +186,11 @@ function normalizeTable(node: ITableElement, ctx: FormatTreeContext): void {
   if (!Array.isArray(node.colgroup)) node.colgroup = []
   if (!Array.isArray(node.trList)) node.trList = []
 
-  for (const tr of node.trList) normalizeTr(tr, ctx)
+  for (let ri = 0; ri < node.trList.length; ri++) {
+    ctx._pathStack?.push('trList', ri)
+    normalizeTr(node.trList[ri], ctx)
+    ctx._pathStack?.splice(-2, 2)
+  }
 
   // 若 colgroup 为空则用第一行宽度推导
   if (node.colgroup.length === 0 && node.trList[0]) {
@@ -178,7 +206,11 @@ function normalizeTable(node: ITableElement, ctx: FormatTreeContext): void {
 function normalizeTr(tr: ITr, ctx: FormatTreeContext): void {
   if (typeof tr.height !== 'number' || tr.height <= 0) tr.height = 32
   if (!Array.isArray(tr.tdList)) tr.tdList = []
-  for (const td of tr.tdList) normalizeTd(td, ctx)
+  for (let ci = 0; ci < tr.tdList.length; ci++) {
+    ctx._pathStack?.push('tdList', ci)
+    normalizeTd(tr.tdList[ci], ctx)
+    ctx._pathStack?.splice(-2, 2)
+  }
 }
 
 /**
@@ -191,9 +223,9 @@ function normalizeTd(td: ITd, ctx: FormatTreeContext): void {
   if (typeof td.width !== 'number' || td.width <= 0) td.width = 100
   if (typeof td.colspan !== 'number' || td.colspan <= 0) td.colspan = 1
   if (typeof td.rowspan !== 'number' || td.rowspan <= 0) td.rowspan = 1
-  if (!td.verticalAlign) td.verticalAlign = 'top'
+  if (!td.verticalAlign) td.verticalAlign = 'middle'
   if (!Array.isArray(td.padding) || td.padding.length !== 4) {
-    td.padding = [5, 5, 5, 5]
+    td.padding = [2, 2, 2, 2]
   }
   if (!td.borderStyle) {
     td.borderStyle = {
@@ -204,7 +236,9 @@ function normalizeTd(td: ITd, ctx: FormatTreeContext): void {
     }
   }
   if (!Array.isArray(td.value)) td.value = []
+  ctx._pathStack?.push('value')
   formatElementTree(td.value, ctx)
+  ctx._pathStack?.pop()
 }
 
 /**
@@ -274,4 +308,34 @@ function inheritParagraphAttrsToChildren(container: ITitleElement | IListElement
       }
     }
   }
+}
+
+/**
+ * 将收集到的 bookmarkMarker 列表配对为 IBookmark[]。
+ * 同名 start/end 配对，start 的 path 作为 range.anchor，end 的 path 作为 range.focus。
+ */
+export function pairBookmarkMarkers(
+  markers: { name: string; position: string; path: Path }[]
+): IBookmark[] {
+  const startMap = new Map<string, Path>()
+  const bookmarks: IBookmark[] = []
+  for (const m of markers) {
+    if (m.position === 'start') {
+      startMap.set(m.name, m.path)
+    } else {
+      const startPath = startMap.get(m.name)
+      if (startPath) {
+        bookmarks.push({
+          name: m.name,
+          range: {
+            anchor: { path: startPath, offset: 0 },
+            focus: { path: m.path, offset: 0 }
+          },
+          collapsed: false
+        })
+        startMap.delete(m.name)
+      }
+    }
+  }
+  return bookmarks
 }

@@ -350,6 +350,10 @@ export class LayoutEngine {
     let bulletColor: string | undefined
     let bulletBold: boolean | undefined
     let bulletX: number | undefined
+    // 是否使用 Word 悬挂缩进模型（有 indentHanging 时为 true）
+    let useWordHanging = false
+    // 悬挂缩进量（编号在文字左侧的偏移）
+    let bulletHanging = 0
     // 项目符号/编号：list 段落必定处理；title 段落若带 listNumbering（Word heading 关联多级列表）也一并处理
     const hasNumbering = !!(block as unknown as { listNumbering?: unknown } | undefined)?.listNumbering
     if (block && (paragraphKind === 'list' || (paragraphKind === 'title' && hasNumbering))) {
@@ -357,8 +361,11 @@ export class LayoutEngine {
       const res = resolveBullet(listEl, this.counters)
       // 层级缩进
       const level = Math.max(0, listEl.listLevel ?? 0)
-      const listHanging = Number(listEl.listHanging ?? listEl.listNumbering?.indentHanging ?? 24)
+      const listHanging = Number(listEl.listHanging ?? 24)
       const listBaseIndent = Number(listEl.listIndent ?? listEl.listNumbering?.indentLeft ?? 0)
+      // 编号悬挂：仅当 listNumbering 明确定义 indentHanging 时才用 Word 悬挂模型
+      bulletHanging = Number(listEl.listNumbering?.indentHanging ?? 0)
+      useWordHanging = bulletHanging > 0
       // title 段落（Word heading 关联多级列表）：段落本身已带自己的缩进/对齐，
       // numbering.indentLeft 只作为"编号列宽提示"，不应再叠加到段落 indentLeft，
       // 否则整段被推到右侧（源数据里 indentLeft 常带异常大值，如 368px）。
@@ -392,24 +399,22 @@ export class LayoutEngine {
       const glyphW = this.measure.textWidth(bulletText, bulletFont, bulletSize, bulletBold)
       bulletWidth = glyphW + symbolGap
       // 编号列内对齐（lvlJc）：
-      //   编号列 = [firstLine.x - bulletWidth, firstLine.x]（尾部含 symbolGap 作为编号与正文的间距）
-      //   编号绘制 x = firstLine.x + bulletX（bulletX 通常为负）
-      //   - left  : 编号左端贴列左侧 → bulletX = -bulletWidth
-      //   - center: 编号在编号列（去掉 gap）内居中 → bulletX = -bulletWidth + (bulletWidth - symbolGap - glyphW)/2
-      //   - right (默认): 编号右端贴 gap 左边（等价于原来的行为） → bulletX = -bulletWidth
-      // 说明：因为原行为已经是 "编号紧邻 gap"，right/left 视觉一致（都从列左起，右边留 gap）；
-      //       仅 center 会显著不同。此处保留三分支，方便后续独立微调。
+      //   useWordHanging（有 indentHanging）：indentLeft = 文字位置，编号在 indentLeft - bulletHanging
+      //   否则（无 indentHanging）：indentLeft = 编号位置，文字在 indentLeft + bulletWidth（原行为）
+      //   编号绘制 x = firstLine.x + bulletX（bulletX 为负）
       const jc = res.lvlJc
+      const hangingOffset = useWordHanging ? bulletHanging : bulletWidth
       if (jc === 'center') {
-        const inner = Math.max(0, bulletWidth - symbolGap - glyphW)
-        bulletX = -bulletWidth + inner / 2
+        const inner = Math.max(0, hangingOffset - symbolGap - glyphW)
+        bulletX = -hangingOffset + inner / 2
       } else {
-        bulletX = -bulletWidth
+        bulletX = -hangingOffset
       }
     }
 
-    // 每一行的可用宽度基准（去掉左右缩进 + bullet 宽度；首行额外扣 firstIndent；悬挂缩进影响非首行的起点）
-    const usableWidth = Math.max(20, availableWidth - indentLeft - indentRight - bulletWidth)
+    // 每行可用宽度：Word 悬挂模型下编号在悬挂区不占行宽；否则编号占 bulletWidth
+    const bulletWidthForLine = useWordHanging ? 0 : bulletWidth
+    const usableWidth = Math.max(20, availableWidth - indentLeft - indentRight - bulletWidthForLine)
     const lines: LineBox[] = []
     let currentInlines: InlineBox[] = []
     let currentLineWidth = 0
@@ -452,7 +457,7 @@ export class LayoutEngine {
     const finalizeLine = (isLastLine: boolean) => {
       const size = currentMaxSize
       const lh = computeLineHeight(size)
-      let lineXBase = indentLeft + bulletWidth
+      let lineXBase = indentLeft + (useWordHanging ? 0 : bulletWidth)
       if (isFirstLine && firstIndent > 0 && !useHanging) lineXBase += firstIndent
       else if (!isFirstLine && useHanging) lineXBase += indentHanging
       // 把 inline.x 从"相对 line 起点"平移到"相对块起点"
@@ -703,7 +708,7 @@ export class LayoutEngine {
     const rowFlex = String(anyEl.rowFlex ?? 'left')
     let x = 0
     if (occupiedW < availableWidth) {
-      if (rowFlex === 'center' || rowFlex === 'alignment') x = (availableWidth - occupiedW) / 2
+      if (rowFlex === 'center') x = (availableWidth - occupiedW) / 2
       else if (rowFlex === 'right') x = availableWidth - occupiedW
     }
     return {
@@ -1127,11 +1132,15 @@ function applyRowFlex(line: LineBox, containerWidth: number): void {
     for (const inl of line.inlines) inl.x += free
     return
   }
-  if ((line.rowFlex === 'justify' || line.rowFlex === 'alignment') && !line.isLastLine && line.inlines.length > 0) {
+  const isJustify = line.rowFlex === 'justify' || line.rowFlex === 'alignment'
+  const isDistribute = line.rowFlex === 'distribute'
+  if ((isJustify || isDistribute) && line.inlines.length > 0) {
+    if (isJustify && line.isLastLine) return
     // 按"字符间隙"分配额外空白（接近 Word 的两端对齐视觉效果）：
     // 全行字符数 N，可拉伸缝隙数 = N - 1，均分 free 到每个字符后。
     // 每个 inline 的宽度按 letterSpacing * charCount 扩展，后续 inline
     // 依次右移；inline 之间不再额外插入间隙，避免出现大块空白。
+    // distribute 与 justify 唯一区别：末行也分散对齐。
     let totalChars = 0
     for (const inl of line.inlines) totalChars += inl.text.length
     const gaps = totalChars - 1

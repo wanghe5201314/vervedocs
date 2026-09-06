@@ -124,7 +124,7 @@ const handleClick = () => {
 }
 .ribbon-btn-sm .ribbon-btn-icon :deep(svg),
 .ribbon-btn-sm .ribbon-btn-icon :deep(i) {
-  font-size: 14px;
+  font-size: 20px;
 }
 .ribbon-btn-sm .ribbon-btn-text {
   font-size: 11px;

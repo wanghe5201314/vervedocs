@@ -3,7 +3,7 @@
  */
 
 import type { CommandAdapt } from './command-adapt'
-import type { IElement, Path, IAutoTocResult, IBookmark, IEditorOption, IRange } from '@vervedoc/docx-editor-schema'
+import type { IElement, Path, IAutoTocResult, IBookmark, IEditorOption, IRange, IParagraphStyle, IListNumbering, IDocxTheme } from '@vervedoc/docx-editor-schema'
 import type { IRangeStyle, IEditorAbility } from '@vervedoc/docx-editor-state'
 
 /**
@@ -434,7 +434,7 @@ export class Command {
    * 设置文档内容。
    * @param payload 文档内容，包含 main 及可选的 header/footer/comments
    */
-  executeSetValue(payload: { main: IElement[]; header?: IElement[]; footer?: IElement[]; comments?: unknown[] }): void { this.adapt.setValue(payload) }
+  executeSetValue(payload: { main: IElement[]; header?: IElement[]; footer?: IElement[]; comments?: unknown[]; styles?: Record<string, IParagraphStyle>; numbering?: Record<string, IListNumbering>; theme?: IDocxTheme }): void { this.adapt.setValue(payload) }
   /**
    * 获取字数统计。
    * @returns 字数数值

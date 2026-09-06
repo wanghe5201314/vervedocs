@@ -79,7 +79,7 @@ export interface LineBox {
   /** 该行包含的 inline 列表 */
   inlines: InlineBox[]
   /** 段落对齐方式 */
-  rowFlex: 'left' | 'center' | 'right' | 'alignment' | 'justify'
+  rowFlex: 'left' | 'center' | 'right' | 'alignment' | 'justify' | 'distribute'
   /** 是否是段落最后一行（影响两端对齐） */
   isLastLine: boolean
 }

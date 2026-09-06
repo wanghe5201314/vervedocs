@@ -158,7 +158,7 @@ export class DocxEditor {
     this.draw = new Draw(container, editorOptions, {
       document: doc,
       listener: this.listener,
-      eventBus: this.eventBus,
+
       rangeManager: this.range,
       onInput: (text: string) => {
         adapt?.insertText(text)

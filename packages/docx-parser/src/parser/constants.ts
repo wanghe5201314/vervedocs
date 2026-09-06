@@ -161,15 +161,17 @@ export const NUM_FMT_MAP: Record<string, { listType: string; listStyle: string }
 
 export const ALIGNMENT_MAP: Record<string, string> = {
   left: 'left',
+  start: 'left',
   center: 'center',
   right: 'right',
+  end: 'right',
   both: 'justify',
   justify: 'justify',
-  distribute: 'justify',
+  distribute: 'distribute',
   numTab: 'left',
   highKashida: 'left',
   lowKashida: 'left',
-  thaiDistribute: 'justify'
+  thaiDistribute: 'distribute'
 }
 
 // ---- 边框类型映射 ----

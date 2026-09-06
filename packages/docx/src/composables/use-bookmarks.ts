@@ -15,7 +15,7 @@ export interface BookmarkItem {
 }
 
 /** 默认书签名称，当无可用选区文本时使用 */
-const DEFAULT_BOOKMARK_NAME = '书签'
+const DEFAULT_BOOKMARK_NAME = ''
 /** 书签名称最大长度限制 */
 const MAX_BOOKMARK_NAME_LENGTH = 12
 

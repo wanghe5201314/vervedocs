@@ -62,17 +62,18 @@
       <div v-if="matchCount" class="match-list-wrap">
         <div class="match-list-header">共 {{ matchCount }} 处匹配</div>
         <div class="match-list">
-          <div
-            v-for="item in matches"
-            :key="item.index"
-            class="match-item"
-            :class="{ active: item.index === activeIndex }"
-            @click="selectMatch(item.index)"
-          >
-            <span class="match-before">{{ item.before }}</span>
-            <mark class="match-hit">{{ item.match }}</mark>
-            <span class="match-after">{{ item.after }}</span>
-          </div>
+          <template v-for="(item, idx) in matches" :key="item.index">
+            <div
+              class="match-item"
+              :class="{ active: item.index === activeIndex }"
+              @click="selectMatch(item.index)"
+            >
+              <span class="match-before">{{ item.before }}</span>
+              <mark class="match-hit">{{ item.match }}</mark>
+              <span class="match-after">{{ item.after }}</span>
+            </div>
+            <a-divider v-if="idx < matches.length - 1" class="match-divider" />
+          </template>
         </div>
       </div>
       <div v-else class="empty-state">
@@ -382,8 +383,8 @@ onBeforeUnmount(() => {
   background: transparent;
   border-radius: 4px;
   cursor: pointer;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+
+  word-break: break-all;
   transition: background 0.15s;
 }
 
@@ -393,6 +394,10 @@ onBeforeUnmount(() => {
 
 .match-item.active {
   background: #e8e3ff;
+}
+
+.match-divider {
+  margin: 2px 0 !important;
 }
 
 .match-hit {

@@ -30,7 +30,7 @@ export type ElementType =
   | 'watermark'
 
 /** 段落水平对齐方式 */
-export type RowFlex = 'left' | 'center' | 'right' | 'alignment' | 'justify'
+export type RowFlex = 'left' | 'center' | 'right' | 'alignment' | 'justify' | 'distribute'
 /** 行高规则：auto=倍数行距、exact=固定值、atLeast=最小值 */
 export type LineHeightRule = 'auto' | 'exact' | 'atLeast'
 /** 垂直对齐方式（用于表格单元格） */

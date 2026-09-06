@@ -360,7 +360,7 @@ export class HeaderFooterWidget {
       item.appendChild(textEl)
       item.addEventListener('click', () => {
         this.selectedPosition = value
-        this.updatePositionSelection(posItems, textEl.parentElement as HTMLDivElement)
+
         // 更新所有项高亮
         posItems.forEach((it) => {
           const isActive = it.value === value
@@ -429,17 +429,6 @@ export class HeaderFooterWidget {
     document.body.appendChild(popup)
   }
 
-  /**
-   * 更新位置项的选中高亮（占位方法，实际高亮逻辑已在 click 中处理）
-   * @param _items 所有位置项集合
-   * @param _current 当前点击的位置项
-   */
-  private updatePositionSelection(
-    _items: Array<{ value: PageNumberPosition; el: HTMLDivElement; preview: HTMLDivElement }>,
-    _current: HTMLDivElement,
-  ): void {
-    // 高亮逻辑已在 click 中处理，此方法保留占位以便未来扩展
-  }
 
   /* -------------------- 交互 -------------------- */
 

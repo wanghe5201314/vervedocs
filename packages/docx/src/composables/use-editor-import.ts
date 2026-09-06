@@ -1,6 +1,7 @@
 import { nextTick } from 'vue'
 import { PaperDirection } from '@vervedoc/core'
 import { replaceDocument } from '@/composables/use-replace-document'
+import { adaptStyles, adaptNumbering, adaptTheme } from '@/utils/docx-meta-adapter'
 
 /**
  * 事件发射函数类型
@@ -17,7 +18,7 @@ interface EditorInstance {
     /** 获取当前文档值 */
     getValue: () => { data?: { main?: any[] } }
     /** 设置文档值 */
-    executeSetValue: (value: { main: any[]; header?: any[]; footer?: any[]; comments?: unknown[] }) => void
+    executeSetValue: (value: { main: any[]; header?: any[]; footer?: any[]; comments?: unknown[]; styles?: unknown; numbering?: unknown; theme?: unknown }) => void
   }
   comment?: any
   revision?: any
@@ -72,6 +73,9 @@ export function useEditorImport(options: {
       const comments = Array.isArray(json?.comments) ? json.comments : []
       const header = Array.isArray(json?.header) ? json.header : []
       const footer = Array.isArray(json?.footer) ? json.footer : []
+      const styles = adaptStyles(json?.styles)
+      const numbering = adaptNumbering(json?.numbering)
+      const theme = adaptTheme(json?.theme)
 
       onProgress?.(60, '正在渲染内容...')
       const inst = getEditorInstance()
@@ -103,7 +107,7 @@ export function useEditorImport(options: {
 
       await replaceDocument(
         { getEditorInstance, refreshCatalog },
-        { main, header, footer, comments }
+        { main, header, footer, comments, styles, numbering, theme }
       )
 
       onProgress?.(100, '加载完成!')

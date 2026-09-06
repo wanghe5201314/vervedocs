@@ -1,4 +1,5 @@
 import { nextTick } from 'vue'
+import type { IParagraphStyle, IListNumbering, IDocxTheme } from '@vervedoc/docx-editor-schema'
 
 /** 整文档替换载荷接口 */
 export interface ReplaceDocumentPayload {
@@ -15,6 +16,12 @@ export interface ReplaceDocumentPayload {
    * - 缺省 / 空数组 → 清空批注
    */
   comments?: unknown[]
+  /** 段落样式表 */
+  styles?: Record<string, IParagraphStyle>
+  /** 列表编号定义表 */
+  numbering?: Record<string, IListNumbering>
+  /** 文档主题 */
+  theme?: IDocxTheme
 }
 
 /** 整文档替换依赖接口 */
@@ -47,7 +54,10 @@ export async function replaceDocument(
     main: Array.isArray(payload.main) ? payload.main : [],
     header: payload.header ?? [],
     footer: payload.footer ?? [],
-    comments: payload.comments
+    comments: payload.comments,
+    styles: payload.styles,
+    numbering: payload.numbering,
+    theme: payload.theme
   })
 
   await nextTick()

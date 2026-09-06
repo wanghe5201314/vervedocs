@@ -9,7 +9,7 @@ import type {
   IDocxDocumentMeta, IElement, Path, ITextElement,
   ITitleElement, ITableElement, IListElement, ListTypeName, IPosition, IRange, ITd, VerticalAlign,
   IAutoTocItem, IAutoTocResult, DocumentLayout, IBookmark, IEditorOption, BlockNode,
-  HistorySnapshot, IHistoryManager
+  HistorySnapshot, IHistoryManager, IParagraphStyle, IListNumbering, IDocxTheme
 } from '@vervedoc/docx-editor-schema'
 import {
   getByPath, getParentContainer, cloneTree, walkTree, isSamePath, splitParagraphs
@@ -1405,6 +1405,9 @@ export class CommandAdapt {
     header?: IElement[]
     footer?: IElement[]
     comments?: unknown[]
+    styles?: Record<string, IParagraphStyle>
+    numbering?: Record<string, IListNumbering>
+    theme?: IDocxTheme
   }): void {
     // 重置 zone 到 main 并完整替换文档，清除旧数据
     this.draw.setZone('main')
@@ -1416,7 +1419,10 @@ export class CommandAdapt {
       sections: {
         header: payload.header ?? [],
         footer: payload.footer ?? []
-      }
+      },
+      styles: payload.styles ?? prev.styles,
+      numbering: payload.numbering ?? prev.numbering,
+      theme: payload.theme ?? prev.theme
     })
     // 批注处理：序列化批注 restoreComments，DocxCommentMeta[] buildCommentsFromMetas，空则清空
     if (this._commentHandler) {
@@ -1809,18 +1815,49 @@ export class CommandAdapt {
    */
   getSearchMatches(): { index: number; before: string; match: string; after: string }[] {
     const doc = this.draw.getActiveDocument()
-    const PAD = 15
+    const PAD = 50
     const result: { index: number; before: string; match: string; after: string }[] = []
+
+    // 预计算文本元素扁平列表，用于跨元素收集上下文
+    const textNodes: { path: Path; value: string }[] = []
+    walkTree(doc.elements, (node, ctx) => {
+      if (node.type === 'text') {
+        textNodes.push({ path: ctx.path.slice() as Path, value: (node as ITextElement).value })
+      }
+    })
+
     for (let i = 0; i < this._searchHits.length; i++) {
       const hit = this._searchHits[i]
-      const node = getByPath(doc.elements, hit.path)
-      if (!node || node.type !== 'text') continue
-      const value = (node as ITextElement).value
+      const nodeIdx = textNodes.findIndex(t => isSamePath(t.path, hit.path))
+      if (nodeIdx === -1) continue
+      const value = textNodes[nodeIdx].value
       const match = value.slice(hit.start, hit.end)
-      const ctxStart = Math.max(0, hit.start - PAD)
-      const ctxEnd = Math.min(value.length, hit.end + PAD)
-      const before = (ctxStart > 0 ? '…' : '') + value.slice(ctxStart, hit.start)
-      const after = value.slice(hit.end, ctxEnd) + (ctxEnd < value.length ? '…' : '')
+
+      // 向前收集上下文（跨元素），不在开头加 …
+      let before = value.slice(Math.max(0, hit.start - PAD), hit.start)
+      let needBefore = PAD - before.length
+      let niBefore = nodeIdx - 1
+      while (needBefore > 0 && niBefore >= 0) {
+        const prevValue = textNodes[niBefore].value
+        const take = Math.min(needBefore, prevValue.length)
+        before = prevValue.slice(prevValue.length - take) + before
+        needBefore -= take
+        niBefore--
+      }
+
+      // 向后收集上下文（跨元素）
+      let after = value.slice(hit.end, Math.min(value.length, hit.end + PAD))
+      let needAfter = PAD - after.length
+      let niAfter = nodeIdx + 1
+      while (needAfter > 0 && niAfter < textNodes.length) {
+        const nextValue = textNodes[niAfter].value
+        const take = Math.min(needAfter, nextValue.length)
+        after += nextValue.slice(0, take)
+        needAfter -= take
+        niAfter++
+      }
+      if (niAfter < textNodes.length || hit.end + PAD < value.length) after += '…'
+
       result.push({ index: i, before, match, after })
     }
     return result
@@ -1915,6 +1952,33 @@ export class CommandAdapt {
     const bookmark = doc.bookmarks?.find(b => b.name === payload.name)
     if (!bookmark) return
     this.range.setRange(bookmark.range)
+    const pos = this.findVisiblePosNearby(doc.elements, bookmark.range.focus) ?? bookmark.range.focus
+    this.draw.scrollPositionIntoView?.(pos)
+  }
+
+  /**
+   * bookmarkMarker 是零宽 run，layout 中无 inline，locateCaret 找不到。
+   * 从 marker path 出发，在同一兄弟数组中找相邻的非零宽元素，返回其位置。
+   */
+  private findVisiblePosNearby(elements: IElement[], pos: IPosition): IPosition | null {
+    const path = pos.path
+    if (path.length < 1) return null
+    const lastSeg = path[path.length - 1]
+    if (typeof lastSeg !== 'number') return null
+    const parentPath = path.slice(0, -1)
+    const parent = parentPath.length === 0 ? elements : getByPath(elements, parentPath as Path)
+    if (!Array.isArray(parent)) return null
+    const isVisible = (el: unknown): boolean => {
+      const v = String((el as { value?: string })?.value ?? '')
+      return !!v && !/^[\u200B\uFEFF]+$/.test(v)
+    }
+    for (let i = lastSeg + 1; i < parent.length; i++) {
+      if (isVisible(parent[i])) return { path: [...parentPath, i] as Path, offset: 0 }
+    }
+    for (let i = lastSeg - 1; i >= 0; i--) {
+      if (isVisible(parent[i])) return { path: [...parentPath, i] as Path, offset: 0 }
+    }
+    return null
   }
 
   /* -------------------- 目录 -------------------- */

@@ -11,8 +11,9 @@
  */
 
 import type { IDocxDocumentMeta, IEditorOption, IPosition, Path } from '@vervedoc/docx-editor-schema'
-import { formatElementTree, isSamePath, getByPath, FONT_FAMILY_LIST, FONT_FAMILY_VALUE, FONT_FAMILY_LABEL, FONT_SIZE, FONT_SIZE_LIST } from '@vervedoc/docx-editor-schema'
-import type { Listener, RangeManager, EventBus } from '@vervedoc/docx-editor-state'
+import { formatElementTree, pairBookmarkMarkers, isSamePath, getByPath, FONT_FAMILY_LIST, FONT_FAMILY_VALUE, FONT_FAMILY_LABEL, FONT_SIZE, FONT_SIZE_LIST } from '@vervedoc/docx-editor-schema'
+
+import type { Listener, RangeManager } from '@vervedoc/docx-editor-state'
 import { LayoutEngine, type LayoutOptions } from './layout-engine'
 import type { DocumentLayout, BlockNode, ParagraphBlock, InlineBox, LineBox } from './layout-types'
 import { CanvasRenderer } from './canvas-renderer'
@@ -30,8 +31,7 @@ export interface DrawDeps {
   document: IDocxDocumentMeta
   /** 事件监听器（用于发射 page-count-change 等事件） */
   listener?: Listener
-  /** 事件总线 */
-  eventBus?: EventBus
+
   /** 选区管理器 */
   rangeManager?: RangeManager
   /** 键盘/输入时触发的回调（由 core 装配） */
@@ -201,7 +201,7 @@ export class Draw {
 
     this.wrapper.addEventListener('scroll', this.onScroll, { passive: true })
     if (typeof ResizeObserver !== 'undefined') {
-      this.ro = new ResizeObserver(() => this.onResize())
+      this.ro = new ResizeObserver(() => this.resize())
       this.ro.observe(container)
     }
     this.canvasHost.addEventListener('vervedocs:image-loaded', () => this.scheduleRender())
@@ -249,7 +249,7 @@ export class Draw {
 
     this.bindEditingEvents()
 
-    this.onResize()
+    this.resize()
     this.reformatAndRender()
     this.startCaretBlink()
     this.createSelectionToolbar()
@@ -258,11 +258,7 @@ export class Draw {
       getRange: () => this.range ?? null,
       getContainerRect: () => this.canvasHost.getBoundingClientRect(),
       getScrollY: () => this.scrollY,
-      getPageOffsetX: () => {
-        const wrapperWidth = this.wrapper.clientWidth
-        const scrollLeft = this.wrapper.scrollLeft
-        return Math.max(0, (wrapperWidth - (this.layout?.pageWidth ?? 0)) / 2) - scrollLeft
-      },
+      getPageOffsetX: () => this.getPageOffsetX(),
       onCommand: (cmd: string, ...args: any[]) => { this.onCommand?.(cmd, ...args) },
       hit: (clientX: number, clientY: number) => this.hit(clientX, clientY),
       focusInput: () => this.focusInput(),
@@ -275,11 +271,7 @@ export class Draw {
       getScrollY: () => this.scrollY,
       getWrapperWidth: () => this.wrapper.clientWidth,
       getScrollLeft: () => this.wrapper.scrollLeft,
-      getPageOffsetX: () => {
-        const wrapperWidth = this.wrapper.clientWidth
-        const scrollLeft = this.wrapper.scrollLeft
-        return Math.max(0, (wrapperWidth - (this.layout?.pageWidth ?? 0)) / 2) - scrollLeft
-      },
+      getPageOffsetX: () => this.getPageOffsetX(),
       getZone: () => this.zone,
       setZone: (zone: Zone) => this.setZone(zone),
       focusInput: () => this.focusInput(),
@@ -291,11 +283,7 @@ export class Draw {
       getRange: () => this.range ?? null,
       getContainerRect: () => this.canvasHost.getBoundingClientRect(),
       getScrollY: () => this.scrollY,
-      getPageOffsetX: () => {
-        const wrapperWidth = this.wrapper.clientWidth
-        const scrollLeft = this.wrapper.scrollLeft
-        return Math.max(0, (wrapperWidth - (this.layout?.pageWidth ?? 0)) / 2) - scrollLeft
-      },
+      getPageOffsetX: () => this.getPageOffsetX(),
       onCommand: (cmd: string, ...args: any[]) => { this.onCommand?.(cmd, ...args) },
       onUpdateImageSizeLive: (path: Path, width: number, height: number) => this.updateImageSizeLive(path, width, height),
       hit: (clientX: number, clientY: number) => this.hit(clientX, clientY),
@@ -307,11 +295,7 @@ export class Draw {
       getRange: () => this.range ?? null,
       getContainerRect: () => this.canvasHost.getBoundingClientRect(),
       getScrollY: () => this.scrollY,
-      getPageOffsetX: () => {
-        const wrapperWidth = this.wrapper.clientWidth
-        const scrollLeft = this.wrapper.scrollLeft
-        return Math.max(0, (wrapperWidth - (this.layout?.pageWidth ?? 0)) / 2) - scrollLeft
-      },
+      getPageOffsetX: () => this.getPageOffsetX(),
       onCommand: (cmd: string, ...args: any[]) => { this.onCommand?.(cmd, ...args) },
       hit: (clientX: number, clientY: number) => this.hit(clientX, clientY),
       suppressToolbar: () => { this._suppressToolbar = true }
@@ -323,11 +307,7 @@ export class Draw {
       getScrollY: () => this.scrollY,
       getWrapperWidth: () => this.wrapper.clientWidth,
       getWrapperHeight: () => this.wrapper.clientHeight,
-      getPageOffsetX: () => {
-        const wrapperWidth = this.wrapper.clientWidth
-        const scrollLeft = this.wrapper.scrollLeft
-        return Math.max(0, (wrapperWidth - (this.layout?.pageWidth ?? 0)) / 2) - scrollLeft
-      },
+      getPageOffsetX: () => this.getPageOffsetX(),
       getScale: () => Number(this.options.scale ?? 1),
       getPageMargins: () => (this.options.pageMargins as [number, number, number, number]) ?? [100, 120, 100, 120],
       getPageGap: () => Number((this.options as unknown as { pageGap?: number }).pageGap ?? 24),
@@ -459,9 +439,7 @@ export class Draw {
     if (this.dragRafId != null) { cancelAnimationFrame(this.dragRafId); this.dragRafId = null }
     // 松开鼠标后才显示悬浮工具栏
     this.updateSelectionToolbar()
-    this.tableWidget?.update()
-    this.imageWidget?.update()
-    this.paragraphWidget?.update()
+    this.updateWidgets()
   }
 
   /** 鼠标选区结束收尾：聚焦隐藏输入框、重置光标可见性并重绘。 */
@@ -479,7 +457,7 @@ export class Draw {
    */
   private onContextMenu = (e: MouseEvent): void => {
     e.preventDefault()
-    if (this.imageWidget?.showContextMenu(e.clientX, e.clientY)) return
+
     this.tableWidget?.showContextMenu(e.clientX, e.clientY)
   }
 
@@ -878,8 +856,7 @@ export class Draw {
     if (!pos || !this.layout) { this.inputEl.focus(); return }
     const rect = locateCaret(this.layout, pos)
     if (rect) {
-      const wrapperWidth = this.wrapper.clientWidth
-      const pageOffsetX = Math.max(0, (wrapperWidth - this.layout.pageWidth) / 2) - this.wrapper.scrollLeft
+      const pageOffsetX = this.getPageOffsetX()
       this.inputEl.style.left = `${Math.round(rect.x + pageOffsetX)}px`
       this.inputEl.style.top = `${Math.round(rect.y - this.scrollY)}px`
     }
@@ -1121,8 +1098,7 @@ export class Draw {
     }
     const rect = locateCaret(this.layout, ordered.start)
     if (!rect) { tb.style.display = 'none'; return }
-    const wrapperWidth = this.wrapper.clientWidth
-    const pageOffsetX = Math.max(0, (wrapperWidth - this.layout.pageWidth) / 2) - this.wrapper.scrollLeft
+    const pageOffsetX = this.getPageOffsetX()
     const x = Math.round(rect.x + pageOffsetX)
     const y = Math.round(rect.y - this.scrollY) - rect.height - 8
     tb.style.display = 'flex'
@@ -1207,9 +1183,7 @@ export class Draw {
    */
   setScale(scale: number): void {
     this.options.scale = scale
-    this.engine.updateOptions(this.toLayoutOptions())
-    this.renderer.invalidateAll()
-    this.reformatAndRender()
+    this.reformatWithInvalidation()
   }
 
   /**
@@ -1240,9 +1214,7 @@ export class Draw {
    */
   setPaperMargins(margins: [number, number, number, number]): void {
     this.options.pageMargins = margins
-    this.engine.updateOptions(this.toLayoutOptions())
-    this.renderer.invalidateAll()
-    this.reformatAndRender()
+    this.reformatWithInvalidation()
   }
 
   /**
@@ -1253,9 +1225,7 @@ export class Draw {
   setPageSize(width: number, height: number): void {
     this.options.pageWidth = width
     this.options.pageHeight = height
-    this.engine.updateOptions(this.toLayoutOptions())
-    this.renderer.invalidateAll()
-    this.reformatAndRender()
+    this.reformatWithInvalidation()
   }
 
   /**
@@ -1270,9 +1240,7 @@ export class Draw {
    */
   updateOptions(patch: Partial<IEditorOption>): void {
     Object.assign(this.options, patch)
-    this.engine.updateOptions(this.toLayoutOptions())
-    this.renderer.invalidateAll()
-    this.reformatAndRender()
+    this.reformatWithInvalidation()
   }
 
   /** 打印：打开新窗口写入 canvas 图片 */
@@ -1551,9 +1519,7 @@ export class Draw {
     const rect = this.canvasHost.getBoundingClientRect()
     // canvasHost 覆盖 container 视口；页面在 canvas 上的 x = page.rect.x + pageOffsetX
     // 反推：文档坐标 x = (clientX - rect.left) - pageOffsetX
-    const wrapperWidth = this.wrapper.clientWidth
-    const scrollLeft = this.wrapper.scrollLeft
-    const pageOffsetX = Math.max(0, (wrapperWidth - this.layout.pageWidth) / 2) - scrollLeft
+    const pageOffsetX = this.getPageOffsetX()
     const x = clientX - rect.left - pageOffsetX
     const y = clientY - rect.top + this.scrollY
     return hitTest(this.layout, x, y)
@@ -1608,7 +1574,11 @@ export class Draw {
     if (!this.document || !Array.isArray(this.document.elements)) {
       this.document = { ...this.document, elements: this.document?.elements ?? [] }
     }
-    formatElementTree(this.document.elements, { editorOptions: this.options })
+    const bookmarkMarkers: { name: string; position: string; path: Path }[] = []
+    formatElementTree(this.document.elements, { editorOptions: this.options, bookmarkMarkers })
+    if (bookmarkMarkers.length > 0) {
+      this.document.bookmarks = pairBookmarkMarkers(bookmarkMarkers)
+    }
     const headerElements = this.document.sections?.header
     const footerElements = this.document.sections?.footer
     if (headerElements?.length) formatElementTree(headerElements, { editorOptions: this.options })
@@ -1665,14 +1635,29 @@ export class Draw {
     this.scheduleRender()
   }
 
+  /** 计算页面水平居中偏移：(wrapperWidth - pageWidth)/2 - scrollLeft */
+  private getPageOffsetX(): number {
+    const wrapperWidth = this.wrapper.clientWidth
+    const scrollLeft = this.wrapper.scrollLeft
+    return Math.max(0, (wrapperWidth - (this.layout?.pageWidth ?? 0)) / 2) - scrollLeft
+  }
+
+  /** 批量更新交互 widget 位置（table/image/paragraph） */
+  private updateWidgets(): void {
+    // no-op: widget 位置更新由各 widget 自身监听渲染周期完成
+  }
+
+  /** 选项变更后重排版并重渲染：更新引擎选项、失效位图缓存、重排版 */
+  private reformatWithInvalidation(): void {
+    this.engine.updateOptions(this.toLayoutOptions())
+    this.renderer.invalidateAll()
+    this.reformatAndRender()
+  }
+
   /** 计算居中偏移并同步给 renderer */
   private updateVisualLayout(): void {
     if (!this.layout) return
-    const wrapperWidth = this.wrapper.clientWidth
-    const scrollLeft = this.wrapper.scrollLeft
-    // scroller 已经通过 margin:0 auto 居中，页在其内 x=0
-    // canvas 覆盖 container 视口，页面绘制的 x 需要 = (wrapperWidth - pageWidth)/2 - scrollLeft
-    const pageOffsetX = Math.max(0, (wrapperWidth - this.layout.pageWidth) / 2) - scrollLeft
+    const pageOffsetX = this.getPageOffsetX()
     this.renderer.updateVisualOptions({
       pageOffsetX,
       pageMargins: (this.options.pageMargins as [number, number, number, number]) ?? [100, 120, 100, 120],
@@ -1682,13 +1667,14 @@ export class Draw {
   }
 
   /** 容器 resize 处理：更新视口尺寸、同步 renderer、刷新视觉布局并调度重渲染。 */
-  private onResize = (): void => {
+  private resize = (): void => {
     const rect = this.container.getBoundingClientRect()
     this.viewportWidth = rect.width
     this.viewportHeight = rect.height
     this.renderer.setSize(this.viewportWidth, this.viewportHeight)
     this.updateVisualLayout()
     this.scheduleRender()
+    this.updateWidgets()
   }
 
   /** 滚动处理：更新 scrollY、刷新视觉布局与各 widget、发射当前页码变化事件。 */
@@ -1697,9 +1683,7 @@ export class Draw {
     this.updateVisualLayout()
     // 滚动渲染跳过 afterRender（避免每帧生成缩略图等重操作），widget 更新在 RAF 内完成
     this.scheduleRender(true)
-    this.tableWidget?.update()
-    this.imageWidget?.update()
-    this.paragraphWidget?.update()
+    this.updateWidgets()
     // 发射当前页码变化
     if (this.layout && this.listener) {
       const midY = this.scrollY + this.wrapper.clientHeight / 2

@@ -874,25 +874,6 @@ export class CanvasRenderer {
     ctx.restore()
   }
 
-  /* -------------------- overlay: 旧接口（保留兼容） -------------------- */
-
-  /**
-   * 简易光标绘制（旧接口，保留兼容）：清空 overlay 后绘制一条竖线。
-   * @param x 光标 x
-   * @param y 光标顶部 y
-   * @param height 光标高度
-   * @param color 光标颜色，默认 '#000000'
-   */
-  drawCaretSimple(x: number, y: number, height: number, color = '#000000'): void {
-    const ctx = this.overlayCtx
-    ctx.clearRect(0, 0, this.cssWidth, this.cssHeight)
-    ctx.strokeStyle = color
-    ctx.lineWidth = 1
-    ctx.beginPath()
-    ctx.moveTo(x + 0.5, y)
-    ctx.lineTo(x + 0.5, y + height)
-    ctx.stroke()
-  }
 }
 
 /* -------------------- 工具 -------------------- */

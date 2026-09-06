@@ -2,7 +2,7 @@
   <a-modal v-model:open="visible" title="书签" width="520px" :maskClosable="false" :footer="null" class="app-dialog">
     <div class="bookmark-body">
       <div class="bookmark-left">
-        <a-form :model="form" :label-col="{ style: { width: '70px' } }">
+        <a-form :model="form">
           <a-form-item label="书签名">
             <a-input
               v-model:value="form.name"

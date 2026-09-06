@@ -12,7 +12,7 @@
 import type { DocumentLayout, ImageBlock } from '../layout-types'
 import type { RangeManager } from '@vervedoc/docx-editor-state'
 import type { IPosition, Path } from '@vervedoc/docx-editor-schema'
-import { ContextMenu } from '../context-menu'
+
 
 /**
  * ImageWidget 的依赖注入接口
@@ -87,8 +87,7 @@ export class ImageWidget {
   private toolbar: HTMLDivElement | null = null
   /** 当前选中的图片信息，未选中时为 null */
   private selection: ImageSelection | null = null
-  /** 右键上下文菜单实例（当前未使用，保留以备扩展） */
-  private contextMenu = new ContextMenu()
+
   /** 拖拽缩放状态，未拖拽时为 null */
   private dragging: { dir: string; startX: number; startY: number; origW: number; origH: number; lastW: number; lastH: number } | null = null
 
@@ -463,30 +462,10 @@ export class ImageWidget {
   }
 
   /**
-   * 显示右键上下文菜单（当前图片改为点击显示悬浮工具栏，此方法保留并返回 false）
-   *
-   * @param _clientX 客户端横坐标（未使用）
-   * @param _clientY 客户端纵坐标（未使用）
-   * @returns 始终返回 false，表示未显示菜单
-   */
-  showContextMenu(_clientX: number, _clientY: number): boolean {
-    // 图片不再使用右键菜单，改为点击时显示悬浮工具栏
-    return false
-  }
-
-  /**
-   * 隐藏右键上下文菜单
-   */
-  hideContextMenu(): void {
-    this.contextMenu.hide()
-  }
-
-  /**
-   * 销毁 widget，清除选中、隐藏菜单、移除事件监听并清理所有 DOM
+   * 销毁 widget，清除选中、移除事件监听并清理所有 DOM
    */
   destroy(): void {
     this.clearSelection()
-    this.hideContextMenu()
     window.removeEventListener('mousemove', this.onDragMove)
     window.removeEventListener('mouseup', this.onDragEnd)
     if (this.selectionBox) { this.selectionBox.remove(); this.selectionBox = null }

@@ -26,13 +26,13 @@
       <div class="result-toolbar">
         <div class="result-summary">
           搜索结果：
-          <span class="result-count">{{ currentDisplay }}/{{ resultList.length }}</span>
+          <span class="result-count">{{ currentDisplay }}/{{ matchCount }}</span>
         </div>
         <div class="navigate-actions">
           <button
             class="icon-btn"
             type="button"
-            :disabled="!resultList.length"
+            :disabled="!matchCount"
             @click="navigate(-1)"
           >
             <UpOutlined />
@@ -40,7 +40,7 @@
           <button
             class="icon-btn"
             type="button"
-            :disabled="!resultList.length"
+            :disabled="!matchCount"
             @click="navigate(1)"
           >
             <DownOutlined />
@@ -59,24 +59,8 @@
         </a-button>
       </div>
 
-      <div v-if="resultList.length" class="result-list">
-        <button
-          v-for="item in resultList"
-          :key="item.groupId"
-          class="result-item"
-          type="button"
-          :class="{ active: item.resultIndex === activeIndex }"
-          @click="selectResult(item.resultIndex)"
-        >
-          <div class="result-item-meta">
-            <span class="result-page">第 {{ item.pageNo }} 页</span>
-            <span class="result-coord">
-              {{ Math.round(item.startPosition.coordinate.leftTop[0]) }},
-              {{ Math.round(item.startPosition.coordinate.leftTop[1]) }}
-            </span>
-          </div>
-          <div class="result-item-text" v-html="renderPreviewHtml(item.previewText, item.text)"></div>
-        </button>
+      <div v-if="matchCount" class="match-info">
+        <span class="match-text">共 {{ matchCount }} 处匹配</span>
       </div>
       <div v-else class="empty-state">
         <a-empty :image="false" :description="searchText ? '没有找到匹配内容' : '请输入关键词开始搜索'" />
@@ -89,7 +73,6 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { CloseOutlined, DownOutlined, SearchOutlined, UpOutlined } from '@ant-design/icons-vue'
 import { VIcon } from '@vervedoc/icons'
-import type { ISearchResultItem } from '@vervedoc/core'
 import type { IEditorSearchApi } from '@/composables/use-editor-search'
 
 const props = defineProps<{
@@ -100,105 +83,91 @@ const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
+/** 搜索关键词 */
 const searchText = ref('')
+/** 替换文本 */
 const replaceText = ref('')
-const resultList = ref<ISearchResultItem[]>([])
+/** 匹配结果数量 */
+const matchCount = ref(0)
+/** 当前激活的匹配项索引，-1 表示无激活项 */
 const activeIndex = ref(-1)
 
+/** 当前匹配项的展示序号（从 1 开始） */
 const currentDisplay = computed(() =>
-  resultList.value.length && activeIndex.value >= 0
+  matchCount.value && activeIndex.value >= 0
     ? activeIndex.value + 1
     : 0
 )
 
+/** 是否可执行替换当前 */
 const canReplaceCurrent = computed(() =>
   !!replaceText.value && !!searchText.value && activeIndex.value >= 0
 )
 
+/** 是否可执行全部替换 */
 const canReplaceAll = computed(() =>
-  !!replaceText.value && !!searchText.value && resultList.value.length > 0
+  !!replaceText.value && !!searchText.value && matchCount.value > 0
 )
 
-const escapeHtml = (text: string) =>
-  text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-
-const renderPreviewHtml = (previewText: string, keyword: string) => {
-  const safePreview = escapeHtml(previewText || '')
-  const safeKeyword = escapeHtml(keyword || '')
-  if (!safeKeyword) return safePreview
-  const pattern = new RegExp(
-    safeKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
-    'ig'
-  )
-  return safePreview.replace(pattern, match => `<mark>${match}</mark>`)
-}
-
-const syncResultList = async (nextList: ISearchResultItem[]) => {
-  resultList.value = Array.isArray(nextList) ? nextList : []
-  if (!resultList.value.length) {
+/** 执行搜索：关键词为空时清空，否则搜索并定位到首个匹配项 */
+const runSearch = async () => {
+  const keyword = searchText.value.trim()
+  if (!keyword) {
+    const result = props.searchAPI.clear()
+    matchCount.value = result.count
     activeIndex.value = -1
     return
   }
-  activeIndex.value = Math.min(
-    Math.max(activeIndex.value, 0),
-    resultList.value.length - 1
-  )
-}
-
-const runSearch = async () => {
-  const keyword = searchText.value.trim()
-  const nextList = !keyword
-    ? await Promise.resolve(props.searchAPI.clear())
-    : await Promise.resolve(props.searchAPI.query(keyword))
-  await syncResultList(nextList)
-  if (resultList.value.length) {
-    activeIndex.value = 0
+  const result = props.searchAPI.search(keyword)
+  matchCount.value = result.count
+  activeIndex.value = result.count > 0 ? 0 : -1
+  if (activeIndex.value >= 0) {
+    props.searchAPI.locate(activeIndex.value)
   }
 }
 
-const selectResult = async (index: number) => {
-  const result = resultList.value[index]
-  if (!result) return
-  activeIndex.value = index
-  await Promise.resolve(props.searchAPI.locate(result))
-}
-
-const navigate = async (step: number) => {
-  if (!resultList.value.length) return
+/**
+ * 在匹配项之间导航
+ * @param step - 步进值，正数为向后，负数为向前
+ */
+const navigate = (step: number) => {
+  if (!matchCount.value) return
   const nextIndex =
     activeIndex.value < 0
       ? 0
-      : (activeIndex.value + step + resultList.value.length) % resultList.value.length
-  await selectResult(nextIndex)
+      : (activeIndex.value + step + matchCount.value) % matchCount.value
+  activeIndex.value = nextIndex
+  props.searchAPI.locate(nextIndex)
 }
 
+/** 替换当前匹配项并更新匹配状态 */
 const replaceCurrent = async () => {
   const keyword = searchText.value.trim()
-  const currentResult = resultList.value[activeIndex.value] || null
-  if (!keyword || !replaceText.value || !currentResult) return
-  const nextList = await Promise.resolve(
-    props.searchAPI.replaceOne(currentResult, replaceText.value)
+  if (!keyword || !replaceText.value || activeIndex.value < 0) return
+  const result = props.searchAPI.replaceOne(
+    activeIndex.value,
+    keyword,
+    replaceText.value
   )
-  await syncResultList(nextList)
+  matchCount.value = result.count
+  if (activeIndex.value >= matchCount.value) {
+    activeIndex.value = matchCount.value - 1
+  }
   if (activeIndex.value >= 0) {
-    await selectResult(activeIndex.value)
+    props.searchAPI.locate(activeIndex.value)
   }
 }
 
+/** 全部替换并重置匹配状态 */
 const replaceAll = async () => {
   const keyword = searchText.value.trim()
   if (!keyword || !replaceText.value) return
-  const nextList = await Promise.resolve(
-    props.searchAPI.replaceAll(keyword, replaceText.value)
-  )
-  await syncResultList(nextList)
+  props.searchAPI.replaceAll(keyword, replaceText.value)
+  matchCount.value = 0
+  activeIndex.value = -1
 }
 
+/** 监听搜索关键词变化，清空时自动重置搜索 */
 watch(
   () => searchText.value,
   value => {
@@ -208,14 +177,16 @@ watch(
   }
 )
 
+/** 挂载时若关键词为空则执行一次搜索 */
 onMounted(() => {
   if (!searchText.value.trim()) {
     void runSearch()
   }
 })
 
+/** 卸载前清空搜索状态 */
 onBeforeUnmount(() => {
-  void Promise.resolve(props.searchAPI.clear())
+  props.searchAPI.clear()
 })
 </script>
 
@@ -327,14 +298,8 @@ onBeforeUnmount(() => {
   border-radius: 2px;
 }
 
-.actions :deep(.material-icons) {
+.actions :deep(.material-symbols-outlined) {
   font-size: 12px;
-}
-
-.icon-btn,
-.result-item {
-  border: none;
-  outline: none;
 }
 
 .icon-btn {
@@ -345,6 +310,8 @@ onBeforeUnmount(() => {
   justify-content: center;
   background: transparent;
   color: #333;
+  border: none;
+  outline: none;
   border-radius: 2px;
   cursor: pointer;
 }
@@ -358,56 +325,18 @@ onBeforeUnmount(() => {
   cursor: not-allowed;
 }
 
-.result-list {
+.match-info {
   flex: 1;
-  min-height: 0;
-  overflow: auto;
-  background: transparent;
-  padding-right: 2px;
-}
-
-.result-item {
-  width: 100%;
-  display: block;
-  text-align: left;
-  padding: 8px 8px;
-  background: #ebebeb;
-  border-bottom: 1px solid #d7d7d7;
-  cursor: pointer;
-}
-
-.result-item:hover {
-  background: #e2e2e2;
-}
-
-.result-item.active {
-  background: #9aa0a6;
-  color: #fff;
-}
-
-.result-item-meta {
   display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  opacity: 0.8;
-  margin-bottom: 4px;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  min-height: 180px;
 }
 
-.result-item-text {
-  font-size: 12px;
-  line-height: 1.45;
-  color: inherit;
-  word-break: break-word;
-}
-
-.result-item-text :deep(mark) {
-  background: #ffe58f;
-  color: inherit;
-  padding: 0;
-}
-
-.result-item.active .result-item-text :deep(mark) {
-  background: rgba(255, 229, 143, 0.78);
+.match-text {
+  font-size: 13px;
+  color: #70757a;
 }
 
 .empty-state {

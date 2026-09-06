@@ -19,9 +19,9 @@
         <button
           class="dock-btn"
           type="button"
-          :class="{ active: activeKey === 'catalog' }"
+          :class="{ active: activeKey === 'toc' }"
           aria-label="目录"
-          @click="emit('select', 'catalog')"
+          @click="emit('select', 'toc')"
         >
           <VIcon name="table-of-contents" :size="18" />
         </button>
@@ -73,7 +73,7 @@
 <script setup lang="ts">
 import { VIcon } from '@vervedoc/icons'
 
-type DockKey = 'search' | 'catalog' | 'section' | 'ai' | 'revision' | ''
+type DockKey = 'search' | 'toc' | 'section' | 'ai' | 'revision' | ''
 
 defineProps<{
   activeKey: DockKey
@@ -104,9 +104,6 @@ const emit = defineEmits<{
   gap: 0;
 }
 
-.dock-spacer {
-  flex: 1;
-}
 
 .dock-btn {
   width: 36px;

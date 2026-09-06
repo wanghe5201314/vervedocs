@@ -53,9 +53,12 @@ const props = withDefaults(defineProps<{
   max: 5
 })
 
+/** 是否显示工具提示 */
 const showTooltip = ref(false)
 
+/** 可见用户列表（最多 max 个） */
 const visibleUsers = computed(() => props.users.slice(0, props.max))
+/** 溢出用户数量 */
 const overflowCount = computed(() => Math.max(0, props.users.length - props.max))
 
 </script>

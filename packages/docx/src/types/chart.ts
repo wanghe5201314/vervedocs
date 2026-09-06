@@ -22,25 +22,7 @@ export interface ITableData {
 }
 
 /**
- * 图表数据源配置
- */
-export interface IChartDataSource {
-  /** 数据源类型：table=引用表格，manual=手动数据 */
-  type: 'table' | 'manual'
-  /** 引用的表格 ID（type=table 时有效） */
-  tableId?: string
-  /** 引用表格的单元格范围（type=table 时有效） */
-  range?: {
-    startTr: number
-    endTr: number
-    startTd: number
-    endTd: number
-  }
-  /** 手动输入的数据（type=manual 时有效） */
-  manualData?: ITableData
-}
 
-/**
  * 图表显示配置
  */
 export interface IChartConfig {
@@ -91,32 +73,5 @@ export interface IChartConfig {
   animation?: boolean
 }
 
-/**
- * 可引用的表格选项
- */
-export interface ITableOption {
-  /** 表格唯一标识 */
-  id: string
-  /** 表格名称 */
-  name: string
-  /** 行数 */
-  rowCount: number
-  /** 列数 */
-  colCount: number
-}
 
-/**
- * 图表图片扩展信息（嵌入图片元素时的图表元数据）
- */
-export interface IChartImageExtension {
-  /** 扩展类型标识，固定为 'chart' */
-  kind: 'chart'
-  /** 图表类型 */
-  chartType: ChartType
-  /** 图表子类型 */
-  subtype: string
-  /** 数据源配置 */
-  dataSource: IChartDataSource
-  /** 显示配置 */
-  config: IChartConfig
-}
+

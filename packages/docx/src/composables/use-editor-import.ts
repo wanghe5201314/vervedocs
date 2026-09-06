@@ -17,7 +17,7 @@ interface EditorInstance {
     /** 获取当前文档值 */
     getValue: () => { data?: { main?: any[] } }
     /** 设置文档值 */
-    executeSetValue: (value: { main: any[]; header?: any[]; footer?: any[] }) => void
+    executeSetValue: (value: { main: any[]; header?: any[]; footer?: any[]; comments?: unknown[] }) => void
   }
   comment?: any
   revision?: any
@@ -26,7 +26,7 @@ interface EditorInstance {
 /**
  * 文档导入 composable
  * @param options 配置项
- * @returns JSON 文件导入方法
+ * @returns 包含 JSON 文件导入方法的对象
  */
 export function useEditorImport(options: {
   /** 事件发射函数 */
@@ -41,6 +41,7 @@ export function useEditorImport(options: {
   /**
    * 导入 JSON 文件并整文档替换到编辑器
    * @param payload 导入参数，可包含 url、onProgress、onComplete
+   * @returns 无返回值
    */
   async function importJsonFile(payload?: any) {
     const url = String(payload?.url || '').trim()

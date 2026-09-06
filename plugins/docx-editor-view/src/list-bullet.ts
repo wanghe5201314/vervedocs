@@ -13,6 +13,12 @@ import type { IListElement, IListNumbering } from '@vervedoc/docx-editor-schema'
 
 /* ==================== 数字格式转换 ==================== */
 
+/**
+ * 将阿拉伯数字转换为罗马数字。
+ * @param num - 待转换的正整数（仅支持 1..3999，超出范围直接返回原数字字符串）
+ * @param upper - 是否输出大写罗马数字
+ * @returns 罗马数字字符串
+ */
 function toRoman(num: number, upper: boolean): string {
   if (num <= 0 || num >= 4000) return String(num)
   const map: [number, string][] = [
@@ -25,6 +31,12 @@ function toRoman(num: number, upper: boolean): string {
   return upper ? out : out.toLowerCase()
 }
 
+/**
+ * 将正整数转换为字母序号（1→A, 26→Z, 27→AA）。
+ * @param num - 待转换的正整数（<=0 时直接返回原数字字符串）
+ * @param upper - 是否输出大写字母
+ * @returns 字母序号字符串
+ */
 function toLetter(num: number, upper: boolean): string {
   if (num <= 0) return String(num)
   let n = num, out = ''
@@ -36,11 +48,20 @@ function toLetter(num: number, upper: boolean): string {
   return upper ? out : out.toLowerCase()
 }
 
+/** 中文小写数字字符表（0..9 对应 零..九） */
 const CN_DIGITS = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九']
+/** 中文数位单位（个、十、百、千） */
 const CN_UNITS = ['', '十', '百', '千']
+/** 中文大分段单位（个、万、亿、兆） */
 const CN_BIG_UNITS = ['', '万', '亿', '兆']
+/** 中文大写数字字符表（0..9 对应 零..玖，财务用大写） */
 const CN_UPPER   = ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖']
 
+/**
+ * 将正整数转换为中文小写计数（如 12 → 十二，23 → 二十三）。
+ * @param num - 待转换的正整数（<=0 时直接返回原数字字符串）
+ * @returns 中文小写计数字符串
+ */
 function toChineseCounting(num: number): string {
   if (num <= 0) return String(num)
   if (num < 10) return CN_DIGITS[num]
@@ -52,6 +73,11 @@ function toChineseCounting(num: number): string {
   return toChineseCountingLarge(num)
 }
 
+/**
+ * 将任意大正整数转换为中文计数（支持万、亿、兆等大单位）。
+ * @param num - 待转换的非负整数
+ * @returns 中文计数字符串
+ */
 function toChineseCountingLarge(num: number): string {
   if (num === 0) return '零'
   let out = ''
@@ -73,6 +99,11 @@ function toChineseCountingLarge(num: number): string {
   return out
 }
 
+/**
+ * 将正整数转换为中文大写计数（财务用，如 12 → 壹拾贰）。
+ * @param num - 待转换的正整数
+ * @returns 中文大写计数字符串
+ */
 function toChineseUpper(num: number): string {
   return toChineseCounting(num).split('').map(ch => {
     const i = CN_DIGITS.indexOf(ch)
@@ -80,14 +111,30 @@ function toChineseUpper(num: number): string {
   }).join('')
 }
 
+/**
+ * 将正整数转换为逐位中文数字（如 123 → 一二三，不进位）。
+ * @param num - 待转换的正整数
+ * @returns 逐位中文数字字符串
+ */
 function toIdeographDigital(num: number): string {
   return String(num).split('').map(d => CN_DIGITS[Number(d)] ?? d).join('')
 }
 
+/**
+ * 将正整数格式化为两位前导零十进制（如 1 → 01，10 → 10）。
+ * @param num - 待格式化的正整数
+ * @returns 两位十进制字符串
+ */
 function toDecimalZero(num: number): string {
   return num < 10 ? '0' + num : String(num)
 }
 
+/**
+ * 按 OOXML numFmt 编号格式将计数值转换为展示字符串。
+ * @param num - 当前层级的计数值
+ * @param numFmt - 编号格式名称（decimal / lowerLetter / upperRoman / chineseCounting 等）
+ * @returns 格式化后的编号字符串
+ */
 export function formatCounter(num: number, numFmt: string): string {
   switch (numFmt) {
     case 'decimal':                    return String(num)
@@ -162,6 +209,7 @@ export const BULLET_FONT_STACK_FALLBACK =
  * 环境检测：当前浏览器是否安装了 Wingdings 字体。
  * 通过测量特定字符宽度对比 sans-serif 判断。缓存结果。
  */
+/** Wingdings 字体检测结果缓存（null 表示尚未检测） */
 let _hasWingdings: boolean | null = null
 export function detectWingdings(): boolean {
   if (_hasWingdings != null) return _hasWingdings
@@ -236,6 +284,10 @@ export function normalizeBulletChar(ch: string, hasWingdings: boolean): string {
 
 /* ==================== 顶层入口 ==================== */
 
+/**
+ * 项目符号解析结果。
+ * 描述一个列表项最终要绘制的符号/编号文本及其渲染方式。
+ */
 export interface BulletResult {
   /** 无序符号 or 有序编号，最终要绘制的字符串 */
   text: string
@@ -245,6 +297,13 @@ export interface BulletResult {
   lvlJc?: 'left' | 'center' | 'right'
 }
 
+/**
+ * 解析列表项的项目符号或编号文本（顶层入口）。
+ * 无序列表返回符号字符；有序列表根据计数器计算当前编号并替换 lvlText 占位符。
+ * @param list - 列表元素数据
+ * @param counters - 跨列表项的编号计数器（按 "groupId:level" 索引），可选
+ * @returns 项目符号解析结果
+ */
 export function resolveBullet(
   list: IListElement,
   counters?: Map<string, number>
@@ -295,6 +354,11 @@ export function resolveBullet(
   return { text, isSymbol: false, lvlJc: num?.lvlJc }
 }
 
+/**
+ * 判断给定的 listStyle 是否属于有序编号样式。
+ * @param s - listStyle 字符串
+ * @returns 若为有序编号样式返回 true，否则 false
+ */
 function isOrderedStyle(s?: string): boolean {
   if (!s) return false
   return [

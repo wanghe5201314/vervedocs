@@ -19,22 +19,22 @@ export function useEditorBarcode(options: {
 
   /**
    * 插入条形码
-   * @param content 条形码内容
+   * @param payload 条形码图片数据
    */
-  function barcode(content: string) {
+  function barcode(payload: { value: string; width: number; height: number }) {
     const instance = getEditorInstance()
     if (!instance) return
-    instance.command.execute('barcode', content)
+    instance.command.executeInsertBarcode(payload)
   }
 
   /**
    * 插入二维码
-   * @param content 二维码内容
+   * @param payload 二维码图片数据
    */
-  async function qrcode(content: string) {
+  function qrcode(payload: { value: string; width: number; height: number }) {
     const instance = getEditorInstance()
     if (!instance) return
-    await instance.command.execute('qrcode', content)
+    instance.command.executeInsertQrcode(payload)
   }
 
   return { barcode, qrcode }

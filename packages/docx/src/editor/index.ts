@@ -10,20 +10,17 @@
 export * from '@vervedoc/core'
 
 // 导出对象式接入入口
-export { WordEditor } from '../core/word-editor'
-export type { Options } from '../core/word-editor'
+export { WordEditor } from './word-editor'
+export type { Options } from './word-editor'
 
 // 明确再导出导入/导出契约，便于宿主与实现方对齐
 export type {
   DocxImportCallback,
-  DocxExportCallback,
-  IDocxImportResult,
-  IDocxExportResult,
-  IDocxImportOptions,
-  IDocxExportOptions
+  DocxExportCallback
 } from '@vervedoc/core'
 
 // 导出版本号
+/** docx-editor UI 版本号，取自构建期注入的 __APP_VERSION__ */
 export const DOCX_EDITOR_UI_VERSION = __APP_VERSION__
 
 // 导出文档 API 类型与默认实现（供接入方 / playground 注入）
@@ -44,4 +41,4 @@ export {
 export type {
   CollaborationOptions,
   DocxEditorUiInitialDocument
-} from '../ui/index'
+} from './types'

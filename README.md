@@ -157,7 +157,7 @@ const editor = new DocxEditor(container, {
 })
 
 // 使用命令 API
-editor.command.executeBold()  // 加粗
+editor.command.executeSetBold()  // 加粗
 editor.command.executeUndo()  // 撤销
 ```
 

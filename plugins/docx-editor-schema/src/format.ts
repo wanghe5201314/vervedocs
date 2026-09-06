@@ -18,9 +18,13 @@ import type {
 } from './types'
 import { DEFAULT_EDITOR_OPTION } from './constants'
 
+/** 格式化树上下文：携带编辑器选项、样式表、编号定义等归一化所需依赖 */
 export interface FormatTreeContext {
+  /** 编辑器选项 */
   editorOptions: IEditorOption
+  /** 段落样式表 */
   styles?: Record<string, IParagraphStyle>
+  /** 列表编号定义表 */
   numbering?: Record<string, IListNumbering>
   /** 供 LaTeX / 公式等扩展使用的转换钩子 */
   laTexToSVG?: (latex: string) => string
@@ -46,12 +50,28 @@ export function formatElementTree(
   ctx: FormatTreeContext
 ): IElement[] {
   if (!Array.isArray(elements)) return elements
+  // 空文档兜底：若 elements 为空数组，插入一个携带默认字体/字号的空 text run，
+  // 以保证 layout 能产出一个段落 block（空段兜底会为其生成零宽 caret 承载 inline），
+  // 光标可以定位、用户可以直接输入。新字符会拼入该 run 并继承其属性（默认无 bold/highlight）。
+  if (elements.length === 0) {
+    elements.push({
+      type: 'text',
+      value: '',
+      font: ctx.editorOptions.defaultFont,
+      size: ctx.editorOptions.defaultSize
+    } as unknown as IElement)
+  }
   for (let i = 0; i < elements.length; i++) {
     normalizeNode(elements[i], ctx)
   }
   return elements
 }
 
+/**
+ * 单节点归一化分发：按节点类型调用对应的归一化函数。
+ * @param node 当前节点
+ * @param ctx 格式化上下文
+ */
 function normalizeNode(node: IElement, ctx: FormatTreeContext): void {
   if (!node || typeof node !== 'object') return
 
@@ -84,8 +104,11 @@ function normalizeNode(node: IElement, ctx: FormatTreeContext): void {
   }
 }
 
-/* -------------------- text -------------------- */
-
+/**
+ * 归一化 text 节点：补全 value、font、size 默认值并应用段落样式。
+ * @param node text 节点
+ * @param ctx 格式化上下文
+ */
 function normalizeText(node: IElement, ctx: FormatTreeContext): void {
   const anyNode = node as unknown as Record<string, unknown>
   if (typeof anyNode.value !== 'string') anyNode.value = String(anyNode.value ?? '')
@@ -94,8 +117,11 @@ function normalizeText(node: IElement, ctx: FormatTreeContext): void {
   applyParagraphStyleId(node, ctx)
 }
 
-/* -------------------- title -------------------- */
-
+/**
+ * 归一化 title 节点：补全 valueList、level 默认值，递归归一化子节点并下沉段落属性。
+ * @param node title 节点
+ * @param ctx 格式化上下文
+ */
 function normalizeTitle(node: ITitleElement, ctx: FormatTreeContext): void {
   if (!Array.isArray(node.valueList)) node.valueList = []
   if (!node.level) node.level = 'first'
@@ -105,8 +131,12 @@ function normalizeTitle(node: ITitleElement, ctx: FormatTreeContext): void {
   inheritParagraphAttrsToChildren(node)
 }
 
-/* -------------------- list -------------------- */
-
+/**
+ * 归一化 list 节点：补全 valueList、listType、listStyle、listLevel 等默认值，
+ * 关联 numbering 定义，递归归一化子节点并下沉段落属性。
+ * @param node list 节点
+ * @param ctx 格式化上下文
+ */
 function normalizeList(node: IListElement, ctx: FormatTreeContext): void {
   if (!Array.isArray(node.valueList)) node.valueList = []
   if (!node.listType) node.listType = 'ul'
@@ -122,8 +152,12 @@ function normalizeList(node: IListElement, ctx: FormatTreeContext): void {
   inheritParagraphAttrsToChildren(node)
 }
 
-/* -------------------- table -------------------- */
-
+/**
+ * 归一化 table 节点：补全 colgroup、trList，递归归一化各行；
+ * 若 colgroup 为空则用第一行宽度推导。
+ * @param node table 节点
+ * @param ctx 格式化上下文
+ */
 function normalizeTable(node: ITableElement, ctx: FormatTreeContext): void {
   if (!Array.isArray(node.colgroup)) node.colgroup = []
   if (!Array.isArray(node.trList)) node.trList = []
@@ -136,12 +170,23 @@ function normalizeTable(node: ITableElement, ctx: FormatTreeContext): void {
   }
 }
 
+/**
+ * 归一化表格行：补全 height、tdList 默认值，递归归一化各单元格。
+ * @param tr 表格行
+ * @param ctx 格式化上下文
+ */
 function normalizeTr(tr: ITr, ctx: FormatTreeContext): void {
   if (typeof tr.height !== 'number' || tr.height <= 0) tr.height = 32
   if (!Array.isArray(tr.tdList)) tr.tdList = []
   for (const td of tr.tdList) normalizeTd(td, ctx)
 }
 
+/**
+ * 归一化单元格：补全 width、colspan、rowspan、verticalAlign、padding、borderStyle 默认值，
+ * 递归归一化单元格内容。
+ * @param td 表格单元格
+ * @param ctx 格式化上下文
+ */
 function normalizeTd(td: ITd, ctx: FormatTreeContext): void {
   if (typeof td.width !== 'number' || td.width <= 0) td.width = 100
   if (typeof td.colspan !== 'number' || td.colspan <= 0) td.colspan = 1
@@ -162,8 +207,11 @@ function normalizeTd(td: ITd, ctx: FormatTreeContext): void {
   formatElementTree(td.value, ctx)
 }
 
-/* -------------------- image -------------------- */
-
+/**
+ * 归一化 image 节点：补全 width、height、rotate 默认值并应用段落样式。
+ * @param node image 节点
+ * @param ctx 格式化上下文
+ */
 function normalizeImage(node: IElement, ctx: FormatTreeContext): void {
   const anyNode = node as unknown as Record<string, unknown>
   if (typeof anyNode.width !== 'number' || (anyNode.width as number) <= 0) anyNode.width = 200
@@ -172,16 +220,22 @@ function normalizeImage(node: IElement, ctx: FormatTreeContext): void {
   applyParagraphStyleId(node, ctx)
 }
 
-/* -------------------- pageBreak -------------------- */
-
+/**
+ * 归一化 pageBreak 节点：补全 value 默认值为 'manual' 并应用段落样式。
+ * @param node pageBreak 节点
+ * @param ctx 格式化上下文
+ */
 function normalizePageBreak(node: IElement, ctx: FormatTreeContext): void {
   const anyNode = node as unknown as Record<string, unknown>
   if (anyNode.value !== 'manual' && anyNode.value !== 'auto') anyNode.value = 'manual'
   applyParagraphStyleId(node, ctx)
 }
 
-/* -------------------- 样式表应用 -------------------- */
-
+/**
+ * 应用段落样式表：当节点引用了 paragraphStyleId 时，将样式字段填入节点未显式设置的字段。
+ * @param node 当前节点
+ * @param ctx 格式化上下文
+ */
 function applyParagraphStyleId(node: IElement, ctx: FormatTreeContext): void {
   if (!ctx.styles) return
   const styleId = (node as unknown as { paragraphStyleId?: string }).paragraphStyleId

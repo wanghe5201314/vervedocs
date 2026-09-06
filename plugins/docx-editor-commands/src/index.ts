@@ -5,7 +5,7 @@ export { Search } from './search'
 export type { ISearchResult, IReplaceOption, INavigateInfo } from './search'
 export { BlockParticle } from './block-particle'
 export { ControlComponent } from './control-component'
-export { GadgetComponent } from './gadget-component'
+
 
 export { EDITOR_PREFIX, BlockType, EditorComponent } from './constants'
 export type { IElementPosition } from './constants'

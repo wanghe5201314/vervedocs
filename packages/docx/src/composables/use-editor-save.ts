@@ -1,6 +1,6 @@
 import { Ref } from 'vue'
 import { emitExternalEvent } from '@/composables/use-external-events'
-import { appConfig } from '@/config/app-config'
+
 import type { DocumentMeta } from '@/types/document'
 
 /**
@@ -44,13 +44,16 @@ export function useEditorSave(options: {
 }) {
   const { getEditorInstance, getCommentComponent, documentMeta, busyState, emitMetaChange } = options
 
+  /** 延迟保存定时器句柄 */
   let saveTimer: number | null = null
+  /** 当前是否正在保存 */
   let saving = false
+  /** 保存期间是否有新的待保存请求 */
   let pendingSave = false
 
   /**
    * 获取当前文档快照，包含元数据、内容及评论和修订等附加信息
-   * @returns 文档快照对象
+   * @returns 文档快照对象，包含 meta 和 content 字段
    */
   const getSnapshot = () => {
     const instance = getEditorInstance()
@@ -78,6 +81,7 @@ export function useEditorSave(options: {
   /**
    * 立即保存文档，若正在保存则标记待保存，完成后触发相应事件
    * @param saveOptions 保存选项（是否静默保存）
+   * @returns 无返回值
    */
   const saveNow = async (saveOptions?: { silent?: boolean }) => {
     if (saving) {
@@ -112,9 +116,10 @@ export function useEditorSave(options: {
 
   /**
    * 延迟保存文档，在 800 毫秒后触发静默保存
+   * @returns 无返回值
    */
   const scheduleSave = () => {
-    if (!appConfig['auto-save']) return
+
     if (documentMeta.status === 'view') return
     if (saveTimer) window.clearTimeout(saveTimer)
     saveTimer = window.setTimeout(() => {

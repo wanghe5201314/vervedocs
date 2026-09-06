@@ -68,6 +68,6 @@ defineEmits<{
   save: []
   importDoc: []
   command: [command: string, ...args: any[]]
-  showPopup: [name: 'table' | 'link' | 'search' | 'shortcuts' | 'catalog']
+  showPopup: [name: 'table' | 'link' | 'search' | 'shortcuts' | 'toc']
 }>()
 </script>

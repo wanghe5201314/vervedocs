@@ -4,9 +4,16 @@
  * 纯 DOM 实现，无框架依赖。支持子菜单、图标、快捷键、分隔线。
  */
 
+/** CSS 类名前缀，所有菜单相关样式均以此为前缀 */
 const PREFIX = 'ce-table-context-menu'
 
+/** 样式是否已注入到 document.head 的标记，避免重复注入 */
 let styleInjected = false
+/**
+ * 将菜单所需 CSS 一次性注入到 document.head。
+ * 内部通过 styleInjected 标记保证仅注入一次。
+ * @returns 无返回值
+ */
 function injectStyle(): void {
   if (styleInjected) return
   styleInjected = true
@@ -44,30 +51,58 @@ function injectStyle(): void {
   document.head.appendChild(el)
 }
 
+/**
+ * 菜单项内嵌数字输入框配置。
+ * 用于在菜单项右侧展示一个带单位的数字输入控件（如行高、列宽）。
+ */
 export interface MenuItemInput {
+  /** 输入框初始值 */
   defaultValue: number
+  /** 单位文本（如 "px"、"%"） */
   unit: string
+  /** 允许的最小值，默认 1 */
   min?: number
+  /** 允许的最大值，默认 99 */
   max?: number
 }
 
+/**
+ * 菜单项内嵌颜色选择器配置。
+ * 用于在菜单项右侧展示一个原生 color input 及可选的"无"清除按钮。
+ */
 export interface MenuItemColorPicker {
+  /** 初始颜色值（如 "#ffffff"），默认白色 */
   defaultColor?: string
+  /** 是否展示"无"清除按钮，点击后以空字符串触发 onClick */
   allowClear?: boolean
 }
 
+/**
+ * 右键菜单项描述。
+ * 支持图标、快捷键、子菜单、内嵌输入框、内嵌颜色选择器、危险态、禁用态等。
+ */
 export interface MenuItem {
+  /** 显示文本；值为 "---" 时渲染为分隔线 */
   label: string
+  /** material-icons 图标名，可选 */
   icon?: string
+  /** 快捷键提示文本（仅展示，不绑定按键），可选 */
   shortcut?: string
+  /** 是否为危险操作（红色高亮），可选 */
   danger?: boolean
+  /** 是否禁用该项，可选 */
   disabled?: boolean
+  /** 子菜单项数组，存在时显示右箭头并悬停展开 */
   submenu?: MenuItem[]
+  /** 内嵌数字输入框配置，可选 */
   input?: MenuItemInput
+  /** 内嵌颜色选择器配置，可选 */
   colorPicker?: MenuItemColorPicker
+  /** 点击回调；参数为输入框/颜色选择器的当前值（无控件时为 undefined） */
   onClick?: (value?: number | string) => void
 }
 
+/** material-icons 图标名映射表，供外部通过 getIcons() 引用 */
 const SVG = {
   insertRowAbove: 'table_rows',
   insertRowBelow: 'table_rows',
@@ -92,11 +127,25 @@ const SVG = {
   arrow: 'chevron_right'
 }
 
+/**
+ * 表格右键菜单控制器。
+ * 纯 DOM 实现，负责菜单/子菜单的构建、定位、显隐与外部点击关闭。
+ */
 export class ContextMenu {
+  /** 主菜单根元素 */
   private menuEl: HTMLDivElement | null = null
+  /** 子菜单根元素 */
   private submenuEl: HTMLDivElement | null = null
+  /** 子菜单延迟隐藏定时器句柄 */
   private hideTimer: number | null = null
 
+  /**
+   * 在指定坐标显示主菜单。
+   * @param x - 菜单左上角横坐标（px）
+   * @param y - 菜单左上角纵坐标（px）
+   * @param items - 菜单项描述数组
+   * @returns 无返回值
+   */
   show(x: number, y: number, items: MenuItem[]): void {
     injectStyle()
     this.hide()
@@ -109,6 +158,10 @@ export class ContextMenu {
     document.addEventListener('scroll', this.onScroll, { capture: true })
   }
 
+  /**
+   * 关闭并销毁主菜单与子菜单，移除所有全局事件监听。
+   * @returns 无返回值
+   */
   hide(): void {
     if (this.menuEl) { this.menuEl.remove(); this.menuEl = null }
     if (this.submenuEl) { this.submenuEl.remove(); this.submenuEl = null }
@@ -116,6 +169,12 @@ export class ContextMenu {
     document.removeEventListener('scroll', this.onScroll, { capture: true })
   }
 
+  /**
+   * 根据菜单项描述构建菜单根 div。
+   * @param items - 菜单项描述数组
+   * @param isSub - 是否为子菜单（影响是否追加子菜单修饰类）
+   * @returns 构建完成的菜单根 HTMLDivElement
+   */
   private buildMenu(items: MenuItem[], isSub: boolean): HTMLDivElement {
     const el = document.createElement('div')
     el.className = PREFIX + (isSub ? ` ${PREFIX}--sub` : '')
@@ -131,6 +190,11 @@ export class ContextMenu {
     return el
   }
 
+  /**
+   * 构建单个菜单项元素，包含图标、文本、快捷键、子菜单箭头、输入框、颜色选择器等。
+   * @param item - 菜单项描述
+   * @returns 构建完成的菜单项 HTMLDivElement
+   */
   private buildItem(item: MenuItem): HTMLDivElement {
     const el = document.createElement('div')
     el.className = `${PREFIX}__item${item.danger ? ' danger' : ''}${item.disabled ? ' disabled' : ''}${item.input ? ` ${PREFIX}__item--with-input` : ''}`
@@ -279,6 +343,12 @@ export class ContextMenu {
     return el
   }
 
+  /**
+   * 在指定父菜单项右侧展开其子菜单，并绑定悬停保持/离开延迟隐藏。
+   * @param parentEl - 触发展开的父菜单项元素
+   * @param items - 子菜单项描述数组
+   * @returns 无返回值
+   */
   private showSubmenu(parentEl: HTMLDivElement, items: MenuItem[]): void {
     if (this.submenuEl) { this.submenuEl.remove(); this.submenuEl = null }
     this.submenuEl = this.buildMenu(items, true)
@@ -299,6 +369,13 @@ export class ContextMenu {
     this.adjustPosition(this.submenuEl, x, y)
   }
 
+  /**
+   * 校正菜单位置，避免其超出视口右边界或下边界。
+   * @param el - 待校正的菜单元素
+   * @param x - 期望的横坐标（px）
+   * @param y - 期望的纵坐标（px）
+   * @returns 无返回值
+   */
   private adjustPosition(el: HTMLDivElement, x: number, y: number): void {
     const rect = el.getBoundingClientRect()
     const vw = window.innerWidth
@@ -311,6 +388,7 @@ export class ContextMenu {
     }
   }
 
+  /** 全局 mousedown 监听器：点击发生在菜单外部时关闭菜单 */
   private onOutsideDown = (e: MouseEvent): void => {
     const target = e.target as Node
     if (this.menuEl?.contains(target)) return
@@ -318,9 +396,14 @@ export class ContextMenu {
     this.hide()
   }
 
+  /** 全局 scroll 监听器：页面滚动时关闭菜单，避免错位 */
   private onScroll = (): void => {
     this.hide()
   }
 
+  /**
+   * 获取内置 material-icons 图标名映射表。
+   * @returns 图标名映射对象
+   */
   static getIcons() { return SVG }
 }

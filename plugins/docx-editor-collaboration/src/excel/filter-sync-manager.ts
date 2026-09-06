@@ -1,5 +1,6 @@
 import type { Awareness } from 'y-protocols/awareness'
 
+/** 触发筛选同步的 Univer 命令 ID 集合 */
 const FILTER_COMMANDS = new Set([
   'sheet.command.set-filter-range',
   'sheet.command.remove-sheet-filter',
@@ -9,22 +10,48 @@ const FILTER_COMMANDS = new Set([
   'sheet.command.re-calc-filter',
 ])
 
+/**
+ * 远程筛选数据
+ *
+ * 通过 Awareness 在客户端之间广播的筛选状态。
+ */
 interface RemoteFilterData {
+  /** 工作表 ID */
   sheetId: string
+  /** 自动筛选模型，包含引用范围与各列筛选条件；为 null 表示清除筛选 */
   autoFilter: {
+    /** 筛选引用范围 */
     ref?: { startRow: number; startColumn: number; endRow: number; endColumn: number }
+    /** 各列筛选条件列表 */
     filterColumns?: any[]
   } | null
 }
 
+/**
+ * Excel 筛选状态同步管理器
+ *
+ * 监听本地筛选命令并广播到 Awareness，同时监听 Awareness 远端筛选变更并应用到 Univer。
+ */
 export class ExcelFilterSyncManager {
+  /** Awareness 实例 */
   private awareness: Awareness | null = null
+  /** Univer API 实例 */
   private univerAPI: any = null
+  /** 是否启用筛选同步 */
   private enabled = true
+  /** 是否正在应用远端筛选（防回环） */
   private isApplyingRemote = false
+  /** Univer 命令执行事件回调引用 */
   private commandHandler: ((event: any) => void) | null = null
+  /** Awareness 变更事件回调引用 */
   private awarenessHandler: ((change: { added: number[]; updated: number[]; removed: number[] }) => void) | null = null
 
+  /**
+   * 绑定 Awareness 与 Univer API，建立双向筛选同步
+   *
+   * @param awareness Awareness 实例
+   * @param univerAPI Univer API 实例
+   */
   bindAwareness(awareness: Awareness, univerAPI: any): void {
     this.awareness = awareness
     this.univerAPI = univerAPI
@@ -51,6 +78,13 @@ export class ExcelFilterSyncManager {
     univerAPI.addEvent(univerAPI.Event.CommandExecuted, this.commandHandler)
   }
 
+  /**
+   * 启用或禁用筛选同步
+   *
+   * 禁用时清除 Awareness 中的筛选字段；启用时立即广播一次本地筛选。
+   *
+   * @param enabled 是否启用
+   */
   setEnabled(enabled: boolean): void {
     this.enabled = enabled
     if (!enabled) {
@@ -60,6 +94,11 @@ export class ExcelFilterSyncManager {
     }
   }
 
+  /**
+   * 广播本地当前筛选状态到 Awareness
+   *
+   * 读取当前工作表的筛选范围与各列条件，写入 Awareness 的 filter 字段。
+   */
   private broadcastLocalFilter(): void {
     if (!this.awareness || !this.univerAPI) return
     const workbook = this.univerAPI.getActiveWorkbook()
@@ -90,6 +129,11 @@ export class ExcelFilterSyncManager {
     })
   }
 
+  /**
+   * 应用远端筛选状态到本地 Univer
+   *
+   * @param filterData 远端筛选数据
+   */
   private applyRemoteFilter(filterData: RemoteFilterData): void {
     if (!this.univerAPI) return
     this.isApplyingRemote = true
@@ -130,6 +174,9 @@ export class ExcelFilterSyncManager {
     }
   }
 
+  /**
+   * 销毁管理器，解除 Awareness 与命令事件监听
+   */
   destroy(): void {
     if (this.awarenessHandler && this.awareness) {
       this.awareness.off('change', this.awarenessHandler)

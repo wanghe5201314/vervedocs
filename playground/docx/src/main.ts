@@ -14,6 +14,7 @@ import {
   buildInitialDocumentFromLocation
 } from './resolve-from-location'
 
+
 import GUI from 'lil-gui'
 
 /**
@@ -102,6 +103,9 @@ window.onload = () => {
   gui.add(options, 'isLocalImport').name('本地导入')
 
   setDocumentApi(createDefaultDocumentApi())
+
+  const initialDocument = buildInitialDocumentFromLocation()
+
   /**
    * 导入/导出策略由宿主显式注入，GUI 可运行时切换：
    * - 本地 JS：@vervedoc/docx-parser
@@ -109,7 +113,7 @@ window.onload = () => {
    */
   new WordEditor({
     container: '#app',
-    initialDocument: buildInitialDocumentFromLocation(),
+    initialDocument,
     collaboration: buildCollaborationFromLocation(),
     importCallback: (data, opts) =>
       options.isLocalImport

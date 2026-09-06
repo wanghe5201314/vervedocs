@@ -4,15 +4,25 @@
 import type { IChartTableData, IChartConfig as IChartConfigBase, IChartDataRange } from '@vervedoc/docx-editor-schema'
 import echartsLib from './echarts'
 
+/** 图表配置接口，扩展基础图表配置，包含标题、动画、坐标轴等显示选项 */
 export interface IChartConfig extends IChartConfigBase {
+  /** 标题位置 */
   titlePosition?: string
+  /** 标题字号 */
   titleFontSize?: number
+  /** 是否开启动画 */
   animation?: boolean
+  /** 数据标签位置 */
   dataLabelPosition?: string
+  /** X 轴标签旋转角度 */
   xAxisLabelRotate?: number
+  /** 是否显示 X 轴轴线 */
   showXAxisLine?: boolean
+  /** 是否显示 Y 轴轴线 */
   showYAxisLine?: boolean
+  /** 是否显示 X 轴网格线 */
   showXAxisSplitLine?: boolean
+  /** 是否显示 Y 轴网格线 */
   showYAxisSplitLine?: boolean
 }
 
@@ -29,6 +39,9 @@ export type ChartType =
 
 /**
  * 从表格元素提取数据
+ * @param tableElement 表格元素
+ * @param range 数据范围
+ * @returns 提取的表格数据，包含表头与数据行
  */
 export function extractTableData(
   tableElement: any,
@@ -67,6 +80,8 @@ export function extractTableData(
 
 /**
  * 从元素列表提取纯文本
+ * @param elements 元素列表
+ * @returns 拼接后的纯文本
  */
 function extractTextFromElements(elements: any[]): string {
   if (!elements || !Array.isArray(elements)) return ''
@@ -78,6 +93,11 @@ function extractTextFromElements(elements: any[]): string {
 
 /**
  * 根据表格数据生成 ECharts 配置
+ * @param chartType 图表类型
+ * @param tableData 表格数据
+ * @param config 图表配置
+ * @param subtype 图表子类型
+ * @returns ECharts 配置对象
  */
 export function generateChartOption(
   chartType: ChartType | string,

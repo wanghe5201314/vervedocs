@@ -21,25 +21,25 @@ export function useEditorToc(options: { getEditorInstance: () => EditorInstance 
   async function tocInsert(payload: any) {
     const instance = getEditorInstance()
     if (!instance) return
-    await instance.command.execute('tocInsert', payload)
+    instance.command.executeInsertToc(payload)
   }
 
   /** 删除目录 */
   function tocRemove() {
     const instance = getEditorInstance()
     if (!instance) return
-    instance.command.execute('tocRemove')
+    instance.command.executeRemoveToc()
   }
 
   /**
    * 定位到指定目录项
    * @param id 目录项标识
    */
-  function locationCatalog(id: string) {
+  function locationToc(id: string) {
     const instance = getEditorInstance()
     if (!instance) return
-    instance.command.executeLocationCatalog(id)
+    instance.command.executeLocationToc(id)
   }
 
-  return { tocInsert, tocRemove, locationCatalog }
+  return { tocInsert, tocRemove, locationToc }
 }

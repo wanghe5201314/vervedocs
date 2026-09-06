@@ -11,6 +11,7 @@ import echartsLib from './echarts'
  * @param height 高度
  * @param pixelRatio 像素比例
  * @param echartsInstance 可选的 echarts 实例（用于自定义版本）
+ * @returns 渲染后的 PNG DataURL 字符串
  */
 export const renderChartToDataUrl = (
   option: any,

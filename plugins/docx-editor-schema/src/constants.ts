@@ -4,6 +4,7 @@
 
 import type { IEditorOption } from './types'
 
+/** 当前 Schema 版本号 */
 export const SCHEMA_VERSION = '4.0.0-tree'
 
 /** 默认编辑器选项 */
@@ -43,7 +44,7 @@ export const PARAGRAPH_CONTAINER_TYPES = new Set(['title', 'list'])
 
 /** 段落级块类型（占独立段） */
 export const BLOCK_LEVEL_TYPES = new Set([
-  'title', 'list', 'table', 'image', 'pageBreak'
+  'title', 'list', 'table', 'image', 'pageBreak', 'separator'
 ])
 
 /** 列表类型 */
@@ -230,6 +231,21 @@ export const FONT_SIZE_LIST = [
   '18', '20', '22', '24', '26', '28', '30', '36', '42', '48', '54', '60', '72'
 ] as const
 
+/* ========== 纸张方向 / 表格边框 ========== */
+
+/** 纸张方向 */
+export const PaperDirection = {
+  VERTICAL: 'vertical',
+  HORIZONTAL: 'horizontal'
+} as const
+
+/** 表格边框类型 */
+export const TableBorder = {
+  NONE: 'none',
+  OUTSIDE: 'outside',
+  ALL: 'all'
+} as const
+
 /* ========== 纸张大小（对齐 WPS/Office，96 DPI） ========== */
 
 export interface PaperSize {
@@ -286,3 +302,101 @@ export const PAPER_SIZE_LIST: PaperSize[] = [
 
 /** 默认纸张大小（A4） */
 export const DEFAULT_PAPER_SIZE: PaperSize = PAPER_SIZE_LIST[4]
+
+/* ========== 项目符号 / 编号样式 ========== */
+
+/** 项目符号样式 */
+export const BULLET_STYLES = [
+  { style: 'disc', icon: '●', label: '实心圆点' },
+  { style: 'square', icon: '■', label: '实心方块' },
+  { style: 'diamond', icon: '◆', label: '实心菱形' },
+  { style: 'hollow-diamond', icon: '◇', label: '空心菱形' },
+  { style: 'arrow', icon: '▶', label: '箭头' },
+  { style: 'check', icon: '✓', label: '对勾' },
+  { style: 'circle', icon: '○', label: '空心圆点' },
+  { style: 'hollow-square', icon: '□', label: '空心方块' }
+]
+
+/** 编号样式 */
+export const NUMBER_STYLES = [
+  { style: 'chinese', samples: ['一、', '二、', '三、'], label: '中文数字' },
+  { style: 'chinese-bracket', samples: ['（一）', '（二）', '（三）'], label: '中文括号' },
+  { style: 'decimal', samples: ['1.', '2.', '3.'], label: '阿拉伯数字' },
+  { style: 'decimal-paren', samples: ['(1)', '(2)', '(3)'], label: '数字括号' },
+  { style: 'decimal-circle', samples: ['①', '②', '③'], label: '圈码' },
+  { style: 'decimal-bracket', samples: ['1)', '2)', '3)'], label: '数字右括号' },
+  { style: 'upper-alpha', samples: ['A', 'B', 'C'], label: '大写字母' },
+  { style: 'lower-alpha-dot', samples: ['a.', 'b.', 'c.'], label: '小写字母' }
+]
+
+/* ========== 行距 / 页边距 / 缩放 ========== */
+
+/** 行距选项 */
+export const LINE_HEIGHT_OPTIONS = [
+  { value: 1, label: '单倍行距' },
+  { value: 1.15, label: '1.15 倍行距' },
+  { value: 1.5, label: '1.5 倍行距' },
+  { value: 2, label: '双倍行距' },
+  { value: 2.5, label: '2.5 倍行距' },
+  { value: 3, label: '三倍行距' }
+]
+
+/** 页边距预设 */
+export const MARGIN_PRESETS = [
+  { name: '普通', margins: [96, 120, 96, 120], style: { margin: '14px 18px' } },
+  { name: '窄', margins: [48, 48, 48, 48], style: { margin: '7px 7px' } },
+  { name: '适中', margins: [96, 72, 96, 72], style: { margin: '14px 11px' } },
+  { name: '宽', margins: [96, 192, 96, 192], style: { margin: '14px 28px' } }
+]
+
+/** 缩放级别 */
+export const ZOOM_LEVELS = [50, 75, 100, 125, 150, 200]
+
+/* ========== 分割线样式 ========== */
+
+/** 分割线样式 */
+export const SEPARATOR_STYLES = [
+  { name: '极细实线', type: 'solid', width: 0.5, dashArray: [0, 0] },
+  { name: '细实线', type: 'solid', width: 1, dashArray: [0, 0] },
+  { name: '中实线', type: 'solid', width: 2, dashArray: [0, 0] },
+  { name: '粗实线', type: 'solid', width: 3, dashArray: [0, 0] },
+  { name: '特粗实线', type: 'solid', width: 4, dashArray: [0, 0] },
+  { name: '细点线', type: 'dotted', width: 0.5, dashArray: [1, 1] },
+  { name: '点线', type: 'dotted', width: 1, dashArray: [1, 1] },
+  { name: '粗点线', type: 'dotted', width: 2, dashArray: [1, 1] },
+  { name: '大点线', type: 'dotted', width: 3, dashArray: [2, 2] },
+  { name: '细短虚线', type: 'dashed', width: 0.5, dashArray: [3, 2] },
+  { name: '短虚线', type: 'dashed', width: 1, dashArray: [3, 2] },
+  { name: '粗短虚线', type: 'dashed', width: 2, dashArray: [3, 2] },
+  { name: '细长虚线', type: 'dashed', width: 0.5, dashArray: [6, 3] },
+  { name: '长虚线', type: 'dashed', width: 1, dashArray: [6, 3] },
+  { name: '粗长虚线', type: 'dashed', width: 2, dashArray: [6, 3] },
+  { name: '特长虚线', type: 'dashed', width: 1, dashArray: [10, 5] },
+  { name: '点划线', type: 'dashed', width: 1, dashArray: [6, 2, 1, 2] },
+  { name: '粗点划线', type: 'dashed', width: 2, dashArray: [6, 2, 1, 2] },
+  { name: '双点划线', type: 'dashed', width: 1, dashArray: [6, 2, 1, 2, 1, 2] },
+  { name: '粗双点划线', type: 'dashed', width: 2, dashArray: [6, 2, 1, 2, 1, 2] },
+  { name: '细双线', type: 'double', width: 2, dashArray: [0, 0] },
+  { name: '双线', type: 'double', width: 3, dashArray: [0, 0] },
+  { name: '粗双线', type: 'double', width: 4, dashArray: [0, 0] },
+  { name: '特粗双线', type: 'double', width: 5, dashArray: [0, 0] },
+  { name: '三线', type: 'triple', width: 4, dashArray: [0, 0] },
+  { name: '细波浪线', type: 'wavy', width: 0.5, dashArray: [0, 0] },
+  { name: '波浪线', type: 'wavy', width: 1, dashArray: [0, 0] },
+  { name: '粗波浪线', type: 'wavy', width: 2, dashArray: [0, 0] },
+  { name: '渐变线', type: 'gradient', width: 2, dashArray: [0, 0] },
+  { name: '阴影线', type: 'shadow', width: 2, dashArray: [0, 0] },
+  { name: '浮雕线', type: 'emboss', width: 3, dashArray: [0, 0] }
+]
+
+/* ========== 标题级别映射 ========== */
+
+/** 标题级别映射 */
+export const TITLE_LEVEL_MAP: Record<string, string> = {
+  first: '标题1',
+  second: '标题2',
+  third: '标题3',
+  fourth: '标题4',
+  fifth: '标题5',
+  sixth: '标题6'
+}

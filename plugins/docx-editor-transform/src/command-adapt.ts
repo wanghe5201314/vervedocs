@@ -8,56 +8,102 @@
 import type {
   IDocxDocumentMeta, IElement, Path, ITextElement,
   ITitleElement, ITableElement, IListElement, ListTypeName, IPosition, IRange, ITd, VerticalAlign,
-  IAutoCatalogItem, IAutoCatalogResult, DocumentLayout
+  IAutoTocItem, IAutoTocResult, DocumentLayout, IBookmark, IEditorOption, BlockNode,
+  HistorySnapshot, IHistoryManager
 } from '@vervedoc/docx-editor-schema'
 import {
   getByPath, getParentContainer, cloneTree, walkTree, isSamePath, splitParagraphs
 } from '@vervedoc/docx-editor-schema'
-import type { RangeManager } from '@vervedoc/docx-editor-state'
+import type { RangeManager, IRangeStyle, IEditorAbility, Listener } from '@vervedoc/docx-editor-state'
 
+// 重新导出迁移至 schema 的跨包共享类型，保持 transform 包 API 兼容
+export type { HistorySnapshot, IHistoryManager } from '@vervedoc/docx-editor-schema'
+
+/** 文档编辑区域类型：主体、页眉、页脚 */
+export type Zone = 'main' | 'header' | 'footer'
+
+/**
+ * DrawLike 接口：描述 CommandAdapt 所依赖的视图/绘制层抽象。
+ * 通过该接口隔离命令适配器与具体视图实现，便于测试与解耦。
+ */
 export interface DrawLike {
+  /** 获取当前文档元数据 */
   getDocument(): IDocxDocumentMeta
+  /** 设置文档元数据并触发重排 */
   setDocument(doc: IDocxDocumentMeta): void
+  /** 获取当前活动文档（根据 zone 切换的文档） */
   getActiveDocument(): IDocxDocumentMeta
+  /** 应用活动文档变更 */
   applyActiveDocument(doc: IDocxDocumentMeta): void
+  /** 获取文档布局信息，未布局时返回 null */
   getLayout(): DocumentLayout | null
+  /** 获取滚动容器元素 */
+  getScroller(): HTMLDivElement
+  /** 设置页面缩放比例 */
   setScale(scale: number): void
+  /** 设置页面尺寸（宽高） */
   setPageSize(width: number, height: number): void
+  /** 设置标尺可见性 */
   setRulerVisible(visible: boolean): void
+  /** 设置页边距（上、右、下、左） */
   setPaperMargins(margins: [number, number, number, number]): void
+  /** 获取编辑器选项 */
   getOptions(): { pageWidth?: number; pageHeight?: number; scale?: number; [key: string]: unknown }
+  /** 以补丁方式更新编辑器选项 */
+  updateOptions(patch: Partial<IEditorOption>): void
+  /** 获取当前编辑区域 */
+  getZone(): Zone
+  /** 设置当前编辑区域 */
+  setZone(zone: Zone): void
+  /** 打印文档 */
   print(): void
+  /** 获取所有页面缩略图（data URL 数组） */
+  getPageThumbnails(): string[]
 }
 
-export interface HistorySnapshot {
-  doc: IDocxDocumentMeta
-  range: IRange | null
-}
-
-export interface IHistoryManager {
-  pushInitial(snapshot: HistorySnapshot): void
-  push(snapshot: HistorySnapshot, coalesceKey?: string): void
-  undo(current: HistorySnapshot): HistorySnapshot | null
-  redo(current: HistorySnapshot): HistorySnapshot | null
-  canUndo(): boolean
-  canRedo(): boolean
-  clear(): void
-  destroy(): void
-}
-
+/**
+ * CommandAdapt 类：基于路径的树编辑命令适配器。
+ * 所有命令直接操作 IDocxDocumentMeta.elements 树，通过 draw.setDocument 通知视图重排，
+ * 避免直接依赖 view。是 Command 门面背后真正执行编辑逻辑的核心实现。
+ */
 export class CommandAdapt {
+  /** 格式刷暂存的文本格式片段，null 表示未启用格式刷 */
   private _paintFmt: Partial<Pick<ITextElement, 'bold' | 'italic' | 'underline' | 'strikeout' | 'color' | 'highlight' | 'font' | 'size'>> | null = null
+  /** 当前搜索命中结果列表，每项记录命中的路径与起止偏移 */
   private _searchHits: { path: Path; start: number; end: number }[] = []
+  /** 当前搜索命中索引（高亮位置） */
   private _searchIdx = 0
+  /** 历史管理器实例，未设置时为 null */
   private _historyManager: IHistoryManager | null = null
+  /** 批注处理器，用于构建与恢复批注，未设置时为 null */
+  private _commentHandler: { buildCommentsFromMetas(c: unknown[]): void; restoreComments(c: unknown[]): void } | null = null
 
+  /**
+   * 创建 CommandAdapt 实例。
+   * @param draw 绘制层抽象，用于读写文档与触发视图更新
+   * @param range 选区管理器，用于维护光标与选区
+   * @param listener 事件监听器，可选，用于对外发射状态变更事件
+   */
   constructor(
     private draw: DrawLike,
-    private range: RangeManager
+    private range: RangeManager,
+    private listener?: Listener
   ) {}
 
+  /**
+   * 设置历史管理器。
+   * @param hm 历史管理器实例
+   */
   setHistoryManager(hm: IHistoryManager): void {
     this._historyManager = hm
+  }
+
+  /**
+   * 设置批注处理器。
+   * @param handler 批注处理器，包含 buildCommentsFromMetas 与 restoreComments 方法
+   */
+  setCommentHandler(handler: { buildCommentsFromMetas(c: unknown[]): void; restoreComments(c: unknown[]): void }): void {
+    this._commentHandler = handler
   }
 
   /** 计算当前页面内容区宽度（pageWidth - 左右边距） */
@@ -77,7 +123,7 @@ export class CommandAdapt {
     })
   }
 
-  /** 提交变更并推送历史快照 */
+  /** 提交变更并推送历史快照，同时通知调用方状态变更 */
   private _commit(doc: IDocxDocumentMeta, coalesceKey?: string): void {
     this.draw.applyActiveDocument(doc)
     if (this._historyManager) {
@@ -86,10 +132,18 @@ export class CommandAdapt {
         coalesceKey
       )
     }
+    // 通知调用方：内容变更 + 选区样式变更 + 能力变更（含撤销/重做状态）
+    this.listener?.emit('content-change')
+    this.listener?.emit('range-style-change', this.getRangeStyle())
+    this.listener?.emit('ability-change', this.getAbility())
   }
 
   /* -------------------- 文本编辑 -------------------- */
 
+  /**
+   * 在当前光标位置插入文本。若存在选区则先删除选区再插入。
+   * @param text 待插入的文本内容
+   */
   insertText(text: string): void {
     if (this.deleteSelection()) {
       // 选区已删除，光标在原选区 start，继续插入 text
@@ -205,6 +259,10 @@ export class CommandAdapt {
     return result
   }
 
+  /**
+   * 向后删除一个字符（Backspace 行为）。若有选区则删除选区；否则删除光标前一个字符，
+   * 光标位于 run 起点时尝试与前一个 text run 合并。
+   */
   deleteBackward(): void {
     if (this.deleteSelection()) return
     const pos = this.range.getFocus()
@@ -241,6 +299,9 @@ export class CommandAdapt {
     }
   }
 
+  /**
+   * 向前删除一个字符（Delete 行为）。若有选区则删除选区；否则删除光标后一个字符。
+   */
   deleteForward(): void {
     if (this.deleteSelection()) return
     const pos = this.range.getFocus()
@@ -290,6 +351,9 @@ export class CommandAdapt {
 
   /* -------------------- 光标移动 -------------------- */
 
+  /**
+   * 将光标向左移动一位。若已处于 run 起点，则跨 run 向前移动到上一个 text run 末尾。
+   */
   moveCaretLeft(): void {
     const pos = this.range.getFocus()
     if (!pos) return
@@ -315,6 +379,9 @@ export class CommandAdapt {
     }
   }
 
+  /**
+   * 将光标向右移动一位。若已处于 run 末尾，则跨 run 向后移动到下一个 text run 起点。
+   */
   moveCaretRight(): void {
     const pos = this.range.getFocus()
     if (!pos) return
@@ -345,6 +412,10 @@ export class CommandAdapt {
 
   /* -------------------- 段落属性 -------------------- */
 
+  /**
+   * 设置当前段落的行弹性对齐方式。
+   * @param flex 对齐方式：'left' | 'center' | 'right' | 'justify' | 'alignment'
+   */
   setRowFlex(flex: 'left' | 'center' | 'right' | 'justify' | 'alignment'): void {
     const doc = this.draw.getActiveDocument()
     const ordered = this.range.getOrdered()
@@ -367,6 +438,11 @@ export class CommandAdapt {
     }
   }
 
+  /**
+   * 设置当前段落的行高及行高规则。
+   * @param lh 行高数值
+   * @param rule 行高规则，默认 'auto'
+   */
   setLineHeight(lh: number, rule: 'auto' | 'exact' | 'atLeast' = 'auto'): void {
     const doc = this.draw.getActiveDocument()
     const pos = this.range.getFocus()
@@ -388,7 +464,10 @@ export class CommandAdapt {
     }
   }
 
-  /** 段间距（前后各 margin） */
+  /**
+   * 段间距（前后各 margin）。
+   * @param margin 段前段后间距数值
+   */
   setRowMargin(margin: number): void {
     const doc = this.draw.getActiveDocument()
     const pos = this.range.getFocus()
@@ -412,33 +491,67 @@ export class CommandAdapt {
 
   /* -------------------- run 样式 -------------------- */
 
+  /**
+   * 设置选区内 run 的加粗样式。
+   * @param bold 是否加粗，省略时为切换语义
+   */
   setBold(bold?: boolean): void {
     this.mutateRuns(run => { run.bold = bold }, 'bold')
   }
+  /**
+   * 设置选区内 run 的斜体样式。
+   * @param italic 是否斜体，省略时为切换语义
+   */
   setItalic(italic?: boolean): void {
     this.mutateRuns(run => { run.italic = italic }, 'italic')
   }
+  /**
+   * 设置选区内 run 的文字颜色。
+   * @param color 颜色值字符串
+   */
   setColor(color: string): void {
     this.mutateRuns(run => { (run as unknown as Record<string, unknown>).color = color })
   }
+  /**
+   * 设置选区内 run 的字体。
+   * @param font 字体名称
+   */
   setFont(font: string): void {
     this.mutateRuns(run => { (run as unknown as Record<string, unknown>).font = font })
   }
+  /**
+   * 设置选区内 run 的字号。
+   * @param size 字号数值
+   */
   setSize(size: number): void {
     this.mutateRuns(run => { (run as unknown as Record<string, unknown>).size = size })
   }
+  /** 增大选区内 run 的字号（步进 2，上限 72）。 */
   setSizeAdd(): void {
     this.mutateRuns(run => { run.size = Math.min(72, (run.size ?? 14) + 2) })
   }
+  /** 减小选区内 run 的字号（步进 2，下限 8）。 */
   setSizeMinus(): void {
     this.mutateRuns(run => { run.size = Math.max(8, (run.size ?? 14) - 2) })
   }
+  /**
+   * 设置选区内 run 的高亮颜色。
+   * @param color 高亮颜色值
+   */
   setHighlight(color: string): void {
     this.mutateRuns(run => { (run as unknown as Record<string, unknown>).highlight = color })
   }
+  /**
+   * 设置选区内 run 的删除线。
+   * @param v 是否显示删除线，省略时为切换语义
+   */
   setStrikeout(v?: boolean): void {
     this.mutateRuns(run => { (run as unknown as Record<string, unknown>).strikeout = v }, 'strikeout')
   }
+  /**
+   * 设置选区内 run 的下划线。
+   * @param v 是否显示下划线，省略时为切换语义
+   */
   setUnderline(v?: boolean): void {
     this.mutateRuns(run => { (run as unknown as Record<string, unknown>).underline = v }, 'underline')
   }
@@ -479,6 +592,10 @@ export class CommandAdapt {
     }
   }
 
+  /**
+   * 对当前光标所在的 text run 执行变更并提交。
+   * @param fn 对目标 run 的变更函数
+   */
   private mutateRun(fn: (run: ITextElement) => void): void {
     const pos = this.range.getFocus()
     if (!pos) return
@@ -597,6 +714,13 @@ export class CommandAdapt {
     return { start: { path: startPath, offset: startOffset }, end: { path: endPath, offset: endOffset } }
   }
 
+  /**
+   * 收集选区范围内的所有 text run。
+   * @param elements 文档元素树
+   * @param start 选区起点
+   * @param end 选区终点
+   * @returns 范围内的 text run 数组
+   */
   private collectRunsInRange(elements: IElement[], start: IPosition, end: IPosition): ITextElement[] {
     const runs: { path: Path; node: ITextElement }[] = []
     walkTree(elements, (node, ctx) => {
@@ -614,6 +738,10 @@ export class CommandAdapt {
 
   /* -------------------- 标题 / 列表 -------------------- */
 
+  /**
+   * 设置或取消当前段落的标题级别。level 为 null 时取消标题，否则将当前段落包装为对应级别的标题元素。
+   * @param level 标题级别，null 表示取消标题
+   */
   setTitle(level: ITitleElement['level'] | null): void {
     const pos = this.range.getFocus()
     if (!pos) return
@@ -644,7 +772,11 @@ export class CommandAdapt {
     this._commit(doc)
   }
 
-  /** 设置/取消列表 */
+  /**
+   * 设置或取消列表。
+   * @param type 列表类型名
+   * @param style 列表样式
+   */
   setList(type: ListTypeName, style: string): void {
     const pos = this.range.getFocus()
     if (!pos) return
@@ -675,6 +807,12 @@ export class CommandAdapt {
 
   /* -------------------- 表格 -------------------- */
 
+  /**
+   * 在当前光标处插入表格。
+   * @param rows 行数
+   * @param cols 列数
+   * @param availableWidth 可用宽度，省略时取内容区宽度
+   */
   insertTable(rows: number, cols: number, availableWidth?: number): void {
     const doc = this.draw.getActiveDocument()
     const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
@@ -709,6 +847,10 @@ export class CommandAdapt {
     this._commit(doc)
   }
 
+  /**
+   * 获取当前光标所在的表格上下文信息。
+   * @returns 包含 doc/table/tableIndex/trIndex/tdIndex 的对象；光标不在表格内时返回 null
+   */
   private getTableContext(): { doc: IDocxDocumentMeta; table: ITableElement; tableIndex: number; trIndex: number; tdIndex: number } | null {
     const pos = this.range.getFocus()
     if (!pos) return null
@@ -723,6 +865,11 @@ export class CommandAdapt {
     return { doc, table: table as ITableElement, tableIndex, trIndex, tdIndex }
   }
 
+  /**
+   * 创建一个空的表格单元格。
+   * @param width 单元格宽度
+   * @returns 空单元格对象
+   */
   private makeEmptyTd(width: number): ITd {
     return {
       width,
@@ -740,6 +887,11 @@ export class CommandAdapt {
     }
   }
 
+  /**
+   * 在当前行上方或下方插入指定数量的表格行。
+   * @param position 插入位置：'above' | 'below'
+   * @param count 插入行数，默认 1
+   */
   insertTableRow(position: 'above' | 'below', count = 1): void {
     const ctx = this.getTableContext()
     if (!ctx) return
@@ -755,6 +907,11 @@ export class CommandAdapt {
     this._commit(doc)
   }
 
+  /**
+   * 在当前列左侧或右侧插入指定数量的表格列，并重新均分列宽。
+   * @param position 插入位置：'left' | 'right'
+   * @param count 插入列数，默认 1
+   */
   insertTableCol(position: 'left' | 'right', count = 1): void {
     const ctx = this.getTableContext()
     if (!ctx) return
@@ -777,6 +934,7 @@ export class CommandAdapt {
     this._commit(doc)
   }
 
+  /** 删除当前表格行（至少保留一行）。 */
   deleteTableRow(): void {
     const ctx = this.getTableContext()
     if (!ctx) return
@@ -786,6 +944,7 @@ export class CommandAdapt {
     this._commit(doc)
   }
 
+  /** 删除当前表格列（至少保留一列）。 */
   deleteTableCol(): void {
     const ctx = this.getTableContext()
     if (!ctx) return
@@ -798,6 +957,7 @@ export class CommandAdapt {
     this._commit(doc)
   }
 
+  /** 将当前单元格拆分为两个单元格，并均分原列宽。 */
   splitTableCell(): void {
     const ctx = this.getTableContext()
     if (!ctx) return
@@ -815,6 +975,7 @@ export class CommandAdapt {
     this._commit(doc)
   }
 
+  /** 选中当前表格的全部内容。 */
   selectTable(): void {
     const ctx = this.getTableContext()
     if (!ctx) return
@@ -927,6 +1088,12 @@ export class CommandAdapt {
     this._commit(doc)
   }
 
+  /**
+   * 设置指定表格列的宽度。
+   * @param tableIndex 表格索引
+   * @param colIndex 列索引
+   * @param width 列宽
+   */
   setTableColWidth(tableIndex: number, colIndex: number, width: number): void {
     const doc = this.draw.getDocument()
     const table = doc.elements[tableIndex]
@@ -942,6 +1109,12 @@ export class CommandAdapt {
     this._commit(doc)
   }
 
+  /**
+   * 设置指定表格行的高度。
+   * @param tableIndex 表格索引
+   * @param rowIndex 行索引
+   * @param height 行高
+   */
   setTableRowHeight(tableIndex: number, rowIndex: number, height: number): void {
     const doc = this.draw.getDocument()
     const table = doc.elements[tableIndex]
@@ -955,6 +1128,12 @@ export class CommandAdapt {
 
   /* -------------------- 图片 / 分页 -------------------- */
 
+  /**
+   * 在当前光标处插入图片。
+   * @param src 图片源，可以是 URL 字符串或包含 value/width/height 的对象
+   * @param width 宽度，当 src 为字符串时生效，默认 200
+   * @param height 高度，当 src 为字符串时生效，默认 150
+   */
   insertImage(src: string | { value: string; width: number; height: number }, width?: number, height?: number): void {
     const doc = this.draw.getActiveDocument()
     const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
@@ -969,6 +1148,32 @@ export class CommandAdapt {
     this._commit(doc)
   }
 
+  /** 插入电子签名图片，固定 100×100 */
+  signature(dataUrl: string): void {
+    this.insertImage({ value: dataUrl, width: 100, height: 100 })
+  }
+
+  /**
+   * 在当前光标处插入 LaTeX 公式元素。
+   * @param payload LaTeX 参数，包含 latex/svg/width/height
+   */
+  insertLatex(payload: { latex: string; svg: string; width: number; height: number }): void {
+    const doc = this.draw.getActiveDocument()
+    const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
+    const el: IElement = { type: 'latex', value: payload.latex, laTexSVG: payload.svg, width: payload.width, height: payload.height } as unknown as IElement
+    const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
+    if (!parent) return
+    const idx = (pos.path[pos.path.length - 1] as number) + 1
+    parent.splice(idx, 0, el)
+    this._commit(doc)
+  }
+
+  /**
+   * 更新指定图片的尺寸。
+   * @param path 图片路径
+   * @param width 新宽度
+   * @param height 新高度
+   */
   updateImageSize(path: Path, width: number, height: number): void {
     const doc = this.draw.getActiveDocument()
     const el = getByPath(doc.elements, path)
@@ -978,6 +1183,10 @@ export class CommandAdapt {
     this._commit(doc)
   }
 
+  /**
+   * 删除指定路径的图片元素。
+   * @param path 图片路径
+   */
   deleteImage(path: Path): void {
     const doc = this.draw.getActiveDocument()
     const parent = getParentContainer(doc.elements, path)
@@ -989,6 +1198,10 @@ export class CommandAdapt {
     this._commit(doc)
   }
 
+  /**
+   * 重置指定图片为原始尺寸（通过加载图片获取 naturalWidth/Height）。
+   * @param path 图片路径
+   */
   resetImageSize(path: Path): void {
     const doc = this.draw.getActiveDocument()
     const el = getByPath(doc.elements, path) as unknown as { type: string; value?: string; width: number; height: number } | null
@@ -1002,6 +1215,11 @@ export class CommandAdapt {
     img.src = el.value
   }
 
+  /**
+   * 设置图片对齐方式。
+   * @param path 图片路径
+   * @param align 对齐方式：'left' | 'center' | 'right'
+   */
   imageAlign(path: Path, align: 'left' | 'center' | 'right'): void {
     const doc = this.draw.getActiveDocument()
     const el = getByPath(doc.elements, path)
@@ -1010,6 +1228,10 @@ export class CommandAdapt {
     this._commit(doc)
   }
 
+  /**
+   * 替换指定图片：弹出文件选择框，读取本地图片并以 data URL 替换原图片，同时更新尺寸。
+   * @param path 图片路径
+   */
   replaceImage(path: Path): void {
     const input = document.createElement('input')
     input.type = 'file'
@@ -1038,6 +1260,10 @@ export class CommandAdapt {
     input.click()
   }
 
+  /**
+   * 将指定图片顺时针旋转 90 度。
+   * @param path 图片路径
+   */
   rotateImage(path: Path): void {
     const doc = this.draw.getActiveDocument()
     const el = getByPath(doc.elements, path) as unknown as { type: string; rotate?: number; width: number; height: number } | null
@@ -1047,6 +1273,10 @@ export class CommandAdapt {
     this._commit(doc)
   }
 
+  /**
+   * 保存指定图片到本地（触发浏览器下载）。
+   * @param path 图片路径
+   */
   saveImage(path: Path): void {
     const doc = this.draw.getActiveDocument()
     const el = getByPath(doc.elements, path) as unknown as { type: string; value: string } | null
@@ -1059,6 +1289,11 @@ export class CommandAdapt {
     a.remove()
   }
 
+  /**
+   * 设置图片环绕方式。
+   * @param path 图片路径
+   * @param mode 环绕模式：'block' | 'surround' | 'floatTop' | 'floatBottom'
+   */
   imageWrap(path: Path, mode: 'block' | 'surround' | 'floatTop' | 'floatBottom'): void {
     const doc = this.draw.getActiveDocument()
     const el = getByPath(doc.elements, path) as unknown as { type: string; imgDisplay?: string; rowFlex?: string } | null
@@ -1068,6 +1303,7 @@ export class CommandAdapt {
     this._commit(doc)
   }
 
+  /** 在当前光标处插入分页符。 */
   insertPageBreak(): void {
     const doc = this.draw.getActiveDocument()
     const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
@@ -1078,42 +1314,137 @@ export class CommandAdapt {
     this._commit(doc)
   }
 
-  /** 插入超链接 */
-  insertHyperlink(payload: { value: string; url: string }): void {
+  /**
+   * 插入超链接。
+   * @param payload 超链接参数，包含 url 与 valueList
+   */
+  insertHyperlink(payload: { url: string; valueList: IElement[] }): void {
     const doc = this.draw.getActiveDocument()
     const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
     const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
     if (!parent) return
     const idx = (pos.path[pos.path.length - 1] as number) + 1
     const link: IElement = { type: 'hyperlink', value: payload.url } as unknown as IElement
-    ;(link as unknown as Record<string, unknown>).valueList = [{ type: 'text', value: payload.value } as IElement]
+    ;(link as unknown as Record<string, unknown>).valueList = payload.valueList.map(r => ({ ...r, type: 'text' } as IElement))
     parent.splice(idx, 0, link)
     this._commit(doc)
   }
 
-  /** 插入分隔线 */
-  insertSeparator(): void {
+  /**
+   * 插入分隔线。
+   * @param opts 分隔线选项，可以是对象或数组形式
+   */
+  insertSeparator(opts?: { lineType?: string; lineWidth?: number; dashArray?: number[]; color?: string } | any[]): void {
+    let normalized: { lineType?: string; lineWidth?: number; dashArray?: number[]; color?: string }
+    if (Array.isArray(opts)) {
+      const base: { lineType: string; lineWidth: number; dashArray: number[] } = { lineType: 'solid', lineWidth: 1, dashArray: [0, 0] }
+      if (opts.length === 3) {
+        base.lineType = opts[0]; base.lineWidth = opts[1]; base.dashArray = opts[2]
+      } else {
+        base.dashArray = opts
+      }
+      normalized = base
+    } else if (opts && typeof opts === 'object') {
+      normalized = {
+        lineType: (opts as any).type || (opts as any).lineType || 'solid',
+        lineWidth: (opts as any).width || (opts as any).lineWidth || 1,
+        dashArray: (opts as any).dashArray || [0, 0],
+        color: (opts as any).color
+      }
+    } else {
+      normalized = { lineType: 'solid', lineWidth: 1, dashArray: [0, 0] }
+    }
     const doc = this.draw.getActiveDocument()
     const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
     const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
     if (!parent) return
     const idx = (pos.path[pos.path.length - 1] as number) + 1
-    parent.splice(idx, 0, { type: 'separator', value: '' } as IElement)
+    const sep: IElement = { type: 'separator', value: '' } as unknown as IElement
+    const sepAny = sep as unknown as Record<string, unknown>
+    if (normalized.lineType != null) sepAny.lineType = normalized.lineType
+    if (normalized.lineWidth != null) sepAny.lineWidth = normalized.lineWidth
+    if (normalized.dashArray != null) sepAny.dashArray = normalized.dashArray
+    if (normalized.color != null) sepAny.color = normalized.color
+    parent.splice(idx, 0, sep)
     this._commit(doc)
+  }
+
+  /** 插入换行符 */
+  lineBreak(): void {
+    this.insertElementList([{ type: 'text', value: '\n' } as IElement])
+  }
+
+  /** 插入分栏符 */
+  columnBreak(): void {
+    this.insertElementList([{ type: 'text', value: '\n' } as IElement])
+  }
+
+  /** 插入连续分节符 */
+  sectionBreakContinuous(): void {
+    this.insertSeparator({ dashArray: [0, 0] })
   }
 
   /* -------------------- 内容读写 / 目录 -------------------- */
 
+  /**
+   * 获取当前活动文档的全部元素。
+   * @returns 文档元素数组
+   */
   getValue(): IElement[] {
     return this.draw.getActiveDocument().elements
   }
 
-  setValue(payload: { elements: IElement[] }): void {
-    const doc = this.draw.getActiveDocument()
-    doc.elements = payload.elements
-    this._commit(doc)
+  /**
+   * 完整替换文档内容，并重置编辑区域到 main。
+   * @param payload 文档内容，包含 main 及可选的 header/footer/comments
+   */
+  setValue(payload: {
+    main: IElement[]
+    header?: IElement[]
+    footer?: IElement[]
+    comments?: unknown[]
+  }): void {
+    // 重置 zone 到 main 并完整替换文档，清除旧数据
+    this.draw.setZone('main')
+    const prev = this.draw.getDocument()
+    this.draw.setDocument({
+      ...prev,
+      success: true,
+      elements: payload.main,
+      sections: {
+        header: payload.header ?? [],
+        footer: payload.footer ?? []
+      }
+    })
+    // 批注处理：序列化批注 restoreComments，DocxCommentMeta[] buildCommentsFromMetas，空则清空
+    if (this._commentHandler) {
+      const comments = payload.comments
+      if (Array.isArray(comments) && comments.length > 0) {
+        const isSerialized = !!comments[0] && typeof comments[0] === 'object' && 'groupId' in (comments[0] as object)
+        if (isSerialized) {
+          this._commentHandler.restoreComments(comments)
+        } else {
+          this._commentHandler.buildCommentsFromMetas(comments)
+        }
+      } else {
+        this._commentHandler.buildCommentsFromMetas([])
+      }
+    }
+    if (this._historyManager) {
+      this._historyManager.push(
+        { doc: cloneTree(this.draw.getDocument()), range: this.range.getRange() },
+        undefined
+      )
+    }
+    this.listener?.emit('content-change')
+    this.listener?.emit('range-style-change', this.getRangeStyle())
+    this.listener?.emit('ability-change', this.getAbility())
   }
 
+  /**
+   * 统计文档字数（所有 text run 的字符数之和）。
+   * @returns 字数数值
+   */
   getWordCount(): number {
     const doc = this.draw.getActiveDocument()
     let count = 0
@@ -1123,7 +1454,11 @@ export class CommandAdapt {
     return count
   }
 
-  getCatalog(): { id: string; level: number; name: string }[] {
+  /**
+   * 获取文档目录（基于标题元素）。
+   * @returns 目录项数组，每项包含 id/level/name
+   */
+  getToc(): { id: string; level: number; name: string }[] {
     const doc = this.draw.getActiveDocument()
     const catalog: { id: string; level: number; name: string }[] = []
     const levelMap: Record<string, number> = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6 }
@@ -1137,20 +1472,57 @@ export class CommandAdapt {
     return catalog
   }
 
-  locationCatalog(id: string): void {
+  /**
+   * 定位到指定目录项：滚动到对应标题位置并设置光标。
+   * @param id 目录项 ID（序列化的路径字符串）
+   */
+  locationToc(id: string): void {
     try {
       const path = JSON.parse(id) as Path
+      const layout = this.draw.getLayout()
+      if (layout) {
+        for (const page of layout.pages) {
+          for (const b of page.blocks) {
+            if (b.kind !== 'paragraph') continue
+            const blockPath = b.parentPath.concat(b.startIndex)
+            if (blockPath.length === path.length && blockPath.every((v, i) => v === path[i])) {
+              const scroller = this.draw.getScroller()
+              const scrollContainer = scroller.parentElement as HTMLDivElement
+              const absY = page.contentRect.y + b.rect.y
+              const targetScrollTop = Math.max(0, absY - scrollContainer.clientHeight / 2)
+              scrollContainer.scrollTop = targetScrollTop
+              this.range.setCaret({ path, offset: 0 })
+              return
+            }
+          }
+        }
+      }
       this.range.setCaret({ path, offset: 0 })
-    } catch { /* invalid id */ }
+    } catch {
+      // ignore invalid catalog id
+    }
   }
 
-  getAutoCatalog(): IAutoCatalogResult {
+  /**
+   * 设置光标位置。
+   * @param path 光标路径
+   * @param offset 偏移量
+   */
+  setCaret(path: Path, offset: number): void {
+    this.range.setCaret({ path: path.slice() as Path, offset })
+  }
+
+  /**
+   * 基于布局分页生成自动目录结果（按层级过滤的三组目录）。
+   * @returns 包含 toc1/toc2/toc3 的自动目录结果
+   */
+  getAutoToc(): IAutoTocResult {
     const layout = this.draw.getLayout()
-    const empty: IAutoCatalogResult = { catalog1: [], catalog2: [], catalog3: [] }
+    const empty: IAutoTocResult = { toc1: [], toc2: [], toc3: [] }
     if (!layout) return empty
 
     const levelMap: Record<string, number> = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6 }
-    const all: IAutoCatalogItem[] = []
+    const all: IAutoTocItem[] = []
 
     for (const page of layout.pages) {
       const pageNo = page.index + 1
@@ -1160,20 +1532,28 @@ export class CommandAdapt {
         const level = levelMap[titleEl.level] ?? 1
         const name = (titleEl.valueList ?? []).map(v => v.type === 'text' ? (v as ITextElement).value : '').join('')
         const id = JSON.stringify(b.parentPath.concat(b.startIndex))
-        all.push({ id, level, name, pageNo })
+        // 从排版块中直接取编号文本（由排版引擎通过 listNumbering 计算得到）
+        const bulletText = (b as unknown as { bulletText?: string }).bulletText
+        const number = bulletText?.trim() || undefined
+
+        all.push({ id, level, name, pageNo, number })
       }
     }
 
     return {
-      catalog1: all.filter(i => i.level <= 1),
-      catalog2: all.filter(i => i.level <= 2),
-      catalog3: all.filter(i => i.level <= 3)
+      toc1: all.filter(i => i.level <= 1),
+      toc2: all.filter(i => i.level <= 2),
+      toc3: all.filter(i => i.level <= 3)
     }
   }
 
-  insertAutoCatalog(type: 1 | 2 | 3): void {
-    const result = this.getAutoCatalog()
-    const items = type === 1 ? result.catalog1 : type === 2 ? result.catalog2 : result.catalog3
+  /**
+   * 在当前光标处插入自动目录文本。
+   * @param type 目录类型：1 | 2 | 3，对应不同层级深度
+   */
+  insertAutoToc(type: 1 | 2 | 3): void {
+    const result = this.getAutoToc()
+    const items = type === 1 ? result.toc1 : type === 2 ? result.toc2 : result.toc3
     if (items.length === 0) return
 
     const doc = this.draw.getActiveDocument()
@@ -1196,10 +1576,20 @@ export class CommandAdapt {
 
   /* -------------------- 页面 / 打印 -------------------- */
 
+  /**
+   * 设置纸张尺寸并发出页面尺寸变更事件。
+   * @param width 宽度
+   * @param height 高度
+   */
   setPaperSize(width: number, height: number): void {
     this.draw.setPageSize(width, height)
+    this.listener?.emit('page-size-change', { width, height })
   }
 
+  /**
+   * 设置纸张方向（纵向/横向），自动调整宽高。
+   * @param direction 方向：'vertical' | 'horizontal'
+   */
   setPaperDirection(direction: 'vertical' | 'horizontal'): void {
     const opts = this.draw.getOptions()
     const w = Number(opts.pageWidth ?? 794)
@@ -1211,22 +1601,90 @@ export class CommandAdapt {
     }
   }
 
+  /** 放大页面缩放（步进 0.1，上限 3）。 */
   pageScaleAdd(): void {
     const opts = this.draw.getOptions()
     const scale = Math.min(3, Number(opts.scale ?? 1) + 0.1)
     this.draw.setScale(scale)
+    this.listener?.emit('page-scale-change', scale)
   }
 
+  /** 缩小页面缩放（步进 0.1，下限 0.5）。 */
   pageScaleMinus(): void {
     const opts = this.draw.getOptions()
     const scale = Math.max(0.5, Number(opts.scale ?? 1) - 0.1)
     this.draw.setScale(scale)
+    this.listener?.emit('page-scale-change', scale)
   }
 
+  /**
+   * 获取纸张高度（含缩放）。
+   * @returns 纸张高度数值
+   */
+  getPaperHeight(): number {
+    const opts = this.draw.getOptions()
+    return Number(opts.pageHeight ?? 1123) * Number(opts.scale ?? 1)
+  }
+
+  /**
+   * 获取编辑器选项。
+   * @returns 当前编辑器配置选项
+   */
+  getOptions(): IEditorOption {
+    return this.draw.getOptions() as IEditorOption
+  }
+
+  /**
+   * 设置页面模式。
+   * @param mode 页面模式字符串
+   */
+  setPageMode(mode: string): void {
+    this.draw.updateOptions({ pageMode: mode as 'paging' | 'continuity' })
+  }
+
+  /**
+   * 设置页面缩放比例。
+   * @param scale 缩放比例
+   */
+  setPageScale(scale: number): void {
+    this.draw.setScale(scale)
+    this.listener?.emit('page-scale-change', scale)
+  }
+
+  /** 恢复默认缩放比例 */
+  setPageScaleRecovery(): void {
+    this.draw.setScale(1)
+    this.listener?.emit('page-scale-change', 1)
+  }
+
+  /**
+   * 设置分栏数。
+   * @param value 分栏数量
+   */
+  setColumns(value: number): void {
+    this.draw.updateOptions({ columnCount: value } as Partial<IEditorOption>)
+  }
+
+  /**
+   * 批量更新编辑器选项。
+   * @param patch 选项补丁对象
+   */
+  updateOptions(patch: Partial<IEditorOption>): void {
+    this.draw.updateOptions(patch)
+  }
+
+  /**
+   * 设置标尺可见性。
+   * @param visible 是否可见
+   */
   setRulerVisible(visible: boolean): void {
     this.draw.setRulerVisible(visible)
   }
 
+  /**
+   * 设置页边距（四边数值取整并保证非负）。
+   * @param margins 边距数组，顺序为上、右、下、左
+   */
   setPaperMargin(margins: number[]): void {
     const m = [
       Math.max(0, Math.round(margins[0] ?? 0)),
@@ -1237,13 +1695,49 @@ export class CommandAdapt {
     this.draw.setPaperMargins(m)
   }
 
+  /** 打印文档。 */
   print(): void {
     this.draw.print()
   }
 
+  /**
+   * 获取所有页面缩略图。
+   * @returns 缩略图 data URL 数组
+   */
+  getPageThumbnails(): string[] {
+    return this.draw.getPageThumbnails()
+  }
+
+  /* -------------------- 水印 -------------------- */
+
+  /**
+   * 添加水印。
+   * @param payload 水印参数，可包含 data/content/color/opacity/size/font/repeat
+   */
+  addWatermark(payload: { data?: string; content?: string; color?: string; opacity?: number; size?: number; font?: string; repeat?: boolean } | any): void {
+    const p = payload || {}
+    this.draw.updateOptions({ watermark: {
+      data: p.data || p.content || '',
+      color: p.color,
+      opacity: p.opacity,
+      size: p.size,
+      font: p.font,
+      repeat: p.repeat
+    } } as Partial<IEditorOption>)
+  }
+
+  /** 删除水印 */
+  deleteWatermark(): void {
+    this.draw.updateOptions({ watermark: null } as Partial<IEditorOption>)
+  }
+
   /* -------------------- 查找替换 -------------------- */
 
-  /** 查找关键词，返回命中数，并选中第一个命中 */
+  /**
+   * 查找关键词，返回命中数，并选中第一个命中。
+   * @param keyword 搜索关键字
+   * @returns 包含命中数量 count 的结果对象
+   */
   search(keyword: string): { count: number } {
     this._searchHits = []
     this._searchIdx = 0
@@ -1264,8 +1758,16 @@ export class CommandAdapt {
     return { count: this._searchHits.length }
   }
 
-  /** 替换当前命中为 text，跳到下一个命中。返回是否还有命中。 */
-  replace(text: string): boolean {
+  /**
+   * 替换当前命中为 text，跳到下一个命中。返回是否还有命中。opts.index 可指定替换第几个命中。
+   * @param text 替换文本
+   * @param opts 替换选项，可指定 index
+   * @returns 是否还存在后续命中
+   */
+  replace(text: string, opts?: { index?: number }): boolean {
+    if (opts?.index != null && opts.index >= 0 && opts.index < this._searchHits.length) {
+      this._searchIdx = opts.index
+    }
     if (this._searchIdx >= this._searchHits.length) return false
     const hit = this._searchHits[this._searchIdx]
     const doc = this.draw.getActiveDocument()
@@ -1288,6 +1790,48 @@ export class CommandAdapt {
     return false
   }
 
+  /**
+   * 定位到指定搜索结果索引。
+   * @param idx 搜索结果索引
+   */
+  locateSearchResult(idx: number): void {
+    if (idx < 0 || idx >= this._searchHits.length) return
+    this._searchIdx = idx
+    this._selectHit(idx)
+  }
+
+  /**
+   * 全部替换：先搜索 keyword，逐个替换为 replacement，返回替换计数。
+   * @param keyword 搜索关键字
+   * @param replacement 替换文本
+   * @returns 包含替换数量 count 的结果对象
+   */
+  replaceAll(keyword: string, replacement: string): { count: number } {
+    this.search(keyword)
+    let count = 0
+    while (this._searchIdx < this._searchHits.length) {
+      this.replace(replacement)
+      count++
+    }
+    return { count }
+  }
+
+  /**
+   * 替换一处搜索结果并继续搜索，返回新的搜索结果。
+   * @param result 搜索结果定位信息
+   * @param replacement 替换文本
+   * @returns 包含新的命中数量 count 的结果对象
+   */
+  replaceOne(result: { resultIndex: number; keyword: string }, replacement: string): { count: number } {
+    if (!result || !replacement) return { count: 0 }
+    this.replace(replacement, { index: result.resultIndex })
+    return this.search(result.keyword)
+  }
+
+  /**
+   * 选中指定索引的搜索命中区域。
+   * @param idx 搜索命中索引
+   */
   private _selectHit(idx: number): void {
     const hit = this._searchHits[idx]
     if (!hit) return
@@ -1297,8 +1841,101 @@ export class CommandAdapt {
     })
   }
 
+  /* -------------------- 书签 -------------------- */
+
+  /**
+   * 获取所有书签。
+   * @returns 书签数组
+   */
+  getBookmarks(): IBookmark[] {
+    return this.draw.getDocument().bookmarks ?? []
+  }
+
+  /**
+   * 在当前选区添加书签。
+   * @param payload 书签参数，包含 name
+   */
+  addBookmark(payload: { name: string }): void {
+    const range = this.range.getRange()
+    if (!range) return
+    const doc = this.draw.getDocument()
+    const bookmarks = doc.bookmarks ?? []
+    if (bookmarks.some(b => b.name === payload.name)) return
+    const collapsed = isSamePath(range.anchor.path, range.focus.path) && range.anchor.offset === range.focus.offset
+    bookmarks.push({ name: payload.name, range, collapsed })
+    doc.bookmarks = bookmarks
+    this._commit(doc)
+  }
+
+  /**
+   * 删除指定书签。
+   * @param payload 书签参数，包含 name
+   */
+  deleteBookmark(payload: { name: string }): void {
+    const doc = this.draw.getDocument()
+    if (!doc.bookmarks) return
+    doc.bookmarks = doc.bookmarks.filter(b => b.name !== payload.name)
+    this._commit(doc)
+  }
+
+  /**
+   * 跳转到指定书签。
+   * @param payload 书签参数，包含 name
+   */
+  gotoBookmark(payload: { name: string }): void {
+    const doc = this.draw.getDocument()
+    const bookmark = doc.bookmarks?.find(b => b.name === payload.name)
+    if (!bookmark) return
+    this.range.setRange(bookmark.range)
+  }
+
+  /* -------------------- 目录 -------------------- */
+
+  /**
+   * 插入目录，带 tocId 标识便于后续删除。
+   * @param payload 目录参数，可包含 type/mode 及其他自定义字段
+   */
+  insertToc(payload: { type?: 1 | 2 | 3; mode?: string; [key: string]: unknown }): void {
+    const type = (payload.type as 1 | 2 | 3) ?? 3
+    const result = this.getAutoToc()
+    const items = type === 1 ? result.toc1 : type === 2 ? result.toc2 : result.toc3
+    if (items.length === 0) return
+
+    const doc = this.draw.getActiveDocument()
+    const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
+    const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
+    if (!parent) return
+    const idx = (pos.path[pos.path.length - 1] as number) + 1
+
+    const tocId = Date.now().toString()
+    const tocElements: IElement[] = items.map(item => ({
+      type: 'text',
+      valueList: [{
+        type: 'text',
+        value: '  '.repeat(item.level - 1) + item.name + ' ' + '\u00b7'.repeat(Math.max(3, 50 - item.name.length - item.level * 2)) + ' ' + String(item.pageNo)
+      }],
+      tocId
+    } as unknown as IElement))
+
+    parent.splice(idx, 0, ...tocElements)
+    this._commit(doc)
+  }
+
+  /** 删除所有目录元素（带 tocId 标识的元素） */
+  removeToc(): void {
+    const doc = this.draw.getActiveDocument()
+    const elements = doc.elements
+    for (let i = elements.length - 1; i >= 0; i--) {
+      if ((elements[i] as unknown as { tocId?: string }).tocId) {
+        elements.splice(i, 1)
+      }
+    }
+    this._commit(doc)
+  }
+
   /* -------------------- 撤销 / 重做 -------------------- */
 
+  /** 撤销上一步操作，恢复历史快照并通知选区样式与能力变更。 */
   undo(): void {
     if (!this._historyManager) return
     const current: HistorySnapshot = {
@@ -1310,8 +1947,12 @@ export class CommandAdapt {
       this.draw.setDocument(prev.doc)
       if (prev.range) this.range.setRange(prev.range)
     }
+    // 撤销后通知：选区样式变更 + 能力变更（canUndo/canRedo 可能变化）
+    this.listener?.emit('range-style-change', this.getRangeStyle())
+    this.listener?.emit('ability-change', this.getAbility())
   }
 
+  /** 重做下一步操作，恢复历史快照并通知选区样式与能力变更。 */
   redo(): void {
     if (!this._historyManager) return
     const current: HistorySnapshot = {
@@ -1322,6 +1963,705 @@ export class CommandAdapt {
     if (next) {
       this.draw.setDocument(next.doc)
       if (next.range) this.range.setRange(next.range)
+    }
+    // 重做后通知：选区样式变更 + 能力变更
+    this.listener?.emit('range-style-change', this.getRangeStyle())
+    this.listener?.emit('ability-change', this.getAbility())
+  }
+
+  /* -------------------- 区域切换 -------------------- */
+
+  /**
+   * 切换编辑区域并清空选区。
+   * @param zone 区域：'main' | 'header' | 'footer'
+   */
+  setZone(zone: Zone): void {
+    this.draw.setZone(zone)
+    this.range.clear()
+  }
+
+  /** 清除页眉内容并回到正文 */
+  clearHeader(): void {
+    this.setZone('header')
+    this.selectAll()
+    this.deleteBackward()
+    this.setZone('main')
+  }
+
+  /** 清除页脚内容并回到正文 */
+  clearFooter(): void {
+    this.setZone('footer')
+    this.selectAll()
+    this.deleteBackward()
+    this.setZone('main')
+  }
+
+  /**
+   * 设置页码配置（与现有配置合并）。
+   * @param payload 页码配置对象
+   */
+  setPageNumber(payload: Record<string, unknown>): void {
+    const currentOptions = this.draw.getOptions() || {}
+    this.draw.updateOptions({
+      ...currentOptions,
+      pageNumber: {
+        ...((currentOptions as any).pageNumber || {}),
+        ...payload
+      }
+    } as Partial<IEditorOption>)
+  }
+
+  /**
+   * 获取当前编辑区域。
+   * @returns 区域：'main' | 'header' | 'footer'
+   */
+  getZone(): Zone {
+    return this.draw.getZone()
+  }
+
+  /* -------------------- 选区 / 全选 -------------------- */
+
+  /** 选中当前活动文档的全部内容。 */
+  selectAll(): void {
+    const doc = this.draw.getActiveDocument()
+    const runs: { path: Path }[] = []
+    walkTree(doc.elements, (node, ctx) => {
+      if (node.type === 'text') {
+        runs.push({ path: ctx.path.slice() as Path })
+      }
+    })
+    if (runs.length === 0) return
+    const first = runs[0]
+    const last = runs[runs.length - 1]
+    const lastNode = getByPath(doc.elements, last.path) as ITextElement | null
+    const endOffset = lastNode ? lastNode.value.length : 0
+    this.range.setRange({
+      anchor: { path: first.path, offset: 0 },
+      focus: { path: last.path, offset: endOffset }
+    })
+  }
+
+  /**
+   * 按起止 run 索引设置选区范围。
+   * @param startIndex 起始 run 索引
+   * @param endIndex 结束 run 索引
+   */
+  setRange(startIndex: number, endIndex: number): void {
+    const doc = this.draw.getActiveDocument()
+    const runs: { path: Path }[] = []
+    walkTree(doc.elements, (node, ctx) => {
+      if (node.type === 'text') {
+        runs.push({ path: ctx.path.slice() as Path })
+      }
+    })
+    if (runs.length === 0) return
+    const startIdx = Math.max(0, Math.min(startIndex, runs.length - 1))
+    const endIdx = Math.max(0, Math.min(endIndex, runs.length - 1))
+    const startPath = runs[startIdx].path
+    const endPath = runs[endIdx].path
+    const endNode = getByPath(doc.elements, endPath) as ITextElement | null
+    const endOffset = endNode ? endNode.value.length : 0
+    this.range.setRange({
+      anchor: { path: startPath, offset: 0 },
+      focus: { path: endPath, offset: endOffset }
+    })
+  }
+
+  /* -------------------- 插入元素列表 -------------------- */
+
+  /**
+   * 在当前光标处插入元素列表，若存在选区则先删除选区。
+   * @param elements 待插入的元素数组
+   */
+  insertElementList(elements: IElement[]): void {
+    if (!elements || elements.length === 0) return
+    this.deleteSelection()
+    const doc = this.draw.getActiveDocument()
+    const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
+    for (const el of elements) {
+      const cloned = cloneTree([el])[0]
+      if (cloned.type === 'text') {
+        const textEl = cloned as ITextElement
+        const node = getByPath(doc.elements, pos.path)
+        if (node && node.type === 'text') {
+          const t = node as ITextElement
+          const before = t.value.slice(0, pos.offset)
+          const after = t.value.slice(pos.offset)
+          t.value = before + textEl.value + after
+          pos.offset += textEl.value.length
+        } else {
+          const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
+          if (parent) {
+            const idx = (pos.path[pos.path.length - 1] as number) + 1
+            parent.splice(idx, 0, cloned)
+            pos.path = [...pos.path.slice(0, -1), idx] as Path
+            pos.offset = 0
+          }
+        }
+      } else {
+        const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
+        if (parent) {
+          const idx = (pos.path[pos.path.length - 1] as number) + 1
+          parent.splice(idx, 0, cloned)
+          pos.path = [...pos.path.slice(0, -1), idx] as Path
+          pos.offset = 0
+        }
+      }
+    }
+    this.range.setCaret({ path: pos.path.slice() as Path, offset: pos.offset })
+    this._commit(doc, 'text')
+  }
+
+  /* -------------------- 剪贴板 -------------------- */
+
+  /**
+   * 复制当前选区文本。
+   * @returns 选区纯文本
+   */
+  copy(): string {
+    return this.extractSelectionText()
+  }
+
+  /**
+   * 剪切当前选区文本并删除选区。
+   * @returns 选区纯文本
+   */
+  cut(): string {
+    const text = this.extractSelectionText()
+    this.deleteSelection()
+    return text
+  }
+
+  /**
+   * 粘贴文本（等同于插入文本）。
+   * @param text 待粘贴文本
+   */
+  paste(text: string): void {
+    this.insertText(text)
+  }
+
+  /**
+   * 粘贴纯文本（等同于插入文本）。
+   * @param text 待粘贴文本
+   */
+  pastePlain(text: string): void {
+    this.insertText(text)
+  }
+
+  /* -------------------- run 扩展样式 -------------------- */
+
+  /** 切换选区内 run 的上标样式（与下标互斥）。 */
+  setSuperscript(): void {
+    this.mutateRuns(run => {
+      const r = run as unknown as Record<string, unknown>
+      r.superscript = !r.superscript
+      if (r.superscript) r.subscript = false
+    }, 'superscript' as keyof ITextElement)
+  }
+
+  /** 切换选区内 run 的下标样式（与上标互斥）。 */
+  setSubscript(): void {
+    this.mutateRuns(run => {
+      const r = run as unknown as Record<string, unknown>
+      r.subscript = !r.subscript
+      if (r.subscript) r.superscript = false
+    }, 'subscript' as keyof ITextElement)
+  }
+
+  /**
+   * 设置选区内 run 的字符缩放比例。
+   * @param value 缩放比例
+   */
+  setCharacterScale(value: number): void {
+    this.mutateRuns(run => {
+      (run as unknown as Record<string, unknown>).characterScale = value
+    })
+  }
+
+  /* -------------------- 段落首行缩进 -------------------- */
+
+  /**
+   * 设置当前段落的首行缩进。
+   * @param indentPx 缩进像素值
+   */
+  setParagraphFirstLineIndent(indentPx: number): void {
+    const doc = this.draw.getActiveDocument()
+    const pos = this.range.getFocus()
+    if (!pos) return
+    const parent = getParentContainer(doc.elements, pos.path)
+    if (!parent) return
+    const cursorIdx = pos.path[pos.path.length - 1] as number
+    const groups = splitParagraphs(parent)
+    for (const g of groups) {
+      if (cursorIdx < g.start || cursorIdx >= g.end) continue
+      const targets = g.block ? [g.block, ...g.runs] : g.runs
+      for (const r of targets) {
+        (r as unknown as Record<string, unknown>).paragraphFirstLineIndent = indentPx
+      }
+      this._commit(doc)
+      return
+    }
+  }
+
+  /**
+   * 获取当前段落的首行缩进值。
+   * @returns 首行缩进像素值
+   */
+  getFirstLineIndent(): number {
+    const doc = this.draw.getActiveDocument()
+    const pos = this.range.getFocus()
+    if (!pos) return 0
+    const parent = getParentContainer(doc.elements, pos.path)
+    if (!parent) return 0
+    const cursorIdx = pos.path[pos.path.length - 1] as number
+    const groups = splitParagraphs(parent)
+    for (const g of groups) {
+      if (cursorIdx < g.start || cursorIdx >= g.end) continue
+      const target = g.block ?? g.runs[0]
+      if (!target) return 0
+      return Number((target as unknown as Record<string, unknown>).paragraphFirstLineIndent ?? 0)
+    }
+    return 0
+  }
+
+  /**
+   * 按方向执行首行缩进步进（步长 20 像素，下限 0）。
+   * @param direction 方向：'add' | 'sub'
+   */
+  indentStep(direction: 'add' | 'sub'): void {
+    const step = 20
+    const current = this.getFirstLineIndent()
+    const next = direction === 'add' ? current + step : Math.max(0, current - step)
+    this.setParagraphFirstLineIndent(next)
+  }
+
+  /**
+   * 获取当前选区范围。
+   * @returns 选区范围对象，无选区时返回 null
+   */
+  getRange(): IRange | null {
+    return this.range.getRange()
+  }
+
+  /**
+   * 获取是否只读状态。
+   * @returns 是否只读
+   */
+  getIsReadonly(): boolean {
+    return !!this.draw.getOptions().readonly
+  }
+
+  /**
+   * 获取是否禁用状态。
+   * @returns 是否禁用
+   */
+  getIsDisabled(): boolean {
+    return !!this.draw.getOptions().disabled
+  }
+
+  /**
+   * 获取是否可输入状态（非只读且非禁用）。
+   * @returns 是否可输入
+   */
+  getIsCanInput(): boolean {
+    return !this.getIsReadonly() && !this.getIsDisabled()
+  }
+
+  /**
+   * 获取当前选区样式快照（bold/italic/underline 等回显状态）
+   * @returns 选区样式状态对象
+   */
+  getRangeStyle(): IRangeStyle {
+    const doc = this.draw.getActiveDocument()
+    const pos = this.range.getFocus()
+
+    /** 默认样式快照 */
+    const defaultStyle: IRangeStyle = {
+      type: null, bold: false, italic: false, underline: false, strikeout: false,
+      color: '', highlight: '', font: '', size: 0, level: null,
+      rowFlex: 'left', lineHeight: 1.5, paragraphFirstLineIndent: 0,
+      characterScale: 100, painter: !!this._paintFmt,
+      undo: this._historyManager?.canUndo() ?? false,
+      redo: this._historyManager?.canRedo() ?? false
+    }
+
+    if (!pos) return defaultStyle
+
+    const parent = getParentContainer(doc.elements, pos.path)
+    if (!parent) return defaultStyle
+
+    const cursorIdx = pos.path[pos.path.length - 1] as number
+    const el = parent[cursorIdx] as Record<string, unknown> | undefined
+    if (!el) return defaultStyle
+
+    return {
+      type: (el.type as string) ?? null,
+      bold: !!el.bold,
+      italic: !!el.italic,
+      underline: !!el.underline,
+      strikeout: !!el.strikeout,
+      color: (el.color as string) ?? '',
+      highlight: (el.highlight as string) ?? '',
+      font: (el.font as string) ?? '',
+      size: (el.size as number) ?? 0,
+      level: el.type === 'title' ? (el.level as string) ?? null : null,
+      rowFlex: (el.rowFlex as string) ?? 'left',
+      lineHeight: (el.lineHeight as number) ?? 1.5,
+      paragraphFirstLineIndent: (el.paragraphFirstLineIndent as number) ?? 0,
+      characterScale: (el.characterScale as number) ?? 100,
+      painter: !!this._paintFmt,
+      undo: this._historyManager?.canUndo() ?? false,
+      redo: this._historyManager?.canRedo() ?? false
+    }
+  }
+
+  /**
+   * 获取光标所在行/列信息（基于布局可视行计数）
+   * @returns 行列信息，-1 表示无有效光标
+   */
+  getRangeContext(): { startRowNo: number; startColNo: number } {
+    const pos = this.range.getFocus()
+    const layout = this.draw.getLayout()
+    if (!pos || !layout) return { startRowNo: -1, startColNo: -1 }
+
+    let rowNo = 0
+    for (const page of layout.pages) {
+      const result = this.findRowColInBlocks(page.blocks, pos, rowNo)
+      if (result) return result
+    }
+    return { startRowNo: -1, startColNo: -1 }
+  }
+
+  /**
+   * 在布局块中查找光标所在行/列信息。
+   * @param blocks 布局块数组
+   * @param pos 光标位置
+   * @param startRow 起始行号
+   * @returns 行列信息对象；未找到时返回 null
+   */
+  private findRowColInBlocks(blocks: BlockNode[], pos: IPosition, startRow: number): { startRowNo: number; startColNo: number } | null {
+    let rowNo = startRow
+    for (const b of blocks) {
+      if (b.kind === 'paragraph') {
+        for (const line of b.lines) {
+          for (const inl of line.inlines) {
+            if (isSamePath(inl.path, pos.path) && pos.offset >= inl.startOffset && pos.offset <= inl.endOffset) {
+              let colNo = 0
+              for (const prev of line.inlines) {
+                if (prev === inl) {
+                  colNo += pos.offset - prev.startOffset
+                  break
+                }
+                colNo += prev.text.length
+              }
+              return { startRowNo: rowNo, startColNo: colNo }
+            }
+          }
+          rowNo++
+        }
+      } else if (b.kind === 'table') {
+        for (const row of b.rows) {
+          let maxLinesInRow = 1
+          for (const cell of row.cells) {
+            const cellLines = this.countLinesInBlocks(cell.content)
+            const result = this.findRowColInBlocks(cell.content, pos, rowNo)
+            if (result) return result
+            if (cellLines > maxLinesInRow) maxLinesInRow = cellLines
+          }
+          rowNo += maxLinesInRow
+        }
+      }
+    }
+    return null
+  }
+
+  /**
+   * 统计布局块中的行数（表格按各行最大行数累加）。
+   * @param blocks 布局块数组
+   * @returns 行数总计
+   */
+  private countLinesInBlocks(blocks: BlockNode[]): number {
+    let count = 0
+    for (const b of blocks) {
+      if (b.kind === 'paragraph') {
+        count += b.lines.length
+      } else if (b.kind === 'table') {
+        for (const row of b.rows) {
+          let maxLinesInRow = 1
+          for (const cell of row.cells) {
+            const cellLines = this.countLinesInBlocks(cell.content)
+            if (cellLines > maxLinesInRow) maxLinesInRow = cellLines
+          }
+          count += maxLinesInRow
+        }
+      }
+    }
+    return count
+  }
+
+  /**
+   * 获取编辑器能力状态快照（readonly/disabled/canUndo/canRedo）
+   * @returns 能力状态对象
+   */
+  getAbility(): IEditorAbility {
+    return {
+      readonly: this.getIsReadonly(),
+      disabled: this.getIsDisabled(),
+      canInput: this.getIsCanInput(),
+      canUndo: this._historyManager?.canUndo() ?? false,
+      canRedo: this._historyManager?.canRedo() ?? false
+    }
+  }
+
+  /**
+   * 设置编辑器模式（paging/continuity/readonly/edit），并通知能力变更。
+   * @param mode 模式字符串
+   */
+  setMode(mode: string): void {
+    if (mode === 'paging' || mode === 'continuity') {
+      this.draw.updateOptions({ pageMode: mode })
+    } else if (mode === 'readonly') {
+      this.draw.updateOptions({ readonly: true } as Partial<IEditorOption>)
+    } else if (mode === 'edit') {
+      this.draw.updateOptions({ readonly: false } as Partial<IEditorOption>)
+    }
+    // 模式切换后通知能力变更（readonly/disabled 状态可能变化）
+    this.listener?.emit('ability-change', this.getAbility())
+  }
+
+  /**
+   * 导出为 docx 文档（调用 options.exportCallback）。
+   * @param payload 导出参数
+   * @returns 完成时 resolve 的 Promise
+   */
+  async exportDocx(payload: any): Promise<void> {
+    const cb = this.draw.getOptions().exportCallback as ((data: any, opts?: any) => Promise<any>) | undefined
+    if (cb) {
+      await cb(this.draw.getDocument(), payload)
+    }
+  }
+
+  /**
+   * 预览 HTML 内容（调用 options.previewCallback）。
+   * @param payload 预览参数
+   */
+  previewHtml(payload: any): void {
+    const cb = this.draw.getOptions().previewCallback as ((data: any, opts?: any) => void) | undefined
+    if (cb) {
+      cb(this.draw.getDocument(), payload)
+    }
+  }
+
+  /**
+   * 替换当前选区范围。
+   * @param range 新的选区范围，可为 null
+   */
+  replaceRange(range: IRange | null): void {
+    this.range.setRange(range)
+  }
+
+  /** 将当前选区内的顶层元素标记为同一群组。 */
+  setGroup(): void {
+    const doc = this.draw.getActiveDocument()
+    const ordered = this.range.getOrdered()
+    if (!ordered) return
+    const startPath = ordered.start.path
+    const endPath = ordered.end.path
+    if (startPath.length === 1 && endPath.length === 1) {
+      const groupId = `g_${Date.now()}`
+      const start = startPath[0] as number
+      const end = endPath[0] as number
+      for (let i = start; i <= end; i++) {
+        const el = doc.elements[i]
+        if (el) (el as unknown as Record<string, unknown>).groupId = groupId
+      }
+      this._commit(doc)
+    }
+  }
+
+  /**
+   * 定位到指定群组的第一个元素。
+   * @param id 群组 ID
+   */
+  locationGroup(id: string): void {
+    const doc = this.draw.getActiveDocument()
+    for (let i = 0; i < doc.elements.length; i++) {
+      const el = doc.elements[i]
+      if ((el as unknown as Record<string, unknown>).groupId === id) {
+        this.range.setCaret({ path: [i], offset: 0 })
+        return
+      }
+    }
+  }
+
+  /* -------------------- 表格边框 -------------------- */
+
+  /**
+   * 设置当前光标所在表格的边框类型（none/outside/all 等）。
+   * @param type 边框类型字符串
+   */
+  setTableBorderType(type: string): void {
+    const t = String(type || '').trim().toLowerCase()
+    const resolved =
+      t === 'none' || t === 'empty' || t === 'no' ? 'none'
+      : t === 'outside' || t === 'external' || t === 'box' ? 'outside'
+      : t === 'all' || t === 'full' || t === '' ? 'all'
+      : t
+    const doc = this.draw.getActiveDocument()
+    const pos = this.range.getFocus()
+    if (!pos) return
+    const table = this._findEnclosingTable(doc.elements, pos.path)
+    if (!table) return
+    const t2 = table as unknown as { border?: Record<string, unknown> }
+    if (!t2.border) t2.border = {}
+    t2.border.style = resolved
+    this._commit(doc)
+  }
+
+  /**
+   * 设置当前光标所在表格的边框颜色。
+   * @param color 颜色值
+   */
+  setTableBorderColor(color: string): void {
+    const doc = this.draw.getActiveDocument()
+    const pos = this.range.getFocus()
+    if (!pos) return
+    const table = this._findEnclosingTable(doc.elements, pos.path)
+    if (!table) return
+    const t = table as unknown as { border?: Record<string, unknown> }
+    if (!t.border) t.border = {}
+    t.border.color = color
+    this._commit(doc)
+  }
+
+  /**
+   * 设置当前光标所在表格的边框宽度。
+   * @param width 宽度数值
+   */
+  setTableBorderWidth(width: number): void {
+    const doc = this.draw.getActiveDocument()
+    const pos = this.range.getFocus()
+    if (!pos) return
+    const table = this._findEnclosingTable(doc.elements, pos.path)
+    if (!table) return
+    const t = table as unknown as { border?: Record<string, unknown> }
+    if (!t.border) t.border = {}
+    t.border.width = width
+    this._commit(doc)
+  }
+
+  /**
+   * 设置当前光标所在表格的外部边框宽度。
+   * @param width 宽度数值
+   */
+  setTableBorderExternalWidth(width: number): void {
+    const doc = this.draw.getActiveDocument()
+    const pos = this.range.getFocus()
+    if (!pos) return
+    const table = this._findEnclosingTable(doc.elements, pos.path)
+    if (!table) return
+    const t = table as unknown as { border?: Record<string, unknown> }
+    if (!t.border) t.border = {}
+    t.border.externalWidth = width
+    this._commit(doc)
+  }
+
+  /**
+   * 沿路径查找包含指定路径的最近表格元素。
+   * @param elements 文档元素树
+   * @param path 目标路径
+   * @returns 包裹该路径的表格元素；不存在时返回 null
+   */
+  private _findEnclosingTable(elements: IElement[], path: Path): ITableElement | null {
+    for (let i = 0; i < path.length; i++) {
+      const subPath = path.slice(0, i + 1) as Path
+      const node = getByPath(elements, subPath)
+      if (node && node.type === 'table') return node as ITableElement
+    }
+    return null
+  }
+
+  /* -------------------- 媒体插入 -------------------- */
+
+  /**
+   * 在当前光标处插入音频元素。
+   * @param src 音频源 URL
+   * @param options 选项，可指定 name
+   */
+  insertAudio(src: string, options?: { name?: string }): void {
+    const doc = this.draw.getActiveDocument()
+    const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
+    const el: IElement = { type: 'audio', value: src, name: options?.name ?? '音频' } as unknown as IElement
+    const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
+    if (!parent) return
+    const idx = (pos.path[pos.path.length - 1] as number) + 1
+    parent.splice(idx, 0, el)
+    this._commit(doc)
+  }
+
+  /**
+   * 在当前光标处插入视频元素。
+   * @param src 视频源 URL
+   * @param options 选项，可指定 name
+   */
+  insertVideo(src: string, options?: { name?: string }): void {
+    const doc = this.draw.getActiveDocument()
+    const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
+    const el: IElement = { type: 'video', value: src, name: options?.name ?? '视频' } as unknown as IElement
+    const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
+    if (!parent) return
+    const idx = (pos.path[pos.path.length - 1] as number) + 1
+    parent.splice(idx, 0, el)
+    this._commit(doc)
+  }
+
+  /* -------------------- 图表 -------------------- */
+
+  /**
+   * 在当前光标处插入图表元素。
+   * @param payload 图表参数，包含 type 及可选 data 等
+   */
+  insertChart(payload: { type: string; data?: unknown; [key: string]: unknown }): void {
+    const doc = this.draw.getActiveDocument()
+    const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
+    const el: IElement = { ...payload, type: 'chart', value: '' } as unknown as IElement
+    const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
+    if (!parent) return
+    const idx = (pos.path[pos.path.length - 1] as number) + 1
+    parent.splice(idx, 0, el)
+    this._commit(doc)
+  }
+
+  /**
+   * 更新指定图表的属性。
+   * @param id 图表 ID
+   * @param patch 属性补丁对象
+   */
+  updateChart(id: string, patch: Record<string, unknown>): void {
+    const doc = this.draw.getActiveDocument()
+    walkTree(doc.elements, (node) => {
+      const n = node as unknown as { type: string; id?: string }
+      if (n.type === 'chart' && n.id === id) {
+        Object.assign(n, patch)
+      }
+    })
+    this._commit(doc)
+  }
+
+  /* -------------------- 评论组删除 -------------------- */
+
+  /**
+   * 删除指定评论组。
+   * @param groupId 评论组 ID
+   */
+  deleteGroup(groupId: string): void {
+    const doc = this.draw.getActiveDocument()
+    const groups = (doc as unknown as { comments?: { groups?: { id: string }[] } }).comments?.groups
+    if (!groups) return
+    const idx = groups.findIndex(g => g.id === groupId)
+    if (idx >= 0) {
+      groups.splice(idx, 1)
+      this._commit(doc)
     }
   }
 }

@@ -14,27 +14,53 @@ import type { RangeManager } from '@vervedoc/docx-editor-state'
 import type { IPosition, Path } from '@vervedoc/docx-editor-schema'
 import { ContextMenu } from '../context-menu'
 
+/**
+ * ImageWidget 的依赖注入接口
+ *
+ * 由外部宿主提供，用于获取编辑器布局、选区、容器信息以及触发命令等。
+ */
 export interface ImageWidgetDeps {
+  /** 获取当前文档布局，可能为 null */
   getLayout: () => DocumentLayout | null
+  /** 获取当前选区管理器，可能为 null */
   getRange: () => RangeManager | null
+  /** 获取编辑器容器在视口中的矩形位置 */
   getContainerRect: () => DOMRect
+  /** 获取当前垂直滚动偏移量（像素） */
   getScrollY: () => number
+  /** 获取页面水平偏移量（像素） */
   getPageOffsetX: () => number
+  /** 触发编辑器命令的回调 */
   onCommand: (cmd: string, ...args: any[]) => void
+  /** 拖拽过程中实时更新图片尺寸的回调（不写入文档，仅刷新显示） */
   onUpdateImageSizeLive: (path: Path, width: number, height: number) => void
+  /** 根据客户端坐标命中测试，返回位置信息或 null */
   hit: (clientX: number, clientY: number) => IPosition | null
+  /** 让编辑器输入区获取焦点 */
   focusInput: () => void
 }
 
+/**
+ * 当前选中的图片信息
+ *
+ * 记录选中图片的路径、块数据以及所在页面的屏幕起点坐标，用于定位选中框和手柄。
+ */
 interface ImageSelection {
+  /** 图片在文档中的路径 */
   path: Path
+  /** 图片块数据 */
   block: ImageBlock
+  /** 图片所在页面的屏幕起点横坐标（像素） */
   pageOriginX: number
+  /** 图片所在页面的屏幕起点纵坐标（像素） */
   pageOriginY: number
 }
 
+/** 缩放手柄边长（像素） */
 const HANDLE_SIZE = 8
+/** 缩放手柄中心偏移量（像素），用于将手柄中心对齐到图片边缘 */
 const HANDLE_OFFSET = HANDLE_SIZE / 2
+/** 八方向缩放手柄的位置定义，x/y 为 0~1 的比例坐标 */
 const HANDLES = [
   { dir: 'nw', x: 0, y: 0 },
   { dir: 'n', x: 0.5, y: 0 },
@@ -46,16 +72,36 @@ const HANDLES = [
   { dir: 'w', x: 0, y: 0.5 },
 ] as const
 
+/**
+ * 图片交互 widget
+ *
+ * 提供图片选中高亮、八方向缩放手柄、悬浮工具栏（重置大小、旋转、对齐、
+ * 环绕方式、替换、保存、删除等）以及拖拽缩放功能。
+ */
 export class ImageWidget {
+  /** 选中高亮边框 DOM 元素 */
   private selectionBox: HTMLDivElement | null = null
+  /** 八方向缩放手柄 DOM 元素数组 */
   private handleEls: HTMLDivElement[] = []
+  /** 悬浮工具栏 DOM 元素 */
   private toolbar: HTMLDivElement | null = null
+  /** 当前选中的图片信息，未选中时为 null */
   private selection: ImageSelection | null = null
+  /** 右键上下文菜单实例（当前未使用，保留以备扩展） */
   private contextMenu = new ContextMenu()
+  /** 拖拽缩放状态，未拖拽时为 null */
   private dragging: { dir: string; startX: number; startY: number; origW: number; origH: number; lastW: number; lastH: number } | null = null
 
+  /**
+   * 构造 ImageWidget 实例
+   *
+   * @param deps 依赖注入对象
+   */
   constructor(private deps: ImageWidgetDeps) {}
 
+  /**
+   * 创建选中框、八方向缩放手柄和悬浮工具栏 DOM 并挂载到 document.body
+   */
   create(): void {
     this.selectionBox = document.createElement('div')
     this.selectionBox.style.cssText = 'position:fixed;border:1.5px solid #409eff;pointer-events:none;display:none;z-index:100;box-sizing:border-box;'
@@ -74,6 +120,12 @@ export class ImageWidget {
     document.body.appendChild(this.toolbar)
   }
 
+  /**
+   * 根据手柄方向返回对应的鼠标光标样式
+   *
+   * @param dir 手柄方向（nw/n/ne/e/se/s/sw/w）
+   * @returns 对应的 CSS 光标样式
+   */
   private cursorFor(dir: string): string {
     const map: Record<string, string> = {
       nw: 'nwse-resize', n: 'ns-resize', ne: 'nesw-resize', e: 'ew-resize',
@@ -82,6 +134,13 @@ export class ImageWidget {
     return map[dir] || 'default'
   }
 
+  /**
+   * 创建图片悬浮工具栏
+   *
+   * 工具栏包含重置大小、旋转、预览、对齐方式、环绕方式、替换、保存、删除等按钮。
+   *
+   * @returns 创建好的工具栏 DOM 元素
+   */
   private createToolbar(): HTMLDivElement {
     const bar = document.createElement('div')
     bar.style.cssText = 'position:fixed;display:none;z-index:102;background:#f5f5f5;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.15);padding:4px 6px;display:none;align-items:center;gap:2px;font-family:sans-serif;'
@@ -130,11 +189,22 @@ export class ImageWidget {
     return bar
   }
 
+  /**
+   * 触发针对当前选中图片的编辑器命令
+   *
+   * @param cmd 命令名称
+   * @param args 命令参数
+   */
   private fire(cmd: string, ...args: any[]): void {
     if (!this.selection) return
     this.deps.onCommand(cmd, this.selection.path, ...args)
   }
 
+  /**
+   * 显示图片预览遮罩层
+   *
+   * 创建全屏黑色遮罩并居中展示当前选中图片的原始大小，支持点击遮罩或按 Esc 关闭。
+   */
   private showPreview(): void {
     if (!this.selection) return
     const src = String((this.selection.block.block as unknown as { value?: string }).value ?? '')
@@ -168,7 +238,12 @@ export class ImageWidget {
   }
 
 
-  /** 处理 mousedown，返回 true 表示点击了图片（已拦截），false 表示未处理 */
+  /**
+   * 处理 mousedown，返回 true 表示点击了图片（已拦截），false 表示未处理
+   *
+   * @param e 鼠标事件
+   * @returns 点击命中图片返回 true，否则返回 false
+   */
   handleMouseDown(e: MouseEvent): boolean {
     this.clearSelection()
     const layout = this.deps.getLayout()
@@ -183,6 +258,15 @@ export class ImageWidget {
     return true
   }
 
+  /**
+   * 根据屏幕坐标查找命中的图片
+   *
+   * 同时支持独立图片块和段落环绕图片。
+   *
+   * @param clientX 客户端横坐标
+   * @param clientY 客户端纵坐标
+   * @returns 命中的图片选中信息，未命中返回 null
+   */
   private findImageAt(clientX: number, clientY: number): ImageSelection | null {
     const layout = this.deps.getLayout()
     if (!layout) return null
@@ -215,11 +299,19 @@ export class ImageWidget {
     return null
   }
 
+  /**
+   * 选中指定图片并刷新选中 UI
+   *
+   * @param sel 图片选中信息
+   */
   private selectImage(sel: ImageSelection): void {
     this.selection = sel
     this.updateSelectionUI()
   }
 
+  /**
+   * 清除当前选中状态，隐藏选中框、手柄和工具栏
+   */
   private clearSelection(): void {
     this.selection = null
     if (this.selectionBox) this.selectionBox.style.display = 'none'
@@ -227,6 +319,11 @@ export class ImageWidget {
     if (this.toolbar) this.toolbar.style.display = 'none'
   }
 
+  /**
+   * 刷新选中状态
+   *
+   * 根据当前选中图片路径重新查找布局中的图片块，若已不存在则清除选中。
+   */
   update(): void {
     if (!this.selection) return
     const layout = this.deps.getLayout()
@@ -237,6 +334,12 @@ export class ImageWidget {
     this.updateSelectionUI()
   }
 
+  /**
+   * 根据路径查找图片块
+   *
+   * @param path 图片路径
+   * @returns 命中的图片选中信息，未找到返回 null
+   */
   private findImageByPath(path: Path): ImageSelection | null {
     const layout = this.deps.getLayout()
     if (!layout) return null
@@ -265,6 +368,9 @@ export class ImageWidget {
     return null
   }
 
+  /**
+   * 更新选中框、八方向手柄和悬浮工具栏的位置与显示状态
+   */
   private updateSelectionUI(): void {
     if (!this.selection || !this.selectionBox) return
     const { block, pageOriginX, pageOriginY } = this.selection
@@ -300,6 +406,12 @@ export class ImageWidget {
     }
   }
 
+  /**
+   * 处理缩放手柄的 mousedown 事件，进入拖拽缩放状态
+   *
+   * @param e 鼠标事件
+   * @param dir 手柄方向
+   */
   private onHandleMouseDown(e: MouseEvent, dir: string): void {
     if (!this.selection) return
     e.preventDefault()
@@ -310,6 +422,13 @@ export class ImageWidget {
     window.addEventListener('mouseup', this.onDragEnd)
   }
 
+  /**
+   * 拖拽缩放过程中的 mousemove 处理（箭头函数绑定）
+   *
+   * 根据手柄方向和鼠标偏移量按图片原始宽高比计算新的宽高，并实时刷新显示。
+   *
+   * @param e 鼠标事件
+   */
   private onDragMove = (e: MouseEvent): void => {
     if (!this.dragging || !this.selection) return
     const dx = e.clientX - this.dragging.startX
@@ -329,6 +448,11 @@ export class ImageWidget {
     this.deps.onUpdateImageSizeLive(this.selection.path, w, h)
   }
 
+  /**
+   * 拖拽缩放结束的 mouseup 处理（箭头函数绑定）
+   *
+   * 将最终尺寸写入文档并清理拖拽状态和事件监听。
+   */
   private onDragEnd = (): void => {
     if (this.dragging && this.selection) {
       this.deps.onCommand('executeUpdateImageSize', this.selection.path, this.dragging.lastW, this.dragging.lastH)
@@ -338,15 +462,28 @@ export class ImageWidget {
     window.removeEventListener('mouseup', this.onDragEnd)
   }
 
+  /**
+   * 显示右键上下文菜单（当前图片改为点击显示悬浮工具栏，此方法保留并返回 false）
+   *
+   * @param _clientX 客户端横坐标（未使用）
+   * @param _clientY 客户端纵坐标（未使用）
+   * @returns 始终返回 false，表示未显示菜单
+   */
   showContextMenu(_clientX: number, _clientY: number): boolean {
     // 图片不再使用右键菜单，改为点击时显示悬浮工具栏
     return false
   }
 
+  /**
+   * 隐藏右键上下文菜单
+   */
   hideContextMenu(): void {
     this.contextMenu.hide()
   }
 
+  /**
+   * 销毁 widget，清除选中、隐藏菜单、移除事件监听并清理所有 DOM
+   */
   destroy(): void {
     this.clearSelection()
     this.hideContextMenu()

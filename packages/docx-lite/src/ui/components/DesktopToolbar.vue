@@ -59,7 +59,7 @@
   <div class="toolbar toolbar-secondary">
     <button class="toolbar-btn" title="插入图片" @click="$emit('insertImage')"><span class="material-icons">image</span></button>
     <button class="toolbar-btn" title="插入表格" @click="$emit('showPopup', 'table')"><span class="material-icons">table_chart</span></button>
-    <button class="toolbar-btn" title="插入目录" @click="$emit('showPopup', 'catalog')"><span class="material-icons">format_list_bulleted</span></button>
+    <button class="toolbar-btn" title="插入目录" @click="$emit('showPopup', 'toc')"><span class="material-icons">format_list_bulleted</span></button>
     <div class="toolbar-divider"></div>
     <button class="toolbar-btn" title="插入分隔线" @click="$emit('command', 'executeSeparator')"><span class="material-icons">horizontal_rule</span></button>
     <button class="toolbar-btn" title="插入分页符" @click="$emit('command', 'executePageBreak')"><span class="material-icons">insert_page_break</span></button>
@@ -83,7 +83,7 @@ defineEmits<{
   highlightChange: [value: string]
   titleLevelChange: [value: string]
   lineHeightChange: [value: number]
-  showPopup: [name: 'table' | 'link' | 'search' | 'shortcuts' | 'catalog']
+  showPopup: [name: 'table' | 'link' | 'search' | 'shortcuts' | 'toc']
   insertImage: []
 }>()
 </script>

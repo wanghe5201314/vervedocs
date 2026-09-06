@@ -14,46 +14,95 @@ import type { RangeManager } from '@vervedoc/docx-editor-state'
 import type { IPosition } from '@vervedoc/docx-editor-schema'
 import { ContextMenu, type MenuItem } from '../context-menu'
 
+/** 边框热区半宽（像素），鼠标距离边框小于该值时视为命中边框可拖拽 */
 const BORDER_HOT = 4
 
+/**
+ * 表格边框拖拽状态
+ *
+ * 记录当前正在拖拽的列/行信息，用于拖拽过程中计算新尺寸。
+ */
 interface DragState {
+  /** 拖拽类型：列或行 */
   type: 'col' | 'row'
+  /** 表格在父节点中的索引 */
   tableIndex: number
+  /** 被拖拽边框对应的列/行索引 */
   index: number
+  /** 拖拽起始时的客户端坐标（clientX 或 clientY） */
   startClient: number
+  /** 拖拽起始时该列/行的原始尺寸（像素） */
   origSize: number
 }
 
+/**
+ * TableWidget 的依赖注入接口
+ *
+ * 由外部宿主提供，用于获取编辑器布局、选区、容器信息以及触发命令等。
+ */
 export interface TableWidgetDeps {
+  /** 获取当前文档布局，可能为 null */
   getLayout: () => DocumentLayout | null
+  /** 获取当前选区管理器，可能为 null */
   getRange: () => RangeManager | null
+  /** 获取编辑器容器在视口中的矩形位置 */
   getContainerRect: () => DOMRect
+  /** 获取当前垂直滚动偏移量（像素） */
   getScrollY: () => number
+  /** 获取页面水平偏移量（像素） */
   getPageOffsetX: () => number
+  /** 触发编辑器命令的回调 */
   onCommand: (cmd: string, ...args: any[]) => void
+  /** 根据客户端坐标命中测试，返回位置信息或 null */
   hit: (clientX: number, clientY: number) => IPosition | null
+  /** 让编辑器输入区获取焦点 */
   focusInput: () => void
+  /** 设置鼠标光标样式 */
   setCursor: (cursor: string) => void
 }
 
+/**
+ * 表格交互 widget
+ *
+ * 提供表格选择手柄、添加列/行按钮、右键上下文菜单以及边框拖拽调整列宽行高功能。
+ */
 export class TableWidget {
+  /** 表格左上角的全选手柄 DOM 元素 */
   private handle: HTMLDivElement | null = null
+  /** 表格右侧中间的添加列手柄 DOM 元素 */
   private addColHandle: HTMLDivElement | null = null
+  /** 表格底部中间的添加行手柄 DOM 元素 */
   private addRowHandle: HTMLDivElement | null = null
+  /** 右键上下文菜单实例 */
   private contextMenu = new ContextMenu()
+  /** 当前边框拖拽状态，未拖拽时为 null */
   private dragState: DragState | null = null
+  /** 标记光标样式是否已被修改，用于在离开边框时恢复 */
   private cursorChanged = false
 
+  /**
+   * 构造 TableWidget 实例
+   *
+   * @param deps 依赖注入对象
+   */
   constructor(private deps: TableWidgetDeps) {}
 
   /* -------------------- 创建 -------------------- */
 
+  /**
+   * 创建表格交互所需的全部手柄 DOM 并挂载到 document.body
+   */
   create(): void {
     this.handle = this.createHandle()
     this.addColHandle = this.createAddColHandle()
     this.addRowHandle = this.createAddRowHandle()
   }
 
+  /**
+   * 创建表格左上角全选手柄
+   *
+   * @returns 创建并挂载好的手柄 DOM 元素
+   */
   private createHandle(): HTMLDivElement {
     const el = document.createElement('div')
     el.className = 'vervedocs-table-handle'
@@ -86,6 +135,11 @@ export class TableWidget {
     return el
   }
 
+  /**
+   * 创建表格右侧中间的添加列手柄
+   *
+   * @returns 创建并挂载好的手柄 DOM 元素
+   */
   private createAddColHandle(): HTMLDivElement {
     const el = document.createElement('div')
     el.className = 'vervedocs-table-add-col'
@@ -128,6 +182,11 @@ export class TableWidget {
     return el
   }
 
+  /**
+   * 创建表格底部中间的添加行手柄
+   *
+   * @returns 创建并挂载好的手柄 DOM 元素
+   */
   private createAddRowHandle(): HTMLDivElement {
     const el = document.createElement('div')
     el.className = 'vervedocs-table-add-row'
@@ -172,6 +231,11 @@ export class TableWidget {
 
   /* -------------------- 更新手柄位置 -------------------- */
 
+  /**
+   * 根据当前选区更新手柄位置
+   *
+   * 当光标位于表格内时，显示全选、添加列、添加行手柄；否则隐藏全部手柄。
+   */
   update(): void {
     if (!this.handle) return
     const layout = this.deps.getLayout()
@@ -220,6 +284,9 @@ export class TableWidget {
     }
   }
 
+  /**
+   * 隐藏全部手柄
+   */
   private hideHandles(): void {
     if (this.handle) this.handle.style.display = 'none'
     if (this.addColHandle) this.addColHandle.style.display = 'none'
@@ -228,6 +295,15 @@ export class TableWidget {
 
   /* -------------------- 右键菜单 -------------------- */
 
+  /**
+   * 在指定客户端坐标处显示表格右键上下文菜单
+   *
+   * 菜单包含插入、拆分/合并单元格、删除、对齐方式、底纹颜色、表格属性等操作。
+   *
+   * @param clientX 客户端横坐标
+   * @param clientY 客户端纵坐标
+   * @returns 命中表格并显示菜单返回 true，否则返回 false
+   */
   showContextMenu(clientX: number, clientY: number): boolean {
     const layout = this.deps.getLayout()
     const range = this.deps.getRange()
@@ -308,12 +384,22 @@ export class TableWidget {
     return true
   }
 
+  /**
+   * 隐藏右键上下文菜单
+   */
   hideContextMenu(): void {
     this.contextMenu.hide()
   }
 
   /* -------------------- 边框拖拽 -------------------- */
 
+  /**
+   * 根据屏幕坐标查找命中的表格块
+   *
+   * @param clientX 客户端横坐标
+   * @param clientY 客户端纵坐标
+   * @returns 命中的表格块及其屏幕起点坐标，未命中返回 null
+   */
   private findTableAtScreen(clientX: number, clientY: number): { block: TableBlock; screenX: number; screenY: number } | null {
     const layout = this.deps.getLayout()
     if (!layout) return null
@@ -334,6 +420,13 @@ export class TableWidget {
     return null
   }
 
+  /**
+   * 检测指定坐标是否命中表格边框（列边框或行边框）
+   *
+   * @param clientX 客户端横坐标
+   * @param clientY 客户端纵坐标
+   * @returns 命中边框时返回类型、索引、原始尺寸和表格索引，否则返回 null
+   */
   private detectBorder(clientX: number, clientY: number): { type: 'col' | 'row'; index: number; origSize: number; tableIndex: number } | null {
     const info = this.findTableAtScreen(clientX, clientY)
     if (!info) return null
@@ -357,6 +450,12 @@ export class TableWidget {
     return null
   }
 
+  /**
+   * 处理鼠标按下事件，若命中表格边框则进入拖拽状态
+   *
+   * @param e 鼠标事件
+   * @returns 命中边框并进入拖拽返回 true，否则返回 false
+   */
   handleMouseDown(e: MouseEvent): boolean {
     if (this.dragState) return true
     const border = this.detectBorder(e.clientX, e.clientY)
@@ -374,6 +473,14 @@ export class TableWidget {
     return true
   }
 
+  /**
+   * 处理鼠标移动事件
+   *
+   * 拖拽中：根据偏移量计算并应用新的列宽/行高；
+   * 非拖拽：检测是否悬停在边框上以更新光标样式。
+   *
+   * @param e 鼠标事件
+   */
   handleMouseMove(e: MouseEvent): void {
     if (this.dragState) {
       e.preventDefault()
@@ -397,6 +504,11 @@ export class TableWidget {
     }
   }
 
+  /**
+   * 处理鼠标释放事件，结束边框拖拽并恢复光标
+   *
+   * @param _e 鼠标事件（未使用）
+   */
   handleMouseUp(_e: MouseEvent): void {
     if (!this.dragState) return
     this.dragState = null
@@ -406,6 +518,9 @@ export class TableWidget {
 
   /* -------------------- 销毁 -------------------- */
 
+  /**
+   * 销毁 widget，隐藏手柄和菜单并移除所有手柄 DOM
+   */
   destroy(): void {
     this.hideHandles()
     this.hideContextMenu()

@@ -11,11 +11,21 @@ import type {
 
 /**
  * AI 服务类
+ *
+ * 封装与 AI 后端的 HTTP 通信，支持普通请求与流式响应，
+ * 提供超时控制、请求取消与配置更新能力。
  */
 export class AIService {
+  /** AI 服务配置（已合并默认值） */
   private config: AIServiceConfig
+  /** 当前请求的 AbortController，用于支持取消与超时 */
   private abortController: AbortController | null = null
 
+  /**
+   * 创建 AI 服务实例，合并默认超时与流式配置
+   *
+   * @param config AI 服务配置
+   */
   constructor(config: AIServiceConfig) {
     this.config = {
       timeout: 60000,

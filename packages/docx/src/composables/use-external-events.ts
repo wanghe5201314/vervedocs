@@ -36,7 +36,9 @@ export type ExternalEventSubscribeOptions = {
   throttleMs?: number
 }
 
+/** 外部事件处理函数集合，按事件名称分组 */
 const externalEventHandlers = new Map<ExternalEventName, Set<ExternalEventHandler>>()
+/** 事件处理函数包装映射，用于存储防抖/节流包装后的处理函数 */
 const externalEventHandlerWrappers = new Map<ExternalEventName, Map<ExternalEventHandler, ExternalEventHandler>>()
 
 /**
@@ -161,16 +163,47 @@ export const emitExternalEvent = <T = unknown>(event: ExternalEventName, payload
 }
 
 import type { DocumentMeta } from '@/types/document'
-import type {
-  ICommandSearchApi,
-  ICommandBookmarkApi,
-  ICommandBookmarkState,
-  ICommandCatalogState,
-  IDocxCommentApi,
-  IDocxCommentState,
-  ICommandRevisionApi,
-  ICommandRevisionState
-} from '@vervedoc/core'
+import type { IEditorSearchApi } from '@/composables/use-editor-search'
+
+/* ============================================================
+ * 外部 API State 类型（core 包已删除，本地维护）
+ * ============================================================ */
+
+/** 书签状态接口 */
+export interface BookmarkState {
+  /** 书签列表 */
+  list: any[]
+  /** 建议的书签名称 */
+  suggestedName: string
+  /** 选中文本预览 */
+  selectionPreview: string
+  /** 是否存在选区范围 */
+  hasSelectionRange: boolean
+}
+
+/** 修订状态接口 */
+export interface RevisionState {
+  /** 修订列表 */
+  list: any[]
+  /** 当前激活的修订 ID */
+  activeId: string | null
+}
+
+/** 批注状态接口 */
+export interface CommentState {
+  /** 批注列表 */
+  list: any[]
+  /** 其他扩展属性 */
+  [key: string]: any
+}
+
+/** 目录状态接口 */
+export interface TocState {
+  /** 目录条目列表 */
+  list: any[]
+  /** 其他扩展属性 */
+  [key: string]: any
+}
 
 /**
  * 外部 document API（由 EditorPage 在运行时挂载）
@@ -182,35 +215,81 @@ export interface ExternalDocumentApi {
   save: (opts?: { silent?: boolean }) => Promise<unknown> | unknown
 }
 
-export interface ExternalBookmarkApi
-  extends Pick<ICommandBookmarkApi, 'add' | 'remove' | 'locate'> {
-  getState: () => ICommandBookmarkState
+/** 外部书签 API 接口 */
+export interface ExternalBookmarkApi {
+  /** 添加书签 */
+  add: (name: string) => void
+  /** 删除书签 */
+  remove: (name: string) => void
+  /** 定位到书签 */
+  locate: (name: string) => void
+  /** 获取书签状态 */
+  getState: () => BookmarkState
 }
 
-export interface ExternalRevisionApi
-  extends Omit<ICommandRevisionApi, 'getState'> {
-  getState: () => ICommandRevisionState
+/** 外部修订 API 接口 */
+export interface ExternalRevisionApi {
+  /** 定位到指定修订 */
+  locate: (id: string) => void
+  /** 定位到上一处修订 */
+  locatePrevious: () => void
+  /** 定位到下一处修订 */
+  locateNext: () => void
+  /** 接受指定修订 */
+  accept: (id: string) => void
+  /** 拒绝指定修订 */
+  reject: (id: string) => void
+  /** 接受当前修订 */
+  acceptCurrent: () => void
+  /** 拒绝当前修订 */
+  rejectCurrent: () => void
+  /** 接受所有修订 */
+  acceptAll: () => void
+  /** 拒绝所有修订 */
+  rejectAll: () => void
+  /** 获取修订状态 */
+  getState: () => RevisionState
 }
 
-export interface ExternalCommentApi
-  extends Pick<IDocxCommentApi, 'create' | 'remove' | 'removeCurrent' | 'locate' | 'refresh'> {
-  getState: () => IDocxCommentState
+/** 外部批注 API 接口 */
+export interface ExternalCommentApi {
+  /** 创建批注 */
+  create: (userName: string) => any
+  /** 删除批注 */
+  remove: (id: string) => any
+  /** 删除当前批注组 */
+  removeCurrent: (groupId: string) => void
+  /** 定位到批注 */
+  locate: (id: string) => any
+  /** 刷新批注 */
+  refresh: () => any
+  /** 获取批注状态 */
+  getState: () => CommentState
 }
 
-export interface ExternalCatalogApi {
-  getState: () => ICommandCatalogState & {
+/** 外部目录 API 接口 */
+export interface ExternalTocApi {
+  /** 获取目录状态 */
+  getState: () => TocState & {
     thumbnails: string[]
     selectedId: string
-    activeTab: 'catalog' | 'section'
+    activeTab: 'toc' | 'section'
     visible: boolean
   }
-  sync: () => Promise<ICommandCatalogState['list']>
+  /** 同步目录列表 */
+  sync: () => Promise<any[]>
+  /** 定位到目录条目 */
   locate: (id: string) => void
+  /** 跳转页码 */
   pageJump: (index: number) => void
-  open: (tab?: 'catalog' | 'section') => void
+  /** 打开目录面板 */
+  open: (tab?: 'toc' | 'section') => void
+  /** 关闭目录面板 */
   close: () => void
-  toggle: (desired?: boolean, tab?: 'catalog' | 'section') => void
-  switchTab: (tab: 'catalog' | 'section') => void
+  /** 切换目录面板可见状态 */
+  toggle: (desired?: boolean, tab?: 'toc' | 'section') => void
+  /** 切换标签页 */
+  switchTab: (tab: 'toc' | 'section') => void
 }
 
 /**
@@ -221,13 +300,14 @@ export interface ExternalEditorApi {
   off: typeof offExternalEvent
   events: { on: typeof onExternalEvent; off: typeof offExternalEvent }
   document?: ExternalDocumentApi
-  search?: ICommandSearchApi
+  search?: IEditorSearchApi
   bookmark?: ExternalBookmarkApi
   revision?: ExternalRevisionApi
   comment?: ExternalCommentApi
-  catalog?: ExternalCatalogApi
+  toc?: ExternalTocApi
 }
 
+/** 外部编辑器 API 对象实例，挂载到 window 上供外部调用 */
 export const externalApi: ExternalEditorApi = {
   on: onExternalEvent,
   off: offExternalEvent,
@@ -243,15 +323,3 @@ if (typeof window !== 'undefined') {
   w.docxEditorAppApi = externalApi
 }
 
-/**
- * 外部事件 composable 入口
- * @returns 事件订阅/发布相关方法
- */
-export function useExternalEvents() {
-  return {
-    onExternalEvent,
-    offExternalEvent,
-    emitExternalEvent,
-    externalApi
-  }
-}

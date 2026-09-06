@@ -40,11 +40,7 @@ export interface IComment {
 }
 
 /**
- * 权限级别
- */
-export type PermissionLevel = 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'OWNER'
 
-/**
  * 版本记录
  */
 export interface IVersion {

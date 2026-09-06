@@ -5,28 +5,33 @@ import { emitExternalEvent } from '@/composables/use-external-events'
 import type { DocumentMeta } from '@/types/document'
 
 /**
- * 编辑器实例接口（协作所需的最小能力）
+ * 编辑器实例接口（协作所需的最小能力）。
+ *
+ * ⚠️ 仅暴露 core 公开的合法入口，避免协作层直接访问 `comment` / `revision` 内部对象
+ * 从而覆盖 core 装配的 `CommentHost`。
  */
 interface EditorInstance {
   command?: any
   listener?: any
-  comment?: any
-  revision?: any
   eventBus?: any
+  /** core 提供的批注回调注入入口 */
+  setCommentCallbacks?: (callbacks: any) => void
+  /** core 提供的修订回调注入入口 */
+  setRevisionCallbacks?: (callbacks: any) => void
+  /** core 提供的批注只读视图 */
+  getCommentView?: () => CommentViewLike | null
+  /** core 提供的修订只读视图 */
+  getRevisionView?: () => any
 }
 
 /**
- * 评论组件接口
+ * core 暴露的批注只读视图（与 `@vervedoc/core` 中的 `CommentView` 结构等价）。
+ * 这里以本地接口的形式声明，避免协作 composable 反向依赖 core。
  */
-interface CommentComponent {
-  /** 安装评论组件到编辑器命令上 */
-  install: (command: any, callbacks: any) => void
-  /** 获取所有评论 */
-  getComments: () => any[]
-  /** 设置评论列表 */
-  setComments: (comments: any[]) => void
-  /** 渲染评论 */
-  render: () => void
+interface CommentViewLike {
+  getComments(): any[]
+  setComments(comments: any[]): void
+  render(): void
 }
 
 /**
@@ -51,8 +56,6 @@ export function useCollaboration(options: {
   collaborationConfig: any
   /** 获取编辑器实例 */
   getEditorInstance: () => EditorInstance | null
-  /** 获取评论组件 */
-  getCommentComponent: () => CommentComponent | null
   /** 执行编辑器命令 */
   executeCommand: (command: string, ...args: any[]) => void
   /** 文档元数据 */
@@ -67,7 +70,6 @@ export function useCollaboration(options: {
   const {
     collaborationConfig,
     getEditorInstance,
-    getCommentComponent,
     executeCommand,
     documentMeta,
     editorRef,
@@ -84,15 +86,25 @@ export function useCollaboration(options: {
   const collabOffFns: (() => void)[] = []
 
   /**
-   * 安装评论组件回调，将评论操作与协作插件同步逻辑绑定
-   * @param targetInstance 目标编辑器实例
+   * 通过 core 的合法入口注入批注协作回调。
+   *
+   * 该函数**只调用** core 暴露的 `setCommentCallbacks` 与 `getCommentView`，
+   * 不再直接接触 `editor.comment.install(...)`，避免覆盖 core 内部装配的 `CommentHost`。
+   *
+   * @param targetInstance 目标编辑器实例（必须实现 core 的合法入口）
    */
-  const installCommentCallbacks = (targetInstance: any) => {
-    if (!targetInstance?.command) return
-    const commentComp = getCommentComponent()
-    if (!commentComp) return
+  const installCommentCallbacks = (targetInstance: EditorInstance | null) => {
+    if (!targetInstance) return
+    if (typeof targetInstance.setCommentCallbacks !== 'function') {
+      // 兼容旧版本 core：给出明确警告，但不再回退到 comment.install 覆盖，避免回归
+      console.warn(
+        '[useCollaboration] 当前 editor 实例未提供 setCommentCallbacks，' +
+        '请升级 @vervedoc/core 至最新版本；协作回调本次不会安装。'
+      )
+      return
+    }
 
-    commentComp.install(targetInstance.command, {
+    targetInstance.setCommentCallbacks({
       onSave: () => { collabPlugin?.syncComments() },
       onDelete: () => { collabPlugin?.syncComments() },
       onReply: () => { collabPlugin?.syncComments() },
@@ -101,7 +113,11 @@ export function useCollaboration(options: {
       onRequestSave: () => { if (!isSuppressSaveOnce()) scheduleSave() }
     })
 
-    collabPlugin?.bindCommentComponent(commentComp)
+    // 通过 core 的只读视图与协作插件绑定，视图内部不允许 install / 覆盖 host
+    const commentView = targetInstance.getCommentView?.() || null
+    if (commentView) {
+      collabPlugin?.bindCommentComponent(commentView as any)
+    }
   }
 
   /**

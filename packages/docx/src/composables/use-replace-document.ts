@@ -1,6 +1,6 @@
 import { nextTick } from 'vue'
-import type { DocxCommentMeta } from '@vervedoc/core'
 
+/** 整文档替换载荷接口 */
 export interface ReplaceDocumentPayload {
   /** 正文元素（必填） */
   main: any[]
@@ -14,22 +14,25 @@ export interface ReplaceDocumentPayload {
    * - 序列化批注（含 groupId）→ restoreComments
    * - 缺省 / 空数组 → 清空批注
    */
-  comments?: DocxCommentMeta[] | Array<Record<string, unknown>>
+  comments?: unknown[]
 }
 
+/** 整文档替换依赖接口 */
 export interface ReplaceDocumentDeps {
+  /** 获取编辑器实例的函数 */
   getEditorInstance: () => any
+  /** 刷新目录的函数 */
   refreshCatalog?: () => Promise<unknown> | unknown
+  /** 同步修订列表的函数 */
   syncRevisionList?: () => void
 }
 
-function isSerializedComment(item: unknown): boolean {
-  return !!item && typeof item === 'object' && 'groupId' in (item as object)
-}
-
 /**
- * 整文档替换：正文 + 强制清空页眉页脚（可覆盖）+ 重置批注/修订 UI。
- * 供 docx 导入、JSON url 加载、content 初始加载共用，避免旧内容杂糅。
+ * 整文档替换：正文 + 页眉页脚 + 批注。
+ * 核心 executeSetValue 内部处理 zone 重置、IDocxDocumentMeta 构造、sections 清空、批注渲染。
+ * @param deps 依赖对象，提供编辑器实例及刷新回调
+ * @param payload 载荷对象，包含正文、页眉、页脚、批注
+ * @returns 无返回值
  */
 export async function replaceDocument(
   deps: ReplaceDocumentDeps,
@@ -40,29 +43,16 @@ export async function replaceDocument(
     throw new Error('编辑器未就绪，无法替换文档')
   }
 
-  const header = payload.header ?? []
-  const footer = payload.footer ?? []
-  const main = Array.isArray(payload.main) ? payload.main : []
-
-  inst.command.executeSetValue({ header, main, footer })
-
-  const commentComp = inst.comment
-  const comments = payload.comments
-  if (commentComp) {
-    if (Array.isArray(comments) && comments.length > 0) {
-      if (isSerializedComment(comments[0])) {
-        commentComp.restoreComments(comments)
-      } else {
-        commentComp.buildCommentsFromMetas(comments as DocxCommentMeta[])
-      }
-    } else {
-      commentComp.buildCommentsFromMetas([])
-    }
-  }
+  inst.command.executeSetValue({
+    main: Array.isArray(payload.main) ? payload.main : [],
+    header: payload.header ?? [],
+    footer: payload.footer ?? [],
+    comments: payload.comments
+  })
 
   await nextTick()
   requestAnimationFrame(() => {
-    commentComp?.render?.()
+    inst.comment?.render?.()
     inst.revision?.update?.()
     deps.syncRevisionList?.()
   })

@@ -33,7 +33,7 @@
         :more-menu-open="moreMenuOpen"
         :status-page-text="statusPageText"
         :status-words-text="statusWordsText"
-        @toggle-catalog="toggleCatalog()"
+        @toggle-toc="toggleToc()"
         @save="handleSave"
         @toggle-more="moreMenuOpen = !moreMenuOpen"
         @import-doc="handleImportDoc"
@@ -42,20 +42,20 @@
       />
 
       <div class="body-area">
-        <CatalogSidebar
+        <TocSidebar
           v-if="isDesktop"
-          :catalog-open="catalogOpen"
-          :flat-catalog="flatCatalog"
-          @toggle="toggleCatalog()"
-          @catalog-click="handleCatalogClick"
+          :toc-open="tocOpen"
+          :flat-toc="flatToc"
+          @toggle="toggleToc()"
+          @toc-click="handleTocClick"
         />
 
-        <MobileCatalogDrawer
+        <MobileTocDrawer
           v-if="isMobile"
-          :catalog-open="catalogOpen"
-          :flat-catalog="flatCatalog"
-          @toggle="toggleCatalog()"
-          @catalog-click="handleCatalogClick"
+          :toc-open="tocOpen"
+          :flat-toc="flatToc"
+          @toggle="toggleToc()"
+          @toc-click="handleTocClick"
         />
 
         <div class="editor-wrapper" :class="{ 'mobile-editor-wrapper': isMobile }">
@@ -65,7 +65,7 @@
 
       <StatusBar
         v-if="isDesktop"
-        :catalog-open="catalogOpen"
+        :toc-open="tocOpen"
         :status-words-text="statusWordsText"
         :status-page-text="statusPageText"
         :paper-direction-text="paperDirectionText"
@@ -74,7 +74,7 @@
         :paper-size-menu-open="paperSizeMenuOpen"
         :paper-sizes="PAPER_SIZES"
         :zoom-text="zoomText"
-        @catalog-toggle="(checked: boolean) => toggleCatalog(checked)"
+        @toc-toggle="(checked: boolean) => toggleToc(checked)"
         @toggle-paper-direction="togglePaperDirection"
         @toggle-paper-size-menu="paperSizeMenuOpen = !paperSizeMenuOpen"
         @set-paper-size="setPaperSize"
@@ -130,6 +130,18 @@
         </div>
       </div>
 
+      <div class="popup-panel" :class="{ show: activePopup === 'formula', 'mobile-popup': isMobile }">
+        <div class="popup-title">插入公式</div>
+        <div class="popup-row">
+          <label>LaTeX 公式</label>
+          <input v-model="formulaText" type="text" placeholder="例如：x^2 + y^2 = r^2" />
+        </div>
+        <div class="popup-actions">
+          <button class="popup-btn popup-btn-secondary" @click="closePopup">取消</button>
+          <button class="popup-btn popup-btn-primary" @click="confirmInsertFormula">插入</button>
+        </div>
+      </div>
+
       <div class="popup-panel" :class="{ show: activePopup === 'search', 'mobile-popup': isMobile }">
         <div class="popup-title">查找和替换</div>
         <div class="popup-row">
@@ -147,27 +159,27 @@
         </div>
       </div>
 
-      <div class="popup-panel catalog-popup" :class="{ show: activePopup === 'catalog', 'mobile-popup': isMobile }">
+      <div class="popup-panel catalog-popup" :class="{ show: activePopup === 'toc', 'mobile-popup': isMobile }">
         <div class="popup-title">插入自动目录</div>
         <div class="catalog-type-options">
-          <label class="catalog-type-option" :class="{ active: autoCatalogType === 1 }">
-            <input type="radio" v-model="autoCatalogType" :value="1" />
+          <label class="catalog-type-option" :class="{ active: autoTocType === 1 }">
+            <input type="radio" v-model="autoTocType" :value="1" />
             <span>仅一级标题</span>
           </label>
-          <label class="catalog-type-option" :class="{ active: autoCatalogType === 2 }">
-            <input type="radio" v-model="autoCatalogType" :value="2" />
+          <label class="catalog-type-option" :class="{ active: autoTocType === 2 }">
+            <input type="radio" v-model="autoTocType" :value="2" />
             <span>一至二级标题</span>
           </label>
-          <label class="catalog-type-option" :class="{ active: autoCatalogType === 3 }">
-            <input type="radio" v-model="autoCatalogType" :value="3" />
+          <label class="catalog-type-option" :class="{ active: autoTocType === 3 }">
+            <input type="radio" v-model="autoTocType" :value="3" />
             <span>一至三级标题</span>
           </label>
         </div>
         <div class="catalog-preview">
-          <div v-if="autoCatalogLoading" class="catalog-preview-empty">加载中...</div>
-          <div v-else-if="!autoCatalogPreview.length" class="catalog-preview-empty">暂无标题内容</div>
+          <div v-if="autoTocLoading" class="catalog-preview-empty">加载中...</div>
+          <div v-else-if="!autoTocPreview.length" class="catalog-preview-empty">暂无标题内容</div>
           <div
-            v-for="item in autoCatalogPreview"
+            v-for="item in autoTocPreview"
             :key="item.id"
             class="catalog-preview-item"
             :class="`level-${item.level}`"
@@ -178,7 +190,7 @@
         </div>
         <div class="popup-actions">
           <button class="popup-btn popup-btn-secondary" @click="closePopup">取消</button>
-          <button class="popup-btn popup-btn-primary" :disabled="!autoCatalogPreview.length" @click="confirmInsertCatalog">插入</button>
+          <button class="popup-btn popup-btn-primary" :disabled="!autoTocPreview.length" @click="confirmInsertToc">插入</button>
         </div>
       </div>
 
@@ -220,29 +232,29 @@
 
 <script setup lang="ts">
 import type {IDocxDocumentMeta, IEditorOption, IElement, TitleLevel} from '@vervedoc/core'
-import DocxEditor, {TITLE_LEVEL, PAPER_SIZE_LIST, DEFAULT_PAPER_SIZE} from '@vervedoc/core'
+import DocxEditor, {TITLE_LEVEL, PAPER_SIZE_LIST, DEFAULT_PAPER_SIZE, LaTexParticle} from '@vervedoc/core'
 import {computed, onBeforeUnmount, onMounted, reactive, ref} from 'vue'
 import type {ImportMode, LiteEditorShellExposed, SaveSnapshot, WordEditorOptions} from '../object/word-editor.types'
 import {useResponsive} from '../composables/useResponsive'
 import {useTouch} from '../composables/useTouch'
 import MenuBar from './components/MenuBar.vue'
 import DesktopToolbar from './components/DesktopToolbar.vue'
-import CatalogSidebar from './components/CatalogSidebar.vue'
+import TocSidebar from './components/TocSidebar.vue'
 import StatusBar from './components/StatusBar.vue'
 import MobileHeader from './components/MobileHeader.vue'
 import MobileBottomBar from './components/MobileBottomBar.vue'
-import MobileCatalogDrawer from './components/MobileCatalogDrawer.vue'
+import MobileTocDrawer from './components/MobileTocDrawer.vue'
 
 
 
-interface CatalogItem {
+interface TocItem {
   id?: string
   name?: string
   level?: string | number
-  subCatalog?: CatalogItem[]
+  subToc?: TocItem[]
 }
 
-interface FlatCatalogItem {
+interface FlatTocItem {
   id?: string
   name: string
   level: number
@@ -276,10 +288,10 @@ const randomId = () =>
 const shellRef = ref<HTMLDivElement | null>(null)
 const editorContainerRef = ref<HTMLDivElement | null>(null)
 const editor = ref<DocxEditor | null>(null)
-const catalogRefreshTimer = ref<number | null>(null)
+const tocRefreshTimer = ref<number | null>(null)
 const activeDropdown = ref<string | null>(null)
-const activePopup = ref<'table' | 'link' | 'search' | 'shortcuts' | 'catalog' | null>(null)
-const catalogOpen = ref(false)
+const activePopup = ref<'table' | 'link' | 'search' | 'shortcuts' | 'toc' | 'formula' | null>(null)
+const tocOpen = ref(false)
 const paperDirection = ref<'vertical' | 'horizontal'>('vertical')
 const selectedPaperSizeIndex = ref(PAPER_SIZE_LIST.findIndex(p => p.key === DEFAULT_PAPER_SIZE.key))
 const paperSizeMenuOpen = ref(false)
@@ -297,32 +309,33 @@ const linkText = ref('')
 const linkUrl = ref('')
 const searchText = ref('')
 const replaceText = ref('')
+const formulaText = ref('')
 const importModeResolver = ref<((mode: ImportMode) => void) | null>(null)
-const catalogItems = ref<CatalogItem[]>([])
+const tocItems = ref<TocItem[]>([])
 
-interface AutoCatalogItem {
+interface AutoTocItem {
   id: string
   level: number
   name: string
   pageNo: number
 }
-interface AutoCatalogResult {
-  catalog1: AutoCatalogItem[]
-  catalog2: AutoCatalogItem[]
-  catalog3: AutoCatalogItem[]
+interface AutoTocResult {
+  toc1: AutoTocItem[]
+  toc2: AutoTocItem[]
+  toc3: AutoTocItem[]
 }
-const autoCatalogData = ref<AutoCatalogResult | null>(null)
-const autoCatalogType = ref<1 | 2 | 3>(1)
-const autoCatalogLoading = ref(false)
+const autoTocData = ref<AutoTocResult | null>(null)
+const autoTocType = ref<1 | 2 | 3>(1)
+const autoTocLoading = ref(false)
 
 useTouch(editorContainerRef, {
   minScale: 0.5,
   maxScale: 3,
   onSwipeLeft: () => {
-    if (isMobile.value) toggleCatalog(false)
+    if (isMobile.value) toggleToc(false)
   },
   onSwipeRight: () => {
-    if (isMobile.value) toggleCatalog(true)
+    if (isMobile.value) toggleToc(true)
   }
 })
 
@@ -335,8 +348,8 @@ const documentMeta = reactive<SaveSnapshot['meta']>({
 
 const selectedPaperSize = computed(() => PAPER_SIZES[selectedPaperSizeIndex.value] || PAPER_SIZES[0])
 const paperDirectionText = computed(() => (paperDirection.value === 'vertical' ? '纵向' : '横向'))
-const flatCatalog = computed<FlatCatalogItem[]>(() => {
-  const result: FlatCatalogItem[] = []
+const flatToc = computed<FlatTocItem[]>(() => {
+  const result: FlatTocItem[] = []
 
   const levelMap: Record<string, number> = {
     first: 1,
@@ -347,20 +360,20 @@ const flatCatalog = computed<FlatCatalogItem[]>(() => {
     sixth: 6
   }
 
-  const walk = (items: CatalogItem[]) => {
+  const walk = (items: TocItem[]) => {
     for (const item of items) {
       result.push({
         id: item.id,
         name: item.name || '',
         level: typeof item.level === 'number' ? item.level : levelMap[item.level || 'first'] || 1
       })
-      if (item.subCatalog?.length) {
-        walk(item.subCatalog)
+      if (item.subToc?.length) {
+        walk(item.subToc)
       }
     }
   }
 
-  walk(catalogItems.value)
+  walk(tocItems.value)
   return result
 })
 
@@ -389,16 +402,16 @@ const createEditor = () => {
     ...(props.options as IEditorOption | undefined)
   })
 
-  editor.value.listener.on('contentChange', () => {
+  editor.value.listener.content.onChange(() => {
     void updateWordCount()
-    refreshCatalogLater()
+    refreshTocLater()
     props.onChange?.()
     if (isMobile.value) {
       requestAnimationFrame(() => updateMobileScale())
     }
   })
 
-  editor.value.listener.on('pageSizeChange', (size: { width: number; height: number }) => {
+  editor.value.listener.page.onSizeChange((size: { width: number; height: number }) => {
     statusPageText.value = `共 ${Math.round(size.height / 1123) || 1} 页`
     props.onPageChange?.(Math.round(size.height / 1123) || 1)
     if (isMobile.value) {
@@ -406,10 +419,15 @@ const createEditor = () => {
     }
   })
 
-  editor.value.listener.on('pageScaleChange', (scale: number) => {
+  editor.value.listener.page.onScaleChange((scale: number) => {
     zoomText.value = `${Math.round(scale * 100)}%`
     props.onScaleChange?.(scale)
   })
+
+  editor.value.listener.request.onInsertImage(() => { insertImage() })
+  editor.value.listener.request.onInsertHyperlink(() => { showPopup('link') })
+  editor.value.listener.request.onInsertFormula(() => { showPopup('formula') })
+
 
   props.onReady?.(editor.value)
 }
@@ -457,11 +475,11 @@ const toggleDropdown = (name: string) => {
   activeDropdown.value = activeDropdown.value === name ? null : name
 }
 
-const showPopup = (name: 'table' | 'link' | 'search' | 'shortcuts' | 'catalog') => {
+const showPopup = (name: 'table' | 'link' | 'search' | 'shortcuts' | 'toc' | 'formula') => {
   closeDropdowns()
   activePopup.value = name
-  if (name === 'catalog') {
-    void loadAutoCatalog()
+  if (name === 'toc') {
+    void loadAutoToc()
   }
 }
 
@@ -480,58 +498,58 @@ const updateWordCount = async () => {
   statusWordsText.value = `${count} 字`
 }
 
-const refreshCatalog = async () => {
-  if (!catalogOpen.value) return
-  const catalog = await Promise.resolve(runCommand<CatalogItem[]>('getCatalog'))
-  catalogItems.value = Array.isArray(catalog) ? catalog : []
+const refreshToc = async () => {
+  if (!tocOpen.value) return
+  const toc = await Promise.resolve(runCommand<TocItem[]>('getToc'))
+  tocItems.value = Array.isArray(toc) ? toc : []
 }
 
-const loadAutoCatalog = async () => {
-  autoCatalogLoading.value = true
+const loadAutoToc = async () => {
+  autoTocLoading.value = true
   try {
-    const result = await Promise.resolve(runCommand<AutoCatalogResult>('getAutoCatalog'))
-    autoCatalogData.value = result || null
+    const result = await Promise.resolve(runCommand<AutoTocResult>('getAutoToc'))
+    autoTocData.value = result || null
   } catch {
-    autoCatalogData.value = null
+    autoTocData.value = null
   }
-  autoCatalogLoading.value = false
+  autoTocLoading.value = false
 }
 
-const autoCatalogPreview = computed<AutoCatalogItem[]>(() => {
-  if (!autoCatalogData.value) return []
-  if (autoCatalogType.value === 1) return autoCatalogData.value.catalog1
-  if (autoCatalogType.value === 2) return autoCatalogData.value.catalog2
-  return autoCatalogData.value.catalog3
+const autoTocPreview = computed<AutoTocItem[]>(() => {
+  if (!autoTocData.value) return []
+  if (autoTocType.value === 1) return autoTocData.value.toc1
+  if (autoTocType.value === 2) return autoTocData.value.toc2
+  return autoTocData.value.toc3
 })
 
-const confirmInsertCatalog = () => {
-  runCommand('executeInsertAutoCatalog', autoCatalogType.value)
+const confirmInsertToc = () => {
+  runCommand('executeInsertAutoToc', autoTocType.value)
   closePopup()
 }
 
-const refreshCatalogLater = (delay = 1000) => {
-  if (catalogRefreshTimer.value) {
-    window.clearTimeout(catalogRefreshTimer.value)
+const refreshTocLater = (delay = 1000) => {
+  if (tocRefreshTimer.value) {
+    window.clearTimeout(tocRefreshTimer.value)
   }
-  catalogRefreshTimer.value = window.setTimeout(() => {
-    void refreshCatalog()
+  tocRefreshTimer.value = window.setTimeout(() => {
+    void refreshToc()
   }, delay)
 }
 
-const toggleCatalog = (force?: boolean) => {
-  catalogOpen.value = typeof force === 'boolean' ? force : !catalogOpen.value
-  if (catalogOpen.value) {
-    refreshCatalogLater(0)
+const toggleToc = (force?: boolean) => {
+  tocOpen.value = typeof force === 'boolean' ? force : !tocOpen.value
+  if (tocOpen.value) {
+    refreshTocLater(0)
   }
 }
 
 
-const handleCatalogClick = (id?: string) => {
+const handleTocClick = (id?: string) => {
   if (id) {
-    runCommand('executeLocationCatalog', id)
+    runCommand('executeLocationToc', id)
   }
   if (isMobile.value) {
-    toggleCatalog(false)
+    toggleToc(false)
   }
 }
 
@@ -566,6 +584,18 @@ const confirmInsertLink = () => {
   if (!url) return
   const text = linkText.value.trim() || url
   runCommand('executeHyperlink', { type: 'hyperlink', value: text, url })
+  closePopup()
+}
+
+const confirmInsertFormula = () => {
+  const latex = formulaText.value.trim()
+  if (!latex) return
+  try {
+    const result = LaTexParticle.convertLaTextToSVG(latex)
+    runCommand('executeInsertLatex', { latex, svg: result.svg, width: result.width, height: result.height })
+  } catch {
+    // invalid latex, ignore
+  }
   closePopup()
 }
 
@@ -699,7 +729,7 @@ const handleImportDoc = () => {
           }
 
           await updateWordCount()
-          await refreshCatalog()
+          await refreshToc()
           handleSave()
         } catch (error) {
           console.error('导入失败:', error)
@@ -787,9 +817,9 @@ const handleGlobalKeyDown = (event: KeyboardEvent) => {
 }
 
 const destroyShell = () => {
-  if (catalogRefreshTimer.value) {
-    window.clearTimeout(catalogRefreshTimer.value)
-    catalogRefreshTimer.value = null
+  if (tocRefreshTimer.value) {
+    window.clearTimeout(tocRefreshTimer.value)
+    tocRefreshTimer.value = null
   }
   importModeResolver.value = null
   editor.value?.destroy()
@@ -805,7 +835,7 @@ let mobileResizeObserver: ResizeObserver | null = null
 onMounted(() => {
   createEditor()
   void updateWordCount()
-  refreshCatalogLater(600)
+  refreshTocLater(600)
   document.addEventListener('mousedown', handleGlobalMouseDown)
   document.addEventListener('keydown', handleGlobalKeyDown)
 

@@ -3,7 +3,7 @@
  */
 interface EditorCommand {
   /** 插入图片 */
-  executeImage: (payload: any) => void
+  executeInsertImage: (payload: any) => void
   /** 插入音频 */
   executeInsertAudio: (src: string, options: any) => void
   /** 插入视频 */
@@ -21,7 +21,7 @@ interface EditorInstance {
 /**
  * 媒体（图片/音频/视频）composable
  * @param options 配置项
- * @returns 图片、音频、视频插入方法
+ * @returns 包含图片、音频、视频插入方法的对象
  */
 export function useEditorMedia(options: {
   /** 获取编辑器实例 */
@@ -32,6 +32,7 @@ export function useEditorMedia(options: {
   /**
    * 插入图片，支持传入图片地址、配置对象或无参时弹出文件选择框
    * @param args 图片地址或配置对象，为空时从本地选择文件
+   * @returns 无返回值
    */
   function image(args: any) {
     const instance = getEditorInstance()
@@ -40,7 +41,7 @@ export function useEditorMedia(options: {
       if (typeof args === 'string') {
         const img = new Image()
         img.onload = () => {
-          instance.command.executeImage({
+          instance.command.executeInsertImage({
             value: args,
             width: img.width,
             height: img.height
@@ -63,7 +64,7 @@ export function useEditorMedia(options: {
             const dataUrl = evt.target?.result as string
             const img = new Image()
             img.onload = () => {
-              instance.command.executeImage({
+              instance.command.executeInsertImage({
                 value: dataUrl,
                 width: img.width,
                 height: img.height
@@ -81,6 +82,7 @@ export function useEditorMedia(options: {
   /**
    * 插入音频，支持传入音频地址、配置对象或无参时弹出文件选择框
    * @param args 音频地址或配置对象，为空时从本地选择文件
+   * @returns 无返回值
    */
   function audio(args?: any) {
     const instance = getEditorInstance()
@@ -117,6 +119,7 @@ export function useEditorMedia(options: {
   /**
    * 插入视频，支持传入视频地址、配置对象或无参时弹出文件选择框
    * @param args 视频地址或配置对象，为空时从本地选择文件
+   * @returns 无返回值
    */
   function video(args?: any) {
     const instance = getEditorInstance()

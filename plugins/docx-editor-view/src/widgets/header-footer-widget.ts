@@ -12,47 +12,69 @@
 
 import type { DocumentLayout } from '../layout-types'
 
+/** 文档区域类型：正文 / 页眉 / 页脚 */
 export type Zone = 'main' | 'header' | 'footer'
 
+/** 页码位置：左侧 / 居中 / 右侧 */
 export type PageNumberPosition = 'left' | 'center' | 'right'
+/** 页码样式：阿拉伯数字 / 大小写罗马 / 大小写字母 */
 export type PageNumberStyle = '1, 2, 3 ...' | 'I, II, III ...' | 'i, ii, iii ...' | 'A, B, C ...' | 'a, b, c ...'
 
+/** 插入页码的配置选项 */
 export interface PageNumberOptions {
+  /** 页码样式 */
   style: PageNumberStyle
+  /** 页码位置 */
   position: PageNumberPosition
 }
 
+/** HeaderFooterWidget 的依赖注入接口 */
 export interface HeaderFooterWidgetDeps {
+  /** 获取当前文档布局 */
   getLayout: () => DocumentLayout | null
+  /** 获取容器元素的矩形位置 */
   getContainerRect: () => DOMRect
+  /** 获取当前垂直滚动偏移 */
   getScrollY: () => number
+  /** 获取编辑区可视宽度 */
   getWrapperWidth: () => number
+  /** 获取水平滚动偏移 */
   getScrollLeft: () => number
+  /** 获取页面在容器中的水平偏移 */
   getPageOffsetX: () => number
+  /** 获取当前所处区域 */
   getZone: () => Zone
+  /** 设置当前所处区域 */
   setZone: (zone: Zone) => void
+  /** 让编辑区获取焦点 */
   focusInput: () => void
+  /** 绘制页眉/页脚区域虚线边框 */
   drawZoneBorder: (layout: DocumentLayout, scrollY: number, zone: 'header' | 'footer', pageOffsetX: number) => void
+  /** 插入页码回调（可选） */
   onInsertPageNumber?: (options: PageNumberOptions) => void
 }
 
+/** 页眉页脚交互 widget，负责双击进入/退出编辑、虚线边框、标签栏及插入页码面板 */
 export class HeaderFooterWidget {
-  // 左侧：页眉/页脚 - 第 N 节 + 关闭按钮
+  /** 左侧标签栏容器：页眉/页脚 - 第 N 节 */
   private labelEl: HTMLDivElement | null = null
+  /** 标签栏内的文本 span */
   private labelTextEl: HTMLSpanElement | null = null
 
-  // 居中：插入页码按钮
+  /** 居中的"插入页码"按钮 */
   private insertBtnEl: HTMLButtonElement | null = null
 
-  // 插入页码弹出面板
+  /** 插入页码弹出面板 */
   private popupEl: HTMLDivElement | null = null
+  /** 弹出面板是否可见 */
   private popupVisible = false
 
-  // 面板内当前选中的位置与样式
+  /** 面板内当前选中的页码位置 */
   private selectedPosition: PageNumberPosition = 'center'
+  /** 面板内当前选中的页码样式 */
   private selectedStyle: PageNumberStyle = '1, 2, 3 ...'
 
-  // 用于隐藏 popup 的外部点击监听
+  /** 点击面板外部时隐藏 popup 的全局 mousedown 监听 */
   private onDocumentMouseDown = (e: MouseEvent) => {
     if (!this.popupVisible) return
     const target = e.target as Node
@@ -61,10 +83,15 @@ export class HeaderFooterWidget {
     this.hidePopup()
   }
 
+  /**
+   * 创建 HeaderFooterWidget 实例
+   * @param deps 依赖注入对象
+   */
   constructor(private deps: HeaderFooterWidgetDeps) {}
 
   /* -------------------- 生命周期 -------------------- */
 
+  /** 创建所有 DOM 元素并绑定全局监听 */
   create(): void {
     this.createLabel()
     this.createInsertButton()
@@ -72,6 +99,7 @@ export class HeaderFooterWidget {
     document.addEventListener('mousedown', this.onDocumentMouseDown, true)
   }
 
+  /** 销毁 widget：移除全局监听与所有 DOM 元素并清理引用 */
   destroy(): void {
     document.removeEventListener('mousedown', this.onDocumentMouseDown, true)
     this.labelEl?.remove()
@@ -85,6 +113,7 @@ export class HeaderFooterWidget {
 
   /* -------------------- DOM 构建 -------------------- */
 
+  /** 创建左侧标签栏 DOM（页眉/页脚 - 第 N 节） */
   private createLabel(): void {
     const el = document.createElement('div')
     el.className = 'vervedocs-zone-label'
@@ -115,6 +144,7 @@ export class HeaderFooterWidget {
     document.body.appendChild(el)
   }
 
+  /** 创建居中"插入页码"按钮 DOM（含图标、文字、下拉箭头及悬停态） */
   private createInsertButton(): void {
     const btn = document.createElement('button')
     btn.className = 'vervedocs-zone-insert-pagenumber'
@@ -172,6 +202,7 @@ export class HeaderFooterWidget {
     document.body.appendChild(btn)
   }
 
+  /** 创建插入页码弹出面板 DOM（样式选择 + 位置预览 + 确定按钮） */
   private createPopup(): void {
     const popup = document.createElement('div')
     popup.className = 'ce-zone-pagenumber-menu'
@@ -398,6 +429,11 @@ export class HeaderFooterWidget {
     document.body.appendChild(popup)
   }
 
+  /**
+   * 更新位置项的选中高亮（占位方法，实际高亮逻辑已在 click 中处理）
+   * @param _items 所有位置项集合
+   * @param _current 当前点击的位置项
+   */
   private updatePositionSelection(
     _items: Array<{ value: PageNumberPosition; el: HTMLDivElement; preview: HTMLDivElement }>,
     _current: HTMLDivElement,
@@ -410,6 +446,8 @@ export class HeaderFooterWidget {
   /**
    * 处理 mousedown 事件中的双击页眉/页脚逻辑。
    * 返回 true 表示已处理（Draw 应跳过后续 hit/选词逻辑）。
+   * @param e 鼠标事件
+   * @returns 是否已处理该事件
    */
   handleMouseDown(e: MouseEvent): boolean {
     if (e.detail !== 2) return false
@@ -432,7 +470,11 @@ export class HeaderFooterWidget {
     return false
   }
 
-  /** 判断文档坐标 docY 落在哪个区域 */
+  /**
+   * 判断文档坐标 docY 落在哪个区域
+   * @param docY 文档纵向坐标
+   * @returns 命中的区域类型
+   */
   hitZone(docY: number): Zone {
     const layout = this.deps.getLayout()
     if (!layout) return 'main'
@@ -445,7 +487,9 @@ export class HeaderFooterWidget {
     return 'main'
   }
 
-  /** 渲染 zone 边框 + 更新标签栏（在 overlay clearOverlay 之后调用） */
+  /**
+   * 渲染 zone 边框 + 更新标签栏（在 overlay clearOverlay 之后调用）
+   */
   renderBorder(): void {
     const layout = this.deps.getLayout()
     const zone = this.deps.getZone()
@@ -468,6 +512,11 @@ export class HeaderFooterWidget {
     if (this.popupVisible) this.positionPopup()
   }
 
+  /**
+   * 更新左侧标签栏的位置与文本
+   * @param layout 文档布局
+   * @param zone 当前区域（header / footer）
+   */
   private updateLabel(layout: DocumentLayout, zone: 'header' | 'footer'): void {
     if (!this.labelEl || !this.labelTextEl) return
     const page = layout.pages[0]
@@ -495,6 +544,11 @@ export class HeaderFooterWidget {
     this.labelTextEl.textContent = zone === 'header' ? '页眉 - 第 1 节' : '页脚 - 第 1 节'
   }
 
+  /**
+   * 更新居中"插入页码"按钮的位置（横向居中于页面，纵向贴齐虚线）
+   * @param layout 文档布局
+   * @param zone 当前区域（header / footer）
+   */
   private updateInsertButton(layout: DocumentLayout, zone: 'header' | 'footer'): void {
     if (!this.insertBtnEl) return
     const page = layout.pages[0]
@@ -526,21 +580,25 @@ export class HeaderFooterWidget {
     this.insertBtnEl.style.top = `${top}px`
   }
 
+  /** 隐藏左侧标签栏 */
   private hideLabel(): void {
     if (this.labelEl) this.labelEl.style.display = 'none'
   }
 
+  /** 隐藏"插入页码"按钮 */
   private hideInsertButton(): void {
     if (this.insertBtnEl) this.insertBtnEl.style.display = 'none'
   }
 
   /* -------------------- 弹出面板 -------------------- */
 
+  /** 切换弹出面板的显示/隐藏状态 */
   private togglePopup(): void {
     if (this.popupVisible) this.hidePopup()
     else this.showPopup()
   }
 
+  /** 显示弹出面板并定位 */
   private showPopup(): void {
     if (!this.popupEl) return
     this.popupEl.style.display = 'block'
@@ -548,12 +606,14 @@ export class HeaderFooterWidget {
     this.positionPopup()
   }
 
+  /** 隐藏弹出面板 */
   private hidePopup(): void {
     if (!this.popupEl) return
     this.popupEl.style.display = 'none'
     this.popupVisible = false
   }
 
+  /** 根据按钮位置计算弹出面板坐标，含越界翻转处理 */
   private positionPopup(): void {
     if (!this.popupEl || !this.insertBtnEl) return
     const btnRect = this.insertBtnEl.getBoundingClientRect()

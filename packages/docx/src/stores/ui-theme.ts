@@ -35,8 +35,8 @@ interface UiThemeState {
 
 /**
  * 根据预设主题名获取对应的主题数据
- * @param preset 预设主题名
- * @returns 主题数据
+ * @param {PresetTheme} preset 预设主题名
+ * @returns {ThemeData} 主题数据
  */
 const presetToThemeData = (preset: PresetTheme): ThemeData => {
   if (preset === 'classic') {
@@ -102,6 +102,9 @@ const presetToThemeData = (preset: PresetTheme): ThemeData => {
   }
 }
 
+/**
+ * 默认 UI 主题状态
+ */
 const defaultState: UiThemeState = {
   kind: 'preset',
   preset: 'default',
@@ -114,12 +117,28 @@ const defaultState: UiThemeState = {
   }
 }
 
+/**
+ * 主题状态在 localStorage 中的存储键名
+ */
 const STORAGE_KEY = 'docx-editor:uiTheme'
 
+/**
+ * RGB 颜色三元组
+ */
 type RgbColor = { r: number, g: number, b: number }
 
+/**
+ * 将数值钳制到 0-255 整数范围
+ * @param {number} value 输入数值
+ * @returns {number} 钳制后的整数
+ */
 const clamp = (value: number) => Math.max(0, Math.min(255, Math.round(value)))
 
+/**
+ * 将十六进制颜色字符串解析为 RGB 三元组
+ * @param {string} hex 十六进制颜色字符串（支持 #RGB / #RRGGBB）
+ * @returns {RgbColor | null} 解析成功返回 RGB 对象，否则返回 null
+ */
 const parseHexToRgb = (hex: string): RgbColor | null => {
   const normalized = hex.trim()
   if (!/^#([\da-f]{3}|[\da-f]{6})$/i.test(normalized)) return null
@@ -134,10 +153,27 @@ const parseHexToRgb = (hex: string): RgbColor | null => {
   }
 }
 
+/**
+ * 将单个颜色通道值转换为两位十六进制字符串
+ * @param {number} value 通道数值
+ * @returns {string} 两位十六进制字符串
+ */
 const toHex = (value: number) => clamp(value).toString(16).padStart(2, '0')
 
+/**
+ * 将 RGB 三元组转换为十六进制颜色字符串
+ * @param {RgbColor} param0 RGB 三元组
+ * @returns {string} 形如 #rrggbb 的十六进制颜色字符串
+ */
 const rgbToHex = ({ r, g, b }: RgbColor) => `#${toHex(r)}${toHex(g)}${toHex(b)}`
 
+/**
+ * 按权重在两个十六进制颜色之间线性插值
+ * @param {string} source 源颜色（HEX）
+ * @param {string} target 目标颜色（HEX）
+ * @param {number} weight 插值权重（0-1）
+ * @returns {string} 混合后的十六进制颜色字符串，输入非法时返回 source
+ */
 const mixHexColor = (source: string, target: string, weight: number) => {
   const sourceRgb = parseHexToRgb(source)
   const targetRgb = parseHexToRgb(target)
@@ -151,6 +187,11 @@ const mixHexColor = (source: string, target: string, weight: number) => {
   })
 }
 
+/**
+ * 计算颜色的相对亮度（0-1）
+ * @param {string} color 十六进制颜色字符串
+ * @returns {number} 相对亮度值，输入非法时返回 0
+ */
 const getLuminance = (color: string) => {
   const rgb = parseHexToRgb(color)
   if (!rgb) return 0
@@ -159,8 +200,9 @@ const getLuminance = (color: string) => {
 
 /**
  * 将主题数据应用到根元素的 CSS 变量
- * @param theme 主题数据
- * @param kind 主题来源类型（preset 或 custom）
+ * @param {ThemeData} theme 主题数据
+ * @param {'preset' | 'custom'} kind 主题来源类型（preset 或 custom）
+ * @returns {void} 无返回值
  */
 function applyCssVars(theme: ThemeData, kind: 'preset' | 'custom') {
   const bg = theme.isGradient
@@ -214,14 +256,14 @@ function applyCssVars(theme: ThemeData, kind: 'preset' | 'custom') {
 
 /**
  * 创建 UI 主题状态存储
- * @returns UI 主题存储实例，包含只读 state 及主题切换/持久化方法
+ * @returns {UiThemeStore} UI 主题存储实例，包含只读 state 及主题切换/持久化方法
  */
 function createUiThemeStore() {
   const state = reactive<UiThemeState>({ ...defaultState })
 
   /**
    * 获取当前生效的主题数据
-   * @returns 当前主题数据
+   * @returns {ThemeData} 当前主题数据
    */
   function getCurrentThemeData(): ThemeData {
     return state.kind === 'custom' ? state.custom : presetToThemeData(state.preset)
@@ -229,6 +271,7 @@ function createUiThemeStore() {
 
   /**
    * 将当前主题应用到 CSS 变量
+   * @returns {void} 无返回值
    */
   function applyCurrent() {
     applyCssVars(getCurrentThemeData(), state.kind)
@@ -236,7 +279,8 @@ function createUiThemeStore() {
 
   /**
    * 切换到指定预设主题并持久化、应用
-   * @param preset 预设主题名
+   * @param {PresetTheme} preset 预设主题名
+   * @returns {void} 无返回值
    */
   function setPreset(preset: PresetTheme) {
     state.kind = 'preset'
@@ -247,7 +291,8 @@ function createUiThemeStore() {
 
   /**
    * 设置自定义主题并持久化、应用
-   * @param theme 自定义主题数据
+   * @param {ThemeData} theme 自定义主题数据
+   * @returns {void} 无返回值
    */
   function setCustom(theme: ThemeData) {
     state.kind = 'custom'
@@ -258,6 +303,7 @@ function createUiThemeStore() {
 
   /**
    * 将当前主题状态持久化到 localStorage
+   * @returns {void} 无返回值
    */
   function persist() {
     try {
@@ -269,6 +315,7 @@ function createUiThemeStore() {
 
   /**
    * 从 localStorage 加载主题状态并校验字段后写入 state
+   * @returns {void} 无返回值
    */
   function load() {
     try {
@@ -296,6 +343,7 @@ function createUiThemeStore() {
 
   /**
    * 初始化主题：从本地存储加载并应用当前主题
+   * @returns {void} 无返回值
    */
   function init() {
     load()

@@ -24,13 +24,19 @@ import { ParagraphWidget } from './widgets/paragraph-widget'
 import { HeaderFooterWidget, type Zone } from './widgets/header-footer-widget'
 import { RulerWidget } from './widgets/ruler-widget'
 
+/** Draw 门面依赖：装配文档、状态管理器与各类回调 */
 export interface DrawDeps {
+  /** 文档元数据 */
   document: IDocxDocumentMeta
+  /** 事件监听器（用于发射 page-count-change 等事件） */
   listener?: Listener
+  /** 事件总线 */
   eventBus?: EventBus
+  /** 选区管理器 */
   rangeManager?: RangeManager
   /** 键盘/输入时触发的回调（由 core 装配） */
   onInput?: (text: string) => void
+  /** 键盘事件回调（由 core 装配） */
   onKeyDown?: (e: KeyboardEvent) => void
   /** 每次 RAF 渲染完成后调用（用于驱动批注/修订 overlay 更新） */
   afterRender?: () => void
@@ -40,24 +46,47 @@ export interface DrawDeps {
   onZoneChange?: (zone: Zone) => void
 }
 
+/**
+ * 编辑器视图门面类：装配 LayoutEngine + CanvasRenderer + 各交互 widget，
+ * 对外提供文档/光标/选区/工具栏 API，对内调度排版、渲染、事件绑定。
+ */
 export class Draw {
+  /** 外层容器 DOM */
   private container: HTMLDivElement
+  /** 滚动包装层（绝对定位、自身溢出滚动） */
   private wrapper: HTMLDivElement
+  /** 撑起文档总高度的占位元素（驱动 wrapper 滚动） */
   private scroller: HTMLDivElement
+  /** canvas 三层宿主（pointer-events:none，覆盖 container 视口） */
   private canvasHost: HTMLDivElement
+  /** canvas 渲染器 */
   private renderer: CanvasRenderer
+  /** 排版引擎 */
   private engine: LayoutEngine
+  /** 最近一次排版结果 */
   private layout: DocumentLayout | null = null
 
+  /** 文档元数据 */
   private document: IDocxDocumentMeta
+  /** 编辑器选项 */
   private options: IEditorOption
+  /** 选区管理器 */
   private range?: RangeManager
+  /** 事件监听器 */
+  private listener?: Listener
 
+  /** 当前滚动 y（wrapper.scrollTop） */
   private scrollY = 0
+  /** 视口高度 */
   private viewportHeight = 0
+  /** 视口宽度 */
   private viewportWidth = 0
+  /** RAF 帧句柄 */
   private rafId: number | null = null
+  /** 当前 RAF 是否跳过 afterRender（滚动渲染时为 true，避免每帧生成缩略图） */
+  private _pendingSkipAfterRender = false
 
+  /** 容器尺寸观察器 */
   private ro?: ResizeObserver
 
   /** 上一帧的签名 -> block id，用于复用位图缓存 */
@@ -65,25 +94,36 @@ export class Draw {
 
   /** 隐藏 textarea：作为输入焦点与 IME 组合的宿主 */
   private inputEl!: HTMLTextAreaElement
+  /** IME 组合输入中标志 */
   private isComposing = false
 
-  /** 光标闪烁 */
+  /** 光标闪烁可见性 */
   private caretVisible = true
+  /** 光标闪烁定时器句柄 */
   private caretTimer: number | null = null
 
   /** 鼠标拖拽选区状态 */
   private isDragging = false
+  /** 拖拽锚点（按下位置） */
   private dragAnchor: IPosition | null = null
+  /** 拖拽过程中最近一次命中位置（RAF 节流） */
   private dragPendingPos: IPosition | null = null
+  /** 拖拽 RAF 句柄 */
   private dragRafId: number | null = null
 
+  /** 文本输入回调 */
   private onInput?: (text: string) => void
+  /** 键盘事件回调 */
   private onKeyDown?: (e: KeyboardEvent) => void
+  /** 渲染完成后回调 */
   private afterRender?: () => void
+  /** 命令回调（转发到 Command） */
   private onCommand?: (command: string, ...args: any[]) => void
 
   /** 悬浮选区工具栏 */
   private selectionToolbar: HTMLDivElement | null = null
+  /** 抑制下一次悬浮工具栏显示（段落手柄选中时用） */
+  private _suppressToolbar = false
 
   /** 当前编辑区域：正文 / 页眉 / 页脚 */
   private zone: Zone = 'main'
@@ -101,6 +141,12 @@ export class Draw {
   /** 标尺 widget */
   private rulerWidget: RulerWidget | null = null
 
+  /**
+   * 创建 Draw 视图门面：构建 DOM 骨架、装配渲染器/排版引擎/各 widget、绑定事件并首次渲染。
+   * @param container 外层容器 DOM
+   * @param options 编辑器选项
+   * @param deps 依赖装配（文档、状态、回调）
+   */
   constructor(container: HTMLDivElement, options: IEditorOption, deps: DrawDeps) {
     this.container = container
     this.options = options
@@ -111,7 +157,7 @@ export class Draw {
     this.afterRender = deps.afterRender
     this.onCommand = deps.onCommand
     this.onZoneChange = deps.onZoneChange
-    void deps.listener; void deps.eventBus
+    this.listener = deps.listener
 
     container.classList.add('vervedocs-container')
     // container 需要作为绝对定位的参照
@@ -126,7 +172,7 @@ export class Draw {
     this.wrapper.style.position = 'absolute'
     this.wrapper.style.inset = '0'
     this.wrapper.style.overflow = 'auto'
-    this.wrapper.style.background = '#f0f2f5'
+    this.wrapper.style.background = '#E2E2E2'
 
     // 撑起文档总高度的占位元素
     this.scroller = document.createElement('div')
@@ -162,7 +208,7 @@ export class Draw {
 
     // Range 变化时触发光标重绘 + 悬浮工具栏
     if (deps.listener && this.range) {
-      deps.listener.on('rangeChange', () => {
+      deps.listener.on('range-change', () => {
         this.caretVisible = true
         this.renderCaretIfAny()
         // 拖拽过程中不更新悬浮工具栏，等 mouseup 再触发，避免工具栏跟随拖拽闪烁
@@ -267,7 +313,8 @@ export class Draw {
         return Math.max(0, (wrapperWidth - (this.layout?.pageWidth ?? 0)) / 2) - scrollLeft
       },
       onCommand: (cmd: string, ...args: any[]) => { this.onCommand?.(cmd, ...args) },
-      hit: (clientX: number, clientY: number) => this.hit(clientX, clientY)
+      hit: (clientX: number, clientY: number) => this.hit(clientX, clientY),
+      suppressToolbar: () => { this._suppressToolbar = true }
     })
     this.paragraphWidget.create()
     this.rulerWidget = new RulerWidget({
@@ -294,6 +341,7 @@ export class Draw {
 
   /* -------------------- 输入 / 键盘事件 -------------------- */
 
+  /** 绑定编辑相关事件：鼠标点选/拖拽、右键菜单、键盘、IME 组合输入。 */
   private bindEditingEvents(): void {
     // 让 wrapper 可接收指针事件（canvasHost 为 pointer-events:none）
     this.wrapper.addEventListener('mousedown', this.onMouseDown)
@@ -329,6 +377,11 @@ export class Draw {
     })
   }
 
+  /**
+   * 鼠标按下处理：表格/图片/页眉页脚手柄优先；否则命中文档位置后处理
+   * Ctrl+点击跳转、双击选词、三击选段、Shift+扩展选区、普通点击+开始拖拽。
+   * @param e 鼠标事件
+   */
   private onMouseDown = (e: MouseEvent): void => {
     if (!this.range) return
     // 阻止 mousedown 默认行为抢走隐藏输入框的焦点
@@ -345,6 +398,11 @@ export class Draw {
 
     const pos = this.hit(e.clientX, e.clientY)
     if (!pos) { this.inputEl.focus(); return }
+    // Ctrl/Cmd + 单击：命中超链接则打开浏览器跳转（WPS 行为）
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.detail === 1) {
+      const url = this.findHyperlinkByPos(pos)
+      if (url) { window.open(url, '_blank', 'noopener'); return }
+    }
     // 三击：选段
     if (e.detail >= 3) { this.selectParagraphAt(pos); this.finishMouseSelect(); return }
     // 双击：选词
@@ -361,9 +419,20 @@ export class Draw {
     this.finishMouseSelect()
   }
 
+  /**
+   * 鼠标移动处理：非拖拽时按 hover 超链接切换光标；拖拽时 RAF 节流更新选区 focus。
+   * @param e 鼠标事件
+   */
   private onMouseMove = (e: MouseEvent): void => {
     this.tableWidget?.handleMouseMove(e)
-    if (!this.isDragging || !this.range || !this.dragAnchor || !this.layout) return
+    // 非拖拽时：hover 超链接显示手型，提示可 Ctrl+点击跳转
+    if (!this.isDragging) {
+      const pos = this.hit(e.clientX, e.clientY)
+      const url = pos ? this.findHyperlinkByPos(pos) : null
+      this.wrapper.style.cursor = url ? 'pointer' : 'text'
+      return
+    }
+    if (!this.range || !this.dragAnchor || !this.layout) return
     const pos = this.hit(e.clientX, e.clientY)
     if (!pos) return
     this.dragPendingPos = pos
@@ -378,6 +447,10 @@ export class Draw {
     }
   }
 
+  /**
+   * 鼠标松开处理：结束拖拽、清理 RAF、更新悬浮工具栏与各 widget。
+   * @param e 鼠标事件
+   */
   private onMouseUp = (e: MouseEvent): void => {
     this.tableWidget?.handleMouseUp(e)
     this.isDragging = false
@@ -391,6 +464,7 @@ export class Draw {
     this.paragraphWidget?.update()
   }
 
+  /** 鼠标选区结束收尾：聚焦隐藏输入框、重置光标可见性并重绘。 */
   private finishMouseSelect(): void {
     this.focusInput()
     this.caretVisible = true
@@ -399,6 +473,10 @@ export class Draw {
 
   /* -------------------- 右键菜单 -------------------- */
 
+  /**
+   * 右键菜单处理：优先交给图片/表格 widget 显示上下文菜单。
+   * @param e 鼠标事件
+   */
   private onContextMenu = (e: MouseEvent): void => {
     e.preventDefault()
     if (this.imageWidget?.showContextMenu(e.clientX, e.clientY)) return
@@ -408,6 +486,10 @@ export class Draw {
 
   /* -------------------- 双击选词 / 三击选段 -------------------- */
 
+  /**
+   * 双击选词：在命中 inline 内按 word char 边界扩展选区；非 word char 选当前单字。
+   * @param pos 命中位置
+   */
   private selectWordAt(pos: IPosition): void {
     if (!this.range || !this.layout) return
     const inl = this.findInlineByPos(pos)
@@ -430,6 +512,10 @@ export class Draw {
     })
   }
 
+  /**
+   * 三击选段：把选区扩展到命中段落的首 inline 起点到末 inline 终点。
+   * @param pos 命中位置
+   */
   private selectParagraphAt(pos: IPosition): void {
     if (!this.range || !this.layout) return
     const para = this.findParagraphByPos(pos)
@@ -449,6 +535,11 @@ export class Draw {
     })
   }
 
+  /**
+   * 按 position 在当前 layout 中查找所属 inline。
+   * @param pos 待定位位置
+   * @returns 命中的 InlineBox；未命中返回 null
+   */
   private findInlineByPos(pos: IPosition): InlineBox | null {
     if (!this.layout) return null
     for (const page of this.layout.pages) {
@@ -458,6 +549,12 @@ export class Draw {
     return null
   }
 
+  /**
+   * 在 block 列表中递归查找所属 inline（含表格单元格递归）。
+   * @param blocks 块列表
+   * @param pos 待定位位置
+   * @returns 命中的 InlineBox；未命中返回 null
+   */
   private findInlineInBlocks(blocks: BlockNode[], pos: IPosition): InlineBox | null {
     for (const b of blocks) {
       if (b.kind === 'paragraph') {
@@ -480,6 +577,11 @@ export class Draw {
     return null
   }
 
+  /**
+   * 按 position 在当前 layout 中查找所属段落块。
+   * @param pos 待定位位置
+   * @returns 命中的 ParagraphBlock；未命中返回 null
+   */
   private findParagraphByPos(pos: IPosition): ParagraphBlock | null {
     if (!this.layout) return null
     for (const page of this.layout.pages) {
@@ -489,6 +591,12 @@ export class Draw {
     return null
   }
 
+  /**
+   * 在 block 列表中递归查找所属段落块（含表格单元格递归）。
+   * @param blocks 块列表
+   * @param pos 待定位位置
+   * @returns 命中的 ParagraphBlock；未命中返回 null
+   */
   private findParagraphInBlocks(blocks: BlockNode[], pos: IPosition): ParagraphBlock | null {
     for (const b of blocks) {
       if (b.kind === 'paragraph') {
@@ -521,6 +629,10 @@ export class Draw {
     this.moveCaretVertical(1)
   }
 
+  /**
+   * 光标垂直移动：基于当前光标矩形，用 hitTest 命中上一/下一行同 x 最近字符。
+   * @param dir 移动方向，1=下移，-1=上移
+   */
   private moveCaretVertical(dir: 1 | -1): void {
     if (!this.layout || !this.range) return
     const pos = this.range.getFocus()
@@ -642,6 +754,11 @@ export class Draw {
     this.renderCaretIfAny()
   }
 
+  /**
+   * 按 position 在当前 layout 中查找所属行盒。
+   * @param pos 待定位位置
+   * @returns 命中的 LineBox；未命中返回 null
+   */
   private findLineByPos(pos: IPosition): LineBox | null {
     if (!this.layout) return null
     for (const page of this.layout.pages) {
@@ -651,6 +768,12 @@ export class Draw {
     return null
   }
 
+  /**
+   * 在 block 列表中递归查找所属行盒（含表格单元格递归）。
+   * @param blocks 块列表
+   * @param pos 待定位位置
+   * @returns 命中的 LineBox；未命中返回 null
+   */
   private findLineInBlocks(blocks: BlockNode[], pos: IPosition): LineBox | null {
     for (const b of blocks) {
       if (b.kind === 'paragraph') {
@@ -673,6 +796,10 @@ export class Draw {
     return null
   }
 
+  /**
+   * 查找文档首个 inline（用于光标兜底定位到文档首）。
+   * @returns 首个 InlineBox；空文档返回 null
+   */
   private findFirstInline(): InlineBox | null {
     if (!this.layout) return null
     for (const page of this.layout.pages) {
@@ -682,6 +809,11 @@ export class Draw {
     return null
   }
 
+  /**
+   * 在 block 列表中递归查找首个 inline（含表格单元格递归）。
+   * @param blocks 块列表
+   * @returns 首个 InlineBox；未命中返回 null
+   */
   private findFirstInlineInBlocks(blocks: BlockNode[]): InlineBox | null {
     for (const b of blocks) {
       if (b.kind === 'paragraph') {
@@ -700,6 +832,15 @@ export class Draw {
     return null
   }
 
+  /** 按 position 定位 inline，若属于超链接则返回其 URL（供 Ctrl+点击跳转） */
+  private findHyperlinkByPos(pos: IPosition): string | null {
+    return this.findInlineByPos(pos)?.hyperlink ?? null
+  }
+
+  /**
+   * 查找文档末个 inline（用于光标定位到文档尾/全选终点）。
+   * @returns 末个 InlineBox；空文档返回 null
+   */
   private findLastInline(): InlineBox | null {
     if (!this.layout) return null
     let last: InlineBox | null = null
@@ -709,6 +850,11 @@ export class Draw {
     return last
   }
 
+  /**
+   * 在 block 列表中递归遍历所有 inline，对每个 inline 调用回调（含表格单元格递归）。
+   * @param blocks 块列表
+   * @param onInline 每个 inline 的回调
+   */
   private findLastInlineInBlocks(blocks: BlockNode[], onInline: (inl: InlineBox) => void): void {
     for (const b of blocks) {
       if (b.kind === 'paragraph') {
@@ -742,6 +888,7 @@ export class Draw {
 
   /* -------------------- 光标闪烁 -------------------- */
 
+  /** 启动光标闪烁定时器（530ms 切换可见性）。 */
   private startCaretBlink(): void {
     if (this.caretTimer != null) return
     this.caretTimer = window.setInterval(() => {
@@ -750,6 +897,7 @@ export class Draw {
     }, 530) as unknown as number
   }
 
+  /** 重绘 overlay：zone 边框 + 选区高亮 + 光标（按 caretVisible 闪烁）。 */
   private renderCaretIfAny(): void {
     if (!this.layout || !this.range) return
     this.renderer.clearOverlay()
@@ -773,6 +921,12 @@ export class Draw {
     if (rect) this.renderer.drawCaret(rect.x, rect.y, rect.height, this.scrollY, this.caretVisible)
   }
 
+  /**
+   * 计算表格整表选区高亮矩形：当选区恰好覆盖整张表（首格到末格）时返回所有 cell 矩形，
+   * 否则返回 null（交由普通文本选区处理）。
+   * @param ordered 有序选区
+   * @returns 单元格矩形数组；非整表选区返回 null
+   */
   private computeTableSelectionRects(ordered: { start: IPosition; end: IPosition }): { x: number; y: number; width: number; height: number }[] | null {
     if (!this.layout) return null
     const { start, end } = ordered
@@ -811,6 +965,7 @@ export class Draw {
 
   /* -------------------- 悬浮选区工具栏 -------------------- */
 
+  /** 创建悬浮选区工具栏（字体/字号/B/I/U/S/颜色/高亮/对齐/清除格式）并挂载到容器。 */
   private createSelectionToolbar(): void {
     if (!this.onCommand) return
     const tb = document.createElement('div')
@@ -948,9 +1103,11 @@ export class Draw {
     this.selectionToolbar = tb
   }
 
+  /** 更新悬浮选区工具栏：折叠选区/表格内选区时隐藏，否则定位到选区起点上方并回显格式状态。 */
   private updateSelectionToolbar(): void {
     if (!this.selectionToolbar || !this.layout || !this.range) return
     const tb = this.selectionToolbar
+    if (this._suppressToolbar) { tb.style.display = 'none'; this._suppressToolbar = false; return }
     if (this.range.isCollapsed()) {
       tb.style.display = 'none'
       return
@@ -1026,13 +1183,28 @@ export class Draw {
 
   /* -------------------- 对外 API -------------------- */
 
+  /**
+   * 设置新文档并触发重排版+重渲染。
+   * @param doc 新文档元数据
+   */
   setDocument(doc: IDocxDocumentMeta): void {
+    if (!doc || !Array.isArray(doc.elements)) {
+      doc = { ...(doc ?? {}), elements: (doc as { elements?: unknown[] })?.elements ?? [] } as IDocxDocumentMeta
+    }
     this.document = doc
     this.reformatAndRender()
   }
 
+  /**
+   * 获取当前文档元数据。
+   * @returns 文档元数据
+   */
   getDocument(): IDocxDocumentMeta { return this.document }
 
+  /**
+   * 设置渲染缩放倍数并重排+重渲染。
+   * @param scale 缩放倍数
+   */
   setScale(scale: number): void {
     this.options.scale = scale
     this.engine.updateOptions(this.toLayoutOptions())
@@ -1040,10 +1212,20 @@ export class Draw {
     this.reformatAndRender()
   }
 
+  /**
+   * 设置标尺可见性。
+   * @param visible 是否可见
+   */
   setRulerVisible(visible: boolean): void {
     this.rulerWidget?.setVisible(visible)
   }
 
+  /**
+   * 实时更新图片尺寸（拖拽缩放时调用）并重排+重渲染。
+   * @param path 图片元素路径
+   * @param width 新宽度
+   * @param height 新高度
+   */
   updateImageSizeLive(path: Path, width: number, height: number): void {
     const el = getByPath(this.document.elements, path)
     if (!el || el.type !== 'image') return
@@ -1052,6 +1234,10 @@ export class Draw {
     this.reformatAndRender()
   }
 
+  /**
+   * 设置页边距并重排+重渲染。
+   * @param margins [top, right, bottom, left]
+   */
   setPaperMargins(margins: [number, number, number, number]): void {
     this.options.pageMargins = margins
     this.engine.updateOptions(this.toLayoutOptions())
@@ -1059,6 +1245,11 @@ export class Draw {
     this.reformatAndRender()
   }
 
+  /**
+   * 设置页面尺寸（宽/高）并重排+重渲染。
+   * @param width 页面宽度
+   * @param height 页面高度
+   */
   setPageSize(width: number, height: number): void {
     this.options.pageWidth = width
     this.options.pageHeight = height
@@ -1067,7 +1258,22 @@ export class Draw {
     this.reformatAndRender()
   }
 
+  /**
+   * 获取当前编辑器选项。
+   * @returns 编辑器选项
+   */
   getOptions(): IEditorOption { return this.options }
+
+  /**
+   * 批量更新编辑器选项并重排+重渲染。
+   * @param patch 选项补丁
+   */
+  updateOptions(patch: Partial<IEditorOption>): void {
+    Object.assign(this.options, patch)
+    this.engine.updateOptions(this.toLayoutOptions())
+    this.renderer.invalidateAll()
+    this.reformatAndRender()
+  }
 
   /** 打印：打开新窗口写入 canvas 图片 */
   print(): void {
@@ -1085,8 +1291,31 @@ export class Draw {
     w.print()
   }
 
+  /**
+   * 获取所有页面的缩略图图片（data URL）。
+   * 利用渲染器的 renderPageThumbnail 方法，为每页创建离屏 canvas 绘制内容并输出 PNG data URL。
+   * @returns 缩略图 data URL 数组，每个元素对应一页
+   */
+  getPageThumbnails(): string[] {
+    if (!this.layout) return []
+    const images: string[] = []
+    for (const page of this.layout.pages) {
+      const dataUrl = this.renderer.renderPageThumbnail(page, 0.7)
+      if (dataUrl) images.push(dataUrl)
+    }
+    return images
+  }
+
+  /**
+   * 获取最近一次排版结果。
+   * @returns 排版结果；未排版返回 null
+   */
   getLayout(): DocumentLayout | null { return this.layout }
 
+  /**
+   * 获取滚动占位元素（驱动 wrapper 滚动，批注/修订组件据此判断新架构）。
+   * @returns scroller DOM
+   */
   getScroller(): HTMLDivElement {
     // 打标记，让批注/修订组件的 _applyContainerWidth 跳过宽度覆盖
     ;(this.scroller as any).__vervedocsNewLayout = true
@@ -1168,6 +1397,19 @@ export class Draw {
     return result
   }
 
+  /**
+   * 遍历当前 layout，收集每个 revisionId 所对应的锚点坐标（文档绝对坐标）。
+   * 返回 Map<revisionId, { startX, startY, endX, endY, lineHeight, glyphHeight, startGlyphTop, endGlyphTop }>
+   */
+  getRevisionAnchorMap(): Map<string, { startX: number; startY: number; endX: number; endY: number; lineHeight: number; glyphHeight: number; startGlyphTop: number; endGlyphTop: number }> {
+    const result = new Map<string, { startX: number; startY: number; endX: number; endY: number; lineHeight: number; glyphHeight: number; startGlyphTop: number; endGlyphTop: number }>()
+    if (!this.layout) return result
+    for (const page of this.layout.pages) {
+      this.collectRevisionAnchors(page.blocks, page.contentRect.x, page.contentRect.y, result)
+    }
+    return result
+  }
+
   private collectGroupAnchors(
     blocks: BlockNode[],
     originX: number,
@@ -1219,6 +1461,71 @@ export class Draw {
     }
   }
 
+  private collectRevisionAnchors(
+    blocks: BlockNode[],
+    originX: number,
+    originY: number,
+    result: Map<string, { startX: number; startY: number; endX: number; endY: number; lineHeight: number; glyphHeight: number; startGlyphTop: number; endGlyphTop: number }>
+  ): void {
+    for (const b of blocks) {
+      if (b.kind === 'table') {
+        for (const row of b.rows) {
+          for (const cell of row.cells) {
+            const cx = originX + b.rect.x + cell.rect.x + cell.contentPaddingLeft
+            const cy = originY + b.rect.y + cell.rect.y + cell.contentPaddingTop + cell.verticalOffset
+            this.collectRevisionAnchors(cell.content, cx, cy, result)
+          }
+        }
+        continue
+      }
+      if (b.kind !== 'paragraph') continue
+      const bx = originX + b.rect.x
+      const by = originY + b.rect.y
+      for (const line of b.lines) {
+        for (const inl of line.inlines) {
+          const revisionId = (inl.run as any)?.revisionId
+          if (!revisionId) continue
+          const absX = bx + inl.x
+          const absY = by + line.y
+          const absEndX = absX + inl.width
+          const absEndY = absY + line.height
+          const glyphHeight = inl.size * 1.15
+          const absGlyphTop = absY + line.baseline - inl.size * 0.875
+          const existing = result.get(revisionId)
+          if (!existing) {
+            result.set(revisionId, {
+              startX: absX,
+              startY: absY,
+              endX: absEndX,
+              endY: absEndY,
+              lineHeight: line.height,
+              glyphHeight,
+              startGlyphTop: absGlyphTop,
+              endGlyphTop: absGlyphTop
+            })
+          } else {
+            if (absY < existing.startY || (absY === existing.startY && absX < existing.startX)) {
+              existing.startX = absX
+              existing.startY = absY
+              existing.startGlyphTop = absGlyphTop
+            }
+            if (absEndY > existing.endY || (absEndY === existing.endY && absEndX > existing.endX)) {
+              existing.endX = absEndX
+              existing.endY = absEndY
+              existing.endGlyphTop = absGlyphTop
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * 命中测试：把客户端坐标转为文档坐标并调用 hitTest。
+   * @param clientX 客户端 x
+   * @param clientY 客户端 y
+   * @returns 命中位置；未命中返回 null
+   */
   hit(clientX: number, clientY: number): IPosition | null {
     if (!this.layout) return null
     const rect = this.canvasHost.getBoundingClientRect()
@@ -1232,6 +1539,7 @@ export class Draw {
     return hitTest(this.layout, x, y)
   }
 
+  /** 销毁视图：解绑事件、断开 ResizeObserver、取消 RAF/定时器、销毁各 widget、移除 DOM。 */
   destroy(): void {
     this.wrapper.removeEventListener('scroll', this.onScroll)
     this.wrapper.removeEventListener('mousedown', this.onMouseDown)
@@ -1258,6 +1566,10 @@ export class Draw {
 
   /* -------------------- 内部 -------------------- */
 
+  /**
+   * 把编辑器选项映射为排版引擎选项。
+   * @returns 排版选项
+   */
   private toLayoutOptions(): LayoutOptions {
     return {
       pageWidth: Number(this.options.pageWidth ?? 794),
@@ -1271,7 +1583,11 @@ export class Draw {
     }
   }
 
+  /** 重排版+重渲染：格式化元素树 → 排版 → 复用 block id → 标脏 → 同步视觉 → 调度渲染。 */
   private reformatAndRender(): void {
+    if (!this.document || !Array.isArray(this.document.elements)) {
+      this.document = { ...this.document, elements: this.document?.elements ?? [] }
+    }
     formatElementTree(this.document.elements, { editorOptions: this.options })
     const headerElements = this.document.sections?.header
     const footerElements = this.document.sections?.footer
@@ -1284,7 +1600,7 @@ export class Draw {
     const dirty: number[] = []
     const walk = (blocks: BlockNode[]) => {
       for (const b of blocks) {
-        if (b.kind === 'paragraph' || b.kind === 'image' || b.kind === 'pageBreak') {
+        if (b.kind === 'paragraph' || b.kind === 'image' || b.kind === 'pageBreak' || b.kind === 'separator') {
           const sig = signBlock(b)
           const reusedId = this.lastSignatureToId.get(sig)
           if (reusedId != null) {
@@ -1308,6 +1624,7 @@ export class Draw {
 
     this.lastSignatureToId = nextSignatureToId
     this.layout = layout
+    this.listener?.emit('page-count-change', layout.pages.length)
 
     // scroller 撑起文档总高（页面居中通过 CSS margin:0 auto）
     this.scroller.style.height = `${layout.totalHeight}px`
@@ -1316,6 +1633,15 @@ export class Draw {
 
     if (dirty.length > 0) this.renderer.markDirty(dirty)
     this.updateVisualLayout()
+    // 光标兜底：若 range 尚未定位（首次渲染 / 之前是空文档），把光标置到文档首位，
+    // 避免"看不到光标 / 无法输入"。findFirstInline 在空文档兜底 run 上也能命中零宽 inline。
+    if (this.range && !this.range.getFocus()) {
+      const first = this.findFirstInline()
+      if (first) {
+        this.range.setCaret({ path: first.path, offset: first.startOffset })
+        this.caretVisible = true
+      }
+    }
     this.scheduleRender()
   }
 
@@ -1335,6 +1661,7 @@ export class Draw {
     this.rulerWidget?.update()
   }
 
+  /** 容器 resize 处理：更新视口尺寸、同步 renderer、刷新视觉布局并调度重渲染。 */
   private onResize = (): void => {
     const rect = this.container.getBoundingClientRect()
     this.viewportWidth = rect.width
@@ -1344,31 +1671,58 @@ export class Draw {
     this.scheduleRender()
   }
 
+  /** 滚动处理：更新 scrollY、刷新视觉布局与各 widget、发射当前页码变化事件。 */
   private onScroll = (): void => {
     this.scrollY = this.wrapper.scrollTop
     this.updateVisualLayout()
-    this.scheduleRender()
-    this.updateSelectionToolbar()
+    // 滚动渲染跳过 afterRender（避免每帧生成缩略图等重操作），widget 更新在 RAF 内完成
+    this.scheduleRender(true)
     this.tableWidget?.update()
     this.imageWidget?.update()
     this.paragraphWidget?.update()
+    // 发射当前页码变化
+    if (this.layout && this.listener) {
+      const midY = this.scrollY + this.wrapper.clientHeight / 2
+      for (const page of this.layout.pages) {
+        if (midY >= page.rect.y && midY < page.rect.y + page.rect.height) {
+          this.listener.emit('current-page-no-change', page.index)
+          break
+        }
+      }
+    }
   }
 
-  private scheduleRender(): void {
-    if (this.rafId != null) return
+  /**
+   * 调度一帧渲染：RAF 内执行 renderer.render + 光标/工具栏重绘 + afterRender 回调。
+   * @param skipAfterRender 是否跳过 afterRender 回调（滚动时传 true，避免每帧生成缩略图等重操作）
+   */
+  private scheduleRender(skipAfterRender = false): void {
+    if (this.rafId != null) {
+      if (skipAfterRender) this._pendingSkipAfterRender = true
+      return
+    }
+    this._pendingSkipAfterRender = skipAfterRender
     this.rafId = requestAnimationFrame(() => {
       this.rafId = null
       if (!this.layout) return
       this.renderer.render(this.layout, this.scrollY, this.viewportHeight)
       this.renderCaretIfAny()
       this.updateSelectionToolbar()
-      this.afterRender?.()
+      if (!this._pendingSkipAfterRender) {
+        this.afterRender?.()
+      }
+      this._pendingSkipAfterRender = false
     })
   }
 }
 
 /* -------------------- 块签名（用于跨帧复用 bitmap） -------------------- */
 
+/**
+ * 计算块的签名（用于跨帧复用 bitmap）：按块类型拼接关键字段为字符串。
+ * @param b 块
+ * @returns 块签名字符串
+ */
 function signBlock(b: BlockNode): string {
   if (b.kind === 'paragraph') return signParagraph(b)
   if (b.kind === 'image') {
@@ -1376,9 +1730,15 @@ function signBlock(b: BlockNode): string {
     return `img|${img.value ?? ''}|${b.rect.width}x${b.rect.height}|r${img.rotate ?? 0}|d${img.imgDisplay ?? 'block'}`
   }
   if (b.kind === 'pageBreak') return `pb|${b.parentPath.join('.')}|${b.indexInParent}`
+  if (b.kind === 'separator') return `sep|${b.parentPath.join('.')}|${b.indexInParent}|${b.rect.width}x${b.rect.height}`
   return `unk`
 }
 
+/**
+ * 计算段落块签名：拼接段落属性 + 各 inline 文本/字体/样式 + 项目符号 + 环绕图片关键字段。
+ * @param b 段落块
+ * @returns 段落签名字符串
+ */
 function signParagraph(b: ParagraphBlock): string {
   const attrs = b.block ?? (b.lines[0]?.inlines[0]?.run) ?? null
   const a = attrs as unknown as Record<string, unknown> | null

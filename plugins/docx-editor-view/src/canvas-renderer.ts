@@ -14,15 +14,20 @@
  */
 
 import type {
-  BlockNode, DocumentLayout,
-  ParagraphBlock, ImageBlock, TableBlock, InlineBox
+  BlockNode, DocumentLayout, PageLayout,
+  ParagraphBlock, ImageBlock, TableBlock, SeparatorBlock, InlineBox
 } from './layout-types'
 import type { IGroupColor } from '@vervedoc/docx-editor-schema'
 
+/** CanvasRenderer 渲染器配置选项 */
 export interface RendererOptions {
+  /** 设备像素比，用于高 DPI 屏幕清晰渲染 */
   dpr: number
+  /** 渲染缩放倍数 */
   scale: number
+  /** 页面背景色 */
   pageBg: string
+  /** 页面阴影颜色 */
   pageShadow: string
   /** 页面居中时相对 canvas 左侧的水平偏移（外部计算并传入） */
   pageOffsetX: number
@@ -38,39 +43,73 @@ export interface RendererOptions {
   activeGroupId?: string | null
 }
 
+/** 单条文本绘制命令（用于分桶合并绘制以减少 ctx.font 切换开销） */
 interface DrawCommand {
+  /** 字体字符串（CSS font 简写） */
   font: string
+  /** 文本颜色 */
   color: string
+  /** 绘制起点 x 坐标 */
   x: number
+  /** 绘制基线 y 坐标 */
   y: number
+  /** 待绘制文本内容 */
   text: string
+  /** 字符间距（两端对齐时使用，逐字绘制） */
   letterSpacing?: number
 }
 
+/** 块位图缓存条目：保存已渲染好的 OffscreenCanvas/HTMLCanvasElement 及其尺寸元信息 */
 interface BlockCache {
+  /** 块 id（与 BlockNode.id 对应） */
   id: number
+  /** 已渲染好的位图 */
   bitmap: HTMLCanvasElement
+  /** 位图 CSS 宽度 */
   width: number
+  /** 位图 CSS 高度 */
   height: number
+  /** 创建该位图时的 dpr（dpr 变化时需重建） */
   dpr: number
 }
 
+/**
+ * Canvas 渲染器：维护 background / content / overlay 三层 canvas，
+ * 负责 block 位图缓存、增量重绘、光标/选区/页眉页脚分隔线绘制。
+ */
 export class CanvasRenderer {
+  /** 背景层 canvas（绘制页面底色与阴影） */
   private bgCanvas: HTMLCanvasElement
+  /** 内容层 canvas（绘制 block 位图） */
   private contentCanvas: HTMLCanvasElement
+  /** 覆盖层 canvas（绘制光标、选区高亮、zone 分隔线） */
   private overlayCanvas: HTMLCanvasElement
+  /** 背景层 2d 上下文 */
   private bgCtx: CanvasRenderingContext2D
+  /** 内容层 2d 上下文 */
   private contentCtx: CanvasRenderingContext2D
+  /** 覆盖层 2d 上下文 */
   private overlayCtx: CanvasRenderingContext2D
 
+  /** canvas CSS 宽度（视口宽度） */
   private cssWidth = 0
+  /** canvas CSS 高度（视口高度） */
   private cssHeight = 0
+  /** 渲染器选项 */
   private opts: RendererOptions
 
+  /** 图片元素缓存（url -> HTMLImageElement） */
   private imageCache = new Map<string, HTMLImageElement>()
+  /** block 位图缓存（blockId -> BlockCache） */
   private blockCache = new Map<number, BlockCache>()
+  /** 待重建位图的 block id 集合 */
   private dirtyBlocks = new Set<number>()
 
+  /**
+   * 创建渲染器并挂载三层 canvas 到容器。
+   * @param container 宿主 DOM 容器，三层 canvas 绝对定位覆盖其内
+   * @param options 渲染选项（缺省字段使用默认值）
+   */
   constructor(private container: HTMLElement, options: Partial<RendererOptions> = {}) {
     this.opts = {
       dpr: options.dpr ?? (typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1),
@@ -91,6 +130,12 @@ export class CanvasRenderer {
     this.overlayCtx = this.overlayCanvas.getContext('2d')!
   }
 
+  /**
+   * 创建一个 canvas 图层并挂载到容器。
+   * @param name 图层名（写入 dataset.layer，便于调试与查找）
+   * @param z 图层 z-index（越大越上层）
+   * @returns 创建好的 canvas 元素
+   */
   private createLayer(name: string, z: number): HTMLCanvasElement {
     const c = document.createElement('canvas')
     c.dataset.layer = name
@@ -103,6 +148,11 @@ export class CanvasRenderer {
     return c
   }
 
+  /**
+   * 设置 canvas 视口尺寸（CSS 像素），同时按 dpr 调整物理像素与变换矩阵。
+   * @param cssWidth CSS 宽度
+   * @param cssHeight CSS 高度
+   */
   setSize(cssWidth: number, cssHeight: number): void {
     this.cssWidth = cssWidth
     this.cssHeight = cssHeight
@@ -123,6 +173,55 @@ export class CanvasRenderer {
     'pageOffsetX' | 'pageMargins' | 'showMarginRuler' | 'rulerColor' | 'pageBg' | 'pageShadow' | 'scale' | 'groupColors' | 'activeGroupId'
   >>): void {
     Object.assign(this.opts, patch)
+  }
+
+  /**
+   * 渲染单页缩略图到离屏 canvas 并返回 data URL。
+   * 创建临时 canvas（页面尺寸 × dpr），绘制白底背景 + 页面内容，输出 PNG data URL。
+   * @param page 页面布局信息
+   * @param quality PNG 压缩质量（0-1）
+   * @returns 缩略图 data URL；页面尺寸为 0 时返回空字符串
+   */
+  renderPageThumbnail(page: PageLayout, quality = 0.7): string {
+    if (page.rect.width === 0 || page.rect.height === 0) return ''
+    const dpr = this.opts.dpr
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(page.rect.width * dpr)
+    canvas.height = Math.round(page.rect.height * dpr)
+    const ctx = canvas.getContext('2d')!
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+
+    // 页面背景
+    ctx.fillStyle = this.opts.pageBg
+    ctx.fillRect(0, 0, page.rect.width, page.rect.height)
+
+    // 内容区原点（相对于页面左上角）
+    const contentOriginX = page.contentRect.x - page.rect.x
+    const contentOriginY = page.contentRect.y - page.rect.y
+    const aliveIds = new Set<number>()
+    for (const b of page.blocks) {
+      this.renderBlockOnMain(ctx, b, contentOriginX, contentOriginY, aliveIds)
+    }
+
+    // 页眉
+    if (page.headerBlocks && page.headerRect) {
+      const hx = page.headerRect.x - page.rect.x
+      const hy = page.headerRect.y - page.rect.y
+      for (const b of page.headerBlocks) {
+        this.renderBlockOnMain(ctx, b, hx, hy, aliveIds)
+      }
+    }
+
+    // 页脚
+    if (page.footerBlocks && page.footerRect) {
+      const fx = page.footerRect.x - page.rect.x
+      const fy = page.footerRect.y - page.rect.y
+      for (const b of page.footerBlocks) {
+        this.renderBlockOnMain(ctx, b, fx, fy, aliveIds)
+      }
+    }
+
+    return canvas.toDataURL('image/png', quality)
   }
 
   /** 标脏（下一帧只重建这些 block 的 bitmap） */
@@ -289,6 +388,14 @@ export class CanvasRenderer {
     this.dirtyBlocks.clear()
   }
 
+  /**
+   * 渲染单个 block 到主 content canvas：按需构建/复用位图，再 drawImage 落位。
+   * @param ctx 主 canvas 2d 上下文
+   * @param b 待渲染块
+   * @param originX 块所属内容区在 canvas 上的 x 原点
+   * @param originY 块所属内容区在 canvas 上的 y 原点（已应用 scrollY）
+   * @param aliveIds 收集本帧使用中的 block id，用于 GC 旧位图
+   */
   private renderBlockOnMain(
     ctx: CanvasRenderingContext2D,
     b: BlockNode,
@@ -300,6 +407,12 @@ export class CanvasRenderer {
     if (b.kind === 'pageBreak') return
     const bx = originX + b.rect.x
     const by = originY + b.rect.y
+
+    // 分割线：直接在主 canvas 上按样式画线（简单图形，不走 bitmap 缓存）
+    if (b.kind === 'separator') {
+      this.drawSeparator(ctx, b, bx, by)
+      return
+    }
 
     // table 不做整表 bitmap（cell 内容可能常变），直接递归绘制到主 canvas
     if (b.kind === 'table') {
@@ -329,6 +442,91 @@ export class CanvasRenderer {
     ctx.drawImage(bitmap, Math.round(bx), Math.round(by), b.rect.width, b.rect.height)
   }
 
+  /** 绘制分割线，按元素上的 lineType/lineWidth/dashArray/color 渲染 */
+  private drawSeparator(ctx: CanvasRenderingContext2D, b: SeparatorBlock, bx: number, by: number): void {
+    const anyBlock = b.block as unknown as Record<string, unknown>
+    const lineType = (anyBlock.lineType as string) || 'solid'
+    const lineWidth = Number(anyBlock.lineWidth ?? 1)
+    const dashArray = Array.isArray(anyBlock.dashArray) ? (anyBlock.dashArray as number[]) : [0, 0]
+    const color = (anyBlock.color as string) || '#9e9e9e'
+    const x0 = Math.round(bx)
+    const x1 = Math.round(bx + b.rect.width)
+    const cy = by + Math.round(b.rect.height / 2)
+
+    ctx.save()
+    ctx.strokeStyle = color
+    ctx.lineWidth = lineWidth
+    ctx.lineCap = 'butt'
+
+    if (lineType === 'wavy') {
+      // 波浪线：用正弦近似，振幅随线宽
+      const amp = Math.max(1.5, lineWidth * 1.5)
+      const wave = 6
+      ctx.beginPath()
+      for (let x = x0; x <= x1; x += 1) {
+        const y = cy + amp * Math.sin(((x - x0) / wave) * Math.PI)
+        if (x === x0) { ctx.moveTo(x, y) } else { ctx.lineTo(x, y) }
+      }
+      ctx.stroke()
+    } else if (lineType === 'double' || lineType === 'triple') {
+      const gap = Math.max(2, lineWidth + 1.5)
+      const lines = lineType === 'triple' ? [-gap, 0, gap] : [-gap / 2, gap / 2]
+      ctx.setLineDash(dashArray)
+      for (const off of lines) {
+        ctx.beginPath()
+        ctx.moveTo(x0, Math.round(cy + off) + 0.5)
+        ctx.lineTo(x1, Math.round(cy + off) + 0.5)
+        ctx.stroke()
+      }
+    } else if (lineType === 'shadow') {
+      // 阴影线：主线下方画一条浅色偏移线
+      ctx.beginPath()
+      ctx.moveTo(x0, Math.round(cy) + 0.5)
+      ctx.lineTo(x1, Math.round(cy) + 0.5)
+      ctx.stroke()
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)'
+      ctx.beginPath()
+      ctx.moveTo(x0, Math.round(cy + 1.5) + 0.5)
+      ctx.lineTo(x1, Math.round(cy + 1.5) + 0.5)
+      ctx.stroke()
+    } else if (lineType === 'emboss') {
+      // 浮雕线：上亮下暗
+      ctx.strokeStyle = 'rgba(255,255,255,0.8)'
+      ctx.beginPath()
+      ctx.moveTo(x0, Math.round(cy - 0.75) + 0.5)
+      ctx.lineTo(x1, Math.round(cy - 0.75) + 0.5)
+      ctx.stroke()
+      ctx.strokeStyle = 'rgba(0,0,0,0.5)'
+      ctx.beginPath()
+      ctx.moveTo(x0, Math.round(cy + 0.75) + 0.5)
+      ctx.lineTo(x1, Math.round(cy + 0.75) + 0.5)
+      ctx.stroke()
+    } else if (lineType === 'gradient') {
+      // 渐变线：左透明右实色
+      const grad = ctx.createLinearGradient(x0, 0, x1, 0)
+      grad.addColorStop(0, 'rgba(158,158,158,0)')
+      grad.addColorStop(1, color)
+      ctx.strokeStyle = grad
+      ctx.beginPath()
+      ctx.moveTo(x0, Math.round(cy) + 0.5)
+      ctx.lineTo(x1, Math.round(cy) + 0.5)
+      ctx.stroke()
+    } else {
+      // solid / dotted / dashed
+      ctx.setLineDash(dashArray)
+      ctx.beginPath()
+      ctx.moveTo(x0, Math.round(cy) + 0.5)
+      ctx.lineTo(x1, Math.round(cy) + 0.5)
+      ctx.stroke()
+    }
+    ctx.restore()
+  }
+
+  /**
+   * 为单个 block 构建独立位图（paragraph/image），返回新建的 canvas。
+   * @param b 待构建块（仅处理 paragraph/image，其它类型返回空 canvas）
+   * @returns 渲染好块内容的 canvas 元素
+   */
   private buildBlockBitmap(b: BlockNode): HTMLCanvasElement {
     const dpr = this.opts.dpr
     const w = Math.max(1, Math.ceil(b.rect.width))
@@ -374,6 +572,11 @@ export class CanvasRenderer {
     return color
   }
 
+  /**
+   * 将段落块绘制到目标 ctx：项目符号/编号 + 分桶文本 + 背景色 + 下划线/删除线。
+   * @param ctx 目标 2d 上下文
+   * @param b 段落块
+   */
   private drawParagraphInto(ctx: CanvasRenderingContext2D, b: ParagraphBlock): void {
     // 项目符号 / 编号（list 段落必有；title 段落若关联多级列表也会有）
     if (b.bulletText) {
@@ -465,6 +668,13 @@ export class CanvasRenderer {
     }
   }
 
+  /**
+   * 将图片块绘制到目标 ctx：异步加载图片，加载完成后触发重绘；支持 90/180/270 旋转。
+   * @param ctx 目标 2d 上下文
+   * @param b 图片块
+   * @param x 绘制左上角 x
+   * @param y 绘制左上角 y
+   */
   private drawImageInto(ctx: CanvasRenderingContext2D, b: ImageBlock, x: number, y: number): void {
     const url = String((b.block as unknown as { value?: string }).value ?? '')
     if (!url) return
@@ -505,6 +715,14 @@ export class CanvasRenderer {
     }
   }
 
+  /**
+   * 绘制表格块到主 canvas：依次绘制单元格背景色、单元格内容、统一边框（共享边去重）与斜线。
+   * @param ctx 主 canvas 2d 上下文
+   * @param b 表格块
+   * @param bx 表格左上角在 canvas 上的 x
+   * @param by 表格左上角在 canvas 上的 y
+   * @param aliveIds 收集本帧使用中的 block id，用于 GC
+   */
   private drawTable(
     ctx: CanvasRenderingContext2D,
     b: TableBlock,
@@ -618,6 +836,14 @@ export class CanvasRenderer {
 
   /* -------------------- 边距标尺（WPS 风格） -------------------- */
 
+  /**
+   * 绘制 WPS 风格四角边距标尺：内容区四角的角标朝外伸入页边距。
+   * @param ctx 背景 2d 上下文
+   * @param px 页面左上角 x
+   * @param py 页面左上角 y
+   * @param pw 页面宽度
+   * @param ph 页面高度
+   */
   private drawMarginRuler(
     ctx: CanvasRenderingContext2D,
     px: number, py: number, pw: number, ph: number
@@ -650,6 +876,13 @@ export class CanvasRenderer {
 
   /* -------------------- overlay: 旧接口（保留兼容） -------------------- */
 
+  /**
+   * 简易光标绘制（旧接口，保留兼容）：清空 overlay 后绘制一条竖线。
+   * @param x 光标 x
+   * @param y 光标顶部 y
+   * @param height 光标高度
+   * @param color 光标颜色，默认 '#000000'
+   */
   drawCaretSimple(x: number, y: number, height: number, color = '#000000'): void {
     const ctx = this.overlayCtx
     ctx.clearRect(0, 0, this.cssWidth, this.cssHeight)
@@ -664,18 +897,38 @@ export class CanvasRenderer {
 
 /* -------------------- 工具 -------------------- */
 
+/**
+ * 由 inline 拼出 CSS font 字符串（含粗细、斜体、字号、字体族）。
+ * @param inl inline 元数据
+ * @returns CSS font 简写字符串
+ */
 function fontOf(inl: InlineBox): string {
   const w = inl.bold ? '700' : '400'
   const s = inl.italic ? 'italic ' : ''
   return `${s}${w} ${inl.size}px ${inl.font}`
 }
 
+/**
+ * 将绘制命令按 key 推入分桶，便于后续按相同 font/color 批量绘制。
+ * @param buckets 桶映射
+ * @param key 桶键（通常为 font||color）
+ * @param cmd 待加入的绘制命令
+ */
 function addBucket(buckets: Map<string, DrawCommand[]>, key: string, cmd: DrawCommand): void {
   let list = buckets.get(key)
   if (!list) { list = []; buckets.set(key, list) }
   list.push(cmd)
 }
 
+/**
+ * 绘制一条带样式的边：支持 solid/dashed/dotted/double，并对奇数宽度做 0.5px 像素对齐。
+ * @param ctx 目标 2d 上下文
+ * @param x1 起点 x
+ * @param y1 起点 y
+ * @param x2 终点 x
+ * @param y2 终点 y
+ * @param side 边样式（宽/色/风格）
+ */
 function strokeSide(
   ctx: CanvasRenderingContext2D,
   x1: number, y1: number, x2: number, y2: number,

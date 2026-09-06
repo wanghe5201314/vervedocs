@@ -1,3 +1,4 @@
+/** SVG 命名空间常量，用于创建 SVG 元素 */
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
 /**
@@ -13,6 +14,8 @@ export function createBalloonArrow(color = '#fff'): HTMLDivElement {
 
 /**
  * 清空 SVG 子元素
+ * @param svg 待清空的 SVG 容器元素
+ * @returns 无返回值
  */
 export function clearSvg(svg: SVGSVGElement): void {
   while (svg.firstChild) svg.removeChild(svg.firstChild)
@@ -23,6 +26,7 @@ export function clearSvg(svg: SVGSVGElement): void {
  * @param svg SVG 容器
  * @param anchor 锚点坐标
  * @param color 标记颜色
+ * @returns 无返回值
  */
 export function renderActiveHighlight(
   svg: SVGSVGElement,

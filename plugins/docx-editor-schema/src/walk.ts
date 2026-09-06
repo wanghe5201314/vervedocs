@@ -10,8 +10,14 @@ import type { IElement, Path, PathSegment, IPosition, ITableElement, ITd, ITr } 
 
 /* -------------------- 深拷贝 -------------------- */
 
+/** rfdc 深拷贝实例（关闭原型拷贝与循环引用检测以提升性能） */
 const _clone = rfdc({ proto: false, circles: false })
 
+/**
+ * 深拷贝树节点。
+ * @param node 待拷贝的节点
+ * @returns 拷贝后的新节点（基本类型直接返回）
+ */
 export function cloneTree<T>(node: T): T {
   if (node === null || typeof node !== 'object') return node
   return _clone(node)
@@ -19,22 +25,37 @@ export function cloneTree<T>(node: T): T {
 
 /* -------------------- 类型守卫 -------------------- */
 
+/**
+ * 判断元素是否为段落容器（title/list 且拥有 valueList 数组）。
+ * @param el 待判断元素
+ * @returns 是段落容器则返回 true，并收窄类型
+ */
 export function isParagraphContainer(el: IElement): el is IElement & { valueList: IElement[] } {
   return (el?.type === 'title' || el?.type === 'list') && Array.isArray((el as { valueList?: unknown }).valueList)
 }
 
+/**
+ * 判断元素是否为表格（type='table' 且拥有 trList 数组）。
+ * @param el 待判断元素
+ * @returns 是表格则返回 true，并收窄类型
+ */
 export function isTable(el: IElement): el is ITableElement {
   return el?.type === 'table' && Array.isArray((el as ITableElement).trList)
 }
 
 /* -------------------- 访问器 -------------------- */
 
+/** 遍历上下文：携带父节点、路径与索引信息 */
 export interface VisitContext {
+  /** 父节点（数组或单个元素，根数组时为 null） */
   parent: IElement[] | IElement | null
+  /** 当前节点路径 */
   path: Path
+  /** 在父容器中的索引 */
   index: number
 }
 
+/** 访问者函数类型：返回 false 可跳过当前节点的子树 */
 export type Visitor = (node: IElement, ctx: VisitContext) => void | boolean
 
 /**
@@ -86,6 +107,12 @@ export function getByPath(root: IElement[], path: Path): IElement | null {
   return (current as IElement) ?? null
 }
 
+/**
+ * 获取路径末段对应的父容器数组。
+ * @param root 根元素数组
+ * @param path 目标路径
+ * @returns 父容器数组；若路径非法或末段不是数组索引则返回 null
+ */
 export function getParentContainer(root: IElement[], path: Path): IElement[] | null {
   if (path.length === 0) return null
   const parentPath = path.slice(0, -1)
@@ -104,6 +131,13 @@ export function getParentContainer(root: IElement[], path: Path): IElement[] | n
   return Array.isArray(current) ? (current as IElement[]) : null
 }
 
+/**
+ * 在路径指定位置替换节点。
+ * @param root 根元素数组
+ * @param path 目标路径
+ * @param node 新节点
+ * @returns 替换成功返回 true，路径非法返回 false
+ */
 export function replaceAtPath(root: IElement[], path: Path, node: IElement): boolean {
   const parent = getParentContainer(root, path)
   if (!parent) return false
@@ -112,6 +146,13 @@ export function replaceAtPath(root: IElement[], path: Path, node: IElement): boo
   return true
 }
 
+/**
+ * 在路径指定位置插入节点（插入到该索引前）。
+ * @param root 根元素数组
+ * @param path 目标路径
+ * @param node 待插入节点
+ * @returns 插入成功返回 true，路径非法返回 false
+ */
 export function insertAtPath(root: IElement[], path: Path, node: IElement): boolean {
   const parent = getParentContainer(root, path)
   if (!parent) return false
@@ -120,6 +161,12 @@ export function insertAtPath(root: IElement[], path: Path, node: IElement): bool
   return true
 }
 
+/**
+ * 移除路径指定位置的节点。
+ * @param root 根元素数组
+ * @param path 目标路径
+ * @returns 被移除的节点；路径非法返回 null
+ */
 export function removeAtPath(root: IElement[], path: Path): IElement | null {
   const parent = getParentContainer(root, path)
   if (!parent) return null
@@ -130,12 +177,24 @@ export function removeAtPath(root: IElement[], path: Path): IElement | null {
 
 /* -------------------- 位置工具 -------------------- */
 
+/**
+ * 判断两条路径是否完全相同。
+ * @param a 路径 a
+ * @param b 路径 b
+ * @returns 相同返回 true
+ */
 export function isSamePath(a: Path, b: Path): boolean {
   if (a.length !== b.length) return false
   for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false
   return true
 }
 
+/**
+ * 比较两条路径的字典序（数字段按数值比较，字符串段按字符串比较）。
+ * @param a 路径 a
+ * @param b 路径 b
+ * @returns a<b 返回负数，a=b 返回 0，a>b 返回正数
+ */
 export function comparePath(a: Path, b: Path): number {
   const n = Math.min(a.length, b.length)
   for (let i = 0; i < n; i++) {
@@ -147,6 +206,12 @@ export function comparePath(a: Path, b: Path): number {
   return a.length - b.length
 }
 
+/**
+ * 比较两个文档位置：先比较路径，路径相同再比较 offset。
+ * @param a 位置 a
+ * @param b 位置 b
+ * @returns a<b 返回负数，a=b 返回 0，a>b 返回正数
+ */
 export function comparePosition(a: IPosition, b: IPosition): number {
   const c = comparePath(a.path, b.path)
   if (c !== 0) return c
@@ -155,6 +220,11 @@ export function comparePosition(a: IPosition, b: IPosition): number {
 
 /* -------------------- 表格辅助 -------------------- */
 
+/**
+ * 遍历表格所有单元格，对每个单元格调用回调。
+ * @param table 表格元素
+ * @param fn 回调函数，接收单元格、行、行索引、列索引
+ */
 export function forEachCell(
   table: ITableElement,
   fn: (cell: ITd, tr: ITr, trIndex: number, tdIndex: number) => void

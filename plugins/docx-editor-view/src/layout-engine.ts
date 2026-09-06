@@ -19,38 +19,63 @@ import type {
 import { splitParagraphs, FONT_FAMILY_CSS } from '@vervedoc/docx-editor-schema'
 import type {
   DocumentLayout, PageLayout, BlockNode, ParagraphBlock,
-  ImageBlock, PageBreakBlock, TableBlock, TableRowLayout, TableCellLayout,
+  ImageBlock, PageBreakBlock, SeparatorBlock, TableBlock, TableRowLayout, TableCellLayout,
   LineBox, InlineBox, Rect
 } from './layout-types'
 import { TextMeasure, getSharedMeasure } from './text-measure'
 import { resolveBullet, BULLET_FONT_STACK, BULLET_FONT_STACK_FALLBACK, detectWingdings } from './list-bullet'
 
+/** 排版引擎配置选项 */
 export interface LayoutOptions {
+  /** 页面宽度（CSS 像素） */
   pageWidth: number
+  /** 页面高度（CSS 像素） */
   pageHeight: number
+  /** 页边距 [top, right, bottom, left] */
   pageMargins: [number, number, number, number]   // top, right, bottom, left
+  /** 默认字体族名 */
   defaultFont: string
+  /** 默认字号 */
   defaultSize: number
+  /** 默认行高倍数 */
   defaultLineHeight: number
+  /** 渲染缩放倍数 */
   scale: number
   /** 页首/尾垂直空白（渲染视觉上把纸张与边界隔开） */
   pageGap: number
 }
 
+/** 块 id 自增序列（跨 layout 调用持续递增，保证全局唯一） */
 let _blockSeq = 0
+/** 取下一个全局唯一的 block id。 */
 function nextBlockId(): number { return ++_blockSeq }
 
+/**
+ * 文档排版引擎：把 IElement[] 排版成分页 DocumentLayout，
+ * 处理段落折行、列表编号、表格跨行/跨页、图片环绕等。
+ */
 export class LayoutEngine {
+  /** 文本度量器（计算字符/文本宽度） */
   private measure: TextMeasure
+  /** 排版选项 */
   private opts: LayoutOptions
   /** 跨列表的多级编号计数器（每次 layout() 重置） */
   private counters = new Map<string, number>()
 
+  /**
+   * 创建排版引擎。
+   * @param options 排版选项
+   * @param measure 文本度量器，缺省时使用共享实例
+   */
   constructor(options: LayoutOptions, measure?: TextMeasure) {
     this.opts = options
     this.measure = measure ?? getSharedMeasure()
   }
 
+  /**
+   * 更新排版选项（不立即触发重排，由调用方决定何时 layout()）。
+   * @param options 新的排版选项
+   */
   updateOptions(options: LayoutOptions): void {
     this.opts = options
   }
@@ -219,6 +244,17 @@ export class LayoutEngine {
           indexInParent: g.start,
           rect: { x: 0, y: 0, width: availableWidth, height: 0 }
         } as PageBreakBlock)
+      } else if (g.kind === 'separator') {
+        // 分割线：独立块，高度含上下间距（各 6px）+ 线宽 1px
+        const sepHeight = 13
+        blocks.push({
+          kind: 'separator',
+          id: nextBlockId(),
+          block: g.block as IElement,
+          parentPath,
+          indexInParent: g.start,
+          rect: { x: 0, y: 0, width: availableWidth, height: sepHeight }
+        } as SeparatorBlock)
       } else {
         const kind: ParagraphBlock['paragraphKind'] = g.kind === 'normal' ? 'normal' : g.kind
         const runsParentPath: Path = (kind === 'normal')
@@ -240,6 +276,12 @@ export class LayoutEngine {
     return blocks
   }
 
+  /**
+   * 将单个段落（normal/title/list）排版为 ParagraphBlock：解析段落属性、计算项目符号、
+   * 折行、行高、行内定位、rowFlex 对齐，并产出 inline 列表。
+   * @param input 段落排版输入（类型/容器/runs/路径/可用宽度等）
+   * @returns 段落块（含 lines/inlines 与 rect）
+   */
   private layoutParagraph(input: {
     paragraphKind: ParagraphBlock['paragraphKind']
     block: IElement | null
@@ -433,8 +475,23 @@ export class LayoutEngine {
     }
 
     for (let ri = 0; ri < runs.length; ri++) {
-      const run = runs[ri]
-      if (run.type !== 'text') continue
+      const rawRun = runs[ri]
+      // 超链接：把 valueList 文本拼成等价 text run，标记 URL，渲染为蓝色下划线
+      let hyperlinkUrl: string | undefined
+      let run: IElement = rawRun
+      if (rawRun.type === 'hyperlink') {
+        const vl = (rawRun as unknown as { valueList?: IElement[] }).valueList ?? []
+        const text = vl.map(r => String((r as unknown as { value?: string }).value ?? '')).join('')
+        hyperlinkUrl = String((rawRun as unknown as { value?: string }).value ?? '')
+        const base = (vl[0] as unknown as Record<string, unknown>) ?? {}
+        run = {
+          type: 'text', value: text,
+          font: base.font, size: base.size, bold: base.bold, italic: base.italic,
+          color: '#0563C1', underline: true
+        } as unknown as IElement
+      } else if (rawRun.type !== 'text') {
+        continue
+      }
       const anyRun = run as unknown as Record<string, unknown>
       const rawFont = String(anyRun.font ?? this.opts.defaultFont)
       const font = FONT_FAMILY_CSS[rawFont] ?? rawFont
@@ -514,7 +571,8 @@ export class LayoutEngine {
           strikeout,
           underline,
           baseline: 0,
-          groupIds
+          groupIds,
+          hyperlink: hyperlinkUrl
         }
         currentInlines.push(inline)
         currentLineWidth += segWidth
@@ -625,6 +683,14 @@ export class LayoutEngine {
     }
   }
 
+  /**
+   * 将图片元素排版为 ImageBlock：根据 width/height/rotate 计算占位尺寸与水平对齐位置。
+   * @param el 图片元素
+   * @param parentPath 父容器路径
+   * @param index 在父容器中的索引
+   * @param availableWidth 可用宽度（用于对齐计算）
+   * @returns 图片块
+   */
   private layoutImage(el: IElement, parentPath: Path, index: number, availableWidth: number): ImageBlock {
     const anyEl = el as unknown as Record<string, unknown>
     const w = Math.max(1, Number(anyEl.width ?? 200))
@@ -650,6 +716,15 @@ export class LayoutEngine {
     }
   }
 
+  /**
+   * 将表格元素排版为 TableBlock：计算列宽、rowspan 占用矩阵、各行高、单元格内容排版、
+   * 跨行 cell 撑高与垂直对齐。
+   * @param table 表格元素
+   * @param parentPath 父容器路径
+   * @param index 在父容器中的索引
+   * @param availableWidth 可用宽度
+   * @returns 表格块
+   */
   private layoutTable(
     table: ITableElement,
     parentPath: Path,
@@ -1020,12 +1095,24 @@ export class LayoutEngine {
 
 /* -------------------- 工具 -------------------- */
 
+/**
+ * 数组前 upto 项求和。
+ * @param arr 数值数组
+ * @param upto 求和上界（不含）
+ * @returns 前 upto 项之和
+ */
 function sumUp(arr: number[], upto: number): number {
   let s = 0
   for (let i = 0; i < upto; i++) s += arr[i]
   return s
 }
 
+/**
+ * 对单行 inline 列表应用水平对齐：left/center/right 直接平移；
+ * justify/alignment 将剩余空白均分到字符间隙（仅非末行）。
+ * @param line 行盒
+ * @param containerWidth 容器可用宽度
+ */
 function applyRowFlex(line: LineBox, containerWidth: number): void {
   const used = line.inlines.reduce((s, inl) => s + inl.width, 0)
   const free = containerWidth - used

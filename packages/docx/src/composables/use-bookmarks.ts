@@ -14,9 +14,16 @@ export interface BookmarkItem {
   collapsed?: boolean
 }
 
+/** 默认书签名称，当无可用选区文本时使用 */
 const DEFAULT_BOOKMARK_NAME = '书签'
+/** 书签名称最大长度限制 */
 const MAX_BOOKMARK_NAME_LENGTH = 12
 
+/**
+ * 规范化书签名称：移除零宽空格、空白字符及非单词/非中文字符，并截断到最大长度
+ * @param {string} text 原始文本
+ * @returns {string} 处理后的合法书签名称
+ */
 function sanitizeBookmarkName(text: string): string {
   return text
     .replace(/\u200B/g, '')
@@ -25,17 +32,34 @@ function sanitizeBookmarkName(text: string): string {
     .slice(0, MAX_BOOKMARK_NAME_LENGTH)
 }
 
+/**
+ * 书签管理 API 接口
+ */
 export interface IBookmarkApi {
+  /** 书签列表 */
   bookmarkList: Ref<BookmarkItem[]>
+  /** 建议的书签名称（基于当前选区文本） */
   suggestedBookmarkName: Ref<string>
+  /** 书签选区预览文本 */
   bookmarkSelectionPreview: Ref<string>
+  /** 当前是否存在有效的书签选区范围 */
   hasBookmarkSelectionRange: Ref<boolean>
+  /** 刷新书签列表 */
   refresh(): void
+  /** 添加书签 */
   add(name: string): void
+  /** 删除书签 */
   remove(name: string): void
+  /** 定位到指定书签 */
   locate(name: string): void
 }
 
+/**
+ * 确保书签名称唯一：若基础名称已存在，则追加递增数字后缀
+ * @param {string} baseName 基础书签名称
+ * @param {Set<string>} names 已存在的书签名称集合
+ * @returns {string} 唯一的书签名称
+ */
 function ensureUniqueBookmarkName(baseName: string, names: Set<string>): string {
   const normalizedBase = baseName || DEFAULT_BOOKMARK_NAME
   if (!names.has(normalizedBase)) return normalizedBase
@@ -56,19 +80,23 @@ export function useBookmarks(options: {
   /** 获取编辑器实例 */
   getEditorInstance: () => {
     command?: {
-      getBookmarks?: () => unknown
+      getBookmarks: () => unknown
       getRangeContext?: () => any
-      executeAddBookmark?: (payload: { name: string }) => void
-      executeDeleteBookmark?: (payload: { name: string }) => void
-      executeGotoBookmark?: (payload: { name: string }) => void
+      executeAddBookmark: (payload: { name: string }) => void
+      executeDeleteBookmark: (payload: { name: string }) => void
+      executeGotoBookmark: (payload: { name: string }) => void
     }
   } | null
 }) {
   const { getEditorInstance } = options
 
+  /** 书签列表 */
   const bookmarkList = ref<BookmarkItem[]>([])
+  /** 建议的书签名称 */
   const suggestedBookmarkName = ref(DEFAULT_BOOKMARK_NAME)
+  /** 书签选区预览文本 */
   const bookmarkSelectionPreview = ref('')
+  /** 当前是否存在有效的书签选区范围 */
   const hasBookmarkSelectionRange = ref(false)
 
   /**
@@ -76,7 +104,7 @@ export function useBookmarks(options: {
    */
   function refreshBookmarks() {
     const instance = getEditorInstance()
-    const bookmarks = instance?.command?.getBookmarks?.()
+    const bookmarks = instance?.command?.getBookmarks()
     if (!Array.isArray(bookmarks)) {
       bookmarkList.value = []
       suggestedBookmarkName.value = DEFAULT_BOOKMARK_NAME
@@ -115,7 +143,7 @@ export function useBookmarks(options: {
    */
   function add(name: string) {
     const instance = getEditorInstance()
-    instance?.command?.executeAddBookmark?.({ name })
+    instance?.command?.executeAddBookmark({ name })
     nextTick(() => refreshBookmarks())
   }
 
@@ -125,7 +153,7 @@ export function useBookmarks(options: {
    */
   function remove(name: string) {
     const instance = getEditorInstance()
-    instance?.command?.executeDeleteBookmark?.({ name })
+    instance?.command?.executeDeleteBookmark({ name })
     nextTick(() => refreshBookmarks())
   }
 
@@ -135,9 +163,10 @@ export function useBookmarks(options: {
    */
   function locate(name: string) {
     const instance = getEditorInstance()
-    instance?.command?.executeGotoBookmark?.({ name })
+    instance?.command?.executeGotoBookmark({ name })
   }
 
+  /** 书签管理 API 对象，聚合书签列表与增删改查方法 */
   const bookmarkAPI: IBookmarkApi = {
     bookmarkList,
     suggestedBookmarkName,

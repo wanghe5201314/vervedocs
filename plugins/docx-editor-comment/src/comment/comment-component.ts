@@ -1,9 +1,7 @@
-import type { IComment, IGroupColor } from '@vervedoc/docx-editor-schema'
+﻿import type { IComment, IGroupColor } from '@vervedoc/docx-editor-schema'
 import { nanoid } from 'nanoid'
 import dayjs from 'dayjs'
-
-
-type Command = any
+import type { CommentHost } from './host'
 
 const USER_COLORS = [
   '#409EFF', '#67C23A', '#E6A23C', '#F56C6C',
@@ -57,7 +55,7 @@ function extractCommentBody(content: string, rangeText: string): { sourceText: s
   }
 
   const firstLine = lines[0]
-  const match = firstLine.match(/^取自[：:？?]?\s*(.*)$/)
+  const match = firstLine.match(/^取自[：:]?\s*(.*)$/)
   const sourceText = (match?.[1] || normalizedRange).trim()
   const mainText = match
     ? lines.slice(1).join('\n')
@@ -88,7 +86,7 @@ export interface CommentCallbacks {
 
 export class CommentComponent {
 
-  private _command: Command | null = null
+  private _command: CommentHost | null = null
   private _comments: IComment[] = []
   private _callbacks: CommentCallbacks = {}
   private _overlayContainer: HTMLDivElement | null = null
@@ -120,9 +118,20 @@ export class CommentComponent {
     })
   }
 
-  public install(command: Command, callbacks?: CommentCallbacks): this {
+  public install(command: CommentHost): this {
+    if (this._command && this._command !== command) {
+      console.warn(
+        '[CommentComponent] install() 已被调用，忽略重复注入。' +
+        '若要更新回调请使用 DocxEditor.setCommentCallbacks(...)'
+      )
+      return this
+    }
     this._command = command
-    if (callbacks) this._callbacks = callbacks
+    return this
+  }
+
+  public setCallbacks(callbacks: CommentCallbacks): this {
+    this._callbacks = callbacks || {}
     return this
   }
 
@@ -356,7 +365,7 @@ export class CommentComponent {
       const ctx = this._command?.getGroupContext?.(comment.groupId)
       if (!ctx) continue
 
-      // 新架构：getGroupContext 直接返回 _anchor 坐标，不依赖 positionList
+      // 鏂版灦鏋勶細getGroupContext 鐩存帴杩斿洖 _anchor 鍧愭爣锛屼笉渚濊禆 positionList
       if ((ctx as any)._anchor) {
         const anchor = (ctx as any)._anchor as { startX: number; startY: number; endX: number; endY: number; lineHeight: number; glyphHeight: number; startGlyphTop: number; endGlyphTop: number }
         comment.position = { top: anchor.startY, left: balloonLeft, lineWidth: 0, originalTop: anchor.startY }
@@ -364,7 +373,7 @@ export class CommentComponent {
         continue
       }
 
-      // 旧架构：通过 positionList 查找坐标
+      // 鏃ф灦鏋勶細閫氳繃 positionList 鏌ユ壘鍧愭爣
       if (!positionList || positionList.length === 0) continue
       const startIdx = ctx.isTable ? (ctx.index ?? -1) : (ctx.startIndex ?? -1)
       const endIdx = ctx.isTable ? ctx.index : ctx.endIndex
@@ -459,7 +468,7 @@ export class CommentComponent {
   }
 
   private _applyContainerWidth(container: HTMLDivElement, pageWidth: number): void {
-    // 新架构：容器宽度由 Draw 管理，overlay 以 overflow:visible 自然溢出，不需要强制改宽度
+    // 鏂版灦鏋勶細瀹瑰櫒瀹藉害鐢?Draw 绠＄悊锛宱verlay 浠?overflow:visible 鑷劧婧㈠嚭锛屼笉闇€瑕佸己鍒舵敼瀹藉害
     if ((container as any).__vervedocsNewLayout) return
     const commentWidth = (container as any).__commentNeededWidth || 0
     const revisionWidth = (container as any).__revisionNeededWidth || 0
@@ -558,7 +567,7 @@ export class CommentComponent {
 
     const editBtn = createActionBtn(
       `${PREFIX}-comment-edit`,
-      '编辑批注',
+      '缂栬緫鎵规敞',
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 16.25V20h3.75L18.8 8.94l-3.75-3.75L4 16.25Z" fill="currentColor"/><path d="m14.96 5.19 3.75 3.75 1.09-1.09a1.5 1.5 0 0 0 0-2.12l-1.63-1.63a1.5 1.5 0 0 0-2.12 0l-1.09 1.09Z" fill="currentColor"/></svg>',
       () => {
         comment.isEditing = true
@@ -567,7 +576,7 @@ export class CommentComponent {
     )
     const deleteBtn = createActionBtn(
       `${PREFIX}-comment-delete`,
-      '删除批注',
+      '鍒犻櫎鎵规敞',
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M7 21a2 2 0 0 1-2-2V7h14v12a2 2 0 0 1-2 2H7Z" fill="currentColor"/><path d="M9 4h6l1 2h4v1.5H4V6h4l1-2Z" fill="currentColor"/></svg>',
       () => {
         this.deleteComment(comment.id)
@@ -577,7 +586,7 @@ export class CommentComponent {
     )
     const resolveBtn = createActionBtn(
       `${PREFIX}-comment-resolve`,
-      comment.status === 2 ? '重新打开批注' : '解决批注',
+      comment.status === 2 ? '閲嶆柊鎵撳紑鎵规敞' : '瑙ｅ喅鎵规敞',
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="m9.55 18.2-5.4-5.4 1.41-1.4 3.99 3.98 8.89-8.88 1.41 1.41-10.3 10.29Z" fill="currentColor"/></svg>',
       () => {
         const resolved = comment.status !== 2
@@ -616,7 +625,7 @@ export class CommentComponent {
 
       const textarea = document.createElement('textarea')
       textarea.classList.add(`${PREFIX}-comment-textarea`)
-      textarea.placeholder = '请输入批注内容...'
+      textarea.placeholder = '璇疯緭鍏ユ壒娉ㄥ唴瀹?..'
       textarea.rows = 3
       textarea.value = comment.content
       textarea.style.cssText = 'width:93%;min-height:80px;padding:8px 10px;border:1px solid #dcdfe6;border-radius:6px;font-size:13px;font-family:inherit;line-height:1.6;resize:vertical;outline:none;transition:border-color 0.2s ease;'
@@ -725,7 +734,7 @@ export class CommentComponent {
     } else {
       const replyTrigger = document.createElement('button')
       replyTrigger.type = 'button'
-      replyTrigger.textContent = '添加回复'
+    replyTrigger.textContent = '添加回复'
       replyTrigger.style.cssText = 'margin-top:6px;padding:0;border:none;background:transparent;color:#1a73e8;font-size:11px;line-height:1.3;cursor:pointer;text-decoration:underline;text-underline-offset:2px;'
       replyTrigger.addEventListener('click', () => {
         comment.isReplying = true
@@ -817,7 +826,7 @@ export class CommentComponent {
 
       const resolveBtn = header.querySelector(`.${PREFIX}-comment-resolve`) as HTMLButtonElement | null
       if (resolveBtn) {
-        resolveBtn.title = comment.status === 2 ? '重新打开批注' : '解决批注'
+        resolveBtn.title = comment.status === 2 ? '閲嶆柊鎵撳紑鎵规敞' : '瑙ｅ喅鎵规敞'
         resolveBtn.style.color = comment.status === 2 ? '#2f8f4e' : '#444'
         resolveBtn.style.background = comment.status === 2 ? '#eef8f1' : 'transparent'
       }

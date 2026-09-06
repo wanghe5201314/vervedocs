@@ -18,7 +18,7 @@ const sizeStyle = computed(() => {
 </script>
 
 <template>
-  <i class="material-icons v-icon" :class="{ 'v-icon-auto': !props.size }" :style="sizeStyle">{{ iconName }}</i>
+  <i class="material-symbols-outlined v-icon" :class="{ 'v-icon-auto': !props.size }" :style="sizeStyle">{{ iconName }}</i>
 </template>
 
 <style scoped>

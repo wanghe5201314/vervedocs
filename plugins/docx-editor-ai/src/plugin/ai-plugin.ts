@@ -20,43 +20,73 @@ import '../styles.css'
 
 /** 选区位置信息 */
 interface SelectionPosition {
+  /** 选区所在视口横坐标 */
   x: number
+  /** 选区所在视口纵坐标 */
   y: number
+  /** 选区文本内容 */
   text: string
 }
 
 /** 插件状态 */
 interface PluginState {
+  /** 是否正在处理 AI 请求 */
   isProcessing: boolean
+  /** 当前执行的 AI 操作类型，空闲时为 null */
   currentAction: AIAction | null
+  /** 当前操作的源文本 */
   currentText: string
+  /** 当前操作的可选参数 */
   currentOptions: {
+    /** 翻译目标语言 */
     targetLanguage?: TranslateLanguage
+    /** 自定义提示词 */
     customPrompt?: string
+    /** 自定义操作 ID */
     customActionId?: string
   }
 }
 
 /**
  * AI 插件类
+ *
+ * 负责在编辑器中集成 AI 能力：监听选区变化、显示悬浮工具栏、
+ * 调用 AIService 执行 AI 操作、并通过 ResultPanel 展示与应用结果。
  */
 export class AIPlugin {
+  /** 已安装的编辑器实例，未安装时为 null */
   private editor: EditorInterface | null = null
+  /** UI 挂载容器元素 */
   private container: HTMLElement | null = null
+  /** 合并默认值后的完整插件配置 */
   private config: Omit<Required<AIPluginConfig>, 'i18n'> & { i18n: I18nConfig }
+  /** AI 服务实例，负责与后端通信 */
   private aiService: AIService
+  /** 悬浮工具栏实例 */
   private toolbar: FloatingToolbar | null = null
+  /** 结果预览面板实例 */
   private resultPanel: ResultPanel | null = null
+  /** 当前插件运行状态 */
   private state: PluginState = {
     isProcessing: false,
     currentAction: null,
     currentText: '',
     currentOptions: {}
   }
+  /** 最近一次选区位置信息，用于定位 UI */
   private selectionPosition: SelectionPosition | null = null
+  /** 显示工具栏的延迟定时器句柄 */
   private showToolbarTimeout: ReturnType<typeof setTimeout> | null = null
+  /** eventBus 订阅句柄列表，用于卸载时统一取消订阅 */
   private eventBusSubscriptions: Array<{ unsubscribe: () => void }> = []
 
+  /**
+   * 订阅编辑器 eventBus 事件，兼容 select().subscribe() 与 on()/off() 两种 API
+   *
+   * @param event 事件名称
+   * @param handler 事件处理函数
+   * @returns 包含 unsubscribe 方法的订阅句柄，无 eventBus 时返回空操作句柄
+   */
   private subscribeEventBus(event: string, handler: (...args: unknown[]) => void) {
     if (!this.editor?.eventBus) return { unsubscribe: () => {} }
     const eventBus: any = this.editor.eventBus
@@ -76,6 +106,11 @@ export class AIPlugin {
     return { unsubscribe: () => {} }
   }
 
+  /**
+   * 创建 AI 插件实例，合并默认配置并初始化 AI 服务
+   *
+   * @param config 插件配置
+   */
   constructor(config: AIPluginConfig) {
     // 合并配置
     this.config = {

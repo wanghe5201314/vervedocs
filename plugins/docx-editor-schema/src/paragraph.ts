@@ -19,8 +19,8 @@ import type { IElement } from './types'
 import { BLOCK_LEVEL_TYPES } from './constants'
 
 export interface IParagraphGroup {
-  /** 段落类型：normal / title / list / table / image / pageBreak */
-  kind: 'normal' | 'title' | 'list' | 'table' | 'image' | 'pageBreak'
+  /** 段落类型：normal / title / list / table / image / pageBreak / separator */
+  kind: 'normal' | 'title' | 'list' | 'table' | 'image' | 'pageBreak' | 'separator'
   /** 段落对应的父节点（当 kind !== 'normal' 时即为该节点自身；kind='normal' 时为 null） */
   block: IElement | null
   /** 段落包含的顶层节点在父数组中的索引区间 [start, end)（含 start 不含 end） */
@@ -40,6 +40,14 @@ function isParagraphTerminator(el: IElement): boolean {
   return /^[\u200B\uFEFF]+$/.test(v)
 }
 
+/**
+ * 将同层 elements 切分为段落数组。
+ * - 块级节点（title/list/table/image/pageBreak/separator）各自独立成段
+ * - 普通连续 text 归到同一段，遇到段落终止符或块级节点即断段
+ * - title/list 内部按零宽分隔符切段以支持段内换行
+ * @param elements 顶层元素数组
+ * @returns 段落分组数组
+ */
 export function splitParagraphs(elements: IElement[]): IParagraphGroup[] {
   const out: IParagraphGroup[] = []
   let i = 0

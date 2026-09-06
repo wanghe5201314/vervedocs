@@ -9,6 +9,13 @@ import type { IPosition, Path } from '@vervedoc/docx-editor-schema'
 import type { BlockNode, DocumentLayout, LineBox, ParagraphBlock, TableBlock } from './layout-types'
 import { getSharedMeasure } from './text-measure'
 
+/**
+ * 命中测试主入口：根据文档坐标（未减 scrollY）返回对应位置。
+ * @param layout 文档布局
+ * @param docX 文档 X 坐标
+ * @param docY 文档 Y 坐标
+ * @returns 命中位置；未命中返回 null
+ */
 export function hitTest(layout: DocumentLayout, docX: number, docY: number): IPosition | null {
   for (const page of layout.pages) {
     if (docY < page.rect.y || docY > page.rect.y + page.rect.height) continue
@@ -20,6 +27,15 @@ export function hitTest(layout: DocumentLayout, docX: number, docY: number): IPo
   return null
 }
 
+/**
+ * 在指定原点偏移下遍历块列表进行命中测试。
+ * @param blocks 块节点列表
+ * @param x 文档 X 坐标
+ * @param y 文档 Y 坐标
+ * @param ox 父容器原点 X
+ * @param oy 父容器原点 Y
+ * @returns 命中位置；未命中返回 null
+ */
 function hitBlocks(blocks: BlockNode[], x: number, y: number, ox: number, oy: number): IPosition | null {
   for (const b of blocks) {
     const bx = ox + b.rect.x
@@ -47,6 +63,14 @@ function hitBlocks(blocks: BlockNode[], x: number, y: number, ox: number, oy: nu
   return null
 }
 
+/**
+ * 在段落内进行命中测试，返回所在行的命中位置。
+ * @param b 段落块
+ * @param lx 相对块本地 X 坐标
+ * @param ly 相对块本地 Y 坐标
+ * @param _pb 段落块（保留参数，当前未使用）
+ * @returns 命中位置；未命中返回 null
+ */
 function hitParagraph(b: ParagraphBlock, lx: number, ly: number, _pb: ParagraphBlock): IPosition | null {
   for (const line of b.lines) {
     if (ly < line.y || ly > line.y + line.height) continue
@@ -57,6 +81,12 @@ function hitParagraph(b: ParagraphBlock, lx: number, ly: number, _pb: ParagraphB
   return null
 }
 
+/**
+ * 在单行内进行命中测试，按字符宽度逐字定位光标偏移。
+ * @param line 行盒
+ * @param lx 相对块本地 X 坐标
+ * @returns 命中位置；空行返回 null
+ */
 function hitLine(line: LineBox, lx: number): IPosition | null {
   if (line.inlines.length === 0) return null
   const measure = getSharedMeasure()
@@ -79,6 +109,15 @@ function hitLine(line: LineBox, lx: number): IPosition | null {
   return { path: last.path, offset: last.endOffset }
 }
 
+/**
+ * 在表格内进行命中测试，递归进入命中的单元格内容。
+ * @param b 表格块
+ * @param x 文档 X 坐标
+ * @param y 文档 Y 坐标
+ * @param tbx 表格原点 X
+ * @param tby 表格原点 Y
+ * @returns 命中位置；未命中返回 null
+ */
 function hitTable(b: TableBlock, x: number, y: number, tbx: number, tby: number): IPosition | null {
   for (const row of b.rows) {
     const ry = tby + row.rect.y

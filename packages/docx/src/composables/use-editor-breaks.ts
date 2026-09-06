@@ -28,14 +28,14 @@ export function useEditorBreaks(options: {
   function columnBreak() {
     const instance = getEditorInstance()
     if (!instance) return
-    instance.command.executeInsertElementList([{ value: '\n' }])
+    instance.command.executeColumnBreak()
   }
 
   /** 插入换行符 */
   function lineBreak() {
     const instance = getEditorInstance()
     if (!instance) return
-    instance.command.executeInsertElementList([{ value: '\n' }])
+    instance.command.executeLineBreak()
   }
 
   /** 插入下一页分节符 */
@@ -49,7 +49,7 @@ export function useEditorBreaks(options: {
   function sectionBreakContinuous() {
     const instance = getEditorInstance()
     if (!instance) return
-    instance.command.executeSeparator([0, 0])
+    instance.command.executeSectionBreakContinuous()
   }
 
   /** 插入偶数页分节符 */
@@ -73,25 +73,7 @@ export function useEditorBreaks(options: {
   function separator(payload: any) {
     const instance = getEditorInstance()
     if (!instance) return
-    let separatorOptions: any = {
-      lineType: 'solid',
-      lineWidth: 1,
-      dashArray: [0, 0]
-    }
-    if (Array.isArray(payload)) {
-      if (payload.length === 3) {
-        separatorOptions.lineType = payload[0]
-        separatorOptions.lineWidth = payload[1]
-        separatorOptions.dashArray = payload[2]
-      } else {
-        separatorOptions.dashArray = payload
-      }
-    } else if (typeof payload === 'object' && payload !== null) {
-      separatorOptions.lineType = payload.type || 'solid'
-      separatorOptions.lineWidth = payload.width || 1
-      separatorOptions.dashArray = payload.dashArray || [0, 0]
-    }
-    instance.command.executeSeparator(separatorOptions)
+    instance.command.executeSeparator(payload)
   }
 
   return {

@@ -100,13 +100,6 @@ setDocumentApi(createDefaultDocumentApi())
 
 playground 默认通过配置传入演示文件：
 
-```ts
-// src/resolve-from-location.ts
-{
-  meta: { id: 'local', ... },
-  url: './test-output.json' // 文件位于 public/test-output.json
-}
-```
 
 ## 方式一：本地端 `@vervedoc/docx-parser`
 

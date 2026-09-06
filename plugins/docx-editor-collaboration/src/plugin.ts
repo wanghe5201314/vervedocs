@@ -31,22 +31,40 @@ import {
 import EventEmitter from 'eventemitter3'
 import { subscribeEventBus } from './event-bus'
 
+/** 光标代理相对字符高度的额外偏移量 */
 const CURSOR_AGENT_OFFSET_HEIGHT = 12
+/** 默认光标宽度 */
 const DEFAULT_CURSOR_WIDTH = 1
+/** 默认选区最小宽度 */
 const DEFAULT_SELECTION_MIN_WIDTH = 4
 
+/** 默认共享同步状态：光标与选区均同步 */
 const DEFAULT_SHARED_SYNC_STATE: SharedSyncState = {
   cursor: true,
   selection: true,
 }
 
+/**
+ * 页面画布偏移量
+ *
+ * 描述某一页 canvas 相对渲染容器的左上角偏移。
+ */
 interface PageCanvasOffset {
+  /** 水平偏移 */
   left: number
+  /** 垂直偏移 */
   top: number
 }
 
+/**
+ * 选区布局草稿
+ *
+ * 在 SelectionRenderLayout 基础上附加页号与行号，用于跨行选区合并判断。
+ */
 interface SelectionLayoutDraft extends SelectionRenderLayout {
+  /** 页号 */
   pageNo: number
+  /** 行号 */
   rowNo: number
 }
 
@@ -76,43 +94,68 @@ export interface PluginEvents {
  * 协同编辑插件
  */
 export class CollaborationPlugin {
+  /** 编辑器接口实例 */
   private editor: EditorInterface | null = null
+  /** 插件配置（已合并默认值） */
   private config: Required<Pick<CollaborationPluginConfig, 'enableRemoteCursors' | 'cursorThrottleMs'>> & CollaborationPluginConfig
 
+  /** Yjs 文档实例 */
   private doc: Y.Doc | null = null
+  /** HocuspocusProvider 实例 */
   private provider: HocuspocusProvider | null = null
+  /** Yjs 与编辑器双向绑定器 */
   private binding: YjsBinding | null = null
+  /** 远程光标管理器 */
   private cursorManager: AwarenessCursorManager
 
+  /** 当前共享同步状态（光标/选区开关） */
   private sharedSyncState: SharedSyncState = { ...DEFAULT_SHARED_SYNC_STATE }
+  /** 批注组件桥接层 */
   private commentComponent: CommentComponentBridge | null = null
 
+  /** 当前连接状态 */
   private connectionState: ConnectionState = ConnectionState.DISCONNECTED
+  /** 当前同步状态 */
   private syncState: SyncState = SyncState.SYNCING
 
-  /** 光标节流 */
+  /** 光标节流定时器句柄 */
   private cursorThrottleTimer: ReturnType<typeof setTimeout> | null = null
-  /** 编辑器事件引用 */
+  /** 编辑器选区变更回调引用 */
   private rangeChangeHandler: ((rangeStyle: unknown) => void) | null = null
+  /** 编辑器选区变更订阅句柄 */
   private rangeChangeSubscription: { unsubscribe: () => void } | null = null
   /** Awareness 用户监听引用 */
   private awarenessUsersHandler: ((change: { added: number[]; updated: number[]; removed: number[] }) => void) | null = null
   /** 光标视图刷新引用 */
   private cursorHostContainer: HTMLElement | null = null
+  /** 光标宿主滚动回调引用 */
   private cursorHostScrollHandler: (() => void) | null = null
+  /** 窗口尺寸变更回调引用 */
   private windowResizeHandler: (() => void) | null = null
+  /** 光标宿主 DOM 变更观察器 */
   private cursorMutationObserver: MutationObserver | null = null
+  /** 光标宿主尺寸观察器 */
   private cursorResizeObserver: ResizeObserver | null = null
+  /** 已观察的 canvas 元素集合 */
   private observedCanvasElements = new Set<HTMLElement>()
+  /** 待刷新光标的 requestAnimationFrame 句柄 */
   private pendingCursorRefreshFrame: number | null = null
+  /** 是否有待处理的位置脏标记 */
   private pendingPositionDirty = false
+  /** 是否有待处理的 canvas 重新绑定 */
   private pendingCanvasRebind = false
 
+  /** 内部事件发射器 */
   private eventEmitter = new EventEmitter<PluginEvents>()
 
   /** 已知在线用户（从 Awareness 维护） */
   private onlineUsers = new Map<string, UserInfo>()
 
+  /**
+   * 构造协同编辑插件
+   *
+   * @param config 插件配置
+   */
   constructor(config: CollaborationPluginConfig) {
     this.config = {
       enableRemoteCursors: true,
@@ -124,10 +167,18 @@ export class CollaborationPlugin {
 
   // ==================== 公开 API ====================
 
+  /**
+   * 安装插件，注入编辑器实例
+   *
+   * @param editor 编辑器接口实例
+   */
   install(editor: EditorInterface): void {
     this.editor = editor
   }
 
+  /**
+   * 卸载插件，断开连接并清理资源
+   */
   uninstall(): void {
     this.disconnect()
     this.rangeChangeSubscription?.unsubscribe()
@@ -138,6 +189,14 @@ export class CollaborationPlugin {
     this.editor = null
   }
 
+  /**
+   * 连接协同服务并建立同步
+   *
+   * 创建 Y.Doc 与 HocuspocusProvider，同步完成后建立 YjsBinding 双向绑定，
+   * 并启动 Awareness 光标与用户追踪。
+   *
+   * @returns 连接完成的 Promise
+   */
   async connect(): Promise<void> {
     if (!this.editor) throw new Error('Plugin not installed')
     if (this.provider) return // 已连接
@@ -199,6 +258,9 @@ export class CollaborationPlugin {
     this.syncLocalCursorState()
   }
 
+  /**
+   * 断开协同连接并清理资源
+   */
   disconnect(): void {
     this.teardownAwarenessUserTracking()
     this.teardownCursorRefreshBindings()
@@ -227,26 +289,56 @@ export class CollaborationPlugin {
     this.setConnectionState(ConnectionState.DISCONNECTED)
   }
 
+  /**
+   * 获取当前连接状态
+   *
+   * @returns 连接状态
+   */
   getConnectionState(): ConnectionState {
     return this.connectionState
   }
 
+  /**
+   * 获取当前同步状态
+   *
+   * @returns 同步状态
+   */
   getSyncState(): SyncState {
     return this.syncState
   }
 
+  /**
+   * 获取在线用户列表
+   *
+   * @returns 在线用户数组
+   */
   getOnlineUsers(): UserInfo[] {
     return Array.from(this.onlineUsers.values())
   }
 
+  /**
+   * 获取所有远程光标
+   *
+   * @returns 远程光标数组
+   */
   getRemoteCursors(): RemoteCursor[] {
     return this.cursorManager.getAllCursors()
   }
 
+  /**
+   * 获取共享同步状态副本
+   *
+   * @returns 共享同步状态
+   */
   getSharedSyncState(): SharedSyncState {
     return { ...this.sharedSyncState }
   }
 
+  /**
+   * 更新共享同步状态（光标/选区开关）
+   *
+   * @param patch 状态补丁
+   */
   setSharedSyncState(patch: Partial<SharedSyncState>): void {
     const nextState = this.normalizeSharedSyncState({
       ...this.sharedSyncState,
@@ -256,28 +348,54 @@ export class CollaborationPlugin {
     this.applySharedSyncState(nextState)
   }
 
+  /**
+   * 绑定批注组件桥接层
+   *
+   * @param component 批注组件桥接层（可为 null 表示解绑）
+   */
   bindCommentComponent(component: CommentComponentBridge | null): void {
     this.commentComponent = component
     this.binding?.bindCommentBridge(component)
   }
 
+  /**
+   * 主动从桥接层同步批注到 Y.Doc
+   */
   syncComments(): void {
     this.binding?.syncCommentsFromBridge()
   }
 
+  /**
+   * 初始化远程光标渲染
+   *
+   * @param container 光标渲染容器
+   * @param positionCalculator 位置计算函数
+   */
   initializeCursors(container: HTMLElement, positionCalculator: PositionCalculator): void {
     if (this.config.enableRemoteCursors) {
       this.cursorManager.initializeCursorRendering(container, positionCalculator)
     }
   }
 
+  /** 位置列表是否已变更待重新读取 */
   private positionListDirty = true
+  /** 缓存的位置列表 */
   private cachedPositionList: EditorCursorPoint[] | null = null
 
+  /**
+   * 标记位置列表为脏，下次获取时重新读取
+   */
   markPositionListDirty(): void {
     this.positionListDirty = true
   }
 
+  /**
+   * 基于编辑器初始化远程光标渲染
+   *
+   * 自动构造位置与选区计算函数，并绑定光标刷新监听。
+   *
+   * @param container 光标渲染容器
+   */
   initializeCursorsWithEditor(container: HTMLElement): void {
     if (!this.config.enableRemoteCursors || !this.editor) return
     const positionCalculator: PositionCalculator = (index: number) => {
@@ -291,14 +409,31 @@ export class CollaborationPlugin {
     this.setupCursorRefreshBindings(container)
   }
 
+  /**
+   * 刷新远程光标渲染
+   */
   refreshCursors(): void {
     this.refreshRemoteCursors()
   }
 
+  /**
+   * 订阅插件事件（on 别名）
+   *
+   * @param event 事件名
+   * @param callback 事件回调
+   * @returns 取消订阅函数
+   */
   on<K extends keyof PluginEvents>(event: K, callback: PluginEvents[K]): () => void {
     return this.addEventListener(event, callback)
   }
 
+  /**
+   * 订阅插件事件
+   *
+   * @param event 事件名
+   * @param callback 事件回调
+   * @returns 取消订阅函数
+   */
   addEventListener<K extends keyof PluginEvents>(event: K, callback: PluginEvents[K]): () => void {
     this.eventEmitter.on(event, callback as any)
     return () => {
@@ -378,6 +513,9 @@ export class CollaborationPlugin {
     )
   }
 
+  /**
+   * 解除 Awareness 用户变更监听
+   */
   private teardownAwarenessUserTracking(): void {
     if (!this.awarenessUsersHandler || !this.provider?.awareness) return
     this.provider.awareness.off('change', this.awarenessUsersHandler)
@@ -385,6 +523,12 @@ export class CollaborationPlugin {
   }
 
 
+  /**
+   * 规范化共享同步状态，补全缺省字段
+   *
+   * @param state 原始状态补丁
+   * @returns 完整的共享同步状态
+   */
   private normalizeSharedSyncState(state?: Partial<SharedSyncState>): SharedSyncState {
     return {
       cursor: state?.cursor ?? DEFAULT_SHARED_SYNC_STATE.cursor,
@@ -392,6 +536,12 @@ export class CollaborationPlugin {
     }
   }
 
+  /**
+   * 应用新的共享同步状态并刷新光标
+   *
+   * @param state 新状态
+   * @param forceEmit 是否强制广播事件（即使状态未变）
+   */
   private applySharedSyncState(state: SharedSyncState, forceEmit = false): void {
     const nextState = this.normalizeSharedSyncState(state)
     const changed = this.sharedSyncState.cursor !== nextState.cursor
@@ -407,6 +557,11 @@ export class CollaborationPlugin {
     }
   }
 
+  /**
+   * 读取编辑器当前选区并同步到 Awareness
+   *
+   * 根据共享同步状态决定是否携带选区终点。
+   */
   private syncLocalCursorState(): void {
     if (!this.editor) return
     const range = this.editor.command.getRange()
@@ -429,6 +584,11 @@ export class CollaborationPlugin {
     this.cursorManager.setLocalCursor(pos)
   }
 
+  /**
+   * 绑定光标刷新所需的滚动、尺寸与 DOM 变更监听
+   *
+   * @param container 光标宿主容器
+   */
   private setupCursorRefreshBindings(container: HTMLElement): void {
     this.teardownCursorRefreshBindings()
     this.cursorHostContainer = container
@@ -468,6 +628,9 @@ export class CollaborationPlugin {
     this.refreshRemoteCursors({ markPositionDirty: true, rebindCanvases: true })
   }
 
+  /**
+   * 解除光标刷新相关的所有监听与观察器
+   */
   private teardownCursorRefreshBindings(): void {
     if (this.pendingCursorRefreshFrame !== null) {
       window.cancelAnimationFrame(this.pendingCursorRefreshFrame)
@@ -501,6 +664,13 @@ export class CollaborationPlugin {
     this.cursorHostContainer = null
   }
 
+  /**
+   * 刷新远程光标，合并多次请求到单次 requestAnimationFrame
+   *
+   * @param options 刷新选项
+   * @param options.markPositionDirty 是否标记位置列表为脏
+   * @param options.rebindCanvases 是否需要重新绑定 canvas 观察
+   */
   private refreshRemoteCursors(options: { markPositionDirty?: boolean; rebindCanvases?: boolean } = {}): void {
     const { markPositionDirty = false, rebindCanvases = false } = options
     if (markPositionDirty) {
@@ -523,6 +693,9 @@ export class CollaborationPlugin {
     })
   }
 
+  /**
+   * 重新观察容器内所有 canvas 元素，用于跟随分页变化
+   */
   private observeCanvasElements(): void {
     if (!this.cursorResizeObserver || !this.cursorHostContainer) return
 
@@ -539,6 +712,13 @@ export class CollaborationPlugin {
     })
   }
 
+  /**
+   * 计算指定字符索引处的光标渲染布局
+   *
+   * @param container 光标渲染容器
+   * @param index 字符索引
+   * @returns 光标布局，无法计算时返回 null
+   */
   private calculateCursorLayout(container: HTMLElement, index: number): SelectionRenderLayout | null {
     const positionList = this.getPositionList()
     if (!positionList || index < 0 || index >= positionList.length) return null
@@ -567,6 +747,13 @@ export class CollaborationPlugin {
     }
   }
 
+  /**
+   * 计算选区跨行渲染布局列表
+   *
+   * @param container 光标渲染容器
+   * @param position 光标位置（含选区终点）
+   * @returns 选区布局列表，同行相邻布局会合并
+   */
   private calculateSelectionLayouts(
     container: HTMLElement,
     position: CursorPosition,
@@ -600,6 +787,15 @@ export class CollaborationPlugin {
     return layouts.map(({ pageNo: _pageNo, rowNo: _rowNo, ...layout }) => layout)
   }
 
+  /**
+   * 构建单个字符索引处的选区布局草稿
+   *
+   * @param positionList 位置点列表
+   * @param index 当前字符索引
+   * @param selectionEndIndex 选区结束索引
+   * @param canvasOffsets 各页 canvas 偏移映射
+   * @returns 选区布局草稿，无法构建时返回 null
+   */
   private buildSelectionLayout(
     positionList: EditorCursorPoint[],
     index: number,
@@ -637,6 +833,17 @@ export class CollaborationPlugin {
     }
   }
 
+  /**
+   * 选区宽度回退计算
+   *
+   * 当字符自身宽度为 0 时，向右扫描同页同行的下一个字符作为右边界，
+   * 仍无法确定时使用字形宽度或最小选区宽度。
+   *
+   * @param positionList 位置点列表
+   * @param index 当前字符索引
+   * @param selectionEndIndex 选区结束索引
+   * @returns 回退宽度
+   */
   private resolveSelectionWidthFallback(
     positionList: EditorCursorPoint[],
     index: number,
@@ -665,6 +872,15 @@ export class CollaborationPlugin {
     return Math.max(point.metrics?.width ?? 0, this.getSelectionMinWidth())
   }
 
+  /**
+   * 判断两个选区布局草稿是否可合并
+   *
+   * 同页同行且 y/height 相近、x 相邻时返回 true。
+   *
+   * @param previous 前一个布局
+   * @param next 后一个布局
+   * @returns 是否可合并
+   */
   private canMergeSelectionLayout(
     previous: SelectionLayoutDraft,
     next: SelectionLayoutDraft,
@@ -676,6 +892,12 @@ export class CollaborationPlugin {
       && next.x <= previous.x + previous.width + 1
   }
 
+  /**
+   * 获取容器内各页 canvas 的偏移映射
+   *
+   * @param container 光标渲染容器
+   * @returns 页号到 canvas 偏移的映射
+   */
   private getCanvasOffsetMap(container: HTMLElement): Map<number, PageCanvasOffset> {
     const areaRect = container.getBoundingClientRect()
     const offsets = new Map<number, PageCanvasOffset>()
@@ -694,6 +916,11 @@ export class CollaborationPlugin {
     return offsets
   }
 
+  /**
+   * 获取选区最小宽度（受缩放与光标宽度影响）
+   *
+   * @returns 选区最小宽度
+   */
   private getSelectionMinWidth(): number {
     const options = this.getEditorOptions()
     const scale = options.scale ?? 1
@@ -701,32 +928,58 @@ export class CollaborationPlugin {
     return Math.max(cursorWidth * 2, DEFAULT_SELECTION_MIN_WIDTH * scale)
   }
 
+  /**
+   * 获取编辑器位置点列表，按需刷新缓存
+   *
+   * @returns 位置点列表，编辑器未安装时返回 null
+   */
   private getPositionList(): EditorCursorPoint[] | null {
     if (!this.editor) return null
     if (this.positionListDirty || !this.cachedPositionList) {
-      this.cachedPositionList = this.editor.command.getPositionList?.() || null
+      this.cachedPositionList = (this.editor.command.getPositionList?.() as EditorCursorPoint[] | undefined) || null
       this.positionListDirty = false
     }
     return this.cachedPositionList
   }
 
+  /**
+   * 获取编辑器渲染选项
+   *
+   * @returns 渲染选项，编辑器未安装时返回空对象
+   */
   private getEditorOptions(): EditorCursorOptions {
     if (!this.editor) return {}
-    return this.editor.command.getOptions?.() || {}
+    return (this.editor.command.getOptions?.() as EditorCursorOptions | undefined) || {}
   }
 
+  /**
+   * 更新连接状态并广播事件
+   *
+   * @param state 新的连接状态
+   */
   private setConnectionState(state: ConnectionState): void {
     if (this.connectionState === state) return
     this.connectionState = state
     this.emitEvent('connectionChange', state)
   }
 
+  /**
+   * 更新同步状态并广播事件
+   *
+   * @param state 新的同步状态
+   */
   private setSyncState(state: SyncState): void {
     if (this.syncState === state) return
     this.syncState = state
     this.emitEvent('syncStateChange', state)
   }
 
+  /**
+   * 触发指定插件事件，捕获并打印回调异常
+   *
+   * @param event 事件名
+   * @param args 事件参数
+   */
   private emitEvent<K extends keyof PluginEvents>(event: K, ...args: Parameters<PluginEvents[K]>): void {
     const callbacks = this.eventEmitter.listeners(event) as Array<(...payload: unknown[]) => void>
     callbacks.forEach((callback) => {

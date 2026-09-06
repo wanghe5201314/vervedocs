@@ -12,6 +12,9 @@ import type {
 } from './layout-types'
 import { getSharedMeasure } from './text-measure'
 
+/**
+ * 光标矩形（文档坐标系，未减 scrollY），用于绘制光标闪烁。
+ */
 export interface CaretRect {
   /** 文档坐标（未减 scrollY） */
   x: number
@@ -20,14 +23,26 @@ export interface CaretRect {
   height: number
 }
 
+/**
+ * 选区矩形（文档坐标系，未减 scrollY），用于绘制选区高亮。
+ */
 export interface SelectionRect {
-  /** 文档坐标（未减 scrollY） */
+  /** 文档坐标 X（未减 scrollY） */
   x: number
+  /** 文档坐标 Y（未减 scrollY） */
   y: number
+  /** 矩形宽度 */
   width: number
+  /** 矩形高度 = line.height */
   height: number
 }
 
+/**
+ * 定位光标矩形：根据位置返回光标在文档坐标系中的矩形。
+ * @param layout 文档布局
+ * @param pos 光标位置
+ * @returns 光标矩形；未找到返回 null
+ */
 export function locateCaret(layout: DocumentLayout, pos: IPosition): CaretRect | null {
   for (const page of layout.pages) {
     const originX = page.contentRect.x
@@ -38,6 +53,14 @@ export function locateCaret(layout: DocumentLayout, pos: IPosition): CaretRect |
   return null
 }
 
+/**
+ * 在指定原点偏移下遍历块列表定位光标矩形。
+ * @param blocks 块节点列表
+ * @param pos 光标位置
+ * @param ox 父容器原点 X
+ * @param oy 父容器原点 Y
+ * @returns 光标矩形；未找到返回 null
+ */
 function locateInBlocks(blocks: BlockNode[], pos: IPosition, ox: number, oy: number): CaretRect | null {
   for (const b of blocks) {
     const bx = ox + b.rect.x
@@ -53,6 +76,14 @@ function locateInBlocks(blocks: BlockNode[], pos: IPosition, ox: number, oy: num
   return null
 }
 
+/**
+ * 在段落内定位光标矩形，按行和 inline 匹配位置。
+ * @param b 段落块
+ * @param pos 光标位置
+ * @param bx 段落原点 X
+ * @param by 段落原点 Y
+ * @returns 光标矩形；未找到返回 null
+ */
 function locateInParagraph(b: ParagraphBlock, pos: IPosition, bx: number, by: number): CaretRect | null {
   for (const line of b.lines) {
     for (const inl of line.inlines) {
@@ -71,6 +102,14 @@ function locateInParagraph(b: ParagraphBlock, pos: IPosition, bx: number, by: nu
 }
 
 
+/**
+ * 在表格内定位光标矩形，递归进入匹配的单元格内容。
+ * @param b 表格块
+ * @param pos 光标位置
+ * @param tbx 表格原点 X
+ * @param tby 表格原点 Y
+ * @returns 光标矩形；未找到返回 null
+ */
 function locateInTable(b: TableBlock, pos: IPosition, tbx: number, tby: number): CaretRect | null {
   for (const row of b.rows) {
     for (const cell of row.cells) {
@@ -87,6 +126,12 @@ function locateInTable(b: TableBlock, pos: IPosition, tbx: number, tby: number):
   return null
 }
 
+/**
+ * 判断路径 path 是否以 prefix 为前缀。
+ * @param path 待判断路径
+ * @param prefix 前缀路径
+ * @returns 是前缀返回 true，否则返回 false
+ */
 function pathStartsWith(path: Path, prefix: Path): boolean {
   if (path.length < prefix.length) return false
   for (let i = 0; i < prefix.length; i++) {
@@ -125,6 +170,15 @@ export function computeSelectionRects(layout: DocumentLayout, start: IPosition, 
   return rects
 }
 
+/**
+ * 在指定原点偏移下遍历块列表收集选区矩形。
+ * @param blocks 块节点列表
+ * @param ox 父容器原点 X
+ * @param oy 父容器原点 Y
+ * @param start 选区起点
+ * @param end 选区终点
+ * @param rects 收集结果数组
+ */
 function collectSelectionInBlocks(
   blocks: BlockNode[], ox: number, oy: number,
   start: IPosition, end: IPosition, rects: SelectionRect[]
@@ -146,6 +200,15 @@ function collectSelectionInBlocks(
   }
 }
 
+/**
+ * 在段落内收集选区矩形，同行 inline 合并为一个矩形。
+ * @param b 段落块
+ * @param bx 段落原点 X
+ * @param by 段落原点 Y
+ * @param start 选区起点
+ * @param end 选区终点
+ * @param rects 收集结果数组
+ */
 function collectSelectionInParagraph(
   b: ParagraphBlock, bx: number, by: number,
   start: IPosition, end: IPosition, rects: SelectionRect[]

@@ -44,7 +44,9 @@
     "preview": "vite preview",
     "type:check": "tsc --noEmit"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@vervedoc/docx-editor-schema": "workspace:^"
+  },
   "devDependencies": {
     "@eslint/js": "catalog:",
     "eslint": "catalog:",

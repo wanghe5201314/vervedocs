@@ -123,9 +123,8 @@ export default defineConfig({
           '@vervedoc/docx-editor-comment': 'DocxEditorComment',
         },
         manualChunks(id) {
-          if (id.includes('/src/views/')) return 'editor-view'
+          if (id.includes('/src/app/')) return 'editor-view'
           if (id.includes('/src/components/')) return 'components'
-          if (id.includes('/src/ui/')) return 'ui'
           return undefined
         },
       },

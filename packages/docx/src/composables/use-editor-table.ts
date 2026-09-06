@@ -1,4 +1,3 @@
-import { TableBorder } from '@vervedoc/core'
 
 /**
  * 编辑器实例接口
@@ -33,14 +32,7 @@ export function useEditorTable(options: { getEditorInstance: () => EditorInstanc
   function tableBorderType(borderType: any) {
     const instance = getEditorInstance()
     if (!instance) return
-    const t = String(borderType || '').trim().toLowerCase()
-    const resolved =
-      t === 'none' || t === 'empty' || t === 'no'
-        ? (TableBorder as any).NONE ?? borderType
-        : t === 'outside' || t === 'external' || t === 'box'
-          ? (TableBorder as any).OUTSIDE ?? borderType
-          : (TableBorder as any).ALL ?? borderType
-    instance.command.executeTableBorderType(resolved)
+    instance.command.executeSetTableBorderType(borderType)
   }
 
   /**
@@ -50,7 +42,7 @@ export function useEditorTable(options: { getEditorInstance: () => EditorInstanc
   function tableBorderColor(color: string) {
     const instance = getEditorInstance()
     if (!instance) return
-    instance.command.executeTableBorderColor(color)
+    instance.command.executeSetTableBorderColor(color)
   }
 
   /**
@@ -60,7 +52,7 @@ export function useEditorTable(options: { getEditorInstance: () => EditorInstanc
   function tableBorderWidth(width: number) {
     const instance = getEditorInstance()
     if (!instance) return
-    instance.command.executeTableBorderWidth(width)
+    instance.command.executeSetTableBorderWidth(width)
   }
 
   /**
@@ -70,7 +62,7 @@ export function useEditorTable(options: { getEditorInstance: () => EditorInstanc
   function tableBorderExternalWidth(width: number) {
     const instance = getEditorInstance()
     if (!instance) return
-    instance.command.executeTableBorderExternalWidth(width)
+    instance.command.executeSetTableBorderExternalWidth(width)
   }
 
   return {

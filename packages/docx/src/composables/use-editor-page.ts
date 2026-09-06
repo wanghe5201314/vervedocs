@@ -16,7 +16,7 @@ export function useEditorPage(options: { getEditorInstance: () => EditorInstance
   getEditorContainer: () => HTMLDivElement | null
   /** 应用编辑器选项补丁 */
   applyOptionsPatch: (patch: any) => void }) {
-  const { getEditorInstance, getEditorContainer, applyOptionsPatch } = options
+  const { getEditorInstance, applyOptionsPatch } = options
 
   /**
    * 跳转到指定页码
@@ -27,11 +27,12 @@ export function useEditorPage(options: { getEditorInstance: () => EditorInstance
     if (!instance) return
     const pageHeight = instance.command.getPaperHeight()
     const opts = instance.command.getOptions()
-    const pageGap = opts.pageGap * (opts.scale || 1)
-    const container = getEditorContainer()?.parentElement
-    if (container) {
-      const containerPadding = 40
-      container.scrollTop = index * (pageHeight + pageGap) + containerPadding
+    const pageGap = Number(opts.pageGap ?? 24) * Number(opts.scale ?? 1)
+    // 通过 draw.getScroller() 获取 scroller，其 parentElement 为可滚动的 wrapper
+    const scroller = instance.draw?.getScroller?.()
+    const wrapper = scroller?.parentElement
+    if (wrapper) {
+      wrapper.scrollTop = index * (pageHeight + pageGap)
     }
   }
 
@@ -42,7 +43,7 @@ export function useEditorPage(options: { getEditorInstance: () => EditorInstance
   function pageMode(mode: string) {
     const instance = getEditorInstance()
     if (!instance) return
-    instance.command.executePageMode(mode)
+    instance.command.executeSetPageMode(mode)
   }
 
   /**
@@ -52,7 +53,7 @@ export function useEditorPage(options: { getEditorInstance: () => EditorInstance
   function pageScale(scale: number) {
     const instance = getEditorInstance()
     if (!instance) return
-    instance.command.executePageScale(scale)
+    instance.command.executeSetPageScale(scale)
   }
   /** 恢复页面缩放至默认比例 */
   function pageScaleRecovery() {
@@ -73,12 +74,6 @@ export function useEditorPage(options: { getEditorInstance: () => EditorInstance
     instance.command.executePageScaleMinus()
   }
 
-  /** 设置标尺显示/隐藏 */
-  function setRulerVisible(visible: boolean) {
-    const instance = getEditorInstance()
-    if (!instance) return
-    instance.command.executeSetRulerVisible(visible)
-  }
 
   /**
    * 设置纸张尺寸
@@ -88,7 +83,7 @@ export function useEditorPage(options: { getEditorInstance: () => EditorInstance
   function paperSize(width: number, height: number) {
     const instance = getEditorInstance()
     if (!instance) return
-    instance.command.executePaperSize(width, height)
+    instance.command.executeSetPaperSize(width, height)
   }
   /**
    * 设置纸张方向（纵向/横向）
@@ -97,7 +92,7 @@ export function useEditorPage(options: { getEditorInstance: () => EditorInstance
   function paperDirection(direction: string) {
     const instance = getEditorInstance()
     if (!instance) return
-    instance.command.executePaperDirection(direction)
+    instance.command.executeSetPaperDirection(direction)
   }
   /**
    * 设置页边距
@@ -123,35 +118,35 @@ export function useEditorPage(options: { getEditorInstance: () => EditorInstance
   function columns(value: any) {
     const instance = getEditorInstance()
     if (!instance) return
-    instance.command.executeColumns?.(value)
+    instance.command.executeSetColumns(value)
   }
 
   /**
    * 获取自动目录数据（含页码），返回三种级别的目录
    * catalog1: 仅一级标题，catalog2: 一至二级标题，catalog3: 一至三级标题
    */
-  function getAutoCatalog() {
+  function getAutoToc() {
     const instance = getEditorInstance()
     if (!instance) return null
-    return instance.command.getAutoCatalog()
+    return instance.command.getAutoToc()
   }
 
   /**
    * 在当前光标位置插入自动目录
    * @param type 目录类型：1=仅一级，2=一至二级，3=一至三级
    */
-  function insertAutoCatalog(type: 1 | 2 | 3) {
+  function insertAutoToc(type: 1 | 2 | 3) {
     const instance = getEditorInstance()
     if (!instance) return
-    instance.command.executeInsertAutoCatalog(type)
+    instance.command.executeInsertAutoToc(type)
   }
 
   return {
     pageJump, pageMode,
     pageScale, pageScaleRecovery, pageScaleAdd, pageScaleMinus,
-    setRulerVisible,
+
     paperSize, paperDirection, setPaperMargin, setPaperBackground,
     columns,
-    getAutoCatalog, insertAutoCatalog
+    getAutoToc, insertAutoToc
   }
 }

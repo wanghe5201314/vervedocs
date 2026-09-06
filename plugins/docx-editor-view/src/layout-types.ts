@@ -12,6 +12,7 @@ export type {
   ParagraphBlock,
   ImageBlock,
   PageBreakBlock,
+  SeparatorBlock,
   TableCellLayout,
   TableRowLayout,
   TableBlock,

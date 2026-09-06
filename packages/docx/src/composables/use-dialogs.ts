@@ -16,23 +16,41 @@ export function useDialogs(options: {
 }) {
   const { executeCommand } = options
 
+  /** 快捷键对话框是否可见 */
   const shortcutsDialogVisible = ref(false)
+  /** 超链接对话框是否可见 */
   const hyperlinkDialogVisible = ref(false)
+  /** 书签对话框是否可见 */
   const bookmarkDialogVisible = ref(false)
+  /** 插入表格对话框是否可见 */
   const insertTableDialogVisible = ref(false)
+  /** 表格边框对话框是否可见 */
   const tableBordersDialogVisible = ref(false)
+  /** 图表对话框是否可见 */
   const chartDialogVisible = ref(false)
+  /** LaTeX 公式对话框是否可见 */
   const latexDialogVisible = ref(false)
+  /** 条形码对话框是否可见 */
   const barcodeDialogVisible = ref(false)
+  /** 二维码对话框是否可见 */
   const qrcodeDialogVisible = ref(false)
+  /** 签名对话框是否可见 */
   const signatureDialogVisible = ref(false)
+  /** 水印对话框是否可见 */
   const watermarkDialogVisible = ref(false)
+  /** 纸张大小对话框是否可见 */
   const paperSizeDialogVisible = ref(false)
+  /** 页码对话框是否可见 */
   const pageNumberDialogVisible = ref(false)
+  /** 日期对话框是否可见 */
   const dateDialogVisible = ref(false)
+  /** 段落对话框是否可见 */
   const paragraphDialogVisible = ref(false)
+  /** 目录对话框是否可见 */
   const tocDialogVisible = ref(false)
+  /** AI 设置对话框是否可见 */
   const aiSettingsDialogVisible = ref(false)
+  /** 版本历史对话框是否可见 */
   const versionHistoryDialogVisible = ref(false)
 
   /** 打开快捷键对话框 */
@@ -62,7 +80,7 @@ export function useDialogs(options: {
    * @param data 条形码图像数据
    */
   const handleBarcodeConfirm = (data: { imageDataUrl: string; width: number; height: number }) => {
-    executeCommand('image', {
+    executeCommand('barcode', {
       value: data.imageDataUrl,
       width: data.width,
       height: data.height
@@ -71,10 +89,14 @@ export function useDialogs(options: {
 
   /**
    * 处理二维码确认
-   * @param content 二维码内容
+   * @param data 二维码图像数据
    */
-  const handleQrcodeConfirm = (content: string) => {
-    executeCommand('qrcode', content)
+  const handleQrcodeConfirm = (data: { imageDataUrl: string; width: number; height: number }) => {
+    executeCommand('qrcode', {
+      value: data.imageDataUrl,
+      width: data.width,
+      height: data.height
+    })
   }
 
   /**
@@ -82,7 +104,7 @@ export function useDialogs(options: {
    * @param dataUrl 签名图像数据 URL
    */
   const handleSignatureConfirm = (dataUrl: string) => {
-    executeCommand('image', dataUrl)
+    executeCommand('signatureImage', dataUrl)
   }
 
   /**

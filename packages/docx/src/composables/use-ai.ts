@@ -8,7 +8,9 @@ import type { AIServiceConfig } from '@vervedoc/docx-editor-ai'
 import { aiStateStore } from '@/stores/ai-state'
 import { getAuthToken } from '@/api/document.api'
 
+/** AI 服务实例（单例，首次调用时按环境变量配置创建） */
 let aiService: AIService | null = null
+/** 当前 AI 请求的 AbortController 实例，用于取消请求 */
 let currentAbortController: AbortController | null = null
 
 /**
@@ -45,6 +47,11 @@ export interface AIRequestParams {
 
 /**
  * 直接使用 fetch 处理 SSE 流式请求，解决包缓存导致的解析问题
+ * @param request AI 请求参数对象
+ * @param onChunk 接收流式分块的回调函数
+ * @param onComplete 请求完成时的回调函数
+ * @param onError 请求出错时的回调函数
+ * @returns 无返回值
  */
 async function fetchSSEStream(
   request: Record<string, unknown>,
@@ -143,6 +150,8 @@ async function fetchSSEStream(
 
 /**
  * 执行 AI 请求（自动选择流式/普通模式）
+ * @param params AI 请求参数
+ * @returns 无返回值
  */
 export async function executeAIRequest(params: AIRequestParams): Promise<void> {
   const service = getService()
@@ -189,27 +198,9 @@ export async function executeAIRequest(params: AIRequestParams): Promise<void> {
 }
 
 /**
- * 取消当前 AI 请求
- */
-export function cancelAIRequest(): void {
-  if (currentAbortController) {
-    currentAbortController.abort()
-    currentAbortController = null
-  }
-  getService().cancelCurrentRequest()
-  aiStateStore.resetOperation()
-}
-
-/**
  * 更新 AI 服务配置
+ * @param config 部分配置项
  */
 export function updateAIServiceConfig(config: Partial<AIServiceConfig>): void {
   getService().updateConfig(config)
-}
-
-/**
- * 重置 AI 服务实例（用于配置变更后）
- */
-export function resetAIService(): void {
-  aiService = null
 }

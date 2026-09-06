@@ -6,42 +6,69 @@ import { I18nConfig, DEFAULT_I18N_ZH } from '../types'
 
 /** 面板位置 */
 interface Position {
+  /** 视口横坐标 */
   x: number
+  /** 视口纵坐标 */
   y: number
 }
 
 /** 面板配置 */
 export interface ResultPanelConfig {
+  /** 国际化文案配置 */
   i18n: I18nConfig
 }
 
 /** 面板事件回调 */
 export interface ResultPanelCallbacks {
+  /** 应用结果回调，将结果写回编辑器 */
   onApply: (result: string) => void
+  /** 取消操作回调 */
   onCancel: () => void
+  /** 重新生成回调 */
   onRegenerate: () => void
 }
 
 /** 面板状态 */
 export enum PanelState {
+  /** 加载中 */
   LOADING = 'loading',
+  /** 成功 */
   SUCCESS = 'success',
+  /** 错误 */
   ERROR = 'error',
+  /** 输入自定义指令 */
   INPUT = 'input'
 }
 
 /**
  * 结果预览面板类
+ *
+ * 负责展示 AI 生成结果的加载、成功、错误、输入四种状态，
+ * 并提供应用、重新生成、取消等操作按钮。
  */
 export class ResultPanel {
+  /** 面板挂载的容器元素 */
   private container: HTMLElement
+  /** 面板根 DOM 节点 */
   private panelEl: HTMLDivElement | null = null
+  /** 面板配置 */
   private config: ResultPanelConfig
+  /** 事件回调集合 */
   private callbacks: ResultPanelCallbacks
+  /** 当前面板状态 */
   private state: PanelState = PanelState.LOADING
+  /** 最终结果文本 */
   private result = ''
+  /** 流式接收到的累积内容 */
   private streamContent = ''
 
+  /**
+   * 创建结果面板实例
+   *
+   * @param container 面板挂载的容器元素
+   * @param config 面板配置，i18n 会与默认中文合并
+   * @param callbacks 面板事件回调集合
+   */
   constructor(
     container: HTMLElement,
     config: Partial<ResultPanelConfig>,

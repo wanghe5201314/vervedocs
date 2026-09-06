@@ -1,6 +1,6 @@
 <template>
   <div class="mobile-header">
-    <button class="mobile-header-btn" @click="$emit('toggleCatalog')">
+    <button class="mobile-header-btn" @click="$emit('toggleToc')">
       <span class="material-icons">menu</span>
     </button>
     <div class="mobile-header-center">
@@ -46,7 +46,7 @@ defineProps<{
 }>()
 
 defineEmits<{
-  toggleCatalog: []
+  toggleToc: []
   save: []
   toggleMore: []
   importDoc: []

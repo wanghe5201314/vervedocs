@@ -1,6 +1,5 @@
-import dayjs from 'dayjs'
-
-type Command = any
+﻿import dayjs from 'dayjs'
+import type { CommentHost } from './host'
 
 const PREFIX = 'ce'
 
@@ -28,7 +27,7 @@ export interface RevisionCallbacks {
 }
 
 export class RevisionComponent {
-  private _command: Command | null = null
+  private _command: CommentHost | null = null
   private _container: HTMLDivElement | null = null
   private _overlayContainer: HTMLDivElement | null = null
   private _balloonDoms: Map<string, HTMLDivElement> = new Map()
@@ -39,15 +38,28 @@ export class RevisionComponent {
     return this._command?.getOptions?.()?.revisionColor || '#e60000'
   }
 
-  public install(command: Command, callbacks?: RevisionCallbacks): this {
+  public install(command: CommentHost): this {
+    if (this._command && this._command !== command) {
+      console.warn(
+        '[RevisionComponent] install() 已被调用，忽略重复注入。' +
+        '若要更新回调请使用 DocxEditor.setRevisionCallbacks(...)'
+      )
+      return this
+    }
     this._command = command
-    if (callbacks) this._callbacks = callbacks
     const container = command.getContainer?.()
     if (container) {
       this._container = container
-      this._overlayContainer = this._createOverlayContainer()
-      this._container!.append(this._overlayContainer)
+      if (!this._overlayContainer) {
+        this._overlayContainer = this._createOverlayContainer()
+        this._container!.append(this._overlayContainer)
+      }
     }
+    return this
+  }
+
+  public setCallbacks(callbacks: RevisionCallbacks): this {
+    this._callbacks = callbacks || {}
     return this
   }
 
@@ -156,21 +168,6 @@ export class RevisionComponent {
     return div
   }
 
-  private _getPageOffsetY(pageNo: number): number {
-    if (this._container) {
-      const canvases = this._container.querySelectorAll('canvas[data-index]')
-      if (canvases.length > pageNo) {
-        const canvas = canvases[pageNo] as HTMLElement
-        if (canvas && canvas.offsetTop !== undefined) {
-          return canvas.offsetTop
-        }
-      }
-    }
-    const pageHeight = this._command?.getDrawHeight?.() || 1123
-    const pageGap = this._command?.getPageGap?.() ?? 0
-    return pageNo * (pageHeight + pageGap)
-  }
-
   private _collectOccupiedRanges(selector: string): Array<{ top: number; bottom: number }> {
     if (!this._container) return []
     const ranges: Array<{ top: number; bottom: number }> = []
@@ -246,9 +243,7 @@ export class RevisionComponent {
       if (!el.revisionId || !el.revisionType) continue
       const existing = revisionMap.get(el.revisionId)
       if (existing) {
-        if (el.revisionType === 'format') {
-          // format 修订只取第一个元素的格式描述
-        } else {
+        if (el.revisionType !== 'format') {
           existing.content += el.value || ''
         }
         existing.lastIndex = i
@@ -298,54 +293,18 @@ export class RevisionComponent {
       return
     }
 
-    const positionList = this._command.getPositionList?.()
-    if (!positionList || positionList.length === 0) {
-      this._clear()
-      this._restoreContainerWidth()
-      return
-    }
-
     const pageWidth = this._command.getDrawWidth?.() || 794
-
     const balloonLeft = pageWidth + 16
-
     const balloons: RevisionBalloonData[] = []
     const elementList = this._command.getElementList?.()
 
     for (const rev of revisions) {
-      const startPosIdx = rev.firstIndex
-      if (startPosIdx < 0 || startPosIdx >= positionList.length) continue
-      const startPos = positionList[startPosIdx]
-      if (!startPos?.coordinate) continue
-
-      const endPosIdx = Math.min(rev.lastIndex, positionList.length - 1)
-      const endPos = positionList[endPosIdx]
-
-      const pageNo = startPos.pageNo ?? 0
-      const preY = this._getPageOffsetY(pageNo)
-      const top = preY + (startPos.coordinate.leftTop?.[1] || 0)
-      const anchorX = startPos.coordinate.leftTop?.[0] || 0
-      const anchorY = top
-      let anchorEndX = endPos?.coordinate?.rightBottom?.[0] || endPos?.coordinate?.rightTop?.[0] || anchorX
-      let anchorEndY = top + (startPos.lineHeight || 20)
-      if (endPos?.coordinate) {
-        const endPageNo = endPos.pageNo ?? 0
-        const endPreY = this._getPageOffsetY(endPageNo)
-        anchorEndX = endPos.coordinate.rightBottom?.[0] || endPos.coordinate.rightTop?.[0] || anchorX
-        anchorEndY = endPreY + (endPos.coordinate.leftBottom?.[1] || endPos.coordinate.leftTop?.[1] || 0)
-      }
-      const pageRight = pageWidth
-
+      const anchor = this._command.getRevisionAnchor?.(rev.id)
+      if (!anchor) continue
       const startSize = elementList?.[rev.firstIndex]?.size || 0
-      const endSize = elementList?.[rev.lastIndex]?.size || startSize
-      const startLineHeight = startPos.lineHeight || 20
-      const startBaseline = startLineHeight * 0.82
-      const glyphHeight = startSize * 1.15 || startLineHeight
-      const startGlyphTop = top + startBaseline - startSize * 0.875
-      const endLineHeight = endPos?.lineHeight || startLineHeight
-      const endBaseline = endLineHeight * 0.82
-      const endTopY = endPos?.coordinate ? (this._getPageOffsetY(endPos.pageNo ?? 0) + (endPos.coordinate.leftTop?.[1] || 0)) : top
-      const endGlyphTop = endTopY + endBaseline - endSize * 0.875
+      const glyphHeight = anchor.glyphHeight || startSize * 1.15 || anchor.lineHeight || 20
+      const startGlyphTop = anchor.startGlyphTop ?? anchor.startY
+      const endGlyphTop = anchor.endGlyphTop ?? anchor.startY
 
       balloons.push({
         revisionId: rev.id,
@@ -353,17 +312,23 @@ export class RevisionComponent {
         author: rev.author,
         date: rev.date,
         content: rev.content,
-        top,
+        top: anchor.startY,
         left: balloonLeft,
-        anchorStartX: anchorX,
-        anchorStartY: anchorY,
-        anchorEndX,
-        anchorEndY,
-        pageRight,
+        anchorStartX: anchor.startX,
+        anchorStartY: anchor.startY,
+        anchorEndX: anchor.endX,
+        anchorEndY: anchor.endY,
+        pageRight: pageWidth,
         glyphHeight,
         startGlyphTop,
         endGlyphTop
       })
+    }
+
+    if (balloons.length === 0) {
+      this._clear()
+      this._restoreContainerWidth()
+      return
     }
 
     balloons.sort((a, b) => a.top - b.top)
@@ -391,7 +356,7 @@ export class RevisionComponent {
   }
 
   private _applyContainerWidth(container: HTMLDivElement, pageWidth: number): void {
-    // 新架构：容器宽度由 Draw 管理，overlay 以 overflow:visible 自然溢出，不需要强制改宽度
+    // 新架构下容器宽度由 Draw 管理，overlay 通过 overflow: visible 自然溢出
     if ((container as any).__vervedocsNewLayout) return
     const commentWidth = (container as any).__commentNeededWidth || 0
     const revisionWidth = (container as any).__revisionNeededWidth || 0

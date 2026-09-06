@@ -1,20 +1,42 @@
 import type { Awareness } from 'y-protocols/awareness'
 import type { UserInfo, ExcelSelection, RemoteSelection } from './types'
 
+/**
+ * Excel 远程选区管理器
+ *
+ * 基于 Yjs Awareness 同步多用户选区，并在 Univer 容器上绘制远程选区矩形与用户标签。
+ */
 export class ExcelCursorManager {
+  /** Awareness 实例 */
   private awareness: Awareness | null = null
+  /** Univer API 实例 */
   private univerAPI: any = null
 
+  /** 远程选区缓存，按 userId 索引 */
   private cursors = new Map<string, RemoteSelection>()
+  /** 选区 DOM 元素缓存，按 userId 索引 */
   private elements = new Map<string, SelectionElement>()
+  /** 注入的样式元素 */
   private styleElement: HTMLStyleElement | null = null
+  /** 选区渲染容器 */
   private container: HTMLElement | null = null
+  /** 选区覆盖层根节点 */
   private overlayRoot: HTMLDivElement | null = null
+  /** Awareness 变更事件回调引用 */
   private awarenessHandler: ((change: { added: number[]; updated: number[]; removed: number[] }) => void) | null = null
+  /** 过期选区清理定时器句柄 */
   private cleanupTimer: ReturnType<typeof setInterval> | null = null
+  /** 选区刷新定时器句柄 */
   private refreshTimer: ReturnType<typeof setInterval> | null = null
+  /** 窗口尺寸变更回调引用 */
   private resizeHandler: (() => void) | null = null
 
+  /**
+   * 绑定 Awareness，发布本地用户信息并监听远端选区变更
+   *
+   * @param awareness Awareness 实例
+   * @param localUser 本地用户信息
+   */
   bindAwareness(awareness: Awareness, localUser: UserInfo): void {
     this.awareness = awareness
 
@@ -51,10 +73,21 @@ export class ExcelCursorManager {
     awareness.on('change', this.awarenessHandler)
   }
 
+  /**
+   * 设置本地选区并广播到 Awareness
+   *
+   * @param selection 本地选区
+   */
   setLocalSelection(selection: ExcelSelection): void {
     this.awareness?.setLocalStateField('selection', selection)
   }
 
+  /**
+   * 初始化选区渲染环境
+   *
+   * @param container 选区渲染容器
+   * @param univerAPI Univer API 实例（可选，未传则沿用已有实例）
+   */
   initializeRendering(container: HTMLElement, univerAPI?: any): void {
     this.container = container
     this.univerAPI = univerAPI ?? this.univerAPI
@@ -66,14 +99,25 @@ export class ExcelCursorManager {
     this.refreshAllSelections()
   }
 
+  /**
+   * 刷新所有远程选区渲染
+   */
   refreshAllSelections(): void {
     this.cursors.forEach((sel) => this.renderSelection(sel))
   }
 
+  /**
+   * 获取所有远程选区列表
+   *
+   * @returns 远程选区数组
+   */
   getAllSelections(): RemoteSelection[] {
     return Array.from(this.cursors.values())
   }
 
+  /**
+   * 销毁管理器，解除所有监听并清理 DOM
+   */
   destroy(): void {
     if (this.awarenessHandler && this.awareness) {
       this.awareness.off('change', this.awarenessHandler)
@@ -91,6 +135,13 @@ export class ExcelCursorManager {
     this.awareness = null
   }
 
+  /**
+   * 渲染单个远程选区
+   *
+   * 根据选区起止单元格计算矩形位置与尺寸，更新对应 DOM 元素样式。
+   *
+   * @param cursor 远程选区数据
+   */
   private renderSelection(cursor: RemoteSelection): void {
     if (!this.container || !this.univerAPI) return
 
@@ -147,6 +198,12 @@ export class ExcelCursorManager {
     el.label.style.top = top < 24 ? `${height + 4}px` : '-22px'
   }
 
+  /**
+   * 创建远程选区 DOM 元素
+   *
+   * @param cursor 远程选区数据
+   * @returns 选区元素对象
+   */
   private createSelectionElement(cursor: RemoteSelection): SelectionElement {
     const overlay = document.createElement('div')
     overlay.className = 'remote-excel-selection'
@@ -162,6 +219,11 @@ export class ExcelCursorManager {
     return { overlay, label }
   }
 
+  /**
+   * 确保选区覆盖层根节点存在并挂载到宿主
+   *
+   * @returns 覆盖层根节点，无法解析宿主时返回 null
+   */
   private ensureOverlayRoot(): HTMLDivElement | null {
     if (!this.container) return null
     const host = this.resolveOverlayHost()
@@ -179,6 +241,13 @@ export class ExcelCursorManager {
     return root
   }
 
+  /**
+   * 解析选区覆盖层应挂载的宿主元素
+   *
+   * 优先选择 Univer 内部滚动容器，回退到外层 container。
+   *
+   * @returns 宿主元素，无法确定时返回 null
+   */
   private resolveOverlayHost(): HTMLElement | null {
     if (!this.container) return null
     return (
@@ -189,6 +258,11 @@ export class ExcelCursorManager {
     )
   }
 
+  /**
+   * 清理已断开连接的客户端对应的选区
+   *
+   * @param allStates 当前 Awareness 全部状态
+   */
   private cleanupRemovedClients(allStates: Map<number, Record<string, unknown>>): void {
     const activeUserIds = new Set<string>()
     allStates.forEach((state, clientId) => {
@@ -206,6 +280,11 @@ export class ExcelCursorManager {
     }
   }
 
+  /**
+   * 移除指定用户的选区及其 DOM 元素
+   *
+   * @param userId 用户 ID
+   */
   private removeSelection(userId: string): void {
     this.cursors.delete(userId)
     const el = this.elements.get(userId)
@@ -215,12 +294,20 @@ export class ExcelCursorManager {
     }
   }
 
+  /**
+   * 清除所有选区 DOM 元素与缓存
+   */
   private clearAllElements(): void {
     this.elements.forEach((el) => el.overlay.remove())
     this.elements.clear()
     this.cursors.clear()
   }
 
+  /**
+   * 启动过期选区清理定时器
+   *
+   * 每 5 秒清理一次超过 30 秒未更新的选区。
+   */
   private startCleanupTimer(): void {
     if (this.cleanupTimer) return
     this.cleanupTimer = setInterval(() => {
@@ -233,6 +320,9 @@ export class ExcelCursorManager {
     }, 5000)
   }
 
+  /**
+   * 停止过期选区清理定时器
+   */
   private stopCleanupTimer(): void {
     if (this.cleanupTimer) {
       clearInterval(this.cleanupTimer)
@@ -240,6 +330,11 @@ export class ExcelCursorManager {
     }
   }
 
+  /**
+   * 启动选区刷新定时器
+   *
+   * 每 150 毫秒刷新一次所有选区，跟随 Univer 滚动位置变化。
+   */
   private startRefreshTimer(): void {
     if (this.refreshTimer) return
     this.refreshTimer = setInterval(() => {
@@ -248,6 +343,9 @@ export class ExcelCursorManager {
     }, 150)
   }
 
+  /**
+   * 停止选区刷新定时器
+   */
   private stopRefreshTimer(): void {
     if (this.refreshTimer) {
       clearInterval(this.refreshTimer)
@@ -255,12 +353,18 @@ export class ExcelCursorManager {
     }
   }
 
+  /**
+   * 绑定窗口尺寸变更监听，触发选区刷新
+   */
   private bindResizeListener(): void {
     if (this.resizeHandler) return
     this.resizeHandler = () => this.refreshAllSelections()
     window.addEventListener('resize', this.resizeHandler)
   }
 
+  /**
+   * 解绑窗口尺寸变更监听
+   */
   private unbindResizeListener(): void {
     if (this.resizeHandler) {
       window.removeEventListener('resize', this.resizeHandler)
@@ -268,6 +372,13 @@ export class ExcelCursorManager {
     }
   }
 
+  /**
+   * 将十六进制颜色转换为带透明度的 rgba 字符串
+   *
+   * @param color 颜色值，支持 #RGB / #RRGGBB
+   * @param alpha 透明度，0-1
+   * @returns rgba 字符串；无法解析时返回原值
+   */
   private withAlpha(color: string, alpha: number): string {
     const normalized = color.trim()
     if (normalized.startsWith('#')) {
@@ -287,6 +398,9 @@ export class ExcelCursorManager {
     return normalized
   }
 
+  /**
+   * 注入选区样式到 document.head
+   */
   private injectStyles(): void {
     if (this.styleElement) return
     this.styleElement = document.createElement('style')
@@ -322,6 +436,9 @@ export class ExcelCursorManager {
     document.head.appendChild(this.styleElement)
   }
 
+  /**
+   * 移除注入的样式元素
+   */
   private removeStyles(): void {
     if (this.styleElement) {
       this.styleElement.remove()
@@ -330,7 +447,14 @@ export class ExcelCursorManager {
   }
 }
 
+/**
+ * 选区 DOM 元素组合
+ *
+ * 包含选区外框与用户名标签两个节点。
+ */
 interface SelectionElement {
+  /** 选区外框元素 */
   overlay: HTMLDivElement
+  /** 用户名标签元素 */
   label: HTMLDivElement
 }

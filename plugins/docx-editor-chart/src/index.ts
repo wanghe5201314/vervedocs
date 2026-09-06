@@ -19,14 +19,24 @@ import './chart-renderer'
  * ECharts 图表渲染器实现
  */
 export class EchartsChartRenderer implements IChartRenderer {
+  /** ECharts 实例 */
   private echarts: any
 
+  /**
+   * 构造 ECharts 图表渲染器
+   * @param echartsInstance 可选的 echarts 实例
+   */
   constructor(echartsInstance?: any) {
     this.echarts = echartsInstance
   }
 
   /**
    * 将图表配置渲染为 DataURL 图片
+   * @param option 图表配置
+   * @param width 宽度
+   * @param height 高度
+   * @param pixelRatio 像素比例
+   * @returns 渲染后的 DataURL 字符串
    */
   renderToDataUrl(option: any, width: number, height: number, pixelRatio = 2): string {
     return renderChartToDataUrl(option, width, height, pixelRatio, this.echarts)
@@ -34,6 +44,11 @@ export class EchartsChartRenderer implements IChartRenderer {
 
   /**
    * 根据表格数据生成图表配置
+   * @param chartType 图表类型
+   * @param tableData 表格数据
+   * @param config 图表配置
+   * @param subtype 图表子类型
+   * @returns ECharts 配置对象
    */
   generateOption(
     chartType: string,
@@ -46,6 +61,9 @@ export class EchartsChartRenderer implements IChartRenderer {
 
   /**
    * 从表格元素提取数据
+   * @param tableElement 表格元素
+   * @param range 数据范围
+   * @returns 提取的表格数据
    */
   extractTableData(tableElement: any, range?: IChartDataRange): IChartTableData {
     return extractTableData(tableElement, range)

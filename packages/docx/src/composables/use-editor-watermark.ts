@@ -9,30 +9,27 @@ interface EditorInstance {
 /**
  * 水印 composable
  * @param options 配置项
- * @returns 水印添加与删除方法
+ * @returns 包含水印添加与删除方法的对象
  */
 export function useEditorWatermark(options: { getEditorInstance: () => EditorInstance | null }) {
   const { getEditorInstance } = options
   /**
    * 添加水印
    * @param payload 水印配置参数
+   * @returns 无返回值
    */
   function addWatermark(payload?: any) {
     const instance = getEditorInstance()
     if (!instance) return
     if (payload) {
-      instance.command.executeAddWatermark({
-        data: payload.data || payload.content || '',
-        color: payload.color,
-        opacity: payload.opacity,
-        size: payload.size,
-        font: payload.font,
-        repeat: payload.repeat
-      })
+      instance.command.executeAddWatermark(payload)
     }
   }
 
-  /** 删除水印 */
+  /**
+   * 删除水印
+   * @returns 无返回值
+   */
   function deleteWatermark() {
     const instance = getEditorInstance()
     if (!instance) return

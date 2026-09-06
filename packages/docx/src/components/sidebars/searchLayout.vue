@@ -59,8 +59,22 @@
         </a-button>
       </div>
 
-      <div v-if="matchCount" class="match-info">
-        <span class="match-text">共 {{ matchCount }} 处匹配</span>
+      <div v-if="matchCount" class="match-list-wrap">
+        <div class="match-list-header">共 {{ matchCount }} 处匹配</div>
+        <div class="match-list">
+          <template v-for="(item, idx) in matches" :key="item.index">
+            <div
+              class="match-item"
+              :class="{ active: item.index === activeIndex }"
+              @click="selectMatch(item.index)"
+            >
+              <span class="match-before">{{ item.before }}</span>
+              <mark class="match-hit">{{ item.match }}</mark>
+              <span class="match-after">{{ item.after }}</span>
+            </div>
+            <a-divider v-if="idx < matches.length - 1" class="match-divider" />
+          </template>
+        </div>
       </div>
       <div v-else class="empty-state">
         <a-empty :image="false" :description="searchText ? '没有找到匹配内容' : '请输入关键词开始搜索'" />
@@ -73,7 +87,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { CloseOutlined, DownOutlined, SearchOutlined, UpOutlined } from '@ant-design/icons-vue'
 import { VIcon } from '@vervedoc/icons'
-import type { IEditorSearchApi } from '@/composables/use-editor-search'
+import type { IEditorSearchApi, ISearchMatch } from '@/composables/use-editor-search'
 
 const props = defineProps<{
   searchAPI: IEditorSearchApi
@@ -91,6 +105,8 @@ const replaceText = ref('')
 const matchCount = ref(0)
 /** 当前激活的匹配项索引，-1 表示无激活项 */
 const activeIndex = ref(-1)
+/** 搜索命中列表，每项含匹配文本与上下文 */
+const matches = ref<ISearchMatch[]>([])
 
 /** 当前匹配项的展示序号（从 1 开始） */
 const currentDisplay = computed(() =>
@@ -116,11 +132,13 @@ const runSearch = async () => {
     const result = props.searchAPI.clear()
     matchCount.value = result.count
     activeIndex.value = -1
+    matches.value = []
     return
   }
   const result = props.searchAPI.search(keyword)
   matchCount.value = result.count
   activeIndex.value = result.count > 0 ? 0 : -1
+  matches.value = result.count > 0 ? props.searchAPI.getMatches() : []
   if (activeIndex.value >= 0) {
     props.searchAPI.locate(activeIndex.value)
   }
@@ -140,6 +158,13 @@ const navigate = (step: number) => {
   props.searchAPI.locate(nextIndex)
 }
 
+/** 选中并定位到指定匹配项 */
+const selectMatch = (index: number) => {
+
+  activeIndex.value = index
+  props.searchAPI.locate(index)
+}
+
 /** 替换当前匹配项并更新匹配状态 */
 const replaceCurrent = async () => {
   const keyword = searchText.value.trim()
@@ -153,6 +178,7 @@ const replaceCurrent = async () => {
   if (activeIndex.value >= matchCount.value) {
     activeIndex.value = matchCount.value - 1
   }
+  matches.value = matchCount.value > 0 ? props.searchAPI.getMatches() : []
   if (activeIndex.value >= 0) {
     props.searchAPI.locate(activeIndex.value)
   }
@@ -165,6 +191,7 @@ const replaceAll = async () => {
   props.searchAPI.replaceAll(keyword, replaceText.value)
   matchCount.value = 0
   activeIndex.value = -1
+  matches.value = []
 }
 
 /** 监听搜索关键词变化，清空时自动重置搜索 */
@@ -192,10 +219,10 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .search-sidebar {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
-  height: 100%;
-  width: 100%;
   background-color: #f1f1f1;
   border-right: 1px solid #f1f1f1;
 }
@@ -247,6 +274,7 @@ onBeforeUnmount(() => {
 }
 
 .sidebar-content {
+  flex: 1;
   padding: 10px 8px 10px;
   display: flex;
   flex-direction: column;
@@ -325,18 +353,62 @@ onBeforeUnmount(() => {
   cursor: not-allowed;
 }
 
-.match-info {
+.match-list-wrap {
   flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  min-height: 180px;
+  flex-direction: column;
+  min-height: 0;
 }
 
-.match-text {
-  font-size: 13px;
+.match-list-header {
+  font-size: 12px;
   color: #70757a;
+  padding: 2px 2px 6px;
+}
+
+.match-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.match-item {
+  padding: 5px 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #444;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+
+  word-break: break-all;
+  transition: background 0.15s;
+}
+
+.match-item:hover {
+  background: #f0eefb;
+}
+
+.match-item.active {
+  background: #e8e3ff;
+}
+
+.match-divider {
+  margin: 2px 0 !important;
+}
+
+.match-hit {
+  background: #fff3bf;
+  color: #333;
+  font-weight: 500;
+}
+
+.match-before,
+.match-after {
+  color: #888;
 }
 
 .empty-state {

@@ -1327,6 +1327,26 @@ export class Draw {
     return this.scroller
   }
 
+  /**
+   * 滚动到指定文档位置使其可见。
+   * @param pos 文档位置
+   */
+  scrollPositionIntoView(pos: IPosition): void {
+    if (!this.layout) return
+    const rect = locateCaret(this.layout, pos)
+    if (!rect) return
+    const anchor = document.createElement('div')
+    anchor.style.position = 'absolute'
+    anchor.style.left = `${rect.x}px`
+    anchor.style.top = `${rect.y}px`
+    anchor.style.width = '1px'
+    anchor.style.height = `${rect.height}px`
+    this.scroller.append(anchor)
+    anchor.scrollIntoView({ block: 'center' })
+    anchor.remove()
+
+  }
+
   /** 供 commands 组件获取当前活动区域元素列表 */
   getElementList(): import('@vervedoc/docx-editor-schema').IElement[] {
     return this.getActiveDocument().elements

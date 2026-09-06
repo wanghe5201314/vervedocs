@@ -59,6 +59,8 @@ export interface DrawLike {
   print(): void
   /** 获取所有页面缩略图（data URL 数组） */
   getPageThumbnails(): string[]
+  /** 滚动到指定文档位置使其可见 */
+  scrollPositionIntoView?(pos: IPosition): void
 }
 
 /**
@@ -1795,9 +1797,33 @@ export class CommandAdapt {
    * @param idx 搜索结果索引
    */
   locateSearchResult(idx: number): void {
+
     if (idx < 0 || idx >= this._searchHits.length) return
     this._searchIdx = idx
     this._selectHit(idx)
+  }
+
+  /**
+   * 获取当前搜索命中列表，每项包含匹配文本及前后上下文片段。
+   * @returns 匹配项数组，index 为命中序号，before/match/after 为上下文与匹配文本
+   */
+  getSearchMatches(): { index: number; before: string; match: string; after: string }[] {
+    const doc = this.draw.getActiveDocument()
+    const PAD = 15
+    const result: { index: number; before: string; match: string; after: string }[] = []
+    for (let i = 0; i < this._searchHits.length; i++) {
+      const hit = this._searchHits[i]
+      const node = getByPath(doc.elements, hit.path)
+      if (!node || node.type !== 'text') continue
+      const value = (node as ITextElement).value
+      const match = value.slice(hit.start, hit.end)
+      const ctxStart = Math.max(0, hit.start - PAD)
+      const ctxEnd = Math.min(value.length, hit.end + PAD)
+      const before = (ctxStart > 0 ? '…' : '') + value.slice(ctxStart, hit.start)
+      const after = value.slice(hit.end, ctxEnd) + (ctxEnd < value.length ? '…' : '')
+      result.push({ index: i, before, match, after })
+    }
+    return result
   }
 
   /**
@@ -1834,11 +1860,13 @@ export class CommandAdapt {
    */
   private _selectHit(idx: number): void {
     const hit = this._searchHits[idx]
+
     if (!hit) return
     this.range.setRange({
       anchor: { path: hit.path, offset: hit.start },
       focus: { path: hit.path, offset: hit.end }
     })
+    this.draw.scrollPositionIntoView?.({ path: hit.path, offset: hit.start })
   }
 
   /* -------------------- 书签 -------------------- */

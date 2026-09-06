@@ -326,6 +326,11 @@ export class Command {
    */
   executeLocateSearchResult(idx: number): void { this.adapt.locateSearchResult(idx) }
   /**
+   * 获取当前搜索命中列表。
+   * @returns 匹配项数组，每项含 index、before、match、after
+   */
+  executeGetSearchMatches(): { index: number; before: string; match: string; after: string }[] { return this.adapt.getSearchMatches() }
+  /**
    * 全部替换。
    * @param keyword 搜索关键字
    * @param replacement 替换文本

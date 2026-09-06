@@ -394,6 +394,9 @@ const searchAPI: IEditorSearchApi = {
   search(keyword) {
     return getSearchAPI()?.search(keyword) ?? { count: 0 }
   },
+  getMatches() {
+    return getSearchAPI()?.getMatches() ?? []
+  },
   locate(index) {
     getSearchAPI()?.locate(index)
   },
@@ -1284,6 +1287,7 @@ defineExpose({
 }
 
 .split-left {
+  position: relative;
   min-width: 300px;
   max-width: 420px;
   overflow: hidden;

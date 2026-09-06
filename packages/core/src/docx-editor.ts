@@ -102,10 +102,6 @@ export class DocxEditor {
   /** Worker 管理器（后台计算目录/搜索等） */
   public worker: WorkerManager
 
-  /** loading overlay DOM 元素 */
-  private _loadingEl: HTMLDivElement | null = null
-  /** 首次渲染是否完成 */
-  private _firstRenderDone = false
 
   /**
    * 构造 DocxEditor 实例
@@ -128,8 +124,6 @@ export class DocxEditor {
       )
     }
 
-    // 自管理 loading overlay
-    this._createLoadingOverlay(container)
 
     const editorOptions = mergeOption(options)
     const doc: IDocxDocumentMeta = cloneTree(document)
@@ -171,10 +165,7 @@ export class DocxEditor {
       },
       onKeyDown: shortcut.handle,
       afterRender: () => {
-        if (!this._firstRenderDone) {
-          this._firstRenderDone = true
-          this._hideLoading()
-        }
+
         this.comment.render()
         this.revision.update()
         this.block?.clear()
@@ -235,7 +226,8 @@ export class DocxEditor {
         getZone: () => this.draw.getZone(),
         setZone: (zone) => this.draw.setZone(zone),
         print: () => this.draw.print(),
-        getPageThumbnails: () => this.draw.getPageThumbnails()
+        getPageThumbnails: () => this.draw.getPageThumbnails(),
+        scrollPositionIntoView: (pos) => this.draw.scrollPositionIntoView(pos)
       },
       this.range,
       this.listener
@@ -404,72 +396,10 @@ export class DocxEditor {
     }
   }
 
-  /** 创建 loading overlay 并显示 */
-  private _createLoadingOverlay(container: HTMLDivElement): void {
-    const overlay = document.createElement('div')
-    overlay.style.cssText = (
-      'position:absolute;inset:0;display:flex;flex-direction:column;' +
-      'align-items:center;justify-content:center;background:rgba(255,255,255,0.9);' +
-      'z-index:9999;font-family:"Microsoft YaHei","PingFang SC",sans-serif;' +
-      'color:#555;font-size:14px;user-select:none;'
-    )
-    const spinner = document.createElement('div')
-    spinner.style.cssText = (
-      'width:32px;height:32px;border:3px solid #e0e0e0;border-top-color:#4A9EFF;' +
-      'border-radius:50%;animation:docx-editor-spin 0.8s linear infinite;margin-bottom:12px;'
-    )
-    const text = document.createElement('div')
-    text.textContent = '正在加载...'
-    overlay.appendChild(spinner)
-    overlay.appendChild(text)
-
-    if (!document.getElementById('docx-editor-loading-keyframes')) {
-      const style = document.createElement('style')
-      style.id = 'docx-editor-loading-keyframes'
-      style.textContent = '@keyframes docx-editor-spin{to{transform:rotate(360deg);}}'
-      document.head.appendChild(style)
-    }
-
-    if (getComputedStyle(container).position === 'static') {
-      container.style.position = 'relative'
-    }
-    container.appendChild(overlay)
-    this._loadingEl = overlay
-  }
-
-  /** 隐藏 loading overlay */
-  private _hideLoading(): void {
-    if (this._loadingEl) {
-      this._loadingEl.remove()
-      this._loadingEl = null
-    }
-  }
-
-  /**
-   * 设置 loading 状态（供外部调用）
-   * @param visible 是否显示 loading
-   * @param message loading 提示文本
-   */
-  setLoading(visible: boolean, message?: string): void {
-    if (visible) {
-      if (!this._loadingEl) {
-        const container = this.draw.getContainer()
-        if (container) this._createLoadingOverlay(container)
-      }
-      if (this._loadingEl && message) {
-        const textEl = this._loadingEl.children[1] as HTMLDivElement | undefined
-        if (textEl) textEl.textContent = message
-      }
-    } else {
-      this._hideLoading()
-    }
-  }
-
   /**
    * 销毁编辑器实例，释放所有资源（DOM/事件监听/定时器/组件）
    */
   destroy(): void {
-    this._hideLoading()
     this.block?.destroy()
     this.date?.clearDatePicker()
     this.control?.destroy()

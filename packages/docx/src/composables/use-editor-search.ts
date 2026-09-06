@@ -3,14 +3,24 @@ export interface ISearchCount {
   count: number
 }
 
+/** 单个搜索命中项：index 为命中序号，before/match/after 为上下文与匹配文本 */
+export interface ISearchMatch {
+  index: number
+  before: string
+  match: string
+  after: string
+}
+
 /**
  * 编辑器搜索 API
  * 基于后端导航式搜索契约：executeSearch 返回命中数，
- * 通过 locate 按索引定位，不支持获取完整结果列表。
+ * 通过 locate 按索引定位，getMatches 可获取完整命中列表用于结果展示。
  */
 export interface IEditorSearchApi {
   /** 搜索关键词，返回命中数；传 null 清除搜索 */
   search(keyword: string | null): ISearchCount
+  /** 获取当前搜索命中列表，每项含匹配文本与上下文 */
+  getMatches(): ISearchMatch[]
   /** 定位到指定命中索引 */
   locate(index: number): void
   /** 替换指定索引的命中并重新搜索，返回剩余命中数 */
@@ -60,6 +70,16 @@ export function useEditorSearch(options: { getEditorInstance: () => EditorInstan
   }
 
   /**
+   * 获取当前搜索命中列表
+   * @returns 匹配项数组，每项含匹配文本与上下文
+   */
+  function getMatches(): ISearchMatch[] {
+    const instance = getEditorInstance()
+    if (!instance) return []
+    return instance.command.executeGetSearchMatches() ?? []
+  }
+
+  /**
    * 替换指定索引的命中并重新搜索
    * @param index 命中索引
    * @param keyword 搜索关键词
@@ -104,6 +124,7 @@ export function useEditorSearch(options: { getEditorInstance: () => EditorInstan
   /** 搜索领域 API 对象 */
   const searchAPI: IEditorSearchApi = {
     search,
+    getMatches,
     locate,
     replaceOne,
     replaceAll,

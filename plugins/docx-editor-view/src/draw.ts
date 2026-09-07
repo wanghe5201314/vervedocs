@@ -27,6 +27,7 @@ import { RulerWidget } from './widgets/ruler-widget'
 import { WatermarkWidget, type WatermarkConfig } from './widgets/watermark-widget'
 import { SystemWatermarkWidget, type SystemWatermarkConfig } from './widgets/watermark-system-widget'
 import { SelectionToolbarWidget } from './widgets/selection-toolbar-widget'
+import { CaretWidget } from './widgets/caret-widget'
 import { signBlock } from './block-signature'
 import {
   findInlineByPos,
@@ -107,6 +108,9 @@ export class Draw {
   /** 上一帧的签名 -> block id，用于复用位图缓存 */
   private lastSignatureToId = new Map<string, number>()
 
+  /** 待渲染的脏区域（文档坐标），由 reformatAndRender 计算，scheduleRender 消费后清空 */
+  private pendingDirtyRect: { x: number; y: number; width: number; height: number } | null = null
+
   /** 隐藏 textarea：作为输入焦点与 IME 组合的宿主 */
   private inputEl!: HTMLTextAreaElement
   /** IME 组合输入中标志 */
@@ -159,6 +163,8 @@ export class Draw {
   private watermarkWidget: WatermarkWidget | null = null
   /** 系统级水印 widget（DOM 覆盖层） */
   private systemWatermarkWidget: SystemWatermarkWidget | null = null
+  /** DOM 光标 widget（替代 canvas overlay 绘制光标） */
+  private caretWidget: CaretWidget | null = null
   /** 光标导航 Controller */
   private caretNavigation: CaretNavigation | null = null
   /** 编辑区域 Manager */
@@ -220,6 +226,7 @@ export class Draw {
       showMarginRuler: (options as unknown as { showMarginRuler?: boolean }).showMarginRuler ?? true,
       groupColors: (options as unknown as { group?: { groupColors?: Record<string, import('@vervedoc/docx-editor-schema').IGroupColor> } }).group?.groupColors
     })
+
     this.engine = new LayoutEngine(this.toLayoutOptions())
 
     this.wrapper.addEventListener('scroll', this.onScroll, { passive: true })
@@ -369,6 +376,11 @@ export class Draw {
       getContainer: () => this.container
     })
     this.systemWatermarkWidget.create()
+
+    this.caretWidget = new CaretWidget({
+      getCanvasHost: () => this.canvasHost
+    })
+    this.caretWidget.create()
 
     this.caretNavigation = new CaretNavigation({
       getLayout: () => this.layout,
@@ -721,11 +733,18 @@ export class Draw {
         this.renderer.drawSelection(selRects, this.scrollY)
       }
     }
-    // 光标
+    // 光标（DOM 绘制）
     const pos = this.range.getFocus()
-    if (!pos) return
+    if (!pos) {
+      this.caretWidget?.hide()
+      return
+    }
     const rect = locateCaret(this.layout, pos, this.zone)
-    if (rect) this.renderer.drawCaret(rect.x, rect.y, rect.height, this.scrollY, this.caretVisible)
+    if (rect) {
+      this.caretWidget?.update(rect, this.scrollY, this.getPageOffsetX(), this.caretVisible)
+    } else {
+      this.caretWidget?.hide()
+    }
   }
 
   /**
@@ -1039,6 +1058,8 @@ export class Draw {
     this.watermarkWidget?.destroy()
     this.systemWatermarkWidget?.destroy()
     this.selectionToolbarWidget?.destroy()
+    this.caretWidget?.destroy()
+    this.renderer.destroy()
 
     if (this.inputEl && this.inputEl.parentElement === this.container) {
       this.container.removeChild(this.inputEl)
@@ -1108,6 +1129,7 @@ export class Draw {
       if (page.footerBlocks) walk(page.footerBlocks)
     }
 
+    const oldLayout = this.layout
     this.lastSignatureToId = nextSignatureToId
     this.layout = layout
     this.listener?.emit('page-count-change', layout.pages.length)
@@ -1118,6 +1140,7 @@ export class Draw {
     this.scroller.style.margin = '0 auto'
 
     if (dirty.length > 0) this.renderer.markDirty(dirty)
+    this.pendingDirtyRect = this.computeDirtyRect(oldLayout, layout, dirty)
     this.updateVisualLayout()
     // 光标兜底：若 range 尚未定位（首次渲染 / 之前是空文档），把光标置到文档首位，
     // 避免"看不到光标 / 无法输入"。findFirstInline 在空文档兜底 run 上也能命中零宽 inline。
@@ -1129,6 +1152,66 @@ export class Draw {
       }
     }
     this.scheduleRender()
+  }
+
+  /**
+   * 计算脏区域：仅在"无重排局部变更"时返回脏矩形（文档坐标），否则返回 null（走全量）。
+   * 判定条件：dirty 数量适中、总高/分页数不变、所有页级 block 位置不变、外接矩形未超视口 70%。
+   */
+  private computeDirtyRect(
+    oldLayout: DocumentLayout | null,
+    newLayout: DocumentLayout,
+    dirtyIds: number[]
+  ): { x: number; y: number; width: number; height: number } | null {
+    if (!oldLayout || dirtyIds.length === 0 || dirtyIds.length > 20) return null
+    if (newLayout.totalHeight !== oldLayout.totalHeight) return null
+    if (newLayout.pages.length !== oldLayout.pages.length) return null
+    const oldRects = this.collectBlockRectsById(oldLayout)
+    const newRects = this.collectBlockRectsById(newLayout)
+    if (oldRects.size !== newRects.size) return null
+    // 任一 block 位置变化 → 重排 → 全量
+    for (const [id, nr] of newRects) {
+      const or = oldRects.get(id)
+      if (!or) return null
+      if (Math.abs(or.x - nr.x) > 0.5 || Math.abs(or.y - nr.y) > 0.5 ||
+          Math.abs(or.width - nr.width) > 0.5 || Math.abs(or.height - nr.height) > 0.5) return null
+    }
+    // 收集 dirty block 外接矩形
+    let bbox: { x: number; y: number; width: number; height: number } | null = null
+    for (const id of dirtyIds) {
+      const r = newRects.get(id)
+      if (!r) return null
+      bbox = bbox
+        ? {
+            x: Math.min(bbox.x, r.x),
+            y: Math.min(bbox.y, r.y),
+            width: Math.max(bbox.x + bbox.width, r.x + r.width) - Math.min(bbox.x, r.x),
+            height: Math.max(bbox.y + bbox.height, r.y + r.height) - Math.min(bbox.y, r.y)
+          }
+        : { x: r.x, y: r.y, width: r.width, height: r.height }
+    }
+    if (!bbox) return null
+    // 外接矩形过大 → 全量
+    if (bbox.width * bbox.height > this.viewportWidth * this.viewportHeight * 0.7) return null
+    return bbox
+  }
+
+  /** 收集所有页级 block 的文档坐标矩形（id -> rect），不递归 table 内 cell */
+  private collectBlockRectsById(layout: DocumentLayout): Map<number, { x: number; y: number; width: number; height: number }> {
+    const m = new Map<number, { x: number; y: number; width: number; height: number }>()
+    const collect = (blocks: BlockNode[], originX: number, originY: number) => {
+      for (const b of blocks) {
+        if (b.kind === 'paragraph' || b.kind === 'image' || b.kind === 'separator' || b.kind === 'pageBreak' || b.kind === 'table') {
+          m.set(b.id, { x: originX + b.rect.x, y: originY + b.rect.y, width: b.rect.width, height: b.rect.height })
+        }
+      }
+    }
+    for (const page of layout.pages) {
+      collect(page.blocks, page.contentRect.x, page.contentRect.y)
+      if (page.headerBlocks && page.headerRect) collect(page.headerBlocks, page.headerRect.x, page.headerRect.y)
+      if (page.footerBlocks && page.footerRect) collect(page.footerBlocks, page.footerRect.x, page.footerRect.y)
+    }
+    return m
   }
 
   /** 计算页面水平居中偏移：(wrapperWidth - pageWidth)/2 - scrollLeft */
@@ -1209,7 +1292,10 @@ export class Draw {
       if (!this.layout) return
       this.syncPageNumberToRenderer()
       this.syncWatermarkToRenderer()
-      this.renderer.render(this.layout, this.scrollY, this.viewportHeight)
+      const dirtyRect = this.pendingDirtyRect
+      this.pendingDirtyRect = null
+
+      this.renderer.render(this.layout, this.scrollY, this.viewportHeight, dirtyRect)
       this.renderCaretIfAny()
       this.selectionToolbarWidget?.update()
       if (!this._pendingSkipAfterRender) {

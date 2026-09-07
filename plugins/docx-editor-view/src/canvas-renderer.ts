@@ -1,10 +1,10 @@
 /**
  * VerveDocs View —— CanvasRenderer
  *
- * 三层 canvas：background / content / overlay。
+ * 背景 DOM 层 + content/overlay 两层 canvas。
  *
  * 增量重绘：
- *  - 每个 Block 拥有独立 OffscreenCanvas 位图，key = block.id。
+ *  - 每个 Block 拥有独立 canvas 位图，key = block.id。
  *  - 首次或 dirty 时重建该 block bitmap；否则复用。
  *  - 主 content canvas 每帧执行：clear + drawImage(bitmap) 到屏幕对应位置。
  *  - 因此"内容变化局部更新" = 只对 dirty block 重建 bitmap。
@@ -15,9 +15,11 @@
 
 import type {
   BlockNode, DocumentLayout, PageLayout,
-  ParagraphBlock, ImageBlock, TableBlock, SeparatorBlock, InlineBox
+  ParagraphBlock, ImageBlock, TableBlock, SeparatorBlock
 } from './layout-types'
 import type { IGroupColor } from '@vervedoc/docx-editor-schema'
+import { paintParagraph, type PaintCtx } from './block-painter'
+
 
 /** CanvasRenderer 渲染器配置选项 */
 export interface RendererOptions {
@@ -46,28 +48,13 @@ export interface RendererOptions {
 
 }
 
-/** 单条文本绘制命令（用于分桶合并绘制以减少 ctx.font 切换开销） */
-interface DrawCommand {
-  /** 字体字符串（CSS font 简写） */
-  font: string
-  /** 文本颜色 */
-  color: string
-  /** 绘制起点 x 坐标 */
-  x: number
-  /** 绘制基线 y 坐标 */
-  y: number
-  /** 待绘制文本内容 */
-  text: string
-  /** 字符间距（两端对齐时使用，逐字绘制） */
-  letterSpacing?: number
-}
 
-/** 块位图缓存条目：保存已渲染好的 OffscreenCanvas/HTMLCanvasElement 及其尺寸元信息 */
+/** 块位图缓存条目：保存已渲染好的位图及其尺寸元信息 */
 interface BlockCache {
   /** 块 id（与 BlockNode.id 对应） */
   id: number
-  /** 已渲染好的位图 */
-  bitmap: HTMLCanvasElement
+  /** 已渲染好的位图（OffscreenCanvas 时为 ImageBitmap，降级时为 HTMLCanvasElement） */
+  bitmap: HTMLCanvasElement | ImageBitmap | null
   /** 位图 CSS 宽度 */
   width: number
   /** 位图 CSS 高度 */
@@ -77,22 +64,26 @@ interface BlockCache {
 }
 
 /**
- * Canvas 渲染器：维护 background / content / overlay 三层 canvas，
+ * Canvas 渲染器：维护背景 DOM 层 + content/overlay 两层 canvas，
  * 负责 block 位图缓存、增量重绘、光标/选区/页眉页脚分隔线绘制。
  */
 export class CanvasRenderer {
-  /** 背景层 canvas（绘制页面底色与阴影） */
-  private bgCanvas: HTMLCanvasElement
+  /** 背景层 DOM 容器（每页背景 div，z-index:0） */
+  private bgLayer: HTMLDivElement
   /** 内容层 canvas（绘制 block 位图） */
   private contentCanvas: HTMLCanvasElement
   /** 覆盖层 canvas（绘制光标、选区高亮、zone 分隔线） */
   private overlayCanvas: HTMLCanvasElement
-  /** 背景层 2d 上下文 */
-  private bgCtx: CanvasRenderingContext2D
   /** 内容层 2d 上下文 */
   private contentCtx: CanvasRenderingContext2D
   /** 覆盖层 2d 上下文 */
   private overlayCtx: CanvasRenderingContext2D
+  /** 选区层 DOM 容器（选区高亮 div，z-index:3） */
+  private selectionLayer: HTMLDivElement
+  /** 每页背景 div（页号 → div），带 data-index 供协同光标定位 */
+  private pageBgEls = new Map<number, HTMLDivElement>()
+  /** 选区高亮 div 池（复用，避免频繁创建） */
+  private selectionEls: HTMLDivElement[] = []
 
   /** canvas CSS 宽度（视口宽度） */
   private cssWidth = 0
@@ -107,6 +98,7 @@ export class CanvasRenderer {
   private blockCache = new Map<number, BlockCache>()
   /** 待重建位图的 block id 集合 */
   private dirtyBlocks = new Set<number>()
+
 
   /** 水印 widget（可选，设置后在每页渲染完成后绘制水印） */
   private watermarkWidget: { drawWatermark(ctx: CanvasRenderingContext2D, page: import('./layout-types').PageLayout, scrollY: number): void; drawWatermarkForThumbnail(ctx: CanvasRenderingContext2D, page: import('./layout-types').PageLayout): void } | null = null
@@ -128,12 +120,13 @@ export class CanvasRenderer {
       rulerColor: options.rulerColor ?? '#999999'
     }
 
-    this.bgCanvas = this.createLayer('bg', 0)
+    this.bgLayer = this.createDomLayer('bg', 0)
     this.contentCanvas = this.createLayer('content', 1)
     this.overlayCanvas = this.createLayer('overlay', 2)
-    this.bgCtx = this.bgCanvas.getContext('2d')!
+    this.selectionLayer = this.createDomLayer('selection', 3)
     this.contentCtx = this.contentCanvas.getContext('2d')!
     this.overlayCtx = this.overlayCanvas.getContext('2d')!
+
   }
 
   /**
@@ -154,6 +147,19 @@ export class CanvasRenderer {
     return c
   }
 
+  /** 创建一个 DOM 叠加层并挂载到容器 */
+  private createDomLayer(name: string, z: number): HTMLDivElement {
+    const el = document.createElement('div')
+    el.dataset.layer = name
+    el.style.position = 'absolute'
+    el.style.top = '0'
+    el.style.left = '0'
+    el.style.zIndex = String(z)
+    el.style.pointerEvents = 'none'
+    this.container.appendChild(el)
+    return el
+  }
+
   /**
    * 设置 canvas 视口尺寸（CSS 像素），同时按 dpr 调整物理像素与变换矩阵。
    * @param cssWidth CSS 宽度
@@ -163,13 +169,13 @@ export class CanvasRenderer {
     this.cssWidth = cssWidth
     this.cssHeight = cssHeight
     const dpr = this.opts.dpr
-    for (const c of [this.bgCanvas, this.contentCanvas, this.overlayCanvas]) {
+    for (const c of [this.contentCanvas, this.overlayCanvas]) {
       c.width = Math.round(cssWidth * dpr)
       c.height = Math.round(cssHeight * dpr)
       c.style.width = `${cssWidth}px`
       c.style.height = `${cssHeight}px`
     }
-    for (const ctx of [this.bgCtx, this.contentCtx, this.overlayCtx]) {
+    for (const ctx of [this.contentCtx, this.overlayCtx]) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     }
   }
@@ -240,8 +246,24 @@ export class CanvasRenderer {
 
   /** 全部标脏（用于选项/主题变更） */
   invalidateAll(): void {
+    for (const c of this.blockCache.values()) {
+      if (c.bitmap instanceof ImageBitmap) c.bitmap.close()
+    }
     this.blockCache.clear()
     this.dirtyBlocks.clear()
+  }
+
+  /** 销毁渲染器 */
+  destroy(): void {
+    for (const c of this.blockCache.values()) {
+      if (c.bitmap instanceof ImageBitmap) c.bitmap.close()
+    }
+    this.pageBgEls.clear()
+    this.selectionEls = []
+    this.bgLayer.remove()
+    this.selectionLayer.remove()
+    this.contentCanvas.remove()
+    this.overlayCanvas.remove()
   }
 
   /** 更新页码配置 */
@@ -432,24 +454,36 @@ export class CanvasRenderer {
   }
 
   /**
-   * 绘制选区高亮（overlay 层）。传入文档坐标矩形列表，内部应用 scrollY 与 pageOffsetX。
+   * 绘制选区高亮（DOM div 池）。传入文档坐标矩形列表，内部应用 scrollY 与 pageOffsetX。
    */
   drawSelection(rects: { x: number; y: number; width: number; height: number }[], scrollY: number): void {
-    if (rects.length === 0) return
-    const ov = this.overlayCtx
-    ov.save()
-    ov.fillStyle = 'rgba(77, 146, 255, 0.3)'
-    for (const r of rects) {
-      const x = Math.round(r.x + this.opts.pageOffsetX)
-      const y = Math.round(r.y - scrollY)
-      ov.fillRect(x, y, Math.round(r.width), Math.round(r.height))
+    for (let i = 0; i < rects.length; i++) {
+      const r = rects[i]
+      let el = this.selectionEls[i]
+      if (!el) {
+        el = document.createElement('div')
+        el.className = 'vd-selection'
+        el.style.position = 'absolute'
+        el.style.background = 'rgba(77, 146, 255, 0.3)'
+        el.style.pointerEvents = 'none'
+        this.selectionLayer.appendChild(el)
+        this.selectionEls[i] = el
+      }
+      el.style.display = 'block'
+      el.style.left = `${Math.round(r.x + this.opts.pageOffsetX)}px`
+      el.style.top = `${Math.round(r.y - scrollY)}px`
+      el.style.width = `${Math.round(r.width)}px`
+      el.style.height = `${Math.round(r.height)}px`
     }
-    ov.restore()
+    for (let i = rects.length; i < this.selectionEls.length; i++) {
+      this.selectionEls[i].style.display = 'none'
+    }
   }
 
-  /** 清除 overlay 上的光标 / 选区 */
+  /** 清除 overlay canvas 上的光标/zone，并隐藏选区 div */
   clearOverlay(): void {
     this.overlayCtx.clearRect(0, 0, this.cssWidth, this.cssHeight)
+    for (const el of this.selectionEls) el.style.display = 'none'
   }
 
   /** 绘制页眉/页脚编辑区域的虚线边框（参照 Word：紧贴可输入内容区域的矩形边框） */
@@ -548,77 +582,141 @@ export class CanvasRenderer {
    *   - block bitmap：按需构建（首次 / dirty）
    *   - 主 canvas：clear + drawImage
    */
-  render(layout: DocumentLayout, scrollY: number, viewportHeight: number): void {
-    const bg = this.bgCtx
+  render(layout: DocumentLayout, scrollY: number, viewportHeight: number, dirtyRect?: { x: number; y: number; width: number; height: number } | null): void {
     const ct = this.contentCtx
-    bg.clearRect(0, 0, this.cssWidth, this.cssHeight)
-    ct.clearRect(0, 0, this.cssWidth, this.cssHeight)
+    const w = this.cssWidth
+    const h = this.cssHeight
+    const pageCount = layout.pages.length
+    const aliveIds = new Set<number>()
 
+    // 脏区域合成：无重排局部变更时只清 + 重画脏区域，不重画 bg，跳过 GC
+    if (dirtyRect) {
+
+      const dx = Math.round(dirtyRect.x + this.opts.pageOffsetX)
+      const dy = Math.round(dirtyRect.y - scrollY)
+      const dw = dirtyRect.width
+      const dh = dirtyRect.height
+      const dTop = dirtyRect.y
+      const dBottom = dirtyRect.y + dirtyRect.height
+
+      ct.clearRect(dx, dy, dw, dh)
+      ct.save()
+      ct.beginPath()
+      ct.rect(dx, dy, dw, dh)
+      ct.clip()
+      for (const page of layout.pages) {
+        const pageBottom = page.rect.y + page.rect.height
+        if (pageBottom < dTop || page.rect.y > dBottom) continue
+        this.renderPageContent(ct, page, scrollY, pageCount, aliveIds)
+      }
+      ct.restore()
+      this.dirtyBlocks.clear()
+      return
+    }
+
+    // 全量
+
+    ct.clearRect(0, 0, w, h)
     const viewTop = scrollY
     const viewBottom = scrollY + viewportHeight
 
-    // 收集使用中的 blockId 用于 GC
-    const aliveIds = new Set<number>()
+    this.renderBgDom(layout, scrollY, viewportHeight)
 
     for (const page of layout.pages) {
       const pageBottom = page.rect.y + page.rect.height
       if (pageBottom < viewTop || page.rect.y > viewBottom) continue
-
-      // 页背景（居中偏移 + 柔和阴影）
-      const px = Math.round(page.rect.x + this.opts.pageOffsetX)
-      const py = Math.round(page.rect.y - scrollY)
-      bg.save()
-      bg.shadowColor = this.opts.pageShadow
-      bg.shadowBlur = 12
-      bg.shadowOffsetX = 0
-      bg.shadowOffsetY = 4
-      bg.fillStyle = this.opts.pageBg
-      bg.fillRect(px, py, page.rect.width, page.rect.height)
-      bg.restore()
-
-      // WPS 风格四角边距标尺
-      if (this.opts.showMarginRuler) {
-        this.drawMarginRuler(bg, px, py, page.rect.width, page.rect.height)
-      }
-
-      const contentOriginX = page.contentRect.x + this.opts.pageOffsetX
-      const contentOriginY = page.contentRect.y - scrollY
-
-      for (const b of page.blocks) {
-        this.renderBlockOnMain(ct, b, contentOriginX, contentOriginY, aliveIds)
-      }
-
-      // 页眉内容
-      if (page.headerBlocks && page.headerRect) {
-        const hx = page.headerRect.x + this.opts.pageOffsetX
-        const hy = page.headerRect.y - scrollY
-        for (const b of page.headerBlocks) {
-          this.renderBlockOnMain(ct, b, hx, hy, aliveIds)
-        }
-      }
-
-      // 页脚内容
-      if (page.footerBlocks && page.footerRect) {
-        const fx = page.footerRect.x + this.opts.pageOffsetX
-        const fy = page.footerRect.y - scrollY
-        for (const b of page.footerBlocks) {
-          this.renderBlockOnMain(ct, b, fx, fy, aliveIds)
-        }
-      }
-
-      // 页码
-      this.drawPageNumber(ct, page, scrollY, layout.pages.length)
-
-      // 水印
-      this.watermarkWidget?.drawWatermark(ct, page, scrollY)
+      this.renderPageContent(ct, page, scrollY, pageCount, aliveIds)
     }
 
     // GC：淘汰未使用的 bitmap
     for (const id of Array.from(this.blockCache.keys())) {
-      if (!aliveIds.has(id)) this.blockCache.delete(id)
+      if (!aliveIds.has(id)) {
+        const c = this.blockCache.get(id)!
+        if (c.bitmap instanceof ImageBitmap) c.bitmap.close()
+        this.blockCache.delete(id)
+      }
     }
     // 已应用完 dirty
     this.dirtyBlocks.clear()
+  }
+
+  /** 渲染每页背景 DOM div（带 data-index 供协同光标定位） */
+  private renderBgDom(layout: DocumentLayout, scrollY: number, viewportHeight: number): void {
+    const viewTop = scrollY
+    const viewBottom = scrollY + viewportHeight
+    const alive = new Set<number>()
+    for (const page of layout.pages) {
+      const pageBottom = page.rect.y + page.rect.height
+      if (pageBottom < viewTop || page.rect.y > viewBottom) continue
+      alive.add(page.index)
+      let el = this.pageBgEls.get(page.index)
+      if (!el) {
+        el = document.createElement('div')
+        el.className = 'vd-page-bg'
+        el.dataset.index = String(page.index)
+        el.style.position = 'absolute'
+        el.style.background = this.opts.pageBg
+        el.style.boxShadow = `0 4px 12px ${this.opts.pageShadow}`
+        el.style.pointerEvents = 'none'
+        this.bgLayer.appendChild(el)
+        this.pageBgEls.set(page.index, el)
+      }
+      el.style.left = `${Math.round(page.rect.x + this.opts.pageOffsetX)}px`
+      el.style.top = `${Math.round(page.rect.y - scrollY)}px`
+      el.style.width = `${page.rect.width}px`
+      el.style.height = `${page.rect.height}px`
+      if (this.opts.showMarginRuler) {
+        this.renderMarginRuler(el, page.rect.width, page.rect.height)
+      }
+    }
+    for (const [idx, el] of this.pageBgEls) {
+      if (!alive.has(idx)) { el.remove(); this.pageBgEls.delete(idx) }
+    }
+  }
+
+  /**
+   * 绘制 WPS 风格四角边距标尺（SVG，DOM）。内容区四角的角标朝外伸入页边距。
+   * 用签名缓存避免每帧重建 SVG。
+   */
+  private renderMarginRuler(el: HTMLDivElement, pw: number, ph: number): void {
+    const [mt, mr, mb, ml] = this.opts.pageMargins
+    const color = this.opts.rulerColor
+    const L = 20
+    const sig = `${pw}|${ph}|${ml}|${mr}|${mt}|${mb}|${color}`
+    if (el.dataset.rulerSig === sig) return
+    el.dataset.rulerSig = sig
+    const corners = [
+      `${ml - L},${mt} ${ml},${mt} ${ml},${mt - L}`,
+      `${pw - mr + L},${mt} ${pw - mr},${mt} ${pw - mr},${mt - L}`,
+      `${ml - L},${ph - mb} ${ml},${ph - mb} ${ml},${ph - mb + L}`,
+      `${pw - mr + L},${ph - mb} ${pw - mr},${ph - mb} ${pw - mr},${ph - mb + L}`
+    ]
+    el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none" fill="none" stroke="${color}" stroke-width="1">${corners.map(p => `<polyline points="${p}"/>`).join('')}</svg>`
+  }
+
+  /** 渲染单页内容：blocks + 页眉 + 页脚 + 页码 + 水印 */
+  private renderPageContent(ct: CanvasRenderingContext2D, page: PageLayout, scrollY: number, pageCount: number, aliveIds: Set<number>): void {
+    const contentOriginX = page.contentRect.x + this.opts.pageOffsetX
+    const contentOriginY = page.contentRect.y - scrollY
+    for (const b of page.blocks) {
+      this.renderBlockOnMain(ct, b, contentOriginX, contentOriginY, aliveIds)
+    }
+    if (page.headerBlocks && page.headerRect) {
+      const hx = page.headerRect.x + this.opts.pageOffsetX
+      const hy = page.headerRect.y - scrollY
+      for (const b of page.headerBlocks) {
+        this.renderBlockOnMain(ct, b, hx, hy, aliveIds)
+      }
+    }
+    if (page.footerBlocks && page.footerRect) {
+      const fx = page.footerRect.x + this.opts.pageOffsetX
+      const fy = page.footerRect.y - scrollY
+      for (const b of page.footerBlocks) {
+        this.renderBlockOnMain(ct, b, fx, fy, aliveIds)
+      }
+    }
+    this.drawPageNumber(ct, page, scrollY, pageCount)
+    this.watermarkWidget?.drawWatermark(ct, page, scrollY)
   }
 
   /**
@@ -659,8 +757,10 @@ export class CanvasRenderer {
       Math.round(cache.width) !== Math.round(b.rect.width) ||
       Math.round(cache.height) !== Math.round(b.rect.height) ||
       cache.dpr !== this.opts.dpr
-    let bitmap: HTMLCanvasElement
+
+    let bitmap: HTMLCanvasElement | ImageBitmap | null
     if (needRebuild) {
+      if (cache?.bitmap instanceof ImageBitmap) cache.bitmap.close()
       bitmap = this.buildBlockBitmap(b)
       this.blockCache.set(b.id, {
         id: b.id,
@@ -672,8 +772,11 @@ export class CanvasRenderer {
     } else {
       bitmap = cache!.bitmap
     }
-    ctx.drawImage(bitmap, Math.round(bx), Math.round(by), b.rect.width, b.rect.height)
+    if (bitmap) {
+      ctx.drawImage(bitmap, Math.round(bx), Math.round(by), b.rect.width, b.rect.height)
+    }
   }
+
 
   /** 绘制分割线，按元素上的 lineType/lineWidth/dashArray/color 渲染 */
   private drawSeparator(ctx: CanvasRenderingContext2D, b: SeparatorBlock, bx: number, by: number): void {
@@ -756,19 +859,32 @@ export class CanvasRenderer {
   }
 
   /**
-   * 为单个 block 构建独立位图（paragraph/image），返回新建的 canvas。
-   * @param b 待构建块（仅处理 paragraph/image，其它类型返回空 canvas）
-   * @returns 渲染好块内容的 canvas 元素
+   * 为单个 block 构建独立位图（paragraph/image）。
+   * 优先使用 OffscreenCanvas + transferToImageBitmap（零拷贝），不支持时降级 HTMLCanvasElement。
+   * @param b 待构建块（仅处理 paragraph/image，其它类型返回空位图）
+   * @returns 渲染好块内容的 ImageBitmap 或 canvas 元素
    */
-  private buildBlockBitmap(b: BlockNode): HTMLCanvasElement {
+  private buildBlockBitmap(b: BlockNode): HTMLCanvasElement | ImageBitmap {
     const dpr = this.opts.dpr
     const w = Math.max(1, Math.ceil(b.rect.width))
     const h = Math.max(1, Math.ceil(b.rect.height))
-    const c = document.createElement('canvas')
-    c.width = Math.max(1, Math.round(w * dpr))
-    c.height = Math.max(1, Math.round(h * dpr))
-    const ctx = c.getContext('2d')!
+    const pw = Math.max(1, Math.round(w * dpr))
+    const ph = Math.max(1, Math.round(h * dpr))
+
+    let ctx: PaintCtx
+    let off: OffscreenCanvas | null = null
+    let c: HTMLCanvasElement | null = null
+    if (typeof OffscreenCanvas !== 'undefined') {
+      off = new OffscreenCanvas(pw, ph)
+      ctx = off.getContext('2d')!
+    } else {
+      c = document.createElement('canvas')
+      c.width = pw
+      c.height = ph
+      ctx = c.getContext('2d')!
+    }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+
     if (b.kind === 'paragraph') {
       if (b.surroundImage) {
         const si = b.surroundImage
@@ -790,116 +906,20 @@ export class CanvasRenderer {
       }
     }
     else if (b.kind === 'image') this.drawImageInto(ctx, b, 0, 0)
-    return c
-  }
 
-  /** 将 hex/rgb 颜色转为半透明高亮色（用于批注/修订文本背景） */
-  private _groupHighlightColor(color: string): string {
-    const m = color.match(/^#([0-9a-f]{6})$/i)
-    if (m) {
-      const r = parseInt(m[1].slice(0, 2), 16)
-      const g = parseInt(m[1].slice(2, 4), 16)
-      const b = parseInt(m[1].slice(4, 6), 16)
-      return `rgba(${r},${g},${b},0.18)`
-    }
-    return color
+    if (off) return off.transferToImageBitmap()
+    return c!
   }
 
   /**
-   * 将段落块绘制到目标 ctx：项目符号/编号 + 分桶文本 + 背景色 + 下划线/删除线。
+   * 将段落块绘制到目标 ctx：委托共享纯函数 paintParagraph。
    * @param ctx 目标 2d 上下文
    * @param b 段落块
    */
-  private drawParagraphInto(ctx: CanvasRenderingContext2D, b: ParagraphBlock): void {
-    // 项目符号 / 编号（list 段落必有；title 段落若关联多级列表也会有）
-    if (b.bulletText) {
-      const firstLine = b.lines[0]
-      if (firstLine) {
-        const size = b.bulletSize ?? 16
-        const family = b.bulletFont ?? 'sans-serif'
-        const bold = b.bulletBold ? '700' : '400'
-        ctx.font = `${bold} ${size}px ${family}`
-        ctx.fillStyle = b.bulletColor ?? '#000000'
-        ctx.textBaseline = 'alphabetic'
-        // 绘制位置：优先使用 bulletX 偏移（相对首行 x，支持 lvlJc 对齐）；
-        // 无偏移时回退到 "文本起点 - bulletWidth"（等价原行为）。
-        const bx = firstLine.x + (b.bulletX ?? -(b.bulletWidth ?? 0))
-        const by = firstLine.y + firstLine.baseline
-        ctx.fillText(b.bulletText, bx, by)
-      }
-    }
-    // 分桶
-    const buckets = new Map<string, DrawCommand[]>()
-    const bgRects: { x: number; y: number; w: number; h: number; color: string }[] = []
-    const strokes: { x1: number; y1: number; x2: number; y2: number; color: string; width: number }[] = []
-    const groupColors = this.opts.groupColors
-    for (const line of b.lines) {
-      for (const inl of line.inlines) {
-        if (inl.bgColor) {
-          bgRects.push({ x: inl.x, y: inl.y, w: inl.width, h: line.height, color: inl.bgColor })
-        }
-        const activeGroupId = this.opts.activeGroupId
-        if (activeGroupId && groupColors && inl.groupIds?.includes(activeGroupId)) {
-          const gc = groupColors[activeGroupId]
-          if (gc) {
-            bgRects.push({ x: inl.x, y: inl.y, w: inl.width, h: line.height, color: this._groupHighlightColor(gc.color) })
-          }
-        }
-        const font = fontOf(inl)
-        const key = `${font}||${inl.color}`
-        addBucket(buckets, key, {
-          font, color: inl.color,
-          x: inl.x, y: inl.baseline,
-          text: inl.text,
-          letterSpacing: inl.letterSpacing
-        })
-        if (inl.underline) {
-          strokes.push({
-            x1: inl.x, y1: inl.baseline + 2, x2: inl.x + inl.width, y2: inl.baseline + 2,
-            color: inl.color, width: 1
-          })
-        }
-        if (inl.strikeout) {
-          const my = inl.baseline - inl.size * 0.3
-          strokes.push({
-            x1: inl.x, y1: my, x2: inl.x + inl.width, y2: my,
-            color: inl.color, width: 1
-          })
-        }
-      }
-    }
-    for (const r of bgRects) {
-      ctx.fillStyle = r.color
-      ctx.fillRect(Math.round(r.x), Math.round(r.y), Math.round(r.w), Math.round(r.h))
-    }
-    ctx.textBaseline = 'alphabetic'
-    for (const [key, list] of buckets) {
-      const [font, color] = key.split('||')
-      ctx.font = font
-      ctx.fillStyle = color
-      for (const c of list) {
-        if (!c.letterSpacing) {
-          ctx.fillText(c.text, c.x, c.y)
-        } else {
-          // 逐字绘制以支持两端对齐字距
-          let cx = c.x
-          for (let i = 0; i < c.text.length; i++) {
-            const ch = c.text[i]
-            ctx.fillText(ch, cx, c.y)
-            cx += ctx.measureText(ch).width + c.letterSpacing
-          }
-        }
-      }
-    }
-    for (const s of strokes) {
-      ctx.strokeStyle = s.color
-      ctx.lineWidth = s.width
-      ctx.beginPath()
-      ctx.moveTo(s.x1 + 0.5, s.y1 + 0.5)
-      ctx.lineTo(s.x2 + 0.5, s.y2 + 0.5)
-      ctx.stroke()
-    }
+  private drawParagraphInto(ctx: PaintCtx, b: ParagraphBlock): void {
+    paintParagraph(ctx, b, { groupColors: this.opts.groupColors, activeGroupId: this.opts.activeGroupId })
   }
+
 
   /**
    * 将图片块绘制到目标 ctx：异步加载图片，加载完成后触发重绘；支持 90/180/270 旋转。
@@ -908,7 +928,7 @@ export class CanvasRenderer {
    * @param x 绘制左上角 x
    * @param y 绘制左上角 y
    */
-  private drawImageInto(ctx: CanvasRenderingContext2D, b: ImageBlock, x: number, y: number): void {
+  private drawImageInto(ctx: PaintCtx, b: ImageBlock, x: number, y: number): void {
     const url = String((b.block as unknown as { value?: string }).value ?? '')
     if (!url) return
     let img = this.imageCache.get(url)
@@ -1069,72 +1089,13 @@ export class CanvasRenderer {
 
   /* -------------------- 边距标尺（WPS 风格） -------------------- */
 
-  /**
-   * 绘制 WPS 风格四角边距标尺：内容区四角的角标朝外伸入页边距。
-   * @param ctx 背景 2d 上下文
-   * @param px 页面左上角 x
-   * @param py 页面左上角 y
-   * @param pw 页面宽度
-   * @param ph 页面高度
-   */
-  private drawMarginRuler(
-    ctx: CanvasRenderingContext2D,
-    px: number, py: number, pw: number, ph: number
-  ): void {
-    const [mt, mr, mb, ml] = this.opts.pageMargins
-    const color = this.opts.rulerColor
-    const L = 20 // 角标两臂等长
-    ctx.save()
-    ctx.strokeStyle = color
-    ctx.lineWidth = 1
-    // WPS 风格：内容区四角的角标朝"外"伸入页边距，
-    // 顶部指示器垂直臂朝上、底部指示器垂直臂朝下，水平臂分别朝左右外侧
-    const drawCorner = (cx: number, cy: number, dx: number, dy: number) => {
-      ctx.beginPath()
-      ctx.moveTo(cx + dx * L + 0.5, cy + 0.5)
-      ctx.lineTo(cx + 0.5, cy + 0.5)
-      ctx.lineTo(cx + 0.5, cy + dy * L + 0.5)
-      ctx.stroke()
-    }
-    // 左上：内边距点 (px+ml, py+mt)，水平臂朝左、垂直臂朝上
-    drawCorner(px + ml, py + mt, -1, -1)
-    // 右上：水平臂朝右、垂直臂朝上
-    drawCorner(px + pw - mr, py + mt, 1, -1)
-    // 左下：水平臂朝左、垂直臂朝下
-    drawCorner(px + ml, py + ph - mb, -1, 1)
-    // 右下：水平臂朝右、垂直臂朝下
-    drawCorner(px + pw - mr, py + ph - mb, 1, 1)
-    ctx.restore()
-  }
 
 }
 
 /* -------------------- 工具 -------------------- */
 
 /**
- * 由 inline 拼出 CSS font 字符串（含粗细、斜体、字号、字体族）。
- * @param inl inline 元数据
- * @returns CSS font 简写字符串
- */
-function fontOf(inl: InlineBox): string {
-  const w = inl.bold ? '700' : '400'
-  const s = inl.italic ? 'italic ' : ''
-  return `${s}${w} ${inl.size}px ${inl.font}`
-}
 
-/**
- * 将绘制命令按 key 推入分桶，便于后续按相同 font/color 批量绘制。
- * @param buckets 桶映射
- * @param key 桶键（通常为 font||color）
- * @param cmd 待加入的绘制命令
- */
-function addBucket(buckets: Map<string, DrawCommand[]>, key: string, cmd: DrawCommand): void {
-  let list = buckets.get(key)
-  if (!list) { list = []; buckets.set(key, list) }
-  list.push(cmd)
-}
-
-/**
  * 绘制一条带样式的边：支持 solid/dashed/dotted/double，并对奇数宽度做 0.5px 像素对齐。
  * @param ctx 目标 2d 上下文
  * @param x1 起点 x

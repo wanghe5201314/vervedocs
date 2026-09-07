@@ -98,7 +98,9 @@
               <div class="wm-section-title">预设水印</div>
               <div class="wm-preset-grid">
                 <div class="wm-preset-item" v-for="preset in WATERMARK_PRESETS" :key="preset.name" @click="emit('command', 'addWatermark', preset.options)">
-                  <div class="wm-preset-preview"><span>{{ preset.name }}</span></div>
+                  <div class="wm-preset-preview">
+                    <span class="wm-preset-text" :style="{ color: preset.options.color, opacity: preset.options.opacity }">{{ preset.name }}</span>
+                  </div>
                   <div class="wm-preset-name">{{ preset.name }}</div>
                 </div>
               </div>

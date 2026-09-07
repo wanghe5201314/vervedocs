@@ -59,6 +59,11 @@
   --app-ribbon-hover-bg: #edf2fb;
   --app-ribbon-active-bg: #dce8ff;
   --app-ribbon-active-text: #1f57b8;
+  --app-sidebar-bg: #f1f1f1;
+  --app-sidebar-surface: #ffffff;
+  --app-sidebar-hover-bg: #f5f7fa;
+  --app-sidebar-active-bg: #e6f7ff;
+  --app-sidebar-danger-hover-bg: #fff1f0;
 }
 
 html,
@@ -352,6 +357,10 @@ ul {
 
 /* 水印 */
 
+.watermark-body .ant-form-item { margin-bottom: 10px; }
+.watermark-body .ant-form-item-label > label { font-size: 13px; }
+.watermark-body .ant-slider { margin: 6px 0; }
+
 .wm-section { margin-bottom: 10px; }
 .wm-section:last-child { margin-bottom: 0; }
 .wm-section-title { font-size: 12px; color: #909399; font-weight: 600; margin-bottom: 4px; }
@@ -359,12 +368,12 @@ ul {
 .wm-custom-add:hover { border-color: #1890ff; color: #1890ff; }
 .wm-custom-add .material-symbols-outlined { width: 20px; height: 20px; }
 .wm-custom-add span { font-size: 11px; }
-.wm-preset-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.wm-preset-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; }
-.wm-preset-preview { width: 70px; height: 60px; border: 1px solid #e4e7ed; background: #fff; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; border-radius: 4px; }
-.wm-preset-preview span { font-size: 11px; color: #dcdfe6; transform: rotate(-45deg); white-space: nowrap; }
-.wm-preset-item:hover .wm-preset-preview { border-color: #1890ff; background-color: #f0f7ff; }
-.wm-preset-name { font-size: 11px; color: #606266; text-align: center; }
+.wm-preset-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.wm-preset-item { cursor: pointer; text-align: center; padding: 4px; border: 1px solid #e8e8e8; border-radius: 4px; transition: border-color 0.15s, background-color 0.15s; }
+.wm-preset-item:hover { border-color: #1890ff; background-color: #f0f7ff; }
+.wm-preset-preview { height: 48px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #fff; border-bottom: 1px solid #f0f0f0; margin-bottom: 4px; }
+.wm-preset-text { display: inline-block; transform: rotate(-30deg); white-space: nowrap; font-size: 14px; font-weight: 600; letter-spacing: 1px; }
+.wm-preset-name { font-size: 12px; color: #606266; text-align: center; }
 
 
 /* 分割线（MenuBar & CompactToolbar） */

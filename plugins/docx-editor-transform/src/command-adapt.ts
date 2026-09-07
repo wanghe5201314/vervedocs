@@ -55,12 +55,16 @@ export interface DrawLike {
   getZone(): Zone
   /** 设置当前编辑区域 */
   setZone(zone: Zone): void
+  /** 切换编辑区域并设置初始光标到对应区域起始位置 */
+  setZoneWithCaret(zone: Zone): void
   /** 打印文档 */
   print(): void
   /** 获取所有页面缩略图（data URL 数组） */
   getPageThumbnails(): string[]
   /** 滚动到指定文档位置使其可见 */
   scrollPositionIntoView?(pos: IPosition): void
+  /** 设置系统级水印（DOM 覆盖层），null 表示移除 */
+  setSystemWatermark?(config: { data: string; color?: string; opacity?: number; size?: number; font?: string; repeat?: boolean; gapX?: number; gapY?: number } | null): void
 }
 
 /**
@@ -1722,7 +1726,7 @@ export class CommandAdapt {
    * 添加水印。
    * @param payload 水印参数，可包含 data/content/color/opacity/size/font/repeat
    */
-  addWatermark(payload: { data?: string; content?: string; color?: string; opacity?: number; size?: number; font?: string; repeat?: boolean } | any): void {
+  addWatermark(payload: { data?: string; content?: string; color?: string; opacity?: number; size?: number; font?: string; repeat?: boolean; gapX?: number; gapY?: number } | any): void {
     const p = payload || {}
     this.draw.updateOptions({ watermark: {
       data: p.data || p.content || '',
@@ -1730,13 +1734,28 @@ export class CommandAdapt {
       opacity: p.opacity,
       size: p.size,
       font: p.font,
-      repeat: p.repeat
+      repeat: p.repeat,
+      gapX: p.gapX,
+      gapY: p.gapY
     } } as Partial<IEditorOption>)
   }
 
   /** 删除水印 */
   deleteWatermark(): void {
     this.draw.updateOptions({ watermark: null } as Partial<IEditorOption>)
+  }
+
+  /**
+   * 设置系统级水印（全页面 DOM 覆盖层）。
+   * @param config 水印配置，null 表示移除
+   */
+  setSystemWatermark(config: { data: string; color?: string; opacity?: number; size?: number; font?: string; repeat?: boolean; gapX?: number; gapY?: number } | null): void {
+    this.draw.setSystemWatermark?.(config)
+  }
+
+  /** 删除系统级水印 */
+  deleteSystemWatermark(): void {
+    this.draw.setSystemWatermark?.(null)
   }
 
   /* -------------------- 查找替换 -------------------- */
@@ -2064,12 +2083,12 @@ export class CommandAdapt {
   /* -------------------- 区域切换 -------------------- */
 
   /**
-   * 切换编辑区域并清空选区。
+   * 切换编辑区域。切换到页眉/页脚时，将光标定位到对应区域的起始文本位置；
+   * 切回正文时清空选区，由后续点击/键盘事件重新定位。
    * @param zone 区域：'main' | 'header' | 'footer'
    */
   setZone(zone: Zone): void {
-    this.draw.setZone(zone)
-    this.range.clear()
+    this.draw.setZoneWithCaret(zone)
   }
 
   /** 清除页眉内容并回到正文 */
@@ -2104,6 +2123,7 @@ export class CommandAdapt {
   }
 
   /**
+
    * 获取当前编辑区域。
    * @returns 区域：'main' | 'header' | 'footer'
    */

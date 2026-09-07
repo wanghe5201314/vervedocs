@@ -184,7 +184,7 @@
           <a-menu @click="({ key }: any) => emit('cmd', key)">
             <a-menu-item key="header">编辑页眉</a-menu-item>
             <a-menu-item key="footer">编辑页脚</a-menu-item>
-            <a-menu-item key="pageNumberDialog">插入页码</a-menu-item>
+
             <a-menu-item key="clearHeader">移除页眉</a-menu-item>
             <a-menu-item key="clearFooter">移除页脚</a-menu-item>
           </a-menu>

@@ -98,6 +98,16 @@ export class LayoutEngine {
     const headerBlocks = headerElements?.length ? this.layoutBlocks(headerElements, [], contentWidth) : []
     const footerBlocks = footerElements?.length ? this.layoutBlocks(footerElements, [], contentWidth) : []
 
+    // 页眉内容在上边距区域内靠下排列（底部贴近正文顶部），避免紧贴页面顶部
+    let headerOffsetY = 0
+    if (headerBlocks.length > 0) {
+      const last = headerBlocks[headerBlocks.length - 1]
+      const headerContentHeight = last.rect.y + last.rect.height
+      headerOffsetY = Math.max(0, mt - headerContentHeight)
+    }
+    // 页脚内容在下边距区域内靠上排列（顶部贴近正文底部），偏移为 0
+    const footerOffsetY = 0
+
     // 分页
     const pages: PageLayout[] = []
     let pageIndex = 0
@@ -124,8 +134,14 @@ export class LayoutEngine {
       const footerRect: Rect = { x: ml, y: pageOriginY + mt + contentHeight, width: contentWidth, height: mb }
       pages.push({
         index: pageIndex, rect: pageRect, contentRect, blocks: currentBlocks,
-        headerRect, headerBlocks: headerBlocks.length ? headerBlocks.map(b => ({ ...b })) : undefined,
-        footerRect, footerBlocks: footerBlocks.length ? footerBlocks.map(b => ({ ...b })) : undefined
+        headerRect,
+        headerBlocks: headerBlocks.length
+          ? headerBlocks.map(b => ({ ...b, rect: { ...b.rect, y: b.rect.y + headerOffsetY } }))
+          : undefined,
+        footerRect,
+        footerBlocks: footerBlocks.length
+          ? footerBlocks.map(b => ({ ...b, rect: { ...b.rect, y: b.rect.y + footerOffsetY } }))
+          : undefined
       })
       pageIndex++
       currentBlocks = []

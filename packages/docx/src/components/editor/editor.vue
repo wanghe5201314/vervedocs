@@ -89,7 +89,7 @@ const {
 
 const {
   header: headerFn, footer: footerFn, mainZone: mainZoneFn,
-  clearHeader: clearHeaderFn, clearFooter: clearFooterFn, setPageNumber: setPageNumberFn,
+  clearHeader: clearHeaderFn, clearFooter: clearFooterFn,
 } = useEditorHeaderFooter({ getEditorInstance: () => editorInstance })
 
 const {
@@ -113,6 +113,7 @@ const {
 
 const {
   addWatermark: addWatermarkFn, deleteWatermark: deleteWatermarkFn,
+  setSystemWatermark: setSystemWatermarkFn, deleteSystemWatermark: deleteSystemWatermarkFn,
 } = useEditorWatermark({ getEditorInstance: () => editorInstance })
 
 const { insertLatex: insertLatexFn } = useEditorLatex({ getEditorInstance: () => editorInstance })
@@ -500,6 +501,8 @@ const executeCommand = (command: string, ...args: any[]) => {
     // 水印
     addWatermark: addWatermarkFn,
     deleteWatermark: deleteWatermarkFn,
+    setSystemWatermark: setSystemWatermarkFn,
+    deleteSystemWatermark: deleteSystemWatermarkFn,
 
     // LaTeX
     latex: () => {
@@ -582,8 +585,6 @@ const executeCommand = (command: string, ...args: any[]) => {
     clearHeader: clearHeaderFn,
     clearFooter: clearFooterFn,
 
-    // 设置页码
-    setPageNumber: setPageNumberFn,
 
     // 导入 JSON
     importJsonFile: importJsonFileFn,

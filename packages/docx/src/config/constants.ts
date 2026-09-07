@@ -115,12 +115,12 @@ export const BG_COLOR_PALETTE = [
  * 水印预设列表，含名称与水印选项
  */
 export const WATERMARK_PRESETS = [
-  { name: '保密', options: { data: '保密' } },
-  { name: '严禁复制', options: { data: '严禁复制' } },
-  { name: '原件', options: { data: '原件' } },
-  { name: '样本', options: { data: '样本' } },
-  { name: '绝密', options: { data: '绝密' } },
-  { name: '紧急', options: { data: '紧急' } }
+  { name: '保密', options: { data: '保密', color: '#AEB5C0', opacity: 0.3, size: 120, font: 'Microsoft YaHei', repeat: false } },
+  { name: '严禁复制', options: { data: '严禁复制', color: '#AEB5C0', opacity: 0.3, size: 120, font: 'Microsoft YaHei', repeat: false } },
+  { name: '原件', options: { data: '原件', color: '#AEB5C0', opacity: 0.3, size: 120, font: 'Microsoft YaHei', repeat: false } },
+  { name: '样本', options: { data: '样本', color: '#AEB5C0', opacity: 0.3, size: 120, font: 'Microsoft YaHei', repeat: false } },
+  { name: '绝密', options: { data: '绝密', color: '#AEB5C0', opacity: 0.3, size: 120, font: 'Microsoft YaHei', repeat: false } },
+  { name: '紧急', options: { data: '紧急', color: '#AEB5C0', opacity: 0.3, size: 120, font: 'Microsoft YaHei', repeat: false } }
 ]
 
 /**

@@ -10,6 +10,7 @@ import { isSamePath, comparePosition } from '@vervedoc/docx-editor-schema'
 import type {
   BlockNode, DocumentLayout, ParagraphBlock, TableBlock, InlineBox
 } from './layout-types'
+import type { Zone } from './widgets/header-footer-widget'
 import { getSharedMeasure } from './text-measure'
 
 /**
@@ -41,13 +42,28 @@ export interface SelectionRect {
  * 定位光标矩形：根据位置返回光标在文档坐标系中的矩形。
  * @param layout 文档布局
  * @param pos 光标位置
+ * @param zone 当前编辑区域，默认 'main'；'header'/'footer' 时在对应区域块中定位
  * @returns 光标矩形；未找到返回 null
  */
-export function locateCaret(layout: DocumentLayout, pos: IPosition): CaretRect | null {
+export function locateCaret(layout: DocumentLayout, pos: IPosition, zone: Zone = 'main'): CaretRect | null {
   for (const page of layout.pages) {
-    const originX = page.contentRect.x
-    const originY = page.contentRect.y
-    const r = locateInBlocks(page.blocks, pos, originX, originY)
+    let blocks: BlockNode[]
+    let originX: number
+    let originY: number
+    if (zone === 'header' && page.headerBlocks && page.headerRect) {
+      blocks = page.headerBlocks
+      originX = page.headerRect.x
+      originY = page.headerRect.y
+    } else if (zone === 'footer' && page.footerBlocks && page.footerRect) {
+      blocks = page.footerBlocks
+      originX = page.footerRect.x
+      originY = page.footerRect.y
+    } else {
+      blocks = page.blocks
+      originX = page.contentRect.x
+      originY = page.contentRect.y
+    }
+    const r = locateInBlocks(blocks, pos, originX, originY)
     if (r) return r
   }
   return null
@@ -161,11 +177,32 @@ function charOffsetToX(inl: InlineBox, offsetInInline: number): number {
 /**
  * 计算从 start 到 end（文档顺序）的选区矩形列表（文档坐标，未减 scrollY）。
  * 遍历所有 inline，收集与 [start, end] 相交的部分，同行 inline 合并为一个矩形。
+ * @param layout 文档布局
+ * @param start 选区起点
+ * @param end 选区终点
+ * @param zone 当前编辑区域，默认 'main'；'header'/'footer' 时在对应区域块中收集
+ * @returns 选区矩形列表
  */
-export function computeSelectionRects(layout: DocumentLayout, start: IPosition, end: IPosition): SelectionRect[] {
+export function computeSelectionRects(layout: DocumentLayout, start: IPosition, end: IPosition, zone: Zone = 'main'): SelectionRect[] {
   const rects: SelectionRect[] = []
   for (const page of layout.pages) {
-    collectSelectionInBlocks(page.blocks, page.contentRect.x, page.contentRect.y, start, end, rects)
+    let blocks: BlockNode[]
+    let originX: number
+    let originY: number
+    if (zone === 'header' && page.headerBlocks && page.headerRect) {
+      blocks = page.headerBlocks
+      originX = page.headerRect.x
+      originY = page.headerRect.y
+    } else if (zone === 'footer' && page.footerBlocks && page.footerRect) {
+      blocks = page.footerBlocks
+      originX = page.footerRect.x
+      originY = page.footerRect.y
+    } else {
+      blocks = page.blocks
+      originX = page.contentRect.x
+      originY = page.contentRect.y
+    }
+    collectSelectionInBlocks(blocks, originX, originY, start, end, rects)
   }
   return rects
 }

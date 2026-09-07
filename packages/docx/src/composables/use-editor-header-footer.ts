@@ -52,22 +52,11 @@ export function useEditorHeaderFooter(options: {
     instance.command.executeClearFooter()
   }
 
-  /**
-   * 设置页码配置项
-   * @param payload 页码配置补丁对象，会与现有页码配置合并
-   */
-  function setPageNumber(payload: any) {
-    const instance = getEditorInstance()
-    if (!instance) return
-    instance.command.executeSetPageNumber(payload)
-  }
-
   return {
     header,
     footer,
     mainZone,
     clearHeader,
-    clearFooter,
-    setPageNumber
+    clearFooter
   }
 }

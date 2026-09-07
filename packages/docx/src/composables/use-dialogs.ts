@@ -40,8 +40,7 @@ export function useDialogs(options: {
   const watermarkDialogVisible = ref(false)
   /** 纸张大小对话框是否可见 */
   const paperSizeDialogVisible = ref(false)
-  /** 页码对话框是否可见 */
-  const pageNumberDialogVisible = ref(false)
+
   /** 日期对话框是否可见 */
   const dateDialogVisible = ref(false)
   /** 段落对话框是否可见 */
@@ -124,14 +123,7 @@ export function useDialogs(options: {
   }
 
   /**
-   * 处理页码确认
-   * @param data 页码配置数据
-   */
-  const handlePageNumberConfirm = (data: any) => {
-    executeCommand('setPageNumber', data)
-  }
 
-  /**
    * 处理日期插入确认
    * @param data 日期格式与值
    */
@@ -199,7 +191,7 @@ export function useDialogs(options: {
     signatureDialogVisible,
     watermarkDialogVisible,
     paperSizeDialogVisible,
-    pageNumberDialogVisible,
+
     dateDialogVisible,
     paragraphDialogVisible,
     tocDialogVisible,
@@ -214,7 +206,7 @@ export function useDialogs(options: {
     handleSignatureConfirm,
     handleWatermarkConfirm,
     handlePaperSizeConfirm,
-    handlePageNumberConfirm,
+
     handleDateConfirm,
     handleTocConfirm,
     handleInsertChartConfirm,

@@ -18,18 +18,12 @@
           </a-form-item>
           <a-form-item label="字 体(F)">
             <a-select v-model:value="watermarkForm.font" style="width: 100%;">
-              <a-select-option value="Microsoft YaHei" label="微软雅黑" />
-              <a-select-option value="SimSun" label="宋体" />
-              <a-select-option value="Arial" label="Arial" />
+              <a-select-option v-for="f in fontList" :key="f.value" :value="f.value">{{ f.label }}</a-select-option>
             </a-select>
           </a-form-item>
           <a-form-item label="字 号(S)">
             <a-select v-model:value="watermarkForm.size" style="width: 100%;">
-              <a-select-option :value="120" label="自动" />
-              <a-select-option :value="60" label="60" />
-              <a-select-option :value="80" label="80" />
-              <a-select-option :value="100" label="100" />
-              <a-select-option :value="150" label="150" />
+              <a-select-option v-for="s in sizeList" :key="s.value" :value="s.value">{{ s.label }}</a-select-option>
             </a-select>
           </a-form-item>
           <a-form-item label="颜 色(C)">
@@ -80,6 +74,10 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons-vue'
+import { EDITOR_FONT_OPTIONS, WATERMARK_SIZE_OPTIONS } from '@vervedoc/core'
+
+const fontList = EDITOR_FONT_OPTIONS
+const sizeList = WATERMARK_SIZE_OPTIONS
 
 /** 水印数据结构 */
 interface WatermarkData {

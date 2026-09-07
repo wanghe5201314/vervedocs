@@ -11,7 +11,7 @@
  */
 
 import type { IDocxDocumentMeta, IEditorOption, IPosition, Path } from '@vervedoc/docx-editor-schema'
-import { formatElementTree, pairBookmarkMarkers, isSamePath, getByPath, FONT_FAMILY_LIST, FONT_FAMILY_VALUE, FONT_FAMILY_LABEL, FONT_SIZE, FONT_SIZE_LIST } from '@vervedoc/docx-editor-schema'
+import { formatElementTree, pairBookmarkMarkers, getByPath } from '@vervedoc/docx-editor-schema'
 
 import type { Listener, RangeManager } from '@vervedoc/docx-editor-state'
 import { LayoutEngine, type LayoutOptions } from './layout-engine'
@@ -24,6 +24,21 @@ import { ImageWidget } from './widgets/image-widget'
 import { ParagraphWidget } from './widgets/paragraph-widget'
 import { HeaderFooterWidget, type Zone } from './widgets/header-footer-widget'
 import { RulerWidget } from './widgets/ruler-widget'
+import { WatermarkWidget, type WatermarkConfig } from './widgets/watermark-widget'
+import { SystemWatermarkWidget, type SystemWatermarkConfig } from './widgets/watermark-system-widget'
+import { SelectionToolbarWidget } from './widgets/selection-toolbar-widget'
+import { signBlock } from './block-signature'
+import {
+  findInlineByPos,
+  findParagraphByPos,
+  findLineByPos,
+  findFirstInline,
+  findLastInline,
+  findHyperlinkByPos
+} from './layout-query'
+import { collectGroupAnchors, collectRevisionAnchors, type AnchorInfo } from './anchor-collector'
+import { CaretNavigation } from './caret-navigation'
+import { ZoneManager } from './zone-manager'
 
 /** Draw 门面依赖：装配文档、状态管理器与各类回调 */
 export interface DrawDeps {
@@ -120,8 +135,8 @@ export class Draw {
   /** 命令回调（转发到 Command） */
   private onCommand?: (command: string, ...args: any[]) => void
 
-  /** 悬浮选区工具栏 */
-  private selectionToolbar: HTMLDivElement | null = null
+  /** 悬浮选区工具栏 widget */
+  private selectionToolbarWidget: SelectionToolbarWidget | null = null
   /** 抑制下一次悬浮工具栏显示（段落手柄选中时用） */
   private _suppressToolbar = false
 
@@ -140,6 +155,14 @@ export class Draw {
   private headerFooterWidget: HeaderFooterWidget | null = null
   /** 标尺 widget */
   private rulerWidget: RulerWidget | null = null
+  /** 水印渲染 widget */
+  private watermarkWidget: WatermarkWidget | null = null
+  /** 系统级水印 widget（DOM 覆盖层） */
+  private systemWatermarkWidget: SystemWatermarkWidget | null = null
+  /** 光标导航 Controller */
+  private caretNavigation: CaretNavigation | null = null
+  /** 编辑区域 Manager */
+  private zoneManager: ZoneManager | null = null
 
   /**
    * 创建 Draw 视图门面：构建 DOM 骨架、装配渲染器/排版引擎/各 widget、绑定事件并首次渲染。
@@ -213,7 +236,7 @@ export class Draw {
         this.renderCaretIfAny()
         // 拖拽过程中不更新悬浮工具栏，等 mouseup 再触发，避免工具栏跟随拖拽闪烁
         if (!this.isDragging) {
-          this.updateSelectionToolbar()
+          this.selectionToolbarWidget?.update()
           this.tableWidget?.update()
           this.imageWidget?.update()
           this.paragraphWidget?.update()
@@ -252,7 +275,20 @@ export class Draw {
     this.resize()
     this.reformatAndRender()
     this.startCaretBlink()
-    this.createSelectionToolbar()
+    this.selectionToolbarWidget = new SelectionToolbarWidget({
+      getLayout: () => this.layout,
+      getRange: () => this.range ?? null,
+      getDocument: () => this.document,
+      getZone: () => this.zone,
+      getScrollY: () => this.scrollY,
+      getPageOffsetX: () => this.getPageOffsetX(),
+      getViewportWidth: () => this.viewportWidth,
+      getContainer: () => this.container,
+      onCommand: (cmd: string, ...args: any[]) => { this.onCommand?.(cmd, ...args) },
+      isSuppressToolbar: () => this._suppressToolbar,
+      consumeSuppressToolbar: () => { this._suppressToolbar = false }
+    })
+    this.selectionToolbarWidget.create()
     this.tableWidget = new TableWidget({
       getLayout: () => this.layout,
       getRange: () => this.range ?? null,
@@ -274,8 +310,13 @@ export class Draw {
       getPageOffsetX: () => this.getPageOffsetX(),
       getZone: () => this.zone,
       setZone: (zone: Zone) => this.setZone(zone),
+      setZoneWithCaret: (zone: Zone) => this.setZoneWithCaret(zone),
       focusInput: () => this.focusInput(),
-      drawZoneBorder: (layout, scrollY, zone, pageOffsetX) => this.renderer.drawZoneBorder(layout, scrollY, zone, pageOffsetX)
+      drawZoneBorder: (layout, scrollY, zone, pageOffsetX) => this.renderer.drawZoneBorder(layout, scrollY, zone, pageOffsetX),
+      onInsertPageNumber: (options) => {
+        const zone: 'header' | 'footer' = this.zone === 'header' ? 'header' : 'footer'
+        this.onCommand?.('executeSetPageNumber', { ...options, zone })
+      }
     })
     this.headerFooterWidget.create()
     this.imageWidget = new ImageWidget({
@@ -317,6 +358,41 @@ export class Draw {
     if ((options as unknown as { showRuler?: boolean }).showRuler) {
       this.rulerWidget.setVisible(true)
     }
+
+    this.watermarkWidget = new WatermarkWidget({
+      getPageOffsetX: () => this.getPageOffsetX()
+    })
+    this.watermarkWidget.create()
+    this.renderer.setWatermarkWidget(this.watermarkWidget)
+
+    this.systemWatermarkWidget = new SystemWatermarkWidget({
+      getContainer: () => this.container
+    })
+    this.systemWatermarkWidget.create()
+
+    this.caretNavigation = new CaretNavigation({
+      getLayout: () => this.layout,
+      getRange: () => this.range ?? null,
+      getZone: () => this.zone,
+      findInlineByPos: (pos) => this.findInlineByPos(pos),
+      findParagraphByPos: (pos) => this.findParagraphByPos(pos),
+      findLineByPos: (pos) => this.findLineByPos(pos),
+      findFirstInline: () => this.findFirstInline(),
+      findLastInline: () => this.findLastInline(),
+      setCaretVisible: (visible: boolean) => { this.caretVisible = visible },
+      renderCaretIfAny: () => this.renderCaretIfAny()
+    })
+
+    this.zoneManager = new ZoneManager({
+      getZone: () => this.zone,
+      setZoneState: (zone: Zone) => { this.zone = zone },
+      getDocument: () => this.document,
+      getRange: () => this.range ?? null,
+      focusInput: () => this.focusInput(),
+      onZoneChange: (zone: Zone) => { this.onZoneChange?.(zone) },
+      scheduleRender: () => this.scheduleRender(),
+      reformatAndRender: () => this.reformatAndRender()
+    })
   }
 
   /* -------------------- 输入 / 键盘事件 -------------------- */
@@ -410,6 +486,8 @@ export class Draw {
       const pos = this.hit(e.clientX, e.clientY)
       const url = pos ? this.findHyperlinkByPos(pos) : null
       this.wrapper.style.cursor = url ? 'pointer' : 'text'
+      // 正文模式下，悬浮页眉/页脚区域显示提示
+      this.updateZoneHoverTooltip(e)
       return
     }
     if (!this.range || !this.dragAnchor || !this.layout) return
@@ -428,6 +506,32 @@ export class Draw {
   }
 
   /**
+   * 正文模式下，鼠标悬浮在页眉/页脚区域时设置 title 提示。
+   * @param e 鼠标事件
+   */
+  private updateZoneHoverTooltip(e: MouseEvent): void {
+    if (!this.layout || this.zone !== 'main') {
+      this.wrapper.title = ''
+      return
+    }
+    const rect = this.canvasHost.getBoundingClientRect()
+    const docY = e.clientY - rect.top + this.scrollY
+    for (const page of this.layout.pages) {
+      if (docY < page.rect.y || docY > page.rect.y + page.rect.height) continue
+      if (page.headerRect && docY >= page.headerRect.y && docY <= page.headerRect.y + page.headerRect.height) {
+        this.wrapper.title = '双击编辑页眉'
+        return
+      }
+      if (page.footerRect && docY >= page.footerRect.y && docY <= page.footerRect.y + page.footerRect.height) {
+        this.wrapper.title = '双击编辑页脚'
+        return
+      }
+      break
+    }
+    this.wrapper.title = ''
+  }
+
+  /**
    * 鼠标松开处理：结束拖拽、清理 RAF、更新悬浮工具栏与各 widget。
    * @param e 鼠标事件
    */
@@ -438,7 +542,7 @@ export class Draw {
     this.dragPendingPos = null
     if (this.dragRafId != null) { cancelAnimationFrame(this.dragRafId); this.dragRafId = null }
     // 松开鼠标后才显示悬浮工具栏
-    this.updateSelectionToolbar()
+    this.selectionToolbarWidget?.update()
     this.updateWidgets()
   }
 
@@ -469,25 +573,7 @@ export class Draw {
    * @param pos 命中位置
    */
   private selectWordAt(pos: IPosition): void {
-    if (!this.range || !this.layout) return
-    const inl = this.findInlineByPos(pos)
-    if (!inl) { this.range.setCaret(pos); return }
-    const text = inl.text
-    const localOff = pos.offset - inl.startOffset
-    const isWord = (ch: string) => /[A-Za-z0-9_]/.test(ch)
-    let left = localOff
-    let right = localOff
-    while (left > 0 && isWord(text[left - 1])) left--
-    while (right < text.length && isWord(text[right])) right++
-    // 非 word char（CJK / 标点 / 空格）：选当前单字
-    if (left === right) {
-      if (localOff < text.length) right = localOff + 1
-      else left = Math.max(0, localOff - 1)
-    }
-    this.range.setRange({
-      anchor: { path: inl.path, offset: inl.startOffset + left },
-      focus: { path: inl.path, offset: inl.startOffset + right }
-    })
+    this.caretNavigation?.selectWordAt(pos)
   }
 
   /**
@@ -495,22 +581,7 @@ export class Draw {
    * @param pos 命中位置
    */
   private selectParagraphAt(pos: IPosition): void {
-    if (!this.range || !this.layout) return
-    const para = this.findParagraphByPos(pos)
-    if (!para) { this.range.setCaret(pos); return }
-    let first: InlineBox | undefined
-    let last: InlineBox | undefined
-    for (const line of para.lines) {
-      for (const inl of line.inlines) {
-        if (!first) first = inl
-        last = inl
-      }
-    }
-    if (!first || !last) { this.range.setCaret(pos); return }
-    this.range.setRange({
-      anchor: { path: first.path, offset: first.startOffset },
-      focus: { path: last.path, offset: last.endOffset }
-    })
+    this.caretNavigation?.selectParagraphAt(pos)
   }
 
   /**
@@ -519,40 +590,7 @@ export class Draw {
    * @returns 命中的 InlineBox；未命中返回 null
    */
   private findInlineByPos(pos: IPosition): InlineBox | null {
-    if (!this.layout) return null
-    for (const page of this.layout.pages) {
-      const r = this.findInlineInBlocks(page.blocks, pos)
-      if (r) return r
-    }
-    return null
-  }
-
-  /**
-   * 在 block 列表中递归查找所属 inline（含表格单元格递归）。
-   * @param blocks 块列表
-   * @param pos 待定位位置
-   * @returns 命中的 InlineBox；未命中返回 null
-   */
-  private findInlineInBlocks(blocks: BlockNode[], pos: IPosition): InlineBox | null {
-    for (const b of blocks) {
-      if (b.kind === 'paragraph') {
-        for (const line of b.lines) {
-          for (const inl of line.inlines) {
-            if (isSamePath(inl.path, pos.path) && pos.offset >= inl.startOffset && pos.offset <= inl.endOffset) {
-              return inl
-            }
-          }
-        }
-      } else if (b.kind === 'table') {
-        for (const row of b.rows) {
-          for (const cell of row.cells) {
-            const r = this.findInlineInBlocks(cell.content, pos)
-            if (r) return r
-          }
-        }
-      }
-    }
-    return null
+    return findInlineByPos(this.layout, pos)
   }
 
   /**
@@ -561,175 +599,54 @@ export class Draw {
    * @returns 命中的 ParagraphBlock；未命中返回 null
    */
   private findParagraphByPos(pos: IPosition): ParagraphBlock | null {
-    if (!this.layout) return null
-    for (const page of this.layout.pages) {
-      const r = this.findParagraphInBlocks(page.blocks, pos)
-      if (r) return r
-    }
-    return null
-  }
-
-  /**
-   * 在 block 列表中递归查找所属段落块（含表格单元格递归）。
-   * @param blocks 块列表
-   * @param pos 待定位位置
-   * @returns 命中的 ParagraphBlock；未命中返回 null
-   */
-  private findParagraphInBlocks(blocks: BlockNode[], pos: IPosition): ParagraphBlock | null {
-    for (const b of blocks) {
-      if (b.kind === 'paragraph') {
-        for (const line of b.lines) {
-          for (const inl of line.inlines) {
-            if (isSamePath(inl.path, pos.path)) return b
-          }
-        }
-      } else if (b.kind === 'table') {
-        for (const row of b.rows) {
-          for (const cell of row.cells) {
-            const r = this.findParagraphInBlocks(cell.content, pos)
-            if (r) return r
-          }
-        }
-      }
-    }
-    return null
+    return findParagraphByPos(this.layout, pos)
   }
 
   /* -------------------- 光标移动（方向键 / Home / End / 词移动） -------------------- */
 
   /** 光标上移：基于当前光标矩形，用 hitTest 命中上一行同 x 最近字符 */
   moveCaretUp(): void {
-    this.moveCaretVertical(-1)
+    this.caretNavigation?.moveCaretUp()
   }
 
   /** 光标下移 */
   moveCaretDown(): void {
-    this.moveCaretVertical(1)
-  }
-
-  /**
-   * 光标垂直移动：基于当前光标矩形，用 hitTest 命中上一/下一行同 x 最近字符。
-   * @param dir 移动方向，1=下移，-1=上移
-   */
-  private moveCaretVertical(dir: 1 | -1): void {
-    if (!this.layout || !this.range) return
-    const pos = this.range.getFocus()
-    if (!pos) return
-    const rect = locateCaret(this.layout, pos)
-    if (!rect) return
-    // 目标 y = 当前光标 y ± 行高（估算上一/下一行中部）
-    const targetY = rect.y + dir * rect.height
-    const newPos = hitTest(this.layout, rect.x, targetY)
-    if (newPos) {
-      this.range.setCaret(newPos)
-      this.caretVisible = true
-      this.renderCaretIfAny()
-    }
+    this.caretNavigation?.moveCaretDown()
   }
 
   /** 当前行首 */
   moveCaretToLineStart(): void {
-    if (!this.layout || !this.range) return
-    const pos = this.range.getFocus()
-    if (!pos) return
-    const line = this.findLineByPos(pos)
-    if (!line) return
-    const first = line.inlines[0]
-    if (first) {
-      this.range.setCaret({ path: first.path, offset: first.startOffset })
-      this.caretVisible = true
-      this.renderCaretIfAny()
-    }
+    this.caretNavigation?.moveCaretToLineStart()
   }
 
   /** 当前行尾 */
   moveCaretToLineEnd(): void {
-    if (!this.layout || !this.range) return
-    const pos = this.range.getFocus()
-    if (!pos) return
-    const line = this.findLineByPos(pos)
-    if (!line) return
-    const last = line.inlines[line.inlines.length - 1]
-    if (last) {
-      this.range.setCaret({ path: last.path, offset: last.endOffset })
-      this.caretVisible = true
-      this.renderCaretIfAny()
-    }
+    this.caretNavigation?.moveCaretToLineEnd()
   }
 
   /** 按词左移 */
   moveCaretWordLeft(): void {
-    if (!this.layout || !this.range) return
-    const pos = this.range.getFocus()
-    if (!pos) return
-    const inl = this.findInlineByPos(pos)
-    if (!inl) return
-    const text = inl.text
-    const localOff = pos.offset - inl.startOffset
-    const isWord = (ch: string) => /[A-Za-z0-9_]/.test(ch)
-    let off = localOff
-    // 先跳过非 word char（空格/标点），再跳过 word char
-    while (off > 0 && !isWord(text[off - 1])) off--
-    while (off > 0 && isWord(text[off - 1])) off--
-    if (off === localOff && off > 0) off = localOff - 1
-    this.range.setCaret({ path: inl.path, offset: inl.startOffset + off })
-    this.caretVisible = true
-    this.renderCaretIfAny()
+    this.caretNavigation?.moveCaretWordLeft()
   }
 
   /** 按词右移 */
   moveCaretWordRight(): void {
-    if (!this.layout || !this.range) return
-    const pos = this.range.getFocus()
-    if (!pos) return
-    const inl = this.findInlineByPos(pos)
-    if (!inl) return
-    const text = inl.text
-    const localOff = pos.offset - inl.startOffset
-    const isWord = (ch: string) => /[A-Za-z0-9_]/.test(ch)
-    let off = localOff
-    while (off < text.length && !isWord(text[off])) off++
-    while (off < text.length && isWord(text[off])) off++
-    if (off === localOff && off < text.length) off = localOff + 1
-    this.range.setCaret({ path: inl.path, offset: inl.startOffset + off })
-    this.caretVisible = true
-    this.renderCaretIfAny()
+    this.caretNavigation?.moveCaretWordRight()
   }
 
   /** 文档首 */
   moveCaretToDocStart(): void {
-    if (!this.layout || !this.range) return
-    const first = this.findFirstInline()
-    if (first) {
-      this.range.setCaret({ path: first.path, offset: first.startOffset })
-      this.caretVisible = true
-      this.renderCaretIfAny()
-    }
+    this.caretNavigation?.moveCaretToDocStart()
   }
 
   /** 文档尾 */
   moveCaretToDocEnd(): void {
-    if (!this.layout || !this.range) return
-    const last = this.findLastInline()
-    if (last) {
-      this.range.setCaret({ path: last.path, offset: last.endOffset })
-      this.caretVisible = true
-      this.renderCaretIfAny()
-    }
+    this.caretNavigation?.moveCaretToDocEnd()
   }
 
   /** 全选：从文档首到文档尾 */
   selectAll(): void {
-    if (!this.layout || !this.range) return
-    const first = this.findFirstInline()
-    const last = this.findLastInline()
-    if (!first || !last) return
-    this.range.setRange({
-      anchor: { path: first.path, offset: first.startOffset },
-      focus: { path: last.path, offset: last.endOffset }
-    })
-    this.caretVisible = false
-    this.renderCaretIfAny()
+    this.caretNavigation?.selectAll()
   }
 
   /**
@@ -738,40 +655,7 @@ export class Draw {
    * @returns 命中的 LineBox；未命中返回 null
    */
   private findLineByPos(pos: IPosition): LineBox | null {
-    if (!this.layout) return null
-    for (const page of this.layout.pages) {
-      const r = this.findLineInBlocks(page.blocks, pos)
-      if (r) return r
-    }
-    return null
-  }
-
-  /**
-   * 在 block 列表中递归查找所属行盒（含表格单元格递归）。
-   * @param blocks 块列表
-   * @param pos 待定位位置
-   * @returns 命中的 LineBox；未命中返回 null
-   */
-  private findLineInBlocks(blocks: BlockNode[], pos: IPosition): LineBox | null {
-    for (const b of blocks) {
-      if (b.kind === 'paragraph') {
-        for (const line of b.lines) {
-          for (const inl of line.inlines) {
-            if (isSamePath(inl.path, pos.path) && pos.offset >= inl.startOffset && pos.offset <= inl.endOffset) {
-              return line
-            }
-          }
-        }
-      } else if (b.kind === 'table') {
-        for (const row of b.rows) {
-          for (const cell of row.cells) {
-            const r = this.findLineInBlocks(cell.content, pos)
-            if (r) return r
-          }
-        }
-      }
-    }
-    return null
+    return findLineByPos(this.layout, pos)
   }
 
   /**
@@ -779,40 +663,12 @@ export class Draw {
    * @returns 首个 InlineBox；空文档返回 null
    */
   private findFirstInline(): InlineBox | null {
-    if (!this.layout) return null
-    for (const page of this.layout.pages) {
-      const r = this.findFirstInlineInBlocks(page.blocks)
-      if (r) return r
-    }
-    return null
-  }
-
-  /**
-   * 在 block 列表中递归查找首个 inline（含表格单元格递归）。
-   * @param blocks 块列表
-   * @returns 首个 InlineBox；未命中返回 null
-   */
-  private findFirstInlineInBlocks(blocks: BlockNode[]): InlineBox | null {
-    for (const b of blocks) {
-      if (b.kind === 'paragraph') {
-        for (const line of b.lines) {
-          if (line.inlines[0]) return line.inlines[0]
-        }
-      } else if (b.kind === 'table') {
-        for (const row of b.rows) {
-          for (const cell of row.cells) {
-            const r = this.findFirstInlineInBlocks(cell.content)
-            if (r) return r
-          }
-        }
-      }
-    }
-    return null
+    return findFirstInline(this.layout)
   }
 
   /** 按 position 定位 inline，若属于超链接则返回其 URL（供 Ctrl+点击跳转） */
   private findHyperlinkByPos(pos: IPosition): string | null {
-    return this.findInlineByPos(pos)?.hyperlink ?? null
+    return findHyperlinkByPos(this.layout, pos)
   }
 
   /**
@@ -820,33 +676,7 @@ export class Draw {
    * @returns 末个 InlineBox；空文档返回 null
    */
   private findLastInline(): InlineBox | null {
-    if (!this.layout) return null
-    let last: InlineBox | null = null
-    for (const page of this.layout.pages) {
-      this.findLastInlineInBlocks(page.blocks, (inl) => { last = inl })
-    }
-    return last
-  }
-
-  /**
-   * 在 block 列表中递归遍历所有 inline，对每个 inline 调用回调（含表格单元格递归）。
-   * @param blocks 块列表
-   * @param onInline 每个 inline 的回调
-   */
-  private findLastInlineInBlocks(blocks: BlockNode[], onInline: (inl: InlineBox) => void): void {
-    for (const b of blocks) {
-      if (b.kind === 'paragraph') {
-        for (const line of b.lines) {
-          for (const inl of line.inlines) onInline(inl)
-        }
-      } else if (b.kind === 'table') {
-        for (const row of b.rows) {
-          for (const cell of row.cells) {
-            this.findLastInlineInBlocks(cell.content, onInline)
-          }
-        }
-      }
-    }
+    return findLastInline(this.layout)
   }
 
   /** 把隐藏输入框放到当前光标位置，以便 IME 弹窗位置正确 */
@@ -854,7 +684,7 @@ export class Draw {
     if (!this.range) return
     const pos = this.range.getFocus()
     if (!pos || !this.layout) { this.inputEl.focus(); return }
-    const rect = locateCaret(this.layout, pos)
+    const rect = locateCaret(this.layout, pos, this.zone)
     if (rect) {
       const pageOffsetX = this.getPageOffsetX()
       this.inputEl.style.left = `${Math.round(rect.x + pageOffsetX)}px`
@@ -887,14 +717,14 @@ export class Draw {
       if (tableRects) {
         this.renderer.drawSelection(tableRects, this.scrollY)
       } else {
-        const selRects = computeSelectionRects(this.layout, ordered.start, ordered.end)
+        const selRects = computeSelectionRects(this.layout, ordered.start, ordered.end, this.zone)
         this.renderer.drawSelection(selRects, this.scrollY)
       }
     }
     // 光标
     const pos = this.range.getFocus()
     if (!pos) return
-    const rect = locateCaret(this.layout, pos)
+    const rect = locateCaret(this.layout, pos, this.zone)
     if (rect) this.renderer.drawCaret(rect.x, rect.y, rect.height, this.scrollY, this.caretVisible)
   }
 
@@ -939,222 +769,6 @@ export class Draw {
     return null
   }
 
-
-  /* -------------------- 悬浮选区工具栏 -------------------- */
-
-  /** 创建悬浮选区工具栏（字体/字号/B/I/U/S/颜色/高亮/对齐/清除格式）并挂载到容器。 */
-  private createSelectionToolbar(): void {
-    if (!this.onCommand) return
-    const tb = document.createElement('div')
-    tb.className = 'vervedocs-selection-toolbar'
-    Object.assign(tb.style, {
-      position: 'absolute',
-      display: 'none',
-      zIndex: '100',
-      background: '#fff',
-      borderRadius: '0',
-      boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-      padding: '8px 10px',
-      gap: '6px',
-      alignItems: 'center',
-      fontSize: '14px',
-      userSelect: 'none',
-      whiteSpace: 'nowrap',
-      fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif',
-    } as CSSStyleDeclaration)
-
-    const fire = (cmd: string, ...args: any[]) => { this.onCommand?.(cmd, ...args) }
-
-
-    const mkBtn = (icon: string, cmd: string, args: any[] = [], title = ''): HTMLButtonElement => {
-      const el = document.createElement('button')
-      el.title = title
-      el.dataset.cmd = cmd
-      el.dataset.args = JSON.stringify(args)
-      Object.assign(el.style, {
-        border: 'none', background: 'transparent', borderRadius: '4px',
-        padding: '4px', cursor: 'pointer', display: 'flex',
-        alignItems: 'center', justifyContent: 'center', lineHeight: '0',
-      } as CSSStyleDeclaration)
-      const sp = document.createElement('span')
-      sp.className = 'material-icons'
-      sp.textContent = icon
-      sp.style.cssText = 'font-size:18px;color:#3D4757;'
-      el.appendChild(sp)
-      el.addEventListener('mousedown', (e) => { e.preventDefault(); e.stopPropagation() })
-      el.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); fire(cmd, ...args) })
-      return el
-    }
-
-    const mkSep = (): HTMLSpanElement => {
-      const sep = document.createElement('span')
-      Object.assign(sep.style, {
-        display: 'inline-block', width: '1px', height: '24px',
-        background: '#e0e0e0', margin: '0 3px',
-      } as CSSStyleDeclaration)
-      return sep
-    }
-
-    // 字体下拉
-    const fontSel = document.createElement('select')
-    Object.assign(fontSel.style, {
-      border: '1px solid #ddd', borderRadius: '4px', padding: '4px 6px',
-      fontSize: '13px', background: '#fff', cursor: 'pointer', maxWidth: '110px',
-    } as CSSStyleDeclaration)
-    for (const f of FONT_FAMILY_LIST) {
-      const opt = document.createElement('option')
-      opt.value = FONT_FAMILY_VALUE[f] ?? f; opt.textContent = f
-      fontSel.appendChild(opt)
-    }
-    fontSel.addEventListener('mousedown', (e) => e.stopPropagation())
-    fontSel.addEventListener('change', () => fire('executeFont', fontSel.value))
-    tb.appendChild(fontSel)
-
-    // 字号下拉
-    const sizeSel = document.createElement('select')
-    Object.assign(sizeSel.style, {
-      border: '1px solid #ddd', borderRadius: '4px', padding: '4px 6px',
-      fontSize: '13px', background: '#fff', cursor: 'pointer', width: '68px',
-    } as CSSStyleDeclaration)
-    for (const s of FONT_SIZE_LIST) {
-      const opt = document.createElement('option')
-      const pt = FONT_SIZE[s] ?? Number(s)
-      opt.value = String(pt); opt.textContent = s
-      sizeSel.appendChild(opt)
-    }
-    sizeSel.value = '14'
-    sizeSel.addEventListener('mousedown', (e) => e.stopPropagation())
-    sizeSel.addEventListener('change', () => fire('executeSize', Number(sizeSel.value)))
-    tb.appendChild(sizeSel)
-
-    tb.appendChild(mkSep())
-
-    // B I U S
-    tb.appendChild(mkBtn('format_bold', 'executeBold', [], '加粗'))
-    tb.appendChild(mkBtn('format_italic', 'executeItalic', [], '斜体'))
-    tb.appendChild(mkBtn('format_underlined', 'executeUnderline', [], '下划线'))
-    tb.appendChild(mkBtn('format_strikethrough', 'executeStrikeout', [], '删除线'))
-
-    tb.appendChild(mkSep())
-
-    // 颜色
-    const colorBtn = document.createElement('input')
-    colorBtn.type = 'color'
-    colorBtn.value = '#000000'
-    Object.assign(colorBtn.style, {
-      width: '32px', height: '28px', border: '1px solid #ddd',
-      borderRadius: '4px', cursor: 'pointer', padding: '0', background: 'transparent',
-    } as CSSStyleDeclaration)
-    colorBtn.title = '字体颜色'
-    colorBtn.addEventListener('mousedown', (e) => e.stopPropagation())
-    colorBtn.addEventListener('input', () => fire('executeColor', colorBtn.value))
-    tb.appendChild(colorBtn)
-
-    // 高亮
-    const hlBtn = document.createElement('input')
-    hlBtn.type = 'color'
-    hlBtn.value = '#ffff00'
-    Object.assign(hlBtn.style, {
-      width: '32px', height: '28px', border: '1px solid #ddd',
-      borderRadius: '4px', cursor: 'pointer', padding: '0', background: 'transparent',
-    } as CSSStyleDeclaration)
-    hlBtn.title = '高亮颜色'
-    hlBtn.addEventListener('mousedown', (e) => e.stopPropagation())
-    hlBtn.addEventListener('input', () => fire('executeHighlight', hlBtn.value))
-    tb.appendChild(hlBtn)
-
-    tb.appendChild(mkSep())
-
-    // 对齐
-    tb.appendChild(mkBtn('format_align_left', 'executeRowFlex', ['left'], '左对齐'))
-    tb.appendChild(mkBtn('format_align_center', 'executeRowFlex', ['center'], '居中'))
-    tb.appendChild(mkBtn('format_align_right', 'executeRowFlex', ['right'], '右对齐'))
-    tb.appendChild(mkBtn('format_align_justify', 'executeRowFlex', ['justify'], '两端对齐'))
-
-    tb.appendChild(mkSep())
-
-    // 清除格式
-    tb.appendChild(mkBtn('format_clear', 'executeFormat', [], '清除格式'))
-
-    this.container.appendChild(tb)
-    this.selectionToolbar = tb
-  }
-
-  /** 更新悬浮选区工具栏：折叠选区/表格内选区时隐藏，否则定位到选区起点上方并回显格式状态。 */
-  private updateSelectionToolbar(): void {
-    if (!this.selectionToolbar || !this.layout || !this.range) return
-    const tb = this.selectionToolbar
-    if (this._suppressToolbar) { tb.style.display = 'none'; this._suppressToolbar = false; return }
-    if (this.range.isCollapsed()) {
-      tb.style.display = 'none'
-      return
-    }
-    const ordered = this.range.getOrdered()
-    if (!ordered) { tb.style.display = 'none'; return }
-    // 表格内选区不显示段落悬浮工具栏
-    if (ordered.start.path.length >= 2 && ordered.start.path[1] === 'trList') {
-      tb.style.display = 'none'
-      return
-    }
-    const rect = locateCaret(this.layout, ordered.start)
-    if (!rect) { tb.style.display = 'none'; return }
-    const pageOffsetX = this.getPageOffsetX()
-    const x = Math.round(rect.x + pageOffsetX)
-    const y = Math.round(rect.y - this.scrollY) - rect.height - 8
-    tb.style.display = 'flex'
-    tb.style.left = `${Math.max(4, Math.min(x, this.viewportWidth - tb.offsetWidth - 4))}px`
-    tb.style.top = `${Math.max(4, y)}px`
-
-    this.syncToolbarState(tb)
-  }
-
-  /** 读取光标所在 run 的格式状态，回显到工具栏控件 */
-  private syncToolbarState(tb: HTMLDivElement): void {
-    if (!this.range) return
-    const pos = this.range.getFocus()
-    if (!pos) return
-    const node = getByPath(this.document.elements, pos.path)
-    if (!node || node.type !== 'text') return
-    const run = node as unknown as Record<string, unknown>
-
-    const fontSel = tb.querySelector('select:nth-of-type(1)') as HTMLSelectElement | null
-    const sizeSel = tb.querySelector('select:nth-of-type(2)') as HTMLSelectElement | null
-
-    // 回显字体
-    if (fontSel) {
-      const font = String(run.font ?? '')
-      const label = FONT_FAMILY_LABEL[font] ?? font
-      for (let i = 0; i < fontSel.options.length; i++) {
-        const opt = fontSel.options[i]
-        opt.selected = opt.value === font || opt.textContent === label
-      }
-    }
-
-    // 回显字号
-    if (sizeSel) {
-      const size = String(run.size ?? '')
-      for (let i = 0; i < sizeSel.options.length; i++) {
-        if (sizeSel.options[i].value === size) { sizeSel.options[i].selected = true; break }
-      }
-    }
-
-    // 回显 B/I/U/S 高亮
-    const btns = tb.querySelectorAll<HTMLButtonElement>('button[data-cmd]')
-    for (let i = 0; i < btns.length; i++) {
-      const btn = btns[i]
-      const cmd = btn.dataset.cmd
-      let active = false
-      if (cmd === 'executeBold') active = !!run.bold
-      else if (cmd === 'executeItalic') active = !!run.italic
-      else if (cmd === 'executeUnderline') active = !!run.underline
-      else if (cmd === 'executeStrikeout') active = !!run.strikeout
-      else if (cmd === 'executeRowFlex') {
-        const args = JSON.parse(btn.dataset.args || '[]')
-        active = String(run.rowFlex ?? 'left') === args[0]
-      }
-      btn.style.background = active ? '#e8eaf6' : 'transparent'
-    }
-  }
 
 
   /* -------------------- 对外 API -------------------- */
@@ -1301,7 +915,7 @@ export class Draw {
    */
   scrollPositionIntoView(pos: IPosition): void {
     if (!this.layout) return
-    const rect = locateCaret(this.layout, pos)
+    const rect = locateCaret(this.layout, pos, this.zone)
     if (!rect) return
     const anchor = document.createElement('div')
     anchor.style.position = 'absolute'
@@ -1333,35 +947,27 @@ export class Draw {
 
   /** 切换编辑区域（main/header/footer） */
   setZone(zone: Zone): void {
-    if (this.zone === zone) return
-    this.zone = zone
-    this.onZoneChange?.(zone)
-    this.scheduleRender()
+    this.zoneManager?.setZone(zone)
+  }
+
+  /**
+   * 切换编辑区域并设置初始光标。
+   * 切换到页眉/页脚时，将光标定位到对应区域的起始文本位置；
+   * 切回正文时清空选区。
+   * @param zone 目标区域
+   */
+  setZoneWithCaret(zone: Zone): void {
+    this.zoneManager?.setZoneWithCaret(zone)
   }
 
   /** 获取当前活动区域的文档（zone=header/footer 时 elements 指向对应区域） */
   getActiveDocument(): IDocxDocumentMeta {
-    if (this.zone === 'header' && this.document.sections?.header) {
-      return { ...this.document, elements: this.document.sections.header }
-    }
-    if (this.zone === 'footer' && this.document.sections?.footer) {
-      return { ...this.document, elements: this.document.sections.footer }
-    }
-    return this.document
+    return this.zoneManager?.getActiveDocument() ?? this.document
   }
 
   /** 将修改后的活动文档写回对应区域并触发重渲染 */
   applyActiveDocument(doc: IDocxDocumentMeta): void {
-    if (this.zone === 'header') {
-      this.document.sections = this.document.sections || {}
-      this.document.sections.header = doc.elements
-    } else if (this.zone === 'footer') {
-      this.document.sections = this.document.sections || {}
-      this.document.sections.footer = doc.elements
-    } else {
-      this.document.elements = doc.elements
-    }
-    this.reformatAndRender()
+    this.zoneManager?.applyActiveDocument(doc)
   }
 
   /** 设置当前高亮的批注/修订组 ID（鼠标悬浮气泡时调用） */
@@ -1376,11 +982,11 @@ export class Draw {
    * 返回 Map<groupId, { startX, startY, endX, endY, lineHeight, glyphHeight, startGlyphTop, endGlyphTop }>
    * glyphHeight / startGlyphTop / endGlyphTop 用于按字形实际高度绘制竖线（而非行高）
    */
-  getGroupAnchorMap(): Map<string, { startX: number; startY: number; endX: number; endY: number; lineHeight: number; glyphHeight: number; startGlyphTop: number; endGlyphTop: number }> {
-    const result = new Map<string, { startX: number; startY: number; endX: number; endY: number; lineHeight: number; glyphHeight: number; startGlyphTop: number; endGlyphTop: number }>()
+  getGroupAnchorMap(): Map<string, AnchorInfo> {
+    const result = new Map<string, AnchorInfo>()
     if (!this.layout) return result
     for (const page of this.layout.pages) {
-      this.collectGroupAnchors(page.blocks, page.contentRect.x, page.contentRect.y, result)
+      collectGroupAnchors(page.blocks, page.contentRect.x, page.contentRect.y, result)
     }
     return result
   }
@@ -1389,123 +995,13 @@ export class Draw {
    * 遍历当前 layout，收集每个 revisionId 所对应的锚点坐标（文档绝对坐标）。
    * 返回 Map<revisionId, { startX, startY, endX, endY, lineHeight, glyphHeight, startGlyphTop, endGlyphTop }>
    */
-  getRevisionAnchorMap(): Map<string, { startX: number; startY: number; endX: number; endY: number; lineHeight: number; glyphHeight: number; startGlyphTop: number; endGlyphTop: number }> {
-    const result = new Map<string, { startX: number; startY: number; endX: number; endY: number; lineHeight: number; glyphHeight: number; startGlyphTop: number; endGlyphTop: number }>()
+  getRevisionAnchorMap(): Map<string, AnchorInfo> {
+    const result = new Map<string, AnchorInfo>()
     if (!this.layout) return result
     for (const page of this.layout.pages) {
-      this.collectRevisionAnchors(page.blocks, page.contentRect.x, page.contentRect.y, result)
+      collectRevisionAnchors(page.blocks, page.contentRect.x, page.contentRect.y, result)
     }
     return result
-  }
-
-  private collectGroupAnchors(
-    blocks: BlockNode[],
-    originX: number,
-    originY: number,
-    result: Map<string, { startX: number; startY: number; endX: number; endY: number; lineHeight: number; glyphHeight: number; startGlyphTop: number; endGlyphTop: number }>
-  ): void {
-    for (const b of blocks) {
-      if (b.kind === 'table') {
-        for (const row of b.rows) {
-          for (const cell of row.cells) {
-            const cx = originX + b.rect.x + cell.rect.x + cell.contentPaddingLeft
-            const cy = originY + b.rect.y + cell.rect.y + cell.contentPaddingTop + cell.verticalOffset
-            this.collectGroupAnchors(cell.content, cx, cy, result)
-          }
-        }
-        continue
-      }
-      if (b.kind !== 'paragraph') continue
-      const bx = originX + b.rect.x
-      const by = originY + b.rect.y
-      for (const line of b.lines) {
-        for (const inl of line.inlines) {
-          if (!inl.groupIds?.length) continue
-          const absX = bx + inl.x
-          const absY = by + line.y
-          const absEndX = absX + inl.width
-          const absEndY = absY + line.height
-          const glyphHeight = inl.size * 1.15
-          const absGlyphTop = absY + line.baseline - inl.size * 0.875
-          for (const gid of inl.groupIds) {
-            const existing = result.get(gid)
-            if (!existing) {
-              result.set(gid, { startX: absX, startY: absY, endX: absEndX, endY: absEndY, lineHeight: line.height, glyphHeight, startGlyphTop: absGlyphTop, endGlyphTop: absGlyphTop })
-            } else {
-              if (absY < existing.startY || (absY === existing.startY && absX < existing.startX)) {
-                existing.startX = absX
-                existing.startY = absY
-                existing.startGlyphTop = absGlyphTop
-              }
-              if (absEndY > existing.endY || (absEndY === existing.endY && absEndX > existing.endX)) {
-                existing.endX = absEndX
-                existing.endY = absEndY
-                existing.endGlyphTop = absGlyphTop
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  private collectRevisionAnchors(
-    blocks: BlockNode[],
-    originX: number,
-    originY: number,
-    result: Map<string, { startX: number; startY: number; endX: number; endY: number; lineHeight: number; glyphHeight: number; startGlyphTop: number; endGlyphTop: number }>
-  ): void {
-    for (const b of blocks) {
-      if (b.kind === 'table') {
-        for (const row of b.rows) {
-          for (const cell of row.cells) {
-            const cx = originX + b.rect.x + cell.rect.x + cell.contentPaddingLeft
-            const cy = originY + b.rect.y + cell.rect.y + cell.contentPaddingTop + cell.verticalOffset
-            this.collectRevisionAnchors(cell.content, cx, cy, result)
-          }
-        }
-        continue
-      }
-      if (b.kind !== 'paragraph') continue
-      const bx = originX + b.rect.x
-      const by = originY + b.rect.y
-      for (const line of b.lines) {
-        for (const inl of line.inlines) {
-          const revisionId = (inl.run as any)?.revisionId
-          if (!revisionId) continue
-          const absX = bx + inl.x
-          const absY = by + line.y
-          const absEndX = absX + inl.width
-          const absEndY = absY + line.height
-          const glyphHeight = inl.size * 1.15
-          const absGlyphTop = absY + line.baseline - inl.size * 0.875
-          const existing = result.get(revisionId)
-          if (!existing) {
-            result.set(revisionId, {
-              startX: absX,
-              startY: absY,
-              endX: absEndX,
-              endY: absEndY,
-              lineHeight: line.height,
-              glyphHeight,
-              startGlyphTop: absGlyphTop,
-              endGlyphTop: absGlyphTop
-            })
-          } else {
-            if (absY < existing.startY || (absY === existing.startY && absX < existing.startX)) {
-              existing.startX = absX
-              existing.startY = absY
-              existing.startGlyphTop = absGlyphTop
-            }
-            if (absEndY > existing.endY || (absEndY === existing.endY && absEndX > existing.endX)) {
-              existing.endX = absEndX
-              existing.endY = absEndY
-              existing.endGlyphTop = absGlyphTop
-            }
-          }
-        }
-      }
-    }
   }
 
   /**
@@ -1522,7 +1018,7 @@ export class Draw {
     const pageOffsetX = this.getPageOffsetX()
     const x = clientX - rect.left - pageOffsetX
     const y = clientY - rect.top + this.scrollY
-    return hitTest(this.layout, x, y)
+    return hitTest(this.layout, x, y, this.zone)
   }
 
   /** 销毁视图：解绑事件、断开 ResizeObserver、取消 RAF/定时器、销毁各 widget、移除 DOM。 */
@@ -1540,12 +1036,12 @@ export class Draw {
     this.paragraphWidget?.destroy()
     this.headerFooterWidget?.destroy()
     this.rulerWidget?.destroy()
+    this.watermarkWidget?.destroy()
+    this.systemWatermarkWidget?.destroy()
+    this.selectionToolbarWidget?.destroy()
 
     if (this.inputEl && this.inputEl.parentElement === this.container) {
       this.container.removeChild(this.inputEl)
-    }
-    if (this.selectionToolbar && this.selectionToolbar.parentElement === this.container) {
-      this.container.removeChild(this.selectionToolbar)
     }
     this.container.removeChild(this.wrapper)
   }
@@ -1658,9 +1154,11 @@ export class Draw {
   private updateVisualLayout(): void {
     if (!this.layout) return
     const pageOffsetX = this.getPageOffsetX()
+    const bg = (this.options as unknown as { background?: { color?: string } }).background
     this.renderer.updateVisualOptions({
       pageOffsetX,
       pageMargins: (this.options.pageMargins as [number, number, number, number]) ?? [100, 120, 100, 120],
+      pageBg: bg?.color || '#ffffff',
       groupColors: (this.options as unknown as { group?: { groupColors?: Record<string, import('@vervedoc/docx-editor-schema').IGroupColor> } }).group?.groupColors
     })
     this.rulerWidget?.update()
@@ -1709,58 +1207,33 @@ export class Draw {
     this.rafId = requestAnimationFrame(() => {
       this.rafId = null
       if (!this.layout) return
+      this.syncPageNumberToRenderer()
+      this.syncWatermarkToRenderer()
       this.renderer.render(this.layout, this.scrollY, this.viewportHeight)
       this.renderCaretIfAny()
-      this.updateSelectionToolbar()
+      this.selectionToolbarWidget?.update()
       if (!this._pendingSkipAfterRender) {
         this.afterRender?.()
       }
       this._pendingSkipAfterRender = false
     })
   }
-}
 
-/* -------------------- 块签名（用于跨帧复用 bitmap） -------------------- */
-
-/**
- * 计算块的签名（用于跨帧复用 bitmap）：按块类型拼接关键字段为字符串。
- * @param b 块
- * @returns 块签名字符串
- */
-function signBlock(b: BlockNode): string {
-  if (b.kind === 'paragraph') return signParagraph(b)
-  if (b.kind === 'image') {
-    const img = b.block as unknown as { value?: string; rotate?: number; imgDisplay?: string }
-    return `img|${img.value ?? ''}|${b.rect.width}x${b.rect.height}|r${img.rotate ?? 0}|d${img.imgDisplay ?? 'block'}`
+  /** 将 options.pageNumber 配置同步到渲染器 */
+  private syncPageNumberToRenderer(): void {
+    const pn = (this.options as any).pageNumber ?? null
+    this.renderer.updatePageNumber(pn)
   }
-  if (b.kind === 'pageBreak') return `pb|${b.parentPath.join('.')}|${b.indexInParent}`
-  if (b.kind === 'separator') return `sep|${b.parentPath.join('.')}|${b.indexInParent}|${b.rect.width}x${b.rect.height}`
-  return `unk`
+
+  /** 将 options.watermark 配置同步到水印 widget */
+  private syncWatermarkToRenderer(): void {
+    const wm = (this.options as any).watermark ?? null
+    this.watermarkWidget?.setConfig(wm as WatermarkConfig | null)
+  }
+
+  /** 设置系统级水印（DOM 覆盖层） */
+  setSystemWatermark(config: SystemWatermarkConfig | null): void {
+    this.systemWatermarkWidget?.setConfig(config)
+  }
 }
 
-/**
- * 计算段落块签名：拼接段落属性 + 各 inline 文本/字体/样式 + 项目符号 + 环绕图片关键字段。
- * @param b 段落块
- * @returns 段落签名字符串
- */
-function signParagraph(b: ParagraphBlock): string {
-  const attrs = b.block ?? (b.lines[0]?.inlines[0]?.run) ?? null
-  const a = attrs as unknown as Record<string, unknown> | null
-  const paraKey = a
-    ? `${a.rowFlex ?? ''}|${a.paragraphStyleId ?? ''}|${a.lineHeight ?? ''}|${a.lineHeightRule ?? ''}|${a.paragraphFirstLineIndent ?? ''}|${a.paragraphIndentLeft ?? ''}|${a.paragraphIndentRight ?? ''}|${a.indentHanging ?? ''}|${a.paragraphSpacingBefore ?? ''}|${a.paragraphSpacingAfter ?? ''}`
-    : ''
-  const runsKey: string[] = []
-  for (const line of b.lines) {
-    for (const inl of line.inlines) {
-      runsKey.push(`${inl.text}#${inl.font}|${inl.size}|${inl.bold ? 1 : 0}|${inl.italic ? 1 : 0}|${inl.color}|${inl.bgColor ?? ''}|${inl.strikeout ? 1 : 0}|${inl.underline ? 1 : 0}|ls=${inl.letterSpacing ?? 0}`)
-    }
-  }
-  const bulletKey = b.bulletText
-    ? `~b:${b.bulletKind ?? ''}|${b.bulletText ?? ''}|${b.bulletFont ?? ''}|${b.bulletSize ?? ''}|${b.bulletColor ?? ''}|${b.bulletBold ? 1 : 0}|bx=${b.bulletX ?? ''}`
-    : ''
-  const si = b.surroundImage
-  const surroundKey = si
-    ? `~si:${(si.block as unknown as { value?: string }).value ?? ''}|${si.rect.width}x${si.rect.height}|r${(si.block as unknown as { rotate?: number }).rotate ?? 0}`
-    : ''
-  return `p|${b.paragraphKind}|w=${Math.round(b.rect.width)}|${paraKey}|${runsKey.join('~')}${bulletKey}${surroundKey}`
-}

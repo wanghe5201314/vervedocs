@@ -225,6 +225,7 @@ export class DocxEditor {
         updateOptions: (patch) => this.draw.updateOptions(patch),
         getZone: () => this.draw.getZone(),
         setZone: (zone) => this.draw.setZone(zone),
+        setZoneWithCaret: (zone) => this.draw.setZoneWithCaret(zone),
         print: () => this.draw.print(),
         getPageThumbnails: () => this.draw.getPageThumbnails(),
         scrollPositionIntoView: (pos) => this.draw.scrollPositionIntoView(pos)

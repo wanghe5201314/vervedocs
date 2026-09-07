@@ -17,8 +17,20 @@ export type Zone = 'main' | 'header' | 'footer'
 
 /** 页码位置：左侧 / 居中 / 右侧 */
 export type PageNumberPosition = 'left' | 'center' | 'right'
-/** 页码样式：阿拉伯数字 / 大小写罗马 / 大小写字母 */
-export type PageNumberStyle = '1, 2, 3 ...' | 'I, II, III ...' | 'i, ii, iii ...' | 'A, B, C ...' | 'a, b, c ...'
+/** 页码样式（对齐 Word 标准） */
+export type PageNumberStyle =
+  | '第1页'
+  | '第1页共x页'
+  | '1/x'
+  | '第一页'
+  | '第一页共X页'
+  | '1, 2, 3 ...'
+  | 'I, II, III ...'
+  | 'i, ii, iii ...'
+  | 'A, B, C ...'
+  | 'a, b, c ...'
+  | '一, 二, 三 ...'
+  | '壹, 贰, 叁 ...'
 
 /** 插入页码的配置选项 */
 export interface PageNumberOptions {
@@ -46,6 +58,8 @@ export interface HeaderFooterWidgetDeps {
   getZone: () => Zone
   /** 设置当前所处区域 */
   setZone: (zone: Zone) => void
+  /** 切换区域并设置初始光标到对应区域起始位置 */
+  setZoneWithCaret: (zone: Zone) => void
   /** 让编辑区获取焦点 */
   focusInput: () => void
   /** 绘制页眉/页脚区域虚线边框 */
@@ -56,10 +70,10 @@ export interface HeaderFooterWidgetDeps {
 
 /** 页眉页脚交互 widget，负责双击进入/退出编辑、虚线边框、标签栏及插入页码面板 */
 export class HeaderFooterWidget {
-  /** 左侧标签栏容器：页眉/页脚 - 第 N 节 */
-  private labelEl: HTMLDivElement | null = null
-  /** 标签栏内的文本 span */
-  private labelTextEl: HTMLSpanElement | null = null
+  /** 页眉标签栏容器 */
+  private headerLabelEl: HTMLDivElement | null = null
+  /** 页脚标签栏容器 */
+  private footerLabelEl: HTMLDivElement | null = null
 
   /** 居中的"插入页码"按钮 */
   private insertBtnEl: HTMLButtonElement | null = null
@@ -72,7 +86,7 @@ export class HeaderFooterWidget {
   /** 面板内当前选中的页码位置 */
   private selectedPosition: PageNumberPosition = 'center'
   /** 面板内当前选中的页码样式 */
-  private selectedStyle: PageNumberStyle = '1, 2, 3 ...'
+  private selectedStyle: PageNumberStyle = '第1页'
 
   /** 点击面板外部时隐藏 popup 的全局 mousedown 监听 */
   private onDocumentMouseDown = (e: MouseEvent) => {
@@ -102,11 +116,12 @@ export class HeaderFooterWidget {
   /** 销毁 widget：移除全局监听与所有 DOM 元素并清理引用 */
   destroy(): void {
     document.removeEventListener('mousedown', this.onDocumentMouseDown, true)
-    this.labelEl?.remove()
+    this.headerLabelEl?.remove()
+    this.footerLabelEl?.remove()
     this.insertBtnEl?.remove()
     this.popupEl?.remove()
-    this.labelEl = null
-    this.labelTextEl = null
+    this.headerLabelEl = null
+    this.footerLabelEl = null
     this.insertBtnEl = null
     this.popupEl = null
   }
@@ -115,33 +130,37 @@ export class HeaderFooterWidget {
 
   /** 创建左侧标签栏 DOM（页眉/页脚 - 第 N 节） */
   private createLabel(): void {
-    const el = document.createElement('div')
-    el.className = 'vervedocs-zone-label'
-    Object.assign(el.style, {
-      position: 'fixed',
-      display: 'none',
-      zIndex: '100',
-      alignItems: 'center',
-      gap: '6px',
-      padding: '2px 10px',
-      background: '#e8e8e8',
-      border: '1px solid #bfbfbf',
-      borderRadius: '0',
-      fontSize: '12px',
-      color: '#595959',
-      userSelect: 'none',
-      pointerEvents: 'auto',
-      fontFamily: '"Microsoft YaHei", "PingFang SC", sans-serif',
-      boxShadow: 'none',
-    } as CSSStyleDeclaration)
+    const make = (text: string): { el: HTMLDivElement; textEl: HTMLSpanElement } => {
+      const el = document.createElement('div')
+      el.className = 'vervedocs-zone-label'
+      Object.assign(el.style, {
+        position: 'fixed',
+        display: 'none',
+        zIndex: '100',
+        alignItems: 'center',
+        gap: '6px',
+        padding: '2px 10px',
+        background: '#e8e8e8',
+        border: '1px solid #bfbfbf',
+        borderRadius: '0',
+        fontSize: '12px',
+        color: '#595959',
+        userSelect: 'none',
+        pointerEvents: 'auto',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", sans-serif',
+        boxShadow: 'none',
+      } as CSSStyleDeclaration)
+      const textEl = document.createElement('span')
+      textEl.textContent = text
+      el.appendChild(textEl)
+      document.body.appendChild(el)
+      return { el, textEl }
+    }
 
-    const textEl = document.createElement('span')
-    textEl.textContent = '页眉 - 第 1 节'
-    el.appendChild(textEl)
-
-    this.labelEl = el
-    this.labelTextEl = textEl
-    document.body.appendChild(el)
+    const h = make('页眉')
+    this.headerLabelEl = h.el
+    const f = make('页脚')
+    this.footerLabelEl = f.el
   }
 
   /** 创建居中"插入页码"按钮 DOM（含图标、文字、下拉箭头及悬停态） */
@@ -252,11 +271,18 @@ export class HeaderFooterWidget {
       cursor: 'pointer',
     } as CSSStyleDeclaration)
     const styleOptions: PageNumberStyle[] = [
+      '第1页',
+      '第1页共x页',
+      '1/x',
+      '第一页',
+      '第一页共X页',
       '1, 2, 3 ...',
       'I, II, III ...',
       'i, ii, iii ...',
       'A, B, C ...',
       'a, b, c ...',
+      '一, 二, 三 ...',
+      '壹, 贰, 叁 ...',
     ]
     styleOptions.forEach((s) => {
       const opt = document.createElement('option')
@@ -433,31 +459,50 @@ export class HeaderFooterWidget {
   /* -------------------- 交互 -------------------- */
 
   /**
-   * 处理 mousedown 事件中的双击页眉/页脚逻辑。
+   * 处理 mousedown 事件中的页眉/页脚交互逻辑（参照 Word 标准）。
+   * - 双击页眉/页脚区域：进入对应区域编辑并设置初始光标
+   * - 双击正文区域：若当前处于页眉/页脚编辑，切回正文
+   * - 单击页眉/页脚区域：若当前处于页眉/页脚编辑，切换到对应区域并命中
+   * - 单击正文区域：若当前处于页眉/页脚编辑，拦截事件（正文不可编辑不可选中）
    * 返回 true 表示已处理（Draw 应跳过后续 hit/选词逻辑）。
    * @param e 鼠标事件
    * @returns 是否已处理该事件
    */
   handleMouseDown(e: MouseEvent): boolean {
-    if (e.detail !== 2) return false
     const layout = this.deps.getLayout()
     if (!layout) return false
     const rect = this.deps.getContainerRect()
     const docY = e.clientY - rect.top + this.deps.getScrollY()
     const hitZone = this.hitZone(docY)
-    if (hitZone === 'header' || hitZone === 'footer') {
-      this.deps.setZone(hitZone)
-      this.deps.focusInput()
+    const currentZone = this.deps.getZone()
+    // 双击页眉/页脚：进入对应区域编辑
+    if (e.detail === 2 && (hitZone === 'header' || hitZone === 'footer')) {
+      this.deps.setZoneWithCaret(hitZone)
       return true
     }
-    if (hitZone === 'main' && this.deps.getZone() !== 'main') {
+    // 双击正文 + 当前在页眉/页脚：切回正文
+    if (e.detail === 2 && hitZone === 'main' && currentZone !== 'main') {
       this.hidePopup()
       this.deps.setZone('main')
       this.deps.focusInput()
       return true
     }
+    // 当前处于页眉/页脚编辑模式
+    if (currentZone !== 'main') {
+      // 单击页眉/页脚区域：切换到对应区域，让后续 hit 在对应 zone 中命中
+      if (hitZone === 'header' || hitZone === 'footer') {
+        if (hitZone !== currentZone) {
+          this.deps.setZoneWithCaret(hitZone)
+          return true
+        }
+        return false
+      }
+      // 单击正文区域：拦截事件，正文不可编辑不可选中
+      return true
+    }
     return false
   }
+
 
   /**
    * 判断文档坐标 docY 落在哪个区域
@@ -478,6 +523,7 @@ export class HeaderFooterWidget {
 
   /**
    * 渲染 zone 边框 + 更新标签栏（在 overlay clearOverlay 之后调用）
+   * 页眉/页脚编辑模式下同时绘制两个区域的虚线边框（Word 标准行为）
    */
   renderBorder(): void {
     const layout = this.deps.getLayout()
@@ -491,27 +537,31 @@ export class HeaderFooterWidget {
       return
     }
 
-    // 绘制虚线边框
-    this.deps.drawZoneBorder(layout, this.deps.getScrollY(), zone, this.deps.getPageOffsetX())
+    // 同时绘制页眉和页脚的虚线边框
+    this.deps.drawZoneBorder(layout, this.deps.getScrollY(), 'header', this.deps.getPageOffsetX())
+    this.deps.drawZoneBorder(layout, this.deps.getScrollY(), 'footer', this.deps.getPageOffsetX())
 
-    // 更新左侧标签栏 + 居中"插入页码"按钮
-    this.updateLabel(layout, zone)
+    // 同时更新页眉和页脚标签
+    this.updateLabelForZone(layout, 'header')
+    this.updateLabelForZone(layout, 'footer')
+    // 居中"插入页码"按钮跟随当前激活区域
     this.updateInsertButton(layout, zone)
     // 若 popup 显示中，同步跟随按钮位置
     if (this.popupVisible) this.positionPopup()
   }
 
   /**
-   * 更新左侧标签栏的位置与文本
+   * 更新指定区域标签栏的位置与文本
    * @param layout 文档布局
-   * @param zone 当前区域（header / footer）
+   * @param zone 区域（header / footer）
    */
-  private updateLabel(layout: DocumentLayout, zone: 'header' | 'footer'): void {
-    if (!this.labelEl || !this.labelTextEl) return
+  private updateLabelForZone(layout: DocumentLayout, zone: 'header' | 'footer'): void {
+    const el = zone === 'header' ? this.headerLabelEl : this.footerLabelEl
+    if (!el) return
     const page = layout.pages[0]
     if (!page) return
     const rect = zone === 'header' ? page.headerRect : page.footerRect
-    if (!rect) return
+    if (!rect) { el.style.display = 'none'; return }
 
     const containerRect = this.deps.getContainerRect()
     const pageOffsetX = this.deps.getPageOffsetX()
@@ -525,12 +575,11 @@ export class HeaderFooterWidget {
     const screenX = page.rect.x + pageOffsetX + containerRect.left + 24
     const labelY = zone === 'header'
       ? dividerScreenY + 1
-      : dividerScreenY - this.labelEl.offsetHeight - 1
+      : dividerScreenY - el.offsetHeight - 1
 
-    this.labelEl.style.left = `${screenX}px`
-    this.labelEl.style.top = `${labelY}px`
-    this.labelEl.style.display = 'flex'
-    this.labelTextEl.textContent = zone === 'header' ? '页眉 - 第 1 节' : '页脚 - 第 1 节'
+    el.style.left = `${screenX}px`
+    el.style.top = `${labelY}px`
+    el.style.display = 'flex'
   }
 
   /**
@@ -569,9 +618,10 @@ export class HeaderFooterWidget {
     this.insertBtnEl.style.top = `${top}px`
   }
 
-  /** 隐藏左侧标签栏 */
+  /** 隐藏所有标签栏 */
   private hideLabel(): void {
-    if (this.labelEl) this.labelEl.style.display = 'none'
+    if (this.headerLabelEl) this.headerLabelEl.style.display = 'none'
+    if (this.footerLabelEl) this.footerLabelEl.style.display = 'none'
   }
 
   /** 隐藏"插入页码"按钮 */

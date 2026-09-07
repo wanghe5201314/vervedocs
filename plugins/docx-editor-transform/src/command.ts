@@ -426,6 +426,13 @@ export class Command {
    */
   executeDeleteWatermark(): void { this.adapt.deleteWatermark() }
   /**
+   * 设置系统级水印（全页面 DOM 覆盖层）。
+   * @param config 水印配置，null 表示移除
+   */
+  executeSetSystemWatermark(config: { data: string; color?: string; opacity?: number; size?: number; font?: string; repeat?: boolean; gapX?: number; gapY?: number } | null): void { this.adapt.setSystemWatermark(config) }
+  /** 删除系统级水印 */
+  executeDeleteSystemWatermark(): void { this.adapt.deleteSystemWatermark() }
+  /**
    * 获取文档全部元素值。
    * @returns 文档元素数组
    */
@@ -521,6 +528,8 @@ export class Command {
    * @param payload 页码配置
    */
   executeSetPageNumber(payload: Record<string, unknown>): void { this.adapt.setPageNumber(payload) }
+
+
   /**
    * 获取当前编辑区域。
    * @returns 区域：'main' | 'header' | 'footer'

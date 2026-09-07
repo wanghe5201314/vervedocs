@@ -36,5 +36,17 @@ export function useEditorWatermark(options: { getEditorInstance: () => EditorIns
     instance.command.executeDeleteWatermark()
   }
 
-  return { addWatermark, deleteWatermark }
+  function setSystemWatermark(config: any) {
+    const instance = getEditorInstance()
+    if (!instance) return
+    instance.command.executeSetSystemWatermark(config)
+  }
+
+  function deleteSystemWatermark() {
+    const instance = getEditorInstance()
+    if (!instance) return
+    instance.command.executeDeleteSystemWatermark()
+  }
+
+  return { addWatermark, deleteWatermark, setSystemWatermark, deleteSystemWatermark }
 }

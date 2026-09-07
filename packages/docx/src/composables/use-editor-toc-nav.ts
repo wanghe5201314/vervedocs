@@ -5,7 +5,7 @@ import type { IAutoTocItem } from '@vervedoc/core'
 /** 编辑器目录标签类型：catalog 表示目录，section 表示章节缩略图 */
 export type EditorTocTab = 'toc' | 'section'
 /** 编辑器侧边栏停靠位置类型：可为目录/章节、搜索、AI、修订，或空字符串表示无停靠 */
-export type EditorTocDock = EditorTocTab | 'search' | 'ai' | 'revision' | ''
+export type EditorTocDock = EditorTocTab | 'search' | 'ai' | 'revision' | 'bookmark' | ''
 
 /** 编辑器目录状态快照接口 */
 export interface IEditorTocNavState {

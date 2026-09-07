@@ -7,6 +7,7 @@
 
 import type { IPosition, Path } from '@vervedoc/docx-editor-schema'
 import type { BlockNode, DocumentLayout, LineBox, ParagraphBlock, TableBlock } from './layout-types'
+import type { Zone } from './widgets/header-footer-widget'
 import { getSharedMeasure } from './text-measure'
 
 /**
@@ -14,14 +15,31 @@ import { getSharedMeasure } from './text-measure'
  * @param layout 文档布局
  * @param docX 文档 X 坐标
  * @param docY 文档 Y 坐标
+ * @param zone 当前编辑区域，默认 'main'；'header'/'footer' 时仅命中对应区域块
  * @returns 命中位置；未命中返回 null
  */
-export function hitTest(layout: DocumentLayout, docX: number, docY: number): IPosition | null {
+export function hitTest(layout: DocumentLayout, docX: number, docY: number, zone: Zone = 'main'): IPosition | null {
   for (const page of layout.pages) {
     if (docY < page.rect.y || docY > page.rect.y + page.rect.height) continue
-    const originX = page.contentRect.x
-    const originY = page.contentRect.y
-    const p = hitBlocks(page.blocks, docX, docY, originX, originY)
+    let blocks: BlockNode[]
+    let originX: number
+    let originY: number
+    if (zone === 'header' && page.headerBlocks && page.headerRect) {
+      if (docY < page.headerRect.y || docY > page.headerRect.y + page.headerRect.height) return null
+      blocks = page.headerBlocks
+      originX = page.headerRect.x
+      originY = page.headerRect.y
+    } else if (zone === 'footer' && page.footerBlocks && page.footerRect) {
+      if (docY < page.footerRect.y || docY > page.footerRect.y + page.footerRect.height) return null
+      blocks = page.footerBlocks
+      originX = page.footerRect.x
+      originY = page.footerRect.y
+    } else {
+      blocks = page.blocks
+      originX = page.contentRect.x
+      originY = page.contentRect.y
+    }
+    const p = hitBlocks(blocks, docX, docY, originX, originY)
     if (p) return p
   }
   return null

@@ -4,7 +4,7 @@ import { aiStateStore } from '@/stores/ai-state'
 /**
  * 侧边栏停靠面板类型
  */
-type DockKey = 'search' | 'toc' | 'section' | 'ai' | 'revision' | ''
+type DockKey = 'search' | 'toc' | 'section' | 'ai' | 'revision' | 'bookmark' | ''
 
 /**
  * 侧边栏停靠面板 composable

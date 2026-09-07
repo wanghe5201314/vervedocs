@@ -41,6 +41,19 @@
       </a-tooltip>
 
       <a-tooltip placement="right" :mouseEnterDelay="0.3">
+        <template #title>书签</template>
+        <button
+          class="dock-btn"
+          type="button"
+          :class="{ active: activeKey === 'bookmark' }"
+          aria-label="书签"
+          @click="emit('select', 'bookmark')"
+        >
+          <VIcon name="bookmark-outline" :size="18" />
+        </button>
+      </a-tooltip>
+
+      <a-tooltip placement="right" :mouseEnterDelay="0.3">
         <template #title>AI 助手</template>
         <button
           class="dock-btn"
@@ -73,7 +86,7 @@
 <script setup lang="ts">
 import { VIcon } from '@vervedoc/icons'
 
-type DockKey = 'search' | 'toc' | 'section' | 'ai' | 'revision' | ''
+type DockKey = 'search' | 'toc' | 'section' | 'ai' | 'revision' | 'bookmark' | ''
 
 defineProps<{
   activeKey: DockKey

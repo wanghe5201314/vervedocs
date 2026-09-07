@@ -41,6 +41,9 @@ export interface RendererOptions {
   groupColors?: Record<string, IGroupColor>
   /** 当前高亮的 group ID（鼠标悬浮批注气泡时设置） */
   activeGroupId?: string | null
+  /** 页码配置（设置后在页眉/页脚中渲染页码） */
+  pageNumber?: { style: string; position: 'left' | 'center' | 'right'; zone: 'header' | 'footer' } | null
+
 }
 
 /** 单条文本绘制命令（用于分桶合并绘制以减少 ctx.font 切换开销） */
@@ -104,6 +107,9 @@ export class CanvasRenderer {
   private blockCache = new Map<number, BlockCache>()
   /** 待重建位图的 block id 集合 */
   private dirtyBlocks = new Set<number>()
+
+  /** 水印 widget（可选，设置后在每页渲染完成后绘制水印） */
+  private watermarkWidget: { drawWatermark(ctx: CanvasRenderingContext2D, page: import('./layout-types').PageLayout, scrollY: number): void; drawWatermarkForThumbnail(ctx: CanvasRenderingContext2D, page: import('./layout-types').PageLayout): void } | null = null
 
   /**
    * 创建渲染器并挂载三层 canvas 到容器。
@@ -221,6 +227,9 @@ export class CanvasRenderer {
       }
     }
 
+    this.drawPageNumberForThumbnail(ctx, page, 1)
+    this.watermarkWidget?.drawWatermarkForThumbnail(ctx, page)
+
     return canvas.toDataURL('image/png', quality)
   }
 
@@ -234,6 +243,171 @@ export class CanvasRenderer {
     this.blockCache.clear()
     this.dirtyBlocks.clear()
   }
+
+  /** 更新页码配置 */
+  updatePageNumber(cfg: { style: string; position: 'left' | 'center' | 'right'; zone: 'header' | 'footer' } | null): void {
+    this.opts.pageNumber = cfg
+  }
+
+  /** 设置水印 widget */
+  setWatermarkWidget(widget: { drawWatermark(ctx: CanvasRenderingContext2D, page: import('./layout-types').PageLayout, scrollY: number): void; drawWatermarkForThumbnail(ctx: CanvasRenderingContext2D, page: import('./layout-types').PageLayout): void } | null): void {
+    this.watermarkWidget = widget
+  }
+
+
+  /** 将数字转为罗马数字字符串 */
+  private toRoman(num: number): string {
+    const map: [number, string][] = [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']]
+    let result = ''
+    for (const [v, s] of map) {
+      while (num >= v) { result += s; num -= v }
+    }
+    return result
+  }
+
+  /** 将数字转为中文数字字符串（支持大写） */
+  private toChineseNumber(num: number, uppercase = false): string {
+    const digits = uppercase
+      ? ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖']
+      : ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九']
+    const units = uppercase
+      ? ['', '拾', '佰', '仟', '萬', '億']
+      : ['', '十', '百', '千', '万', '亿']
+    if (num === 0) return digits[0]
+    if (num < 10) return digits[num]
+    if (num < 20) return (num === 10 ? units[1] : units[1] + digits[num - 10])
+    if (num < 100) {
+      const tens = Math.floor(num / 10)
+      const ones = num % 10
+      return digits[tens] + units[1] + (ones > 0 ? digits[ones] : '')
+    }
+    if (num < 1000) {
+      const hundreds = Math.floor(num / 100)
+      const rest = num % 100
+      let result = digits[hundreds] + units[2]
+      if (rest >= 10) {
+        result += this.toChineseNumber(rest, uppercase)
+      } else if (rest > 0) {
+        result += digits[0] + digits[rest]
+      }
+      return result
+    }
+    if (num < 10000) {
+      const thousands = Math.floor(num / 1000)
+      const rest = num % 1000
+      let result = digits[thousands] + units[3]
+      if (rest >= 100) {
+        result += this.toChineseNumber(rest, uppercase)
+      } else if (rest > 0) {
+        result += digits[0] + this.toChineseNumber(rest, uppercase)
+      }
+      return result
+    }
+    return String(num)
+  }
+
+  /**
+   * 在页眉/页脚区域绘制页码文本。
+   * @param ct 内容 canvas 上下文
+   * @param page 页面布局
+   * @param scrollY 滚动偏移
+   * @param totalPages 总页数
+   */
+  private drawPageNumber(
+    ct: CanvasRenderingContext2D,
+    page: { index: number; rect: { x: number; y: number; width: number; height: number }; headerRect?: { x: number; y: number; width: number; height: number } | null; footerRect?: { x: number; y: number; width: number; height: number } | null },
+    scrollY: number,
+    totalPages: number
+  ): void {
+    const cfg = this.opts.pageNumber
+    if (!cfg) return
+    const rect = cfg.zone === 'header' ? page.headerRect : page.footerRect
+    if (!rect) return
+    const text = this.formatPageNumber(page.index, totalPages, cfg.style)
+    ct.save()
+    ct.fillStyle = '#333333'
+    ct.font = '12px "Microsoft YaHei", "PingFang SC", sans-serif'
+    const metrics = ct.measureText(text)
+    const textW = metrics.width
+    const textH = 16
+    const cx = page.rect.x + this.opts.pageOffsetX
+    let x: number
+    if (cfg.position === 'left') {
+      x = cx + rect.x - page.rect.x + 4
+    } else if (cfg.position === 'right') {
+      x = cx + rect.x - page.rect.x + rect.width - textW - 4
+    } else {
+      x = cx + rect.x - page.rect.x + (rect.width - textW) / 2
+    }
+    const baselineY = cfg.zone === 'header'
+      ? rect.y + rect.height - textH - 4 - scrollY
+      : rect.y + 4 - scrollY
+    ct.fillText(text, x, baselineY + textH)
+    ct.restore()
+  }
+
+  /**
+   * 为缩略图绘制页码（原点在页面左上角 0,0，无 scrollY/pageOffsetX）。
+   */
+  private drawPageNumberForThumbnail(
+    ct: CanvasRenderingContext2D,
+    page: { index: number; rect: { x: number; y: number; width: number; height: number }; headerRect?: { x: number; y: number; width: number; height: number } | null; footerRect?: { x: number; y: number; width: number; height: number } | null },
+    totalPages: number
+  ): void {
+    const cfg = this.opts.pageNumber
+    if (!cfg) return
+    const rect = cfg.zone === 'header' ? page.headerRect : page.footerRect
+    if (!rect) return
+    const text = this.formatPageNumber(page.index, totalPages, cfg.style)
+    ct.save()
+    ct.fillStyle = '#333333'
+    ct.font = '12px "Microsoft YaHei", "PingFang SC", sans-serif'
+    const metrics = ct.measureText(text)
+    const textW = metrics.width
+    const textH = 16
+    const relX = rect.x - page.rect.x
+    const relY = rect.y - page.rect.y
+    let x: number
+    if (cfg.position === 'left') {
+      x = relX + 4
+    } else if (cfg.position === 'right') {
+      x = relX + rect.width - textW - 4
+    } else {
+      x = relX + (rect.width - textW) / 2
+    }
+    const baselineY = cfg.zone === 'header'
+      ? relY + rect.height - textH - 4
+      : relY + 4
+    ct.fillText(text, x, baselineY + textH)
+    ct.restore()
+  }
+
+  /**
+   * 将页码索引格式化为字符串（Word 标准格式 + 原有格式）。
+   * @param index 页码索引（从 0 开始）
+   * @param totalPages 总页数
+   * @param style 页码样式
+   * @returns 格式化后的页码字符串
+   */
+  private formatPageNumber(index: number, totalPages: number, style: string): string {
+    const n = index + 1
+    switch (style) {
+      case '第1页': return `第${n}页`
+      case '第1页共x页': return `第${n}页共${totalPages}页`
+      case '1/x': return `${n}/${totalPages}`
+      case '第一页': return `第${this.toChineseNumber(n)}页`
+      case '第一页共X页': return `第${this.toChineseNumber(n)}页共${this.toChineseNumber(totalPages)}页`
+      case '1, 2, 3 ...': return String(n)
+      case 'I, II, III ...': return this.toRoman(n).toUpperCase()
+      case 'i, ii, iii ...': return this.toRoman(n).toLowerCase()
+      case 'A, B, C ...': return String.fromCharCode(64 + n)
+      case 'a, b, c ...': return String.fromCharCode(96 + n)
+      case '一, 二, 三 ...': return this.toChineseNumber(n)
+      case '壹, 贰, 叁 ...': return this.toChineseNumber(n, true)
+      default: return String(n)
+    }
+  }
+
 
   /* -------------------- 光标 / 选区（Overlay） -------------------- */
 
@@ -278,7 +452,7 @@ export class CanvasRenderer {
     this.overlayCtx.clearRect(0, 0, this.cssWidth, this.cssHeight)
   }
 
-  /** 绘制页眉/页脚编辑区域的分隔虚线（一条横穿整页宽度的淡灰虚线） */
+  /** 绘制页眉/页脚编辑区域的虚线边框（参照 Word：紧贴可输入内容区域的矩形边框） */
   drawZoneBorder(
     layout: DocumentLayout,
     scrollY: number,
@@ -287,7 +461,7 @@ export class CanvasRenderer {
   ): void {
     const ov = this.overlayCtx
     ov.save()
-    ov.strokeStyle = '#d9d9d9'
+    ov.strokeStyle = this.opts.rulerColor
     ov.lineWidth = 1
     ov.setLineDash([4, 3])
     for (const page of layout.pages) {
@@ -296,19 +470,72 @@ export class CanvasRenderer {
       const pageBottom = page.rect.y + page.rect.height
       if (pageBottom < scrollY || page.rect.y > scrollY + this.cssHeight) continue
 
-      // 横向范围：横穿整页宽度（含左右页边距）
-      const lineStartX = Math.round(page.rect.x + pageOffsetX) + 0.5
-      const lineEndX = lineStartX + Math.round(page.rect.width) - 1
+      const blocks = zone === 'header' ? page.headerBlocks : page.footerBlocks
+      // 虚线矩形紧贴可输入内容区域，并留出 4px 视觉间距：
+      // - 页眉：顶部在内容上方 4px，底部对齐边距区域下沿（正文顶部）
+      // - 页脚：顶部对齐边距区域上沿（正文底部），底部在内容下方 4px
+      const PADDING = 20
+      let top: number
+      let bottom: number
+      if (zone === 'header') {
+        bottom = rect.y + rect.height
+        if (blocks && blocks.length > 0) {
+          const contentTop = Math.min(...blocks.map(b => b.rect.y))
+          top = rect.y + contentTop - PADDING
+        } else {
+          top = rect.y
+        }
+      } else {
+        top = rect.y
+        if (blocks && blocks.length > 0) {
+          const contentBottom = Math.max(...blocks.map(b => b.rect.y + b.rect.height))
+          bottom = rect.y + contentBottom + PADDING
+        } else {
+          bottom = rect.y + rect.height
+        }
+      }
 
-      // 页眉：分隔线在页眉区域下沿（正文顶部）
-      // 页脚：分隔线在页脚区域上沿（正文底部）
-      const lineY = zone === 'header'
-        ? Math.round(rect.y + rect.height - scrollY) + 0.5
-        : Math.round(rect.y - scrollY) + 0.5
+      const x = Math.round(rect.x + pageOffsetX) + 0.5
+      const y = Math.round(top - scrollY) + 0.5
+      const w = Math.round(rect.width) - 1
+      const h = Math.max(0, Math.round(bottom - top) - 1)
 
+      // 只绘制三边虚线（靠近正文的一侧由贯穿整页的分隔虚线代替，避免重叠）：
+      // - 页眉：上 + 左 + 右（不画底部）
+      // - 页脚：下 + 左 + 右（不画顶部）
       ov.beginPath()
-      ov.moveTo(lineStartX, lineY)
-      ov.lineTo(lineEndX, lineY)
+      if (zone === 'header') {
+        // 上边
+        ov.moveTo(x, y)
+        ov.lineTo(x + w, y)
+        // 左边
+        ov.moveTo(x, y)
+        ov.lineTo(x, y + h)
+        // 右边
+        ov.moveTo(x + w, y)
+        ov.lineTo(x + w, y + h)
+      } else {
+        // 下边
+        ov.moveTo(x, y + h)
+        ov.lineTo(x + w, y + h)
+        // 左边
+        ov.moveTo(x, y)
+        ov.lineTo(x, y + h)
+        // 右边
+        ov.moveTo(x + w, y)
+        ov.lineTo(x + w, y + h)
+      }
+      ov.stroke()
+
+      // 贯穿整页宽度的分隔虚线（页眉：正文顶部；页脚：正文底部）
+      const fullLineStartX = Math.round(page.rect.x + pageOffsetX) + 0.5
+      const fullLineEndX = fullLineStartX + Math.round(page.rect.width) - 1
+      const dividerY = zone === 'header'
+        ? Math.round(bottom - scrollY) + 0.5
+        : Math.round(top - scrollY) + 0.5
+      ov.beginPath()
+      ov.moveTo(fullLineStartX, dividerY)
+      ov.lineTo(fullLineEndX, dividerY)
       ov.stroke()
     }
     ov.restore()
@@ -378,6 +605,12 @@ export class CanvasRenderer {
           this.renderBlockOnMain(ct, b, fx, fy, aliveIds)
         }
       }
+
+      // 页码
+      this.drawPageNumber(ct, page, scrollY, layout.pages.length)
+
+      // 水印
+      this.watermarkWidget?.drawWatermark(ct, page, scrollY)
     }
 
     // GC：淘汰未使用的 bitmap

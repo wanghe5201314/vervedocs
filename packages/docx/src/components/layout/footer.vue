@@ -248,7 +248,7 @@ defineExpose({
 .footer-left, .footer-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 2px;
 }
 
 .footer-item {

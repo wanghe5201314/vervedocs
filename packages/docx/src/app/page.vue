@@ -53,6 +53,11 @@
               :commentAPI="commentAPI"
               @close="closeRevisionDock"
             />
+            <BookmarkLayout
+              v-else-if="activeDock === 'bookmark'"
+              :bookmarkAPI="bookmarkAPI"
+              @close="closeDock"
+            />
           </div>
           <div
             v-if="activeDock"
@@ -132,10 +137,7 @@
       v-model="paperSizeDialogVisible"
       @confirm="handlePaperSizeConfirm"
     />
-    <PageNumberDialog
-      v-model="pageNumberDialogVisible"
-      @confirm="handlePageNumberConfirm"
-    />
+
     <DateDialog v-model="dateDialogVisible" @confirm="handleDateConfirm" />
     <ParagraphDialog
       v-model="paragraphDialogVisible"
@@ -197,7 +199,7 @@ import QrcodeDialog from '@/components/dialogs/qrcodeDialog.vue'
 import SignatureDialog from '@/components/dialogs/signatureDialog.vue'
 import WatermarkDialog from '@/components/dialogs/watermarkDialog.vue'
 import PaperSizeDialog from '@/components/dialogs/paperSizeDialog.vue'
-import PageNumberDialog from '@/components/dialogs/pageNumberDialog.vue'
+
 import DateDialog from '@/components/dialogs/dateDialog.vue'
 import ParagraphDialog from '@/components/dialogs/paragraphDialog.vue'
 import TocDialog from '@/components/dialogs/tocDialog.vue'
@@ -213,6 +215,7 @@ import SearchLayout from '@/components/sidebars/searchLayout.vue'
 import AISidebarLayout from '@/components/sidebars/aiSidebarLayout.vue'
 import AIResultLayout from '@/components/sidebars/aiResultLayout.vue'
 import RevisionLayout from '@/components/sidebars/revisionLayout.vue'
+import BookmarkLayout from '@/components/sidebars/bookmarkLayout.vue'
 import Editor from '@/components/editor/editor.vue'
 import AppSkeleton from '@/components/layout/loadingPlaceholder.vue'
 import PasswordCard from '@/components/editor/passwordCard.vue'
@@ -447,7 +450,7 @@ const {
   signatureDialogVisible,
   watermarkDialogVisible,
   paperSizeDialogVisible,
-  pageNumberDialogVisible,
+
   dateDialogVisible,
   paragraphDialogVisible,
   tocDialogVisible,
@@ -462,7 +465,7 @@ const {
   handleSignatureConfirm,
   handleWatermarkConfirm,
   handlePaperSizeConfirm,
-  handlePageNumberConfirm,
+
   handleDateConfirm,
   handleTocConfirm,
   handleInsertChartConfirm,
@@ -509,10 +512,13 @@ const { tocNavAPI } = useEditorTocNav({
  * 处理左侧停靠栏选择，目录或章节时打开目录面板，其余走基础处理
  * @param key - 停靠栏键值
  */
-const handleDockSelect = (key: 'search' | 'toc' | 'section' | 'ai' | 'revision') => {
+const handleDockSelect = (key: 'search' | 'toc' | 'section' | 'ai' | 'revision' | 'bookmark') => {
   if (key === 'toc' || key === 'section') {
     tocNavAPI.open(key)
     return
+  }
+  if (key === 'bookmark') {
+    bookmarkAPI.refresh()
   }
   baseHandleDockSelect(key)
 }
@@ -889,7 +895,7 @@ const dialogCommands: Record<string, Ref<boolean>> = {
   signature: signatureDialogVisible,
   addWatermark: watermarkDialogVisible,
   customPaperSizeDialog: paperSizeDialogVisible,
-  pageNumberDialog: pageNumberDialogVisible,
+
   insertDate: dateDialogVisible,
   paragraphDialog: paragraphDialogVisible,
   versionHistory: versionHistoryDialogVisible,

@@ -33,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import VdIcon from './VdIcon.vue'
+import VdIcon from '../../icon/VdIcon.vue'
 
 const props = withDefaults(defineProps<{
   icon?: string

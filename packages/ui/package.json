@@ -44,6 +44,7 @@
   },
   "peerDependencies": {
     "@vervedoc/design": "workspace:^",
+    "ant-design-vue": "catalog:",
     "vue": "catalog:"
   },
   "dependencies": {
@@ -51,6 +52,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "catalog:",
+    "ant-design-vue": "catalog:",
     "sass": "^1.89.0",
     "typescript": "catalog:",
     "vite": "catalog:",

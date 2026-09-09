@@ -22,10 +22,17 @@ export default defineConfig({
       fileName: 'vervedoc-ui'
     },
     rollupOptions: {
-      external: ['vue', '@vervedoc/design', /^@vervedoc\/design\//],
+      external: [
+        'vue',
+        'ant-design-vue',
+        /^ant-design-vue\//,
+        '@vervedoc/design',
+        /^@vervedoc\/design\//
+      ],
       output: {
         globals: {
-          vue: 'Vue'
+          vue: 'Vue',
+          'ant-design-vue': 'antd'
         },
         dir: 'dist',
         chunkFileNames: 'chunks/[name]-[hash].js',

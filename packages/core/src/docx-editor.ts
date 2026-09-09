@@ -145,6 +145,9 @@ export class DocxEditor {
     this.comment = new CommentComponent()
     this.revision = new RevisionComponent()
 
+    // 渲染后联动通过 after-render 事件订阅，Draw 只 emit 事件不直接耦合各组件
+    this.wireAfterRenderHooks()
+
     // 先声明适配器占位，以便在 Draw 构造时可以引用（onInput 回调需要 CommandAdapt）
     let adapt: CommandAdapt | null = null
 
@@ -158,6 +161,7 @@ export class DocxEditor {
     this.draw = new Draw(container, editorOptions, {
       document: doc,
       listener: this.listener,
+      eventBus: this.eventBus,
 
       rangeManager: this.range,
       onInput: (text: string) => {
@@ -165,26 +169,36 @@ export class DocxEditor {
       },
       onKeyDown: shortcut.handle,
       afterRender: () => {
-
-        this.comment.render()
-        this.revision.update()
-        this.block?.clear()
-        this.control?.clear()
-        // 通知 Worker 文档数据更新
-        this.worker.updateElements(this.draw.getDocument().elements)
-        // 自动生成缩略图并通过 listener 推送
-        const images = this.draw.getPageThumbnails()
-        this.listener.emit('thumbnail-change', images)
+        this.listener.emit('afterRender')
       },
       onCommand: (command: string, ...args: any[]) => {
-        if (command === 'requestInsertImage') { this.listener.emit('request-insert-image'); return }
-        if (command === 'requestInsertHyperlink') { this.listener.emit('request-insert-hyperlink'); return }
-        if (command === 'requestInsertFormula') { this.listener.emit('request-insert-formula'); return }
-        const fn = (this.command as unknown as Record<string, ((...a: any[]) => void) | undefined>)[command]
-        if (typeof fn === 'function') fn.call(this.command, ...args)
+        if (command === 'requestInsertImage') { this.listener.emit('requestInsertImage'); return }
+        if (command === 'requestInsertHyperlink') { this.listener.emit('requestInsertHyperlink'); return }
+        if (command === 'requestInsertFormula') { this.listener.emit('requestInsertFormula'); return }
+        if (command === 'requestInsertComment') { this.comment.addComment(); return }
+
+        if (command === 'executeCopy') {
+          const text = this.command.executeCopy()
+          if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {})
+          return
+        }
+        if (command === 'executeCut') {
+          const text = this.command.executeCut()
+          if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {})
+          return
+        }
+        if (command === 'executePaste') {
+          if (navigator.clipboard) {
+            navigator.clipboard.readText().then(text => this.command.executePaste(text)).catch(() => {})
+          }
+          return
+        }
+        if (!this.command) return
+        const fn = (this.command as unknown as Record<string, ((...a: any[]) => any) | undefined>)[command]
+        if (typeof fn === 'function') return fn.call(this.command, ...args)
       },
       onZoneChange: (zone) => {
-        this.listener.emit('zone-change', zone)
+        this.listener.emit('zoneChange', zone)
       }
     })
 
@@ -280,7 +294,7 @@ export class DocxEditor {
           _anchor: anchor
         }
       },
-      executeSetGroup: () => null,
+      executeSetGroup: () => this.command?.executeSetGroup() ?? null,
       executeDeleteGroup: () => {},
       executeLocationGroup: () => {},
       executeUpdateOptions: (opts: any) => {
@@ -292,6 +306,7 @@ export class DocxEditor {
       setActiveGroup: (groupId: string | null) => { drawRef.setActiveGroup(groupId) },
     }
     this.comment.install(commentHost)
+    this.comment.setEventBus(this.eventBus)
     this.revision.install(commentHost)
     adapt.setCommentHandler(this.comment)
 
@@ -304,12 +319,30 @@ export class DocxEditor {
     this.worker = new WorkerManager()
     // Worker 计算出目录后，通过 listener 推送给 UI
     this.worker.onTocResult((result) => {
-      this.listener.emit('toc-change', result.toc)
+      this.listener.emit('tocChange', result.toc)
     })
     this.worker.updateElements(doc.elements)
 
     // 鼠标点击 -> hit + setC8 + focus 隐藏输入框
     // 注意：Draw 内 mousedown 已处理 hit，这里不再重复绑定
+  }
+
+  /**
+   * 订阅 after-render 生命周期事件，集中管理渲染后各组件的联动。
+   *
+   * Draw 只 emit `after-render` 事件，不直接调用 comment/revision/block/control/worker，
+   * 各组件的联动逻辑在此集中订阅，新增组件只需在此追加订阅即可，无需修改 Draw 回调签名。
+   */
+  private wireAfterRenderHooks(): void {
+    this.listener.lifecycle.afterRenderListener(() => {
+      this.comment.render()
+      this.revision.update()
+      this.block?.clear()
+      this.control?.clear()
+      this.worker?.updateElements(this.draw.getDocument().elements)
+      const images = this.draw.getPageThumbnails()
+      this.listener.emit('thumbnailChange', images)
+    })
   }
 
   /**

@@ -183,17 +183,9 @@ export function useEditorRevisions(options: { getEditorInstance: () => EditorIns
   function locate(id: string) {
     const instance = getEditorInstance()
     if (!instance) return
-    const elementList = instance.command.getElementList?.() ?? []
-    let firstIndex = -1
-    for (let i = 0; i < elementList.length; i++) {
-      if (elementList[i].revisionId === id) {
-        firstIndex = i
-        break
-      }
-    }
-    if (firstIndex >= 0) {
+    const found = instance.command.executeLocateRevision(id)
+    if (found) {
       activeRevisionId.value = id
-      instance.command.executeSetRange(firstIndex, firstIndex)
     }
   }
 

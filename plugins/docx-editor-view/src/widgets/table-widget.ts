@@ -107,7 +107,7 @@ export class TableWidget {
     const el = document.createElement('div')
     el.className = 'vervedocs-table-handle'
     const icon = document.createElement('span')
-    icon.className = 'material-icons'
+    icon.className = 'material-symbols-outlined'
     icon.textContent = 'drag_indicator'
     icon.style.cssText = 'font-size:16px;color:#606266;'
     el.appendChild(icon)
@@ -144,7 +144,7 @@ export class TableWidget {
     const el = document.createElement('div')
     el.className = 'vervedocs-table-add-col'
     const icon = document.createElement('span')
-    icon.className = 'material-icons'
+    icon.className = 'material-symbols-outlined'
     icon.textContent = 'add'
     icon.style.cssText = 'font-size:16px;color:#606266;'
     el.appendChild(icon)
@@ -191,7 +191,7 @@ export class TableWidget {
     const el = document.createElement('div')
     el.className = 'vervedocs-table-add-row'
     const icon = document.createElement('span')
-    icon.className = 'material-icons'
+    icon.className = 'material-symbols-outlined'
     icon.textContent = 'add'
     icon.style.cssText = 'font-size:16px;color:#606266;'
     el.appendChild(icon)

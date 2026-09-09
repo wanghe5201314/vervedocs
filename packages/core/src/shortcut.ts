@@ -163,12 +163,12 @@ export class ShortcutHandler {
       if (k === 'l') { e.preventDefault(); command.executeSetRowFlex(ROW_FLEX.LEFT); return true }
       if (k === 'e') { e.preventDefault(); command.executeSetRowFlex(ROW_FLEX.CENTER); return true }
       if (k === 'r') { e.preventDefault(); command.executeSetRowFlex(ROW_FLEX.RIGHT); return true }
-      if (k === 'j') { e.preventDefault(); command.executeSetRowFlex(ROW_FLEX.ALIGNMENT); return true }
+      if (k === 'j') { e.preventDefault(); command.executeSetRowFlex(ROW_FLEX.JUSTIFY); return true }
     }
 
     if (e.shiftKey && !e.altKey) {
       if (k === 'x') { e.preventDefault(); command.executeSetStrikeout(); return true }
-      if (k === 'j') { e.preventDefault(); command.executeSetRowFlex(ROW_FLEX.JUSTIFY); return true }
+      if (k === 'j') { e.preventDefault(); command.executeSetRowFlex(ROW_FLEX.DISTRIBUTE); return true }
       if (k === 'i') { e.preventDefault(); command.executeSetList(LIST_TYPE.UL, LIST_STYLE.DISC); return true }
       if (k === 'u') { e.preventDefault(); command.executeSetList(LIST_TYPE.OL, LIST_STYLE.DECIMAL); return true }
     }

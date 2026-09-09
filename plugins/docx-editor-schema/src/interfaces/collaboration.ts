@@ -46,12 +46,18 @@ export interface EditorInterface {
     /** 获取编辑器渲染选项（可选） */
     getOptions?(): unknown
   }
-  /** 编辑器事件监听回调 */
+  /** 编辑器事件监听器（状态变更事件，与 Listener 类接口对齐） */
   listener: {
-    /** 内容变更回调 */
-    contentChange?: () => void
-    /** 选区样式变更回调 */
-    rangeStyleChange?: (rangeStyle: unknown) => void
+    /** 内容事件命名空间 */
+    content: {
+      /** 内容变更回调 */
+      contentListener(handler: () => void): () => void
+    }
+    /** 选区事件命名空间 */
+    range: {
+      /** 格式变更回调 */
+      formatListener(handler: (style: unknown) => void): () => void
+    }
   }
   /** 事件总线，支持 select 风格与传统 on/off 风格 */
   eventBus: {

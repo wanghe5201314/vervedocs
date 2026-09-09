@@ -118,6 +118,14 @@ export class CommentComponent {
     })
   }
 
+  /** 事件总线（由 core 注入，用于发射 comment-create/comment-delete 交互事件） */
+  private _eventBus?: { emit(event: string, ...args: any[]): void }
+
+  /** 注入事件总线 */
+  public setEventBus(eventBus: { emit(event: string, ...args: any[]): void }): void {
+    this._eventBus = eventBus
+  }
+
   public install(command: CommentHost): this {
     if (this._command && this._command !== command) {
       console.warn(
@@ -159,6 +167,7 @@ export class CommentComponent {
     }
     this._comments.push(newComment)
     this._syncGroupColors()
+    this._eventBus?.emit('commentCreate', newComment)
     return newComment
   }
 
@@ -170,6 +179,7 @@ export class CommentComponent {
       this._command?.executeDeleteGroup?.(comment.groupId)
       this._callbacks.onDelete?.(id)
       this._syncGroupColors()
+      this._eventBus?.emit('commentDelete', id)
     }
   }
 

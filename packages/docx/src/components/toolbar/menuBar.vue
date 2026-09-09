@@ -117,8 +117,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { VdIcon } from '@vervedoc/ui'
 import { editorStateStore } from '@/stores/editor-state'
-import { TITLE_LEVEL_MAP } from '@vervedoc/core'
-import { ptToPx, pxToPt } from '@/config/helpers'
+import { TITLE_LEVEL_MAP, ptToPx } from '@vervedoc/core'
 import { RIBBON_TABS } from '@/config/constants'
 import FileTab from '@/components/ribbon/fileTab.vue'
 import HomeTab from '@/components/ribbon/homeTab.vue'
@@ -216,8 +215,8 @@ const revisionCount = computed(() => Number(props.revisionCount || 0))
 
 /** 监听字体变化并同步 */
 watch(() => editorState.font, v => { if (v) currentFont.value = v })
-/** 监听字号变化并转换为磅值 */
-watch(() => editorState.size, v => { if (v) currentSize.value = pxToPt(v) })
+/** 监听字号变化（getRangeStyle 已返回磅值，直接使用） */
+watch(() => editorState.size, v => { if (v) currentSize.value = v })
 /** 监听字体颜色变化 */
 watch(() => editorState.color, v => { if (v) fontColor.value = v })
 /** 监听高亮颜色变化 */

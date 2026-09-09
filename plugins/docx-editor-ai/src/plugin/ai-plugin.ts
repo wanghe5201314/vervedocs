@@ -142,7 +142,7 @@ export class AIPlugin {
    */
   install(editor: EditorInterface): void {
     this.editor = editor
-    
+
     // 使用编辑器自身的容器
     try {
       this.container = editor.command.getContainer() || document.body
@@ -238,12 +238,16 @@ export class AIPlugin {
   private setupSelectionListener(): void {
     if (!this.editor) return
 
-    // 使用编辑器 eventBus 监听鼠标事件（确保能捕获 canvas 内部事件）
+    // 交互事件（鼠标）通过 eventBus 订阅
     this.eventBusSubscriptions.push(
-      this.subscribeEventBus('mouseup', this.handleEditorMouseUp as any),
-      this.subscribeEventBus('mousedown', this.handleEditorMouseDown as any),
-      this.subscribeEventBus('rangeStyleChange', this.handleRangeStyleChange as any)
+      this.subscribeEventBus('editorMouseup', this.handleEditorMouseUp as any),
+      this.subscribeEventBus('editorMousedown', this.handleEditorMouseDown as any)
     )
+    // 状态事件（选区样式变更）通过 listener 订阅
+    if (this.editor?.listener?.range?.formatListener) {
+      const unsub = this.editor.listener.range.formatListener(this.handleRangeStyleChange as any)
+      this.eventBusSubscriptions.push({ unsubscribe: unsub })
+    }
 
     // 文档级 mousedown 用于点击编辑器外部时隐藏工具栏
     document.addEventListener('mousedown', this.handleDocumentMouseDown)
@@ -303,7 +307,7 @@ export class AIPlugin {
    */
   private handleDocumentMouseDown = (e: MouseEvent): void => {
     const target = e.target as HTMLElement
-    
+
     // 如果点击的是工具栏或面板，不处理
     if (target.closest('.docx-ai-toolbar') || target.closest('.docx-ai-panel')) {
       return
@@ -328,7 +332,7 @@ export class AIPlugin {
 
     this.showToolbarTimeout = setTimeout(() => {
       const text = this.editor?.command.getRangeText()
-      
+
       if (text && text.trim().length > 0) {
         this.selectionPosition = { x, y, text: text.trim() }
         this.toolbar?.showToolbar({ x, y })
@@ -369,7 +373,7 @@ export class AIPlugin {
     try {
       // 构建提示词
       let prompt: string
-      
+
       if (action === AIAction.CUSTOM && options?.customActionId) {
         // 自定义操作
         const customAction = this.config.customActions.find(
@@ -413,7 +417,7 @@ export class AIPlugin {
       } else {
         const response = await this.aiService.sendAIRequest(request)
         this.state.isProcessing = false
-        
+
         if (response.success && response.result) {
           this.resultPanel?.showSuccess(response.result)
         } else {
@@ -452,7 +456,7 @@ export class AIPlugin {
     }))
 
     this.editor.command.executeInsertElementList(elementList)
-    
+
     // 重置状态
     this.resetState()
   }

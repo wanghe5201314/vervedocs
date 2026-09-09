@@ -86,6 +86,43 @@ export function formatElementTree(
 }
 
 /**
+ * 调整浮动图片坐标：为非 inline/block 的浮动图片叠加页边距和行内 ascent 偏移。
+ * 仅在导入时调用一次，不随 formatElementTree 自动触发（避免 undo/redo 二次偏移）。
+ * @param elements 顶层元素数组（原地修改）
+ * @param editorOptions 编辑器选项（提供 margins/paperDirection/defaultSize）
+ */
+export function adjustFloatImagePositions(
+  elements: IElement[],
+  editorOptions: IEditorOption
+): void {
+  if (!Array.isArray(elements) || elements.length === 0) return
+  const anyOpts = editorOptions as unknown as Record<string, unknown>
+  const margins = (anyOpts.margins as number[] | undefined) || [96, 120, 96, 120]
+  const paperDirection = anyOpts.paperDirection
+  const marginTop = paperDirection === 'horizontal' ? margins[1] : margins[0]
+  const marginLeft = paperDirection === 'horizontal' ? margins[0] : margins[3]
+  const defaultSize = (anyOpts.defaultSize as number | undefined) || 14
+  for (let li = 0; li < elements.length; li++) {
+    const el = elements[li] as unknown as Record<string, unknown>
+    const imgDisplay = el.imgDisplay as string | undefined
+    if (imgDisplay && imgDisplay !== 'inline' && imgDisplay !== 'block' && el.imgFloatPosition) {
+      let fontSize = defaultSize
+      for (let ni = li + 1; ni < Math.min(li + 10, elements.length); ni++) {
+        const next = elements[ni] as unknown as Record<string, unknown>
+        if (next.size && next.value && (next.value as string).trim()) {
+          fontSize = next.size as number
+          break
+        }
+      }
+      const ascent = fontSize * 0.8
+      const pos = el.imgFloatPosition as { x: number; y: number }
+      pos.x += marginLeft
+      pos.y += marginTop + ascent
+    }
+  }
+}
+
+/**
  * 单节点归一化分发：按节点类型调用对应的归一化函数。
  * @param node 当前节点
  * @param ctx 格式化上下文

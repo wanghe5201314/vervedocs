@@ -104,7 +104,7 @@ export class ChartBlock {
     // 添加点击事件监听器，用于激活图表配置面板
     this.chartContainer.addEventListener('click', (e: Event) => {
       e.stopPropagation()
-      const eventBus = (this.draw as any)?.getEventBus?.()
+      const eventBus = this.draw.getEventBus?.()
       eventBus?.emit?.('chartClick', {
         chartId: this.element.id,
         chartType: block?.chartBlock?.chartType,

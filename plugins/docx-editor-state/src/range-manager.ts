@@ -13,7 +13,7 @@ import type { Listener } from './listener'
  * 选区/光标管理器
  *
  * 维护编辑器当前选区（anchor/focus 双点模型），
- * 并在选区变更时通过 Listener 派发 range-change 与 position-change 事件。
+ * 并在选区变更时通过 Listener 派发 rangeChange 与 positionChange 事件。
  */
 export class RangeManager {
   /** 当前选区，未选中时为 null */
@@ -108,11 +108,11 @@ export class RangeManager {
 
   /**
    * 派发选区变更事件
-   * 同时触发 range-change 与 position-change 事件
+   * 同时触发 rangeChange 与 positionChange 事件
    */
   private emitChange(): void {
-    this.listener?.emit('range-change', this._range)
-    this.listener?.emit('position-change', this._range?.focus ?? null)
+    this.listener?.emit('rangeChange', this._range)
+    this.listener?.emit('positionChange', this._range?.focus ?? null)
   }
 
   /** 用同一 path 移动 offset */

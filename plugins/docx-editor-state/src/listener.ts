@@ -4,8 +4,9 @@
  * 编辑器生命周期/交互事件的回调注册中心。
  * 基于 eventemitter3 实现，保持 on/off/emit API 不变。
  *
- * 事件名统一使用 kebab-case（如 'range-change'、'content-change'）。
+ * 事件名统一使用 camelCase（如 'rangeChange'、'contentChange'）。
  * core 层在状态变更时主动 emit 事件，调用方通过 listener.on() 订阅。
+ * 命名空间方法不带 on 前缀、不带 Change 后缀，以 Listener 结尾。
  */
 
 import { EventEmitter } from 'eventemitter3'
@@ -23,73 +24,76 @@ export type { IRangeStyle, IEditorAbility, ListenerMap } from '@vervedoc/docx-ed
 /** 选区事件命名空间 */
 export interface IRangeListener {
   /** 选区变更（光标移动/选区改变） */
-  onChange(handler: (range: IRange | null) => void): () => void
-  /** 选区样式变更（bold/italic 等回显状态） */
-  onStyleChange(handler: (style: IRangeStyle) => void): () => void
+  rangeListener(handler: (range: IRange | null) => void): () => void
+  /** 格式变更（bold/italic 等回显状态） */
+  formatListener(handler: (style: IRangeStyle) => void): () => void
   /** 光标位置变更 */
-  onPositionChange(handler: (pos: IPosition | null) => void): () => void
+  positionListener(handler: (pos: IPosition | null) => void): () => void
 }
 
 /** 内容事件命名空间 */
 export interface IContentListener {
   /** 内容变更（文本增删/格式修改等） */
-  onChange(handler: () => void): () => void
+  contentListener(handler: () => void): () => void
   /** 文档保存完成 */
-  onSaved(handler: () => void): () => void
+  savedListener(handler: () => void): () => void
 }
 
 /** 能力事件命名空间 */
 export interface IAbilityListener {
   /** 编辑器能力变更（readonly/disabled/canUndo/canRedo） */
-  onChange(handler: (ability: IEditorAbility) => void): () => void
+  abilityListener(handler: (ability: IEditorAbility) => void): () => void
 }
 
 /** 页面事件命名空间 */
 export interface IPageListener {
   /** 缩放比例变更 */
-  onScaleChange(handler: (scale: number) => void): () => void
+  pageScaleListener(handler: (scale: number) => void): () => void
   /** 页面尺寸变更（宽高） */
-  onSizeChange(handler: (size: { width: number; height: number }) => void): () => void
+  pageSizeListener(handler: (size: { width: number; height: number }) => void): () => void
   /** 总页数变更 */
-  onCountChange(handler: (count: number) => void): () => void
+  pageCountListener(handler: (count: number) => void): () => void
   /** 当前页码变更 */
-  onCurrentNoChange(handler: (pageNo: number) => void): () => void
+  currentPageNoListener(handler: (pageNo: number) => void): () => void
 }
 
 /** 目录事件命名空间 */
 export interface ITocListener {
   /** 目录变更 */
-  onChange(handler: (toc: { id: string; level: number; name: string; number?: string }[]) => void): () => void
+  tocListener(handler: (toc: { id: string; level: number; name: string; number?: string }[]) => void): () => void
 }
 
 /** 区域事件命名空间 */
 export interface IZoneListener {
   /** 编辑区域切换（正文/页眉/页脚） */
-  onChange(handler: (zone: 'main' | 'header' | 'footer') => void): () => void
+  zoneListener(handler: (zone: 'main' | 'header' | 'footer') => void): () => void
 }
 
 /** 生命周期事件命名空间 */
 export interface ILifecycleListener {
   /** 编辑器获得焦点 */
-  onFocus(handler: () => void): () => void
+  focusListener(handler: () => void): () => void
   /** 编辑器失去焦点 */
-  onBlur(handler: () => void): () => void
+  blurListener(handler: () => void): () => void
+  /** 渲染完成后触发（各组件订阅此事件执行渲染联动） */
+  afterRenderListener(handler: () => void): () => void
 }
 
 /** 请求事件命名空间（右键菜单等触发的插入请求） */
 export interface IRequestListener {
   /** 请求插入图片 */
-  onInsertImage(handler: () => void): () => void
+  requestInsertImageListener(handler: () => void): () => void
   /** 请求插入超链接 */
-  onInsertHyperlink(handler: () => void): () => void
+  requestInsertHyperlinkListener(handler: () => void): () => void
   /** 请求插入公式 */
-  onInsertFormula(handler: () => void): () => void
+  requestInsertFormulaListener(handler: () => void): () => void
+
 }
 
 /** 缩略图事件命名空间 */
 export interface IThumbnailListener {
   /** 缩略图变更 */
-  onChange(handler: (images: string[]) => void): () => void
+  thumbnailListener(handler: (images: string[]) => void): () => void
 }
 
 /**
@@ -122,72 +126,73 @@ export class Listener {
   /** 选区事件 */
   get range(): IRangeListener {
     return {
-      onChange: (handler) => this.on('range-change', handler),
-      onStyleChange: (handler) => this.on('range-style-change', handler),
-      onPositionChange: (handler) => this.on('position-change', handler)
+      rangeListener: (handler) => this.on('rangeChange', handler),
+      formatListener: (handler) => this.on('formatChange', handler),
+      positionListener: (handler) => this.on('positionChange', handler)
     }
   }
 
   /** 内容事件 */
   get content(): IContentListener {
     return {
-      onChange: (handler) => this.on('content-change', handler),
-      onSaved: (handler) => this.on('saved', handler)
+      contentListener: (handler) => this.on('contentChange', handler),
+      savedListener: (handler) => this.on('saved', handler)
     }
   }
 
   /** 能力事件 */
   get ability(): IAbilityListener {
     return {
-      onChange: (handler) => this.on('ability-change', handler)
+      abilityListener: (handler) => this.on('abilityChange', handler)
     }
   }
 
   /** 页面事件 */
   get page(): IPageListener {
     return {
-      onScaleChange: (handler) => this.on('page-scale-change', handler),
-      onSizeChange: (handler) => this.on('page-size-change', handler),
-      onCountChange: (handler) => this.on('page-count-change', handler),
-      onCurrentNoChange: (handler) => this.on('current-page-no-change', handler)
+      pageScaleListener: (handler) => this.on('pageScaleChange', handler),
+      pageSizeListener: (handler) => this.on('pageSizeChange', handler),
+      pageCountListener: (handler) => this.on('pageCountChange', handler),
+      currentPageNoListener: (handler) => this.on('currentPageNoChange', handler)
     }
   }
 
   /** 目录事件 */
   get toc(): ITocListener {
     return {
-      onChange: (handler) => this.on('toc-change', handler)
+      tocListener: (handler) => this.on('tocChange', handler)
     }
   }
 
   /** 缩略图事件 */
   get thumbnail(): IThumbnailListener {
     return {
-      onChange: (handler) => this.on('thumbnail-change', handler)
+      thumbnailListener: (handler) => this.on('thumbnailChange', handler)
     }
   }
 
   /** 区域事件 */
   get zone(): IZoneListener {
     return {
-      onChange: (handler) => this.on('zone-change', handler)
+      zoneListener: (handler) => this.on('zoneChange', handler)
     }
   }
 
   /** 生命周期事件 */
   get lifecycle(): ILifecycleListener {
     return {
-      onFocus: (handler) => this.on('focus', handler),
-      onBlur: (handler) => this.on('blur', handler)
+      focusListener: (handler) => this.on('focus', handler),
+      blurListener: (handler) => this.on('blur', handler),
+      afterRenderListener: (handler) => this.on('afterRender', handler)
     }
   }
 
   /** 请求事件 */
   get request(): IRequestListener {
     return {
-      onInsertImage: (handler) => this.on('request-insert-image', handler),
-      onInsertHyperlink: (handler) => this.on('request-insert-hyperlink', handler),
-      onInsertFormula: (handler) => this.on('request-insert-formula', handler)
+      requestInsertImageListener: (handler) => this.on('requestInsertImage', handler),
+      requestInsertHyperlinkListener: (handler) => this.on('requestInsertHyperlink', handler),
+      requestInsertFormulaListener: (handler) => this.on('requestInsertFormula', handler)
     }
   }
 }

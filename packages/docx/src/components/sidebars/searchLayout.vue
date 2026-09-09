@@ -10,50 +10,29 @@
       </div>
     </div>
     <div class="sidebar-content">
-      <a-input
-        v-model:value="searchText"
-        allow-clear
-        placeholder="输入要查找的内容回车后开始搜索"
-        @keyup.enter="runSearch"
-      />
-      <a-input
-        v-model:value="replaceText"
-        allow-clear
-        placeholder="替换为"
-        @keyup.enter="replaceCurrent"
-      />
-
+      <a-input v-model:value="searchText" allow-clear placeholder="输入要查找的内容回车后开始搜索" size="small" @keyup.enter="runSearch" />
+      <a-input v-model:value="replaceText" allow-clear placeholder="替换为" size="small" @keyup.enter="replaceCurrent" />
       <div class="result-toolbar">
         <div class="result-summary">
           搜索结果：
           <span class="result-count">{{ currentDisplay }}/{{ matchCount }}</span>
         </div>
         <div class="navigate-actions">
-          <button
-            class="icon-btn"
-            type="button"
-            :disabled="!matchCount"
-            @click="navigate(-1)"
-          >
+          <button class="icon-btn" type="button" :disabled="!matchCount" @click="navigate(-1)">
             <UpOutlined />
           </button>
-          <button
-            class="icon-btn"
-            type="button"
-            :disabled="!matchCount"
-            @click="navigate(1)"
-          >
+          <button class="icon-btn" type="button" :disabled="!matchCount" @click="navigate(1)">
             <DownOutlined />
           </button>
         </div>
       </div>
 
       <div class="actions">
-        <a-button :disabled="!canReplaceCurrent" @click="replaceCurrent">
+        <a-button :disabled="!canReplaceCurrent" @click="replaceCurrent" size="small">
           <VdIcon name="find-replace" />
           替换
         </a-button>
-        <a-button :disabled="!canReplaceAll" @click="replaceAll">
+        <a-button :disabled="!canReplaceAll" @click="replaceAll" size="small">
           <VdIcon name="check-all" />
           全部替换
         </a-button>
@@ -63,11 +42,7 @@
         <div class="match-list-header">共 {{ matchCount }} 处匹配</div>
         <div class="match-list">
           <template v-for="(item, idx) in matches" :key="item.index">
-            <div
-              class="match-item"
-              :class="{ active: item.index === activeIndex }"
-              @click="selectMatch(item.index)"
-            >
+            <div class="match-item" :class="{ active: item.index === activeIndex }" @click="selectMatch(item.index)">
               <span class="match-before">{{ item.before }}</span>
               <mark class="match-hit">{{ item.match }}</mark>
               <span class="match-after">{{ item.after }}</span>
@@ -282,21 +257,6 @@ onBeforeUnmount(() => {
   min-height: 0;
 }
 
-.sidebar-content :deep(.ant-input) {
-  min-height: 30px;
-  padding: 4px 8px;
-  font-size: 12px;
-  line-height: 1.4;
-  border-radius: 4px;
-}
-
-.sidebar-content :deep(.ant-btn) {
-  height: 28px;
-  padding: 0 10px;
-  font-size: 12px;
-  border-radius: 4px;
-}
-
 .result-toolbar {
   display: flex;
   align-items: center;
@@ -320,10 +280,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  height: 24px;
-  padding: 0 8px;
-  font-size: 12px;
-  border-radius: 2px;
+
 }
 
 .actions :deep(.material-symbols-outlined) {

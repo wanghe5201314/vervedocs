@@ -734,13 +734,6 @@ const close = () => {
   background: linear-gradient(180deg, #f7f7f7 0%, #f4f6fb 100%);
 }
 
-:deep(.ant-btn-sm) {
-  height: 32px;
-  padding: 0 12px;
-  border-radius: 0;
-  font-size: 12px;
-}
-
 :deep(.ant-select-single.ant-select-sm .ant-select-selector) {
   height: 32px;
   border-radius: 0;
@@ -754,8 +747,7 @@ const close = () => {
 
 :deep(.ant-input),
 :deep(.ant-input-textarea textarea) {
-  border-radius: 0;
-  font-size: 12px;
+
   background: #fff;
 }
 

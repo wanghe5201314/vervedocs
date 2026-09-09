@@ -9,6 +9,9 @@ import type { DocumentLayout, ParagraphBlock, BlockNode } from '../layout-types'
 import type { RangeManager } from '@vervedoc/docx-editor-state'
 import type { IPosition } from '@vervedoc/docx-editor-schema'
 import { TITLE_LEVEL, ROW_FLEX } from '@vervedoc/docx-editor-schema'
+import { ContextMenu, type MenuItem } from '../context-menu'
+import { ParagraphLayoutWidget } from './layout/paragraph-layout-widget'
+import { FontLayoutWidget } from './layout/font-layout-widget'
 
 
 /**
@@ -33,6 +36,8 @@ export interface ParagraphWidgetDeps {
   hit: (clientX: number, clientY: number) => IPosition | null
   /** 临时抑制工具栏显示 */
   suppressToolbar: () => void
+  /** 让隐藏输入区获焦，以接收后续键盘事件 */
+  focusInput: () => void
 }
 
 /**
@@ -44,19 +49,25 @@ export interface ParagraphWidgetDeps {
 export class ParagraphWidget {
   /** 段落左侧的拖拽手柄 DOM 元素 */
   private handle: HTMLDivElement | null = null
-  /** 弹出的格式菜单 DOM 元素 */
-  private menu: HTMLDivElement | null = null
   /** 当前关联的段落块 */
   private currentBlock: ParagraphBlock | null = null
-  /** 滚动事件处理器引用，用于在销毁时移除监听 */
-  private scrollHandler: (() => void) | null = null
+  /** 段落右键菜单控制器 */
+  private contextMenu = new ContextMenu()
+  /** 段落设置弹出面板 */
+  private panel = new ParagraphLayoutWidget()
+  /** 字体设置弹出面板 */
+  private fontPanel = new FontLayoutWidget()
 
   /**
    * 构造 ParagraphWidget 实例
    *
    * @param deps 依赖注入对象
    */
-  constructor(private deps: ParagraphWidgetDeps) {}
+  constructor(private deps: ParagraphWidgetDeps) {
+    const onCommand = (cmd: string, ...args: any[]) => this.deps.onCommand(cmd, ...args)
+    this.panel.setDeps({ onCommand })
+    this.fontPanel.setDeps({ onCommand })
+  }
 
   /**
    * 创建手柄 DOM 并挂载到 document.body
@@ -81,7 +92,7 @@ export class ParagraphWidget {
       transition: 'background .15s'
     } as CSSStyleDeclaration)
     const icon = document.createElement('span')
-    icon.className = 'material-icons'
+    icon.className = 'material-symbols-outlined'
     icon.textContent = 'drag_indicator'
     icon.style.cssText = 'font-size:14px;color:#606266;'
     this.handle.appendChild(icon)
@@ -227,139 +238,6 @@ export class ParagraphWidget {
     this.hideMenu()
     if (!this.handle || !this.currentBlock) return
 
-    const menu = document.createElement('div')
-    Object.assign(menu.style, {
-      position: 'fixed',
-      background: '#fff',
-      border: '1px solid #dcdfe6',
-      borderRadius: '6px',
-      boxShadow: '0 4px 16px rgba(0,0,0,.12)',
-      padding: '4px 0',
-      zIndex: '101',
-      fontSize: '13px',
-      fontFamily: '"Microsoft YaHei","PingFang SC",sans-serif',
-      color: '#333',
-      userSelect: 'none',
-      minWidth: '120px'
-    } as CSSStyleDeclaration)
-
-    const mkBtn = (label: string, onClick: () => void, opts?: { icon?: string; active?: boolean }): HTMLDivElement => {
-      const btn = document.createElement('div')
-      Object.assign(btn.style, {
-        padding: '6px 14px',
-        cursor: 'pointer',
-        background: opts?.active ? '#f0f0f0' : 'transparent',
-        transition: 'background .12s',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        fontWeight: '400'
-      } as CSSStyleDeclaration)
-      if (opts?.icon) {
-        const sp = document.createElement('span')
-        sp.className = 'material-icons'
-        sp.textContent = opts.icon
-        sp.style.cssText = 'font-size:16px;color:#555;'
-        btn.appendChild(sp)
-      }
-      if (label) {
-        const txt = document.createElement('span')
-        txt.textContent = label
-        btn.appendChild(txt)
-      }
-      btn.addEventListener('mouseenter', () => { if (!opts?.active) btn.style.background = '#f0f0f0' })
-      btn.addEventListener('mouseleave', () => { if (!opts?.active) btn.style.background = 'transparent' })
-      btn.addEventListener('mousedown', (e) => { e.preventDefault(); e.stopPropagation() })
-      btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); onClick(); this.hideMenu() })
-      return btn
-    }
-
-    const mkBtnWithSub = (label: string, icon: string, subItems: { label: string; icon: string; onClick: () => void }[]): HTMLDivElement => {
-      const btn = document.createElement('div')
-      Object.assign(btn.style, {
-        padding: '6px 14px',
-        cursor: 'pointer',
-        background: 'transparent',
-        transition: 'background .12s',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px'
-      } as CSSStyleDeclaration)
-      const sp = document.createElement('span')
-      sp.className = 'material-icons'
-      sp.textContent = icon
-      sp.style.cssText = 'font-size:16px;color:#555;'
-      btn.appendChild(sp)
-      const txt = document.createElement('span')
-      txt.textContent = label
-      txt.style.cssText = 'font-size:13px;font-weight:600;'
-      btn.appendChild(txt)
-      const arrow = document.createElement('span')
-      arrow.className = 'material-icons'
-      arrow.textContent = 'chevron_right'
-      arrow.style.cssText = 'font-size:14px;color:#999;margin-left:auto;'
-      btn.appendChild(arrow)
-
-      let subMenu: HTMLDivElement | null = null
-      let hideTimer: number | null = null
-
-      const showSub = () => {
-        if (hideTimer) { window.clearTimeout(hideTimer); hideTimer = null }
-        document.querySelectorAll('.pw-sub-menu').forEach(el => el.remove())
-        subMenu = document.createElement('div')
-        subMenu.className = 'pw-sub-menu'
-        Object.assign(subMenu.style, {
-          position: 'fixed',
-          background: '#fff',
-          border: '1px solid #dcdfe6',
-          borderRadius: '6px',
-          boxShadow: '0 4px 16px rgba(0,0,0,.12)',
-      padding: '6px 8px',
-          zIndex: '102',
-          fontSize: '13px',
-          fontFamily: '"Microsoft YaHei","PingFang SC",sans-serif',
-          color: '#333',
-          userSelect: 'none',
-          minWidth: '120px'
-        } as CSSStyleDeclaration)
-        for (const si of subItems) {
-          const siEl = document.createElement('div')
-          Object.assign(siEl.style, {
-            padding: '6px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'background .12s'
-          } as CSSStyleDeclaration)
-          const siSp = document.createElement('span')
-          siSp.className = 'material-icons'
-          siSp.textContent = si.icon
-          siSp.style.cssText = 'font-size:16px;color:#555;'
-          siEl.appendChild(siSp)
-          const siTxt = document.createElement('span')
-          siTxt.textContent = si.label
-          siEl.appendChild(siTxt)
-          siEl.addEventListener('mouseenter', () => { siEl.style.background = '#f5f7fa'; if (hideTimer) { window.clearTimeout(hideTimer); hideTimer = null } })
-          siEl.addEventListener('mouseleave', () => { siEl.style.background = 'transparent' })
-          siEl.addEventListener('mousedown', (e) => { e.preventDefault(); e.stopPropagation() })
-          siEl.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); si.onClick(); this.hideMenu() })
-          subMenu!.appendChild(siEl)
-        }
-        const ir = btn.getBoundingClientRect()
-        subMenu.style.left = `${Math.round(ir.right)}px`
-        subMenu.style.top = `${Math.round(ir.top)}px`
-        document.body.appendChild(subMenu)
-        const smH = subMenu.offsetHeight
-        if (ir.top + smH > window.innerHeight) {
-          subMenu.style.top = `${Math.round(Math.max(4, window.innerHeight - smH - 4))}px`
-        }
-      }
-      const hideSub = () => {
-        hideTimer = window.setTimeout(() => { if (subMenu) { subMenu.remove(); subMenu = null } }, 200)
-      }
-
-      btn.addEventListener('mouseenter', () => { btn.style.background = '#f0f0f0'; showSub() })
-      btn.addEventListener('mouseleave', () => { btn.style.background = 'transparent'; hideSub() })
-      btn.addEventListener('mousedown', (e) => { e.preventDefault(); e.stopPropagation() })
-      return btn
-    }
-
     const fire = (cmd: string, ...args: any[]) => { this.deps.onCommand(cmd, ...args) }
 
     const insertBelow = (cmd: string, ...args: any[]) => {
@@ -370,61 +248,96 @@ export class ParagraphWidget {
       fire(cmd, ...args)
     }
 
-    menu.appendChild(mkBtn('正文', () => fire('executeTitle', null), { icon: 'title' }))
-    menu.appendChild(mkBtn('一级标题', () => fire('executeTitle', TITLE_LEVEL.FIRST), { icon: 'title' }))
-    menu.appendChild(mkBtn('二级标题', () => fire('executeTitle', TITLE_LEVEL.SECOND), { icon: 'title' }))
-    menu.appendChild(mkBtn('三级标题', () => fire('executeTitle', TITLE_LEVEL.THIRD), { icon: 'title' }))
-    menu.appendChild(mkBtn('四级标题', () => fire('executeTitle', TITLE_LEVEL.FOURTH), { icon: 'title' }))
-    menu.appendChild(mkBtn('五级标题', () => fire('executeTitle', TITLE_LEVEL.FIFTH), { icon: 'title' }))
-    menu.appendChild(mkBtn('六级标题', () => fire('executeTitle', TITLE_LEVEL.SIXTH), { icon: 'title' }))
-    menu.appendChild(mkBtn('左对齐', () => fire('executeRowFlex', ROW_FLEX.LEFT), { icon: 'format_align_left' }))
-    menu.appendChild(mkBtn('居中', () => fire('executeRowFlex', ROW_FLEX.CENTER), { icon: 'format_align_center' }))
-    menu.appendChild(mkBtn('右对齐', () => fire('executeRowFlex', ROW_FLEX.RIGHT), { icon: 'format_align_right' }))
-    menu.appendChild(mkBtn('两端对齐', () => fire('executeRowFlex', ROW_FLEX.JUSTIFY), { icon: 'format_align_justify' }))
-
-    const sep = document.createElement('div')
-    sep.style.cssText = 'height:1px;background:#e0e0e0;margin:4px 0;'
-    menu.appendChild(sep)
-
-    menu.appendChild(mkBtnWithSub('在下方插入', 'add', [
-      { label: '图片', icon: 'image', onClick: () => insertBelow('requestInsertImage') },
-      { label: '段落', icon: 'text_fields', onClick: () => insertBelow('executeSplitParagraph') },
-      { label: '表格', icon: 'table_chart', onClick: () => insertBelow('executeInsertTable', 3, 4) },
-      { label: '分割线', icon: 'horizontal_rule', onClick: () => insertBelow('executeSeparator') },
-      { label: '超链接', icon: 'link', onClick: () => insertBelow('requestInsertHyperlink') },
-      { label: '公式', icon: 'functions', onClick: () => insertBelow('requestInsertFormula') }
-    ]))
-
-
+    const items: MenuItem[] = [
+      { label: '正文', icon: 'title', onClick: () => fire('executeTitle', null) },
+      { label: '一级标题', icon: 'title', onClick: () => fire('executeTitle', TITLE_LEVEL.FIRST) },
+      { label: '二级标题', icon: 'title', onClick: () => fire('executeTitle', TITLE_LEVEL.SECOND) },
+      { label: '三级标题', icon: 'title', onClick: () => fire('executeTitle', TITLE_LEVEL.THIRD) },
+      { label: '四级标题', icon: 'title', onClick: () => fire('executeTitle', TITLE_LEVEL.FOURTH) },
+      { label: '五级标题', icon: 'title', onClick: () => fire('executeTitle', TITLE_LEVEL.FIFTH) },
+      { label: '六级标题', icon: 'title', onClick: () => fire('executeTitle', TITLE_LEVEL.SIXTH) },
+      { label: '左对齐', icon: 'format_align_left', onClick: () => fire('executeRowFlex', ROW_FLEX.LEFT) },
+      { label: '居中', icon: 'format_align_center', onClick: () => fire('executeRowFlex', ROW_FLEX.CENTER) },
+      { label: '右对齐', icon: 'format_align_right', onClick: () => fire('executeRowFlex', ROW_FLEX.RIGHT) },
+      { label: '两端对齐', icon: 'format_align_justify', onClick: () => fire('executeRowFlex', ROW_FLEX.JUSTIFY) },
+      { label: '---' },
+      {
+        label: '在下方插入', icon: 'add', submenu: [
+          { label: '图片', icon: 'image', onClick: () => insertBelow('requestInsertImage') },
+          { label: '段落', icon: 'text_fields', onClick: () => insertBelow('executeSplitParagraph') },
+          { label: '表格', icon: 'table_chart', onClick: () => insertBelow('executeInsertTable', 3, 4) },
+          { label: '分割线', icon: 'horizontal_rule', onClick: () => insertBelow('executeSeparator') },
+          { label: '超链接', icon: 'link', onClick: () => insertBelow('requestInsertHyperlink') },
+          { label: '公式', icon: 'functions', onClick: () => insertBelow('requestInsertFormula') }
+        ]
+      }
+    ]
 
     const hx = parseFloat(this.handle.style.left)
     const hy = parseFloat(this.handle.style.top)
-    document.body.appendChild(menu)
-    const menuW = menu.offsetWidth
-    const menuH = menu.offsetHeight
-    menu.style.left = `${Math.round(Math.max(4, hx - menuW - 4))}px`
-    menu.style.top = `${Math.round(hy)}px`
-    if (hy + menuH > window.innerHeight) {
-      menu.style.top = `${Math.round(Math.max(4, window.innerHeight - menuH - 4))}px`
-    }
-    this.menu = menu
-
-    this.scrollHandler = () => this.hideMenu()
-    document.addEventListener('scroll', this.scrollHandler, { capture: true })
-
-    const onDown = (e: MouseEvent) => {
-      if (!menu.contains(e.target as Node)) { this.hideMenu(); document.removeEventListener('mousedown', onDown, true) }
-    }
-    setTimeout(() => document.addEventListener('mousedown', onDown, true), 0)
+    this.contextMenu.show(hx, hy + 22, items)
   }
 
   /**
-   * 隐藏格式菜单及其所有子菜单，并移除滚动监听
+   * 隐藏格式菜单及其所有子菜单
    */
   private hideMenu(): void {
-    if (this.menu) { this.menu.remove(); this.menu = null }
-    document.querySelectorAll('.pw-sub-menu').forEach(el => el.remove())
-    if (this.scrollHandler) { document.removeEventListener('scroll', this.scrollHandler, { capture: true }); this.scrollHandler = null }
+    this.contextMenu.hide()
+  }
+
+  /**
+   * 显示段落右键菜单。
+   *
+   * 参照 Word 段落右键菜单，覆盖剪切/复制/粘贴、样式、对齐、缩进、行距、
+   * 项目符号/编号、超链接、清除格式、段落对话框等常用功能。
+   * 复用 ContextMenu 类，样式与表格右键菜单一致（紧凑）。
+   *
+   * @param clientX 右键横坐标（视口）
+   * @param clientY 右键纵坐标（视口）
+   * @returns 命中段落并显示菜单返回 true，否则 false
+   */
+  showContextMenu(clientX: number, clientY: number): boolean {
+    const layout = this.deps.getLayout()
+    const range = this.deps.getRange()
+    if (!layout || !range) return false
+
+    const pos = this.deps.hit(clientX, clientY)
+    if (!pos) return false
+
+    // 表格内选区由 tableWidget 处理，此处跳过
+    if (pos.path.length >= 5 && pos.path[1] === 'trList') return false
+
+    const block = this.findParagraphBlock(layout, pos)
+    if (!block) return false
+
+    range.setCaret(pos)
+    this.deps.focusInput()
+
+    const icons = ContextMenu.getIcons()
+    const fire = (cmd: string, ...args: any[]) => { this.deps.onCommand(cmd, ...args) }
+
+    const items: MenuItem[] = [
+      { label: '剪切', icon: 'content_cut', shortcut: 'Ctrl+X', onClick: () => fire('executeCut') },
+      { label: '复制', icon: 'content_copy', shortcut: 'Ctrl+C', onClick: () => fire('executeCopy') },
+      { label: '粘贴', icon: 'content_paste', shortcut: 'Ctrl+V', onClick: () => fire('executePaste') },
+      { label: '---' },
+      { label: '字体...', icon: 'format_size', onClick: () => this.fontPanel.show() },
+      { label: '段落高级设置', icon: 'subject', onClick: () => this.panel.show() },
+      { label: '---' },
+      { label: '超链接', icon: icons.link, shortcut: 'Ctrl+K', onClick: () => fire('requestInsertHyperlink') },
+      { label: '插入批注', icon: 'comment', onClick: () => fire('requestInsertComment') },
+
+    ]
+
+    this.contextMenu.show(clientX, clientY, items)
+    return true
+  }
+
+  /**
+   * 隐藏段落右键菜单。
+   */
+  hideContextMenu(): void {
+    this.contextMenu.hide()
   }
 
   /**
@@ -432,6 +345,9 @@ export class ParagraphWidget {
    */
   destroy(): void {
     this.hideMenu()
+    this.hideContextMenu()
+    this.panel.hide()
+    this.fontPanel.hide()
     if (this.handle) { this.handle.remove(); this.handle = null }
   }
 }

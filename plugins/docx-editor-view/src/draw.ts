@@ -13,7 +13,7 @@
 import type { IDocxDocumentMeta, IEditorOption, IPosition, Path } from '@vervedoc/docx-editor-schema'
 import { formatElementTree, pairBookmarkMarkers, getByPath } from '@vervedoc/docx-editor-schema'
 
-import type { Listener, RangeManager } from '@vervedoc/docx-editor-state'
+import type { Listener, RangeManager, EventBus } from '@vervedoc/docx-editor-state'
 import { LayoutEngine, type LayoutOptions } from './layout-engine'
 import type { DocumentLayout, BlockNode, ParagraphBlock, InlineBox, LineBox } from './layout-types'
 import { CanvasRenderer } from './canvas-renderer'
@@ -47,6 +47,8 @@ export interface DrawDeps {
   document: IDocxDocumentMeta
   /** 事件监听器（用于发射 page-count-change 等事件） */
   listener?: Listener
+  /** 事件总线（用于发射用户交互事件，如 editor-mousedown/chart-click 等） */
+  eventBus?: EventBus
 
   /** 选区管理器 */
   rangeManager?: RangeManager
@@ -57,7 +59,7 @@ export interface DrawDeps {
   /** 每次 RAF 渲染完成后调用（用于驱动批注/修订 overlay 更新） */
   afterRender?: () => void
   /** 悬浮工具栏命令回调（由 core 装配，转发到 Command） */
-  onCommand?: (command: string, ...args: any[]) => void
+  onCommand?: (command: string, ...args: any[]) => any
   /** zone 变化回调（由 core 装配，用于驱动 UI 标签显示） */
   onZoneChange?: (zone: Zone) => void
 }
@@ -90,6 +92,8 @@ export class Draw {
   private range?: RangeManager
   /** 事件监听器 */
   private listener?: Listener
+  /** 事件总线（用户交互事件） */
+  private eventBus?: EventBus
 
   /** 当前滚动 y（wrapper.scrollTop） */
   private scrollY = 0
@@ -137,7 +141,7 @@ export class Draw {
   /** 渲染完成后回调 */
   private afterRender?: () => void
   /** 命令回调（转发到 Command） */
-  private onCommand?: (command: string, ...args: any[]) => void
+  private onCommand?: (command: string, ...args: any[]) => any
 
   /** 悬浮选区工具栏 widget */
   private selectionToolbarWidget: SelectionToolbarWidget | null = null
@@ -187,6 +191,7 @@ export class Draw {
     this.onCommand = deps.onCommand
     this.onZoneChange = deps.onZoneChange
     this.listener = deps.listener
+    this.eventBus = deps.eventBus
 
     container.classList.add('vervedocs-container')
     // container 需要作为绝对定位的参照
@@ -236,13 +241,16 @@ export class Draw {
     }
     this.canvasHost.addEventListener('vervedocs:image-loaded', () => this.scheduleRender())
 
-    // Range 变化时触发光标重绘 + 悬浮工具栏
+    // Range 变化时触发光标重绘 + 悬浮工具栏 + 工具栏样式同步
     if (deps.listener && this.range) {
-      deps.listener.on('range-change', () => {
+      deps.listener.on('rangeChange', () => {
         this.caretVisible = true
         this.renderCaretIfAny()
         // 拖拽过程中不更新悬浮工具栏，等 mouseup 再触发，避免工具栏跟随拖拽闪烁
         if (!this.isDragging) {
+          // 同步选区样式到工具栏（formatChange）
+          const style = this.onCommand?.('getRangeStyle')
+          if (style) this.listener?.emit('formatChange', style)
           this.selectionToolbarWidget?.update()
           this.tableWidget?.update()
           this.imageWidget?.update()
@@ -291,7 +299,7 @@ export class Draw {
       getPageOffsetX: () => this.getPageOffsetX(),
       getViewportWidth: () => this.viewportWidth,
       getContainer: () => this.container,
-      onCommand: (cmd: string, ...args: any[]) => { this.onCommand?.(cmd, ...args) },
+      onCommand: (cmd: string, ...args: any[]) => this.onCommand?.(cmd, ...args),
       isSuppressToolbar: () => this._suppressToolbar,
       consumeSuppressToolbar: () => { this._suppressToolbar = false }
     })
@@ -302,7 +310,7 @@ export class Draw {
       getContainerRect: () => this.canvasHost.getBoundingClientRect(),
       getScrollY: () => this.scrollY,
       getPageOffsetX: () => this.getPageOffsetX(),
-      onCommand: (cmd: string, ...args: any[]) => { this.onCommand?.(cmd, ...args) },
+      onCommand: (cmd: string, ...args: any[]) => this.onCommand?.(cmd, ...args),
       hit: (clientX: number, clientY: number) => this.hit(clientX, clientY),
       focusInput: () => this.focusInput(),
       setCursor: (cursor: string) => { this.wrapper.style.cursor = cursor }
@@ -332,7 +340,7 @@ export class Draw {
       getContainerRect: () => this.canvasHost.getBoundingClientRect(),
       getScrollY: () => this.scrollY,
       getPageOffsetX: () => this.getPageOffsetX(),
-      onCommand: (cmd: string, ...args: any[]) => { this.onCommand?.(cmd, ...args) },
+      onCommand: (cmd: string, ...args: any[]) => this.onCommand?.(cmd, ...args),
       onUpdateImageSizeLive: (path: Path, width: number, height: number) => this.updateImageSizeLive(path, width, height),
       hit: (clientX: number, clientY: number) => this.hit(clientX, clientY),
       focusInput: () => this.focusInput()
@@ -344,9 +352,10 @@ export class Draw {
       getContainerRect: () => this.canvasHost.getBoundingClientRect(),
       getScrollY: () => this.scrollY,
       getPageOffsetX: () => this.getPageOffsetX(),
-      onCommand: (cmd: string, ...args: any[]) => { this.onCommand?.(cmd, ...args) },
+      onCommand: (cmd: string, ...args: any[]) => this.onCommand?.(cmd, ...args),
       hit: (clientX: number, clientY: number) => this.hit(clientX, clientY),
-      suppressToolbar: () => { this._suppressToolbar = true }
+      suppressToolbar: () => { this._suppressToolbar = true },
+      focusInput: () => this.focusInput()
     })
     this.paragraphWidget.create()
     this.rulerWidget = new RulerWidget({
@@ -359,7 +368,7 @@ export class Draw {
       getScale: () => Number(this.options.scale ?? 1),
       getPageMargins: () => (this.options.pageMargins as [number, number, number, number]) ?? [100, 120, 100, 120],
       getPageGap: () => Number((this.options as unknown as { pageGap?: number }).pageGap ?? 24),
-      onCommand: (cmd: string, ...args: any[]) => { this.onCommand?.(cmd, ...args) }
+      onCommand: (cmd: string, ...args: any[]) => this.onCommand?.(cmd, ...args)
     })
     this.rulerWidget.create()
     if ((options as unknown as { showRuler?: boolean }).showRuler) {
@@ -450,7 +459,13 @@ export class Draw {
    * Ctrl+点击跳转、双击选词、三击选段、Shift+扩展选区、普通点击+开始拖拽。
    * @param e 鼠标事件
    */
+  /** 获取事件总线（供 commands 插件等发射交互事件） */
+  getEventBus(): EventBus | undefined {
+    return this.eventBus
+  }
+
   private onMouseDown = (e: MouseEvent): void => {
+    this.eventBus?.emit('editorMousedown', e)
     if (!this.range) return
     // 阻止 mousedown 默认行为抢走隐藏输入框的焦点
     e.preventDefault()
@@ -459,7 +474,10 @@ export class Draw {
     if (this.tableWidget?.handleMouseDown(e)) return
 
     // 图片选中/缩放
-    if (this.imageWidget?.handleMouseDown(e)) return
+    if (this.imageWidget?.handleMouseDown(e)) {
+      this.eventBus?.emit('imageMousedown', e)
+      return
+    }
 
     // 双击页眉/页脚区域：切换编辑区域
     if (this.headerFooterWidget?.handleMouseDown(e)) return
@@ -548,6 +566,7 @@ export class Draw {
    * @param e 鼠标事件
    */
   private onMouseUp = (e: MouseEvent): void => {
+    this.eventBus?.emit('editorMouseup', e)
     this.tableWidget?.handleMouseUp(e)
     this.isDragging = false
     this.dragAnchor = null
@@ -555,7 +574,7 @@ export class Draw {
     if (this.dragRafId != null) { cancelAnimationFrame(this.dragRafId); this.dragRafId = null }
     // 松开鼠标后才显示悬浮工具栏
     this.selectionToolbarWidget?.update()
-    this.updateWidgets()
+
   }
 
   /** 鼠标选区结束收尾：聚焦隐藏输入框、重置光标可见性并重绘。 */
@@ -574,7 +593,16 @@ export class Draw {
   private onContextMenu = (e: MouseEvent): void => {
     e.preventDefault()
 
-    this.tableWidget?.showContextMenu(e.clientX, e.clientY)
+    // 命中超链接时通知 UI 显示超链接右键菜单
+    const pos = this.hit(e.clientX, e.clientY)
+    if (pos && this.findHyperlinkByPos(pos)) {
+      this.eventBus?.emit('hyperlinkMenuClick')
+      return
+    }
+
+    // 优先表格，未命中再尝试段落
+    if (this.tableWidget?.showContextMenu(e.clientX, e.clientY)) return
+    this.paragraphWidget?.showContextMenu(e.clientX, e.clientY)
   }
 
 
@@ -958,8 +986,6 @@ export class Draw {
     return this.range ?? null
   }
 
-  /** 供批注/修订组件查询：新架构下容器宽度由 Draw 管理，外部不应修改 */
-  isNewLayoutEngine(): boolean { return true }
 
   /** 获取当前编辑区域 */
   getZone(): Zone { return this.zone }
@@ -1132,7 +1158,7 @@ export class Draw {
     const oldLayout = this.layout
     this.lastSignatureToId = nextSignatureToId
     this.layout = layout
-    this.listener?.emit('page-count-change', layout.pages.length)
+    this.listener?.emit('pageCountChange', layout.pages.length)
 
     // scroller 撑起文档总高（页面居中通过 CSS margin:0 auto）
     this.scroller.style.height = `${layout.totalHeight}px`
@@ -1221,10 +1247,6 @@ export class Draw {
     return Math.max(0, (wrapperWidth - (this.layout?.pageWidth ?? 0)) / 2) - scrollLeft
   }
 
-  /** 批量更新交互 widget 位置（table/image/paragraph） */
-  private updateWidgets(): void {
-    // no-op: widget 位置更新由各 widget 自身监听渲染周期完成
-  }
 
   /** 选项变更后重排版并重渲染：更新引擎选项、失效位图缓存、重排版 */
   private reformatWithInvalidation(): void {
@@ -1255,7 +1277,7 @@ export class Draw {
     this.renderer.setSize(this.viewportWidth, this.viewportHeight)
     this.updateVisualLayout()
     this.scheduleRender()
-    this.updateWidgets()
+
   }
 
   /** 滚动处理：更新 scrollY、刷新视觉布局与各 widget、发射当前页码变化事件。 */
@@ -1264,13 +1286,13 @@ export class Draw {
     this.updateVisualLayout()
     // 滚动渲染跳过 afterRender（避免每帧生成缩略图等重操作），widget 更新在 RAF 内完成
     this.scheduleRender(true)
-    this.updateWidgets()
+
     // 发射当前页码变化
     if (this.layout && this.listener) {
       const midY = this.scrollY + this.wrapper.clientHeight / 2
       for (const page of this.layout.pages) {
         if (midY >= page.rect.y && midY < page.rect.y + page.rect.height) {
-          this.listener.emit('current-page-no-change', page.index)
+          this.listener.emit('currentPageNoChange', page.index)
           break
         }
       }

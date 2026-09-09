@@ -434,26 +434,7 @@ export class CanvasRenderer {
   /* -------------------- 光标 / 选区（Overlay） -------------------- */
 
   /**
-   * 绘制光标（overlay 层）。传入文档坐标，内部会应用 scrollY 与 pageOffsetX。
-   * 注意：不再自行 clearOverlay，由调用方先 clearOverlay 再画选区再画光标。
-   * cx: 文档坐标 x；cy: 文档坐标 y；height: 光标高度；scrollY, visible: 闪烁开关
-   */
-  drawCaret(cx: number, cy: number, height: number, scrollY: number, visible: boolean): void {
-    if (!visible) return
-    const ov = this.overlayCtx
-    const x = Math.round(cx + this.opts.pageOffsetX) + 0.5
-    const y = Math.round(cy - scrollY)
-    ov.save()
-    ov.strokeStyle = '#111'
-    ov.lineWidth = 1
-    ov.beginPath()
-    ov.moveTo(x, y)
-    ov.lineTo(x, y + height)
-    ov.stroke()
-    ov.restore()
-  }
 
-  /**
    * 绘制选区高亮（DOM div 池）。传入文档坐标矩形列表，内部应用 scrollY 与 pageOffsetX。
    */
   drawSelection(rects: { x: number; y: number; width: number; height: number }[], scrollY: number): void {

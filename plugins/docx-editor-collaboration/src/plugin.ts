@@ -29,7 +29,7 @@ import {
   type SelectionRenderLayout,
 } from './cursor-manager'
 import EventEmitter from 'eventemitter3'
-import { subscribeEventBus } from './event-bus'
+
 
 /** 光标代理相对字符高度的额外偏移量 */
 const CURSOR_AGENT_OFFSET_HEIGHT = 12
@@ -506,11 +506,10 @@ export class CollaborationPlugin {
         this.syncLocalCursorState()
       }, this.config.cursorThrottleMs)
     }
-    this.rangeChangeSubscription = subscribeEventBus(
-      this.editor.eventBus,
-      'rangeStyleChange',
+    const unsub = this.editor.listener.range.formatListener(
       this.rangeChangeHandler as any
     )
+    this.rangeChangeSubscription = { unsubscribe: unsub }
   }
 
   /**

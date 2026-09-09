@@ -60,7 +60,7 @@ const eventBusSubscriptions: Array<{ unsubscribe: () => void }> = []
  * 刷新目录（已由 Worker + listener 自动处理，保留为空函数兼容调用方）
  */
 const refreshCatalog = async () => {
-  // 目录通过 Worker 后台计算 → listener.toc.onChange 自动推送，无需主动调用
+  // 目录通过 Worker 后台计算 → listener.toc.tocListener 自动推送，无需主动调用
 }
 
 const {
@@ -254,24 +254,24 @@ const setupEditorListeners = () => {
   }
 
   // 目录变化
-  editorInstance.listener.toc.onChange((catalog: any[]) => {
+  editorInstance.listener.toc.tocListener((catalog: any[]) => {
     emit('command', 'tocChange', catalog)
   })
 
   // 缩略图变化
-  editorInstance.listener.thumbnail.onChange((images: string[]) => {
+  editorInstance.listener.thumbnail.thumbnailListener((images: string[]) => {
     emit('command', 'thumbnailsChange', images)
   })
 
   // 内容变化（目录和缩略图已由核心 Worker + afterRender 自动推送，此处仅同步字数和状态）
-  editorInstance.listener.content.onChange(debounce(async () => {
+  editorInstance.listener.content.contentListener(debounce(async () => {
     const wordCount = await editorInstance.command.getWordCount()
     emit('command', 'editorStatus', { wordCount })
     emit('command', 'contentChange')
   }, 1000))
 
   // 选区样式变化 - 同步到状态存储实现工具栏回显
-  editorInstance.listener.range.onStyleChange((rangeStyle: any) => {
+  editorInstance.listener.range.formatListener((rangeStyle: any) => {
     editorStateStore.syncFromEditor(rangeStyle)
     syncAbility()
 
@@ -308,7 +308,7 @@ const setupEditorListeners = () => {
     }
   })
 
-  editorInstance.listener.range.onPositionChange(() => {
+  editorInstance.listener.range.positionListener(() => {
     const rangeContext = editorInstance.command.getRangeContext()
     if (rangeContext) {
       emit('command', 'editorStatus', {
@@ -320,20 +320,20 @@ const setupEditorListeners = () => {
     }
   })
 
-  editorInstance.listener.page.onCountChange((pageCount: number) => {
+  editorInstance.listener.page.pageCountListener((pageCount: number) => {
     emit('command', 'editorStatus', { totalPages: pageCount })
   })
 
-  editorInstance.listener.page.onCurrentNoChange((pageNo: number) => {
+  editorInstance.listener.page.currentPageNoListener((pageNo: number) => {
     emit('command', 'editorStatus', { currentPage: pageNo + 1 })
   })
 
   // 页面缩放变化
-  editorInstance.listener.page.onScaleChange((scale: number) => {
+  editorInstance.listener.page.pageScaleListener((scale: number) => {
     emit('command', 'scaleChange', Math.round(scale * 100))
   })
 
-  editorInstance.listener.content.onSaved((result: any) => {
+  editorInstance.listener.content.savedListener((result: any) => {
     emit('saved', result)
   })
 
@@ -351,7 +351,7 @@ const setupEditorListeners = () => {
       subscribeEventBus(eventBus, 'imageMousedown', (payload: any) => {
         emit('command', 'imageMousedown', payload)
       }),
-      subscribeEventBus(eventBus, 'mousedown', (evt: MouseEvent) => {
+      subscribeEventBus(eventBus, 'editorMousedown', (evt: MouseEvent) => {
         emit('command', 'mousedown', evt)
       }),
       subscribeEventBus(eventBus, 'commentCreate', (payload: any) => {

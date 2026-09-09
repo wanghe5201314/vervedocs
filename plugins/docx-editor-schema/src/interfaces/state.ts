@@ -18,6 +18,14 @@ export interface IRangeStyle {
   underline: boolean
   /** 删除线 */
   strikeout: boolean
+  /** 双删除线 */
+  doubleStrikeout: boolean
+  /** 隐藏文字 */
+  hidden: boolean
+  /** 上标 */
+  superscript: boolean
+  /** 下标 */
+  subscript: boolean
   /** 字体颜色 */
   color: string
   /** 高亮颜色 */
@@ -58,44 +66,70 @@ export interface IEditorAbility {
   canRedo: boolean
 }
 
-/** 编辑器事件映射表，键为事件名（kebab-case），值为对应回调签名 */
+/** 编辑器事件映射表，键为事件名（camelCase），值为对应回调签名 */
 export interface ListenerMap {
   /** 选区变更（光标移动/选区改变） */
-  'range-change': (range: IRange | null) => void
+  'rangeChange': (range: IRange | null) => void
   /** 光标位置变更 */
-  'position-change': (pos: IPosition | null) => void
+  'positionChange': (pos: IPosition | null) => void
   /** 内容变更（文本增删/格式修改等） */
-  'content-change': () => void
-  /** 选区样式变更（bold/italic/underline 等回显状态） */
-  'range-style-change': (style: IRangeStyle) => void
+  'contentChange': () => void
+  /** 格式变更（bold/italic/underline 等回显状态） */
+  'formatChange': (style: IRangeStyle) => void
   /** 编辑器能力变更（readonly/disabled/canUndo/canRedo） */
-  'ability-change': (ability: IEditorAbility) => void
+  'abilityChange': (ability: IEditorAbility) => void
   /** 缩放比例变更 */
-  'page-scale-change': (scale: number) => void
+  'pageScaleChange': (scale: number) => void
   /** 页面尺寸变更（宽高） */
-  'page-size-change': (size: { width: number; height: number }) => void
+  'pageSizeChange': (size: { width: number; height: number }) => void
   /** 总页数变更 */
-  'page-count-change': (count: number) => void
+  'pageCountChange': (count: number) => void
   /** 当前页码变更 */
-  'current-page-no-change': (pageNo: number) => void
+  'currentPageNoChange': (pageNo: number) => void
   /** 目录变更 */
-  'toc-change': (toc: { id: string; level: number; name: string; number?: string }[]) => void
+  'tocChange': (toc: { id: string; level: number; name: string; number?: string }[]) => void
   /** 编辑区域切换（正文/页眉/页脚） */
-  'zone-change': (zone: 'main' | 'header' | 'footer') => void
+  'zoneChange': (zone: 'main' | 'header' | 'footer') => void
   /** 文档保存完成 */
   'saved': () => void
   /** 编辑器获得焦点 */
   'focus': () => void
   /** 编辑器失去焦点 */
   'blur': () => void
+  /** 渲染完成后触发（各组件订阅此事件执行联动） */
+  'afterRender': () => void
   /** 请求插入图片（右键菜单触发） */
-  'request-insert-image': () => void
+  'requestInsertImage': () => void
   /** 请求插入超链接（右键菜单触发） */
-  'request-insert-hyperlink': () => void
+  'requestInsertHyperlink': () => void
   /** 请求插入公式（右键菜单触发） */
-  'request-insert-formula': () => void
+  'requestInsertFormula': () => void
+
   /** 缩略图变更（页面缩略图数据更新） */
-  'thumbnail-change': (images: string[]) => void
+  'thumbnailChange': (images: string[]) => void
+}
+
+/**
+ * 交互事件映射表（EventBus），键为事件名（camelCase），值为对应 payload 类型。
+ *
+ * 与 ListenerMap 的区别：ListenerMap 描述编辑器**状态变更**事件，
+ * EventBusMap 描述用户**交互行为**事件（点击/右键/鼠标等）。
+ */
+export interface EventBusMap {
+  /** 图表点击 */
+  'chartClick': { chartId: string; chartType: string; dataSource: unknown; config: unknown }
+  /** 超链接右键菜单点击 */
+  'hyperlinkMenuClick': void
+  /** 图片鼠标按下 */
+  'imageMousedown': unknown
+  /** 编辑器内鼠标按下 */
+  'editorMousedown': MouseEvent
+  /** 编辑器内鼠标抬起 */
+  'editorMouseup': MouseEvent
+  /** 批注创建 */
+  'commentCreate': unknown
+  /** 批注删除 */
+  'commentDelete': unknown
 }
 
 /** 事件处理器类型，接收一个指定类型的 payload 参数 */

@@ -139,9 +139,9 @@ export class CommandAdapt {
       )
     }
     // 通知调用方：内容变更 + 选区样式变更 + 能力变更（含撤销/重做状态）
-    this.listener?.emit('content-change')
-    this.listener?.emit('range-style-change', this.getRangeStyle())
-    this.listener?.emit('ability-change', this.getAbility())
+    this.listener?.emit('contentChange')
+    this.listener?.emit('formatChange', this.getRangeStyle())
+    this.listener?.emit('abilityChange', this.getAbility())
   }
 
   /* -------------------- 文本编辑 -------------------- */
@@ -228,6 +228,38 @@ export class CommandAdapt {
     this.range.setCaret({ path: start.path.slice() as Path, offset: start.offset })
     this._commit(doc, 'text')
     return true
+  }
+
+  /** 获取文档全文纯文本（所有 text run 的 value 拼接）。 */
+  getFullText(): string {
+    const doc = this.draw.getDocument()
+    return (doc.elements || []).map(el => (el as any).value || '').join('')
+  }
+
+  /** 跳转到指定页码（通过设置滚动位置）。 */
+  jumpToPage(pageNo: number): void {
+    const opts = this.draw.getOptions()
+    const pageHeight = Number(opts.pageHeight ?? 1123)
+    const pageGap = Number(opts.pageGap ?? 24) * Number(opts.scale ?? 1)
+    const scroller = this.draw.getScroller()
+    const wrapper = scroller?.parentElement as HTMLElement | null
+    if (wrapper) {
+      wrapper.scrollTop = pageNo * (pageHeight + pageGap)
+    }
+  }
+
+  /** 定位到指定修订 ID 的首个元素位置，返回是否找到。 */
+  locateRevision(id: string): boolean {
+    if (!id) return false
+    const doc = this.draw.getDocument()
+    const elements = doc.elements || []
+    for (let i = 0; i < elements.length; i++) {
+      if ((elements[i] as any).revisionId === id) {
+        this.setRange(i, i)
+        return true
+      }
+    }
+    return false
   }
 
   /** 提取当前选区纯文本（用于复制/剪切）。 */
@@ -420,9 +452,9 @@ export class CommandAdapt {
 
   /**
    * 设置当前段落的行弹性对齐方式。
-   * @param flex 对齐方式：'left' | 'center' | 'right' | 'justify' | 'alignment'
+   * @param flex 对齐方式：'left' | 'center' | 'right' | 'justify' | 'alignment' | 'distribute'
    */
-  setRowFlex(flex: 'left' | 'center' | 'right' | 'justify' | 'alignment'): void {
+  setRowFlex(flex: 'left' | 'center' | 'right' | 'justify' | 'alignment' | 'distribute'): void {
     const doc = this.draw.getActiveDocument()
     const ordered = this.range.getOrdered()
     const pos = ordered?.start ?? this.range.getFocus()
@@ -553,6 +585,14 @@ export class CommandAdapt {
    */
   setStrikeout(v?: boolean): void {
     this.mutateRuns(run => { (run as unknown as Record<string, unknown>).strikeout = v }, 'strikeout')
+  }
+  /** 设置选区内 run 的双删除线 */
+  setDoubleStrikeout(v?: boolean): void {
+    this.mutateRuns(run => { (run as unknown as Record<string, unknown>).doubleStrikeout = v })
+  }
+  /** 设置选区内 run 的隐藏属性 */
+  setHidden(v?: boolean): void {
+    this.mutateRuns(run => { (run as unknown as Record<string, unknown>).hidden = v })
   }
   /**
    * 设置选区内 run 的下划线。
@@ -1448,9 +1488,9 @@ export class CommandAdapt {
         undefined
       )
     }
-    this.listener?.emit('content-change')
-    this.listener?.emit('range-style-change', this.getRangeStyle())
-    this.listener?.emit('ability-change', this.getAbility())
+    this.listener?.emit('contentChange')
+    this.listener?.emit('formatChange', this.getRangeStyle())
+    this.listener?.emit('abilityChange', this.getAbility())
   }
 
   /**
@@ -1595,7 +1635,7 @@ export class CommandAdapt {
    */
   setPaperSize(width: number, height: number): void {
     this.draw.setPageSize(width, height)
-    this.listener?.emit('page-size-change', { width, height })
+    this.listener?.emit('pageSizeChange', { width, height })
   }
 
   /**
@@ -1618,7 +1658,7 @@ export class CommandAdapt {
     const opts = this.draw.getOptions()
     const scale = Math.min(3, Number(opts.scale ?? 1) + 0.1)
     this.draw.setScale(scale)
-    this.listener?.emit('page-scale-change', scale)
+    this.listener?.emit('pageScaleChange', scale)
   }
 
   /** 缩小页面缩放（步进 0.1，下限 0.5）。 */
@@ -1626,7 +1666,7 @@ export class CommandAdapt {
     const opts = this.draw.getOptions()
     const scale = Math.max(0.5, Number(opts.scale ?? 1) - 0.1)
     this.draw.setScale(scale)
-    this.listener?.emit('page-scale-change', scale)
+    this.listener?.emit('pageScaleChange', scale)
   }
 
   /**
@@ -1660,13 +1700,13 @@ export class CommandAdapt {
    */
   setPageScale(scale: number): void {
     this.draw.setScale(scale)
-    this.listener?.emit('page-scale-change', scale)
+    this.listener?.emit('pageScaleChange', scale)
   }
 
   /** 恢复默认缩放比例 */
   setPageScaleRecovery(): void {
     this.draw.setScale(1)
-    this.listener?.emit('page-scale-change', 1)
+    this.listener?.emit('pageScaleChange', 1)
   }
 
   /**
@@ -2059,8 +2099,8 @@ export class CommandAdapt {
       if (prev.range) this.range.setRange(prev.range)
     }
     // 撤销后通知：选区样式变更 + 能力变更（canUndo/canRedo 可能变化）
-    this.listener?.emit('range-style-change', this.getRangeStyle())
-    this.listener?.emit('ability-change', this.getAbility())
+    this.listener?.emit('formatChange', this.getRangeStyle())
+    this.listener?.emit('abilityChange', this.getAbility())
   }
 
   /** 重做下一步操作，恢复历史快照并通知选区样式与能力变更。 */
@@ -2076,8 +2116,8 @@ export class CommandAdapt {
       if (next.range) this.range.setRange(next.range)
     }
     // 重做后通知：选区样式变更 + 能力变更
-    this.listener?.emit('range-style-change', this.getRangeStyle())
-    this.listener?.emit('ability-change', this.getAbility())
+    this.listener?.emit('formatChange', this.getRangeStyle())
+    this.listener?.emit('abilityChange', this.getAbility())
   }
 
   /* -------------------- 区域切换 -------------------- */
@@ -2347,6 +2387,78 @@ export class CommandAdapt {
     this.setParagraphFirstLineIndent(next)
   }
 
+  /* -------------------- 段落属性通用读写 -------------------- */
+
+  /**
+   * 设置当前段落的指定属性值。
+   * @param key 属性名（如 paragraphIndentLeft）
+   * @param value 属性值
+   */
+  private setParagraphAttr(key: string, value: number): void {
+    const doc = this.draw.getActiveDocument()
+    const pos = this.range.getFocus()
+    if (!pos) return
+    const parent = getParentContainer(doc.elements, pos.path)
+    if (!parent) return
+    const cursorIdx = pos.path[pos.path.length - 1] as number
+    const groups = splitParagraphs(parent)
+    for (const g of groups) {
+      if (cursorIdx < g.start || cursorIdx >= g.end) continue
+      const targets = g.block ? [g.block, ...g.runs] : g.runs
+      for (const r of targets) {
+        (r as unknown as Record<string, unknown>)[key] = value
+      }
+      this._commit(doc)
+      return
+    }
+  }
+
+  /**
+   * 获取当前段落的指定属性值。
+   * @param key 属性名
+   * @returns 属性数值
+   */
+  private getParagraphAttr(key: string): number {
+    const doc = this.draw.getActiveDocument()
+    const pos = this.range.getFocus()
+    if (!pos) return 0
+    const parent = getParentContainer(doc.elements, pos.path)
+    if (!parent) return 0
+    const cursorIdx = pos.path[pos.path.length - 1] as number
+    const groups = splitParagraphs(parent)
+    for (const g of groups) {
+      if (cursorIdx < g.start || cursorIdx >= g.end) continue
+      const target = g.block ?? g.runs[0]
+      if (!target) return 0
+      return Number((target as unknown as Record<string, unknown>)[key] ?? 0)
+    }
+    return 0
+  }
+
+  /* -------------------- 左/右缩进 -------------------- */
+
+  /** 设置左缩进（px） */
+  setParagraphIndentLeft(px: number): void { this.setParagraphAttr('paragraphIndentLeft', px) }
+  /** 获取左缩进（px） */
+  getParagraphIndentLeft(): number { return this.getParagraphAttr('paragraphIndentLeft') }
+
+  /** 设置右缩进（px） */
+  setParagraphIndentRight(px: number): void { this.setParagraphAttr('paragraphIndentRight', px) }
+  /** 获取右缩进（px） */
+  getParagraphIndentRight(): number { return this.getParagraphAttr('paragraphIndentRight') }
+
+  /* -------------------- 段前/段后间距 -------------------- */
+
+  /** 设置段前间距（px） */
+  setParagraphSpacingBefore(px: number): void { this.setParagraphAttr('paragraphSpacingBefore', px) }
+  /** 获取段前间距（px） */
+  getParagraphSpacingBefore(): number { return this.getParagraphAttr('paragraphSpacingBefore') }
+
+  /** 设置段后间距（px） */
+  setParagraphSpacingAfter(px: number): void { this.setParagraphAttr('paragraphSpacingAfter', px) }
+  /** 获取段后间距（px） */
+  getParagraphSpacingAfter(): number { return this.getParagraphAttr('paragraphSpacingAfter') }
+
   /**
    * 获取当前选区范围。
    * @returns 选区范围对象，无选区时返回 null
@@ -2390,6 +2502,7 @@ export class CommandAdapt {
     /** 默认样式快照 */
     const defaultStyle: IRangeStyle = {
       type: null, bold: false, italic: false, underline: false, strikeout: false,
+      doubleStrikeout: false, hidden: false, superscript: false, subscript: false,
       color: '', highlight: '', font: '', size: 0, level: null,
       rowFlex: 'left', lineHeight: 1.5, paragraphFirstLineIndent: 0,
       characterScale: 100, painter: !!this._paintFmt,
@@ -2406,20 +2519,39 @@ export class CommandAdapt {
     const el = parent[cursorIdx] as Record<string, unknown> | undefined
     if (!el) return defaultStyle
 
+    // 段落级属性：从段落第一个有该属性的元素获取（光标所在元素可能缺少段落级属性）
+    const groups = splitParagraphs(parent)
+    let paraEl: Record<string, unknown> = el
+    for (const g of groups) {
+      if (cursorIdx < g.start || cursorIdx >= g.end) continue
+      for (const r of g.runs) {
+        const candidate = r as Record<string, unknown>
+        if (candidate.rowFlex !== undefined) {
+          paraEl = candidate
+          break
+        }
+      }
+      break
+    }
+
     return {
       type: (el.type as string) ?? null,
       bold: !!el.bold,
       italic: !!el.italic,
       underline: !!el.underline,
       strikeout: !!el.strikeout,
+      doubleStrikeout: !!el.doubleStrikeout,
+      hidden: !!el.hidden,
+      superscript: !!el.superscript,
+      subscript: !!el.subscript,
       color: (el.color as string) ?? '',
       highlight: (el.highlight as string) ?? '',
       font: (el.font as string) ?? '',
-      size: (el.size as number) ?? 0,
+      size: Math.round(((el.size as number) ?? 0) * (72 / 96) * 2) / 2,
       level: el.type === 'title' ? (el.level as string) ?? null : null,
-      rowFlex: (el.rowFlex as string) ?? 'left',
-      lineHeight: (el.lineHeight as number) ?? 1.5,
-      paragraphFirstLineIndent: (el.paragraphFirstLineIndent as number) ?? 0,
+      rowFlex: (paraEl.rowFlex as string) ?? 'left',
+      lineHeight: (paraEl.lineHeight as number) ?? 1.5,
+      paragraphFirstLineIndent: (paraEl.paragraphFirstLineIndent as number) ?? 0,
       characterScale: (el.characterScale as number) ?? 100,
       painter: !!this._paintFmt,
       undo: this._historyManager?.canUndo() ?? false,
@@ -2538,7 +2670,7 @@ export class CommandAdapt {
       this.draw.updateOptions({ readonly: false } as Partial<IEditorOption>)
     }
     // 模式切换后通知能力变更（readonly/disabled 状态可能变化）
-    this.listener?.emit('ability-change', this.getAbility())
+    this.listener?.emit('abilityChange', this.getAbility())
   }
 
   /**
@@ -2572,11 +2704,11 @@ export class CommandAdapt {
     this.range.setRange(range)
   }
 
-  /** 将当前选区内的顶层元素标记为同一群组。 */
-  setGroup(): void {
+  /** 将当前选区内的顶层元素标记为同一群组，返回 groupId 或 null。 */
+  setGroup(): string | null {
     const doc = this.draw.getActiveDocument()
     const ordered = this.range.getOrdered()
-    if (!ordered) return
+    if (!ordered) return null
     const startPath = ordered.start.path
     const endPath = ordered.end.path
     if (startPath.length === 1 && endPath.length === 1) {
@@ -2588,7 +2720,9 @@ export class CommandAdapt {
         if (el) (el as unknown as Record<string, unknown>).groupId = groupId
       }
       this._commit(doc)
+      return groupId
     }
+    return null
   }
 
   /**

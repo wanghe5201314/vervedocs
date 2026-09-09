@@ -276,10 +276,13 @@ export interface EditorInterface {
     /** 获取编辑器容器 DOM */
     getContainer(): HTMLDivElement
   }
-  /** 编辑器监听器钩子 */
+  /** 编辑器监听器（状态变更事件，与 Listener 类接口对齐） */
   listener: {
-    /** 选区样式变化回调 */
-    rangeStyleChange?: (rangeStyle: unknown) => void
+    /** 选区事件命名空间 */
+    range: {
+      /** 格式变化回调 */
+      formatListener(handler: (style: unknown) => void): () => void
+    }
   }
   /** 编辑器事件总线，支持 select().subscribe() 与 on()/off() 两种用法 */
   eventBus: {

@@ -4,7 +4,7 @@
       <div class="bookmark-left">
         <a-form :model="form">
           <a-form-item label="书签名">
-            <a-input
+            <a-input size="small"
               v-model:value="form.name"
               placeholder="字母、数字、下划线或中文"
               @keydown.enter.prevent="handleAdd"
@@ -39,10 +39,10 @@
       </div>
 
       <div class="bookmark-actions">
-        <a-button type="primary" :disabled="!canAdd" @click="handleAdd">添加</a-button>
-        <a-button :disabled="!selectedName" @click="handleDelete">删除</a-button>
-        <a-button :disabled="!selectedName" @click="handleGoto">转到</a-button>
-        <a-button @click="visible = false">关闭</a-button>
+        <a-button type="primary" size="small" :disabled="!canAdd" @click="handleAdd">添加</a-button>
+        <a-button :disabled="!selectedName" size="small" @click="handleDelete">删除</a-button>
+        <a-button :disabled="!selectedName" size="small" @click="handleGoto">转到</a-button>
+        <a-button size="small" @click="visible = false">关闭</a-button>
       </div>
     </div>
   </a-modal>

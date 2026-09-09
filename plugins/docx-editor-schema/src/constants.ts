@@ -93,7 +93,8 @@ export const ROW_FLEX = {
   CENTER: 'center',
   RIGHT: 'right',
   JUSTIFY: 'justify',
-  ALIGNMENT: 'alignment'
+  ALIGNMENT: 'alignment',
+  DISTRIBUTE: 'distribute'
 } as const
 
 /** 标题级别 */
@@ -245,6 +246,29 @@ export const TableBorder = {
   OUTSIDE: 'outside',
   ALL: 'all'
 } as const
+
+/* ========== 单位换算（96 DPI） ========== */
+
+/** 屏幕 DPI 常量 */
+export const DPI = 96
+
+/**
+ * 磅（pt）转像素（px）
+ * @param pt 磅值
+ * @returns 像素值（保留两位小数）
+ */
+export function ptToPx(pt: number): number {
+  return Math.round(pt * (DPI / 72) * 100) / 100
+}
+
+/**
+ * 像素（px）转磅（pt）
+ * @param px 像素值
+ * @returns 磅值（保留一位小数，0.5 步进）
+ */
+export function pxToPt(px: number): number {
+  return Math.round(px * (72 / DPI) * 2) / 2
+}
 
 /* ========== 纸张大小（对齐 WPS/Office，96 DPI） ========== */
 

@@ -1,0 +1,223 @@
+.pw-panel-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.28);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pw-panel {
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  width: 540px;
+  font-size: 12px;
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  color: #303133;
+}
+
+/* ===== 标题栏 ===== */
+.pw-panel-title {
+  padding: 10px 16px;
+  border-bottom: 1px solid #ebeef5;
+  font-weight: 400;
+  font-size: 13px;
+}
+
+/* ===== Tab 切换栏 ===== */
+.pw-tabs {
+  display: flex;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.pw-tab {
+  padding: 8px 16px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  color: #606266;
+  user-select: none;
+}
+
+.pw-tab:hover {
+  color: #4096ff;
+}
+
+.pw-tab-active {
+  color: #4096ff;
+  border-bottom-color: #4096ff;
+}
+
+/* ===== 面板主体 ===== */
+.pw-panel-body {
+  padding: 14px 16px;
+  height: 440px;
+  overflow-y: auto;
+}
+
+.pw-pane {
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pw-pane-active {
+  display: flex;
+}
+
+/* ===== 分组（fieldset） ===== */
+.pw-group {
+  border: 1px solid #ebeef5;
+  border-radius: 2px;
+  padding: 8px 12px 10px;
+  margin: 0;
+}
+
+.pw-group legend {
+  padding: 0 6px;
+  color: #909399;
+  font-size: 11px;
+}
+
+/* ===== 两列网格 ===== */
+.pw-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+}
+
+/* ===== 字段：label + 控件水平排列 ===== */
+.pw-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pw-field-label {
+  flex-shrink: 0;
+  width: 48px;
+  text-align: right;
+  color: #606266;
+  font-size: 11px;
+  line-height: 28px;
+}
+
+/* ===== 通用控件 ===== */
+.pw-ctrl {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  border: 1px solid #dcdfe6;
+  border-radius: 0;
+  font-size: 12px;
+  padding: 0 6px;
+  outline: none;
+  box-sizing: border-box;
+  background: #fff;
+  color: #303133;
+  cursor: pointer;
+}
+
+.pw-ctrl:focus {
+  border-color: #4096ff;
+}
+
+.pw-ctrl:disabled {
+  background: #f5f7fa;
+  color: #c0c4cc;
+  cursor: not-allowed;
+}
+
+.pw-unit {
+  flex-shrink: 0;
+  color: #909399;
+  font-size: 11px;
+}
+
+/* ===== 复选框 ===== */
+.pw-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  cursor: pointer;
+  color: #606266;
+  font-size: 11px;
+}
+
+.pw-check input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+}
+
+.pw-check:has(input:disabled) {
+  color: #c0c4cc;
+  cursor: not-allowed;
+}
+
+/* ===== 预览区 ===== */
+.pw-preview-box {
+  border: 1px solid #ebeef5;
+  border-radius: 2px;
+  padding: 8px 12px;
+  background: #fafafa;
+}
+
+.pw-preview-label {
+  color: #909399;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.pw-preview {
+  min-height: 48px;
+  padding: 8px 10px;
+  background: #fff;
+  border: 1px solid #ebeef5;
+  overflow: hidden;
+  line-height: 1.6;
+  color: #303133;
+}
+
+/* ===== 占位提示 ===== */
+.pw-placeholder {
+  padding: 24px 0;
+  text-align: center;
+  color: #c0c4cc;
+  font-size: 12px;
+}
+
+/* ===== 底部按钮 ===== */
+.pw-panel-actions {
+  padding: 10px 16px;
+  border-top: 1px solid #ebeef5;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.pw-panel-actions button {
+  height: 28px;
+  padding: 0 16px;
+  border: 1px solid #dcdfe6;
+  border-radius: 0;
+  background: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  color: #303133;
+}
+
+.pw-panel-actions button:hover {
+  border-color: #c0c4cc;
+}
+
+.pw-panel-actions button:last-child {
+  background: #4096ff;
+  color: #fff;
+  border-color: #4096ff;
+}
+
+.pw-panel-actions button:last-child:hover {
+  background: #1677ff;
+  border-color: #1677ff;
+}

@@ -104,6 +104,10 @@ export class Command {
    * @param v 是否显示删除线
    */
   executeSetStrikeout(v?: boolean): void { this.adapt.setStrikeout(v) }
+  /** 设置双删除线 */
+  executeSetDoubleStrikeout(v?: boolean): void { this.adapt.setDoubleStrikeout(v) }
+  /** 设置隐藏 */
+  executeSetHidden(v?: boolean): void { this.adapt.setHidden(v) }
   /**
    * 设置或切换下划线。
    * @param v 是否显示下划线
@@ -603,6 +607,22 @@ export class Command {
    * @param direction 方向：'add' | 'sub'
    */
   executeIndentStep(direction: 'add' | 'sub'): void { this.adapt.indentStep(direction) }
+  /** 设置左缩进（px） */
+  executeSetParagraphIndentLeft(px: number): void { this.adapt.setParagraphIndentLeft(px) }
+  /** 获取左缩进（px） */
+  getParagraphIndentLeft(): number { return this.adapt.getParagraphIndentLeft() }
+  /** 设置右缩进（px） */
+  executeSetParagraphIndentRight(px: number): void { this.adapt.setParagraphIndentRight(px) }
+  /** 获取右缩进（px） */
+  getParagraphIndentRight(): number { return this.adapt.getParagraphIndentRight() }
+  /** 设置段前间距（px） */
+  executeSetParagraphSpacingBefore(px: number): void { this.adapt.setParagraphSpacingBefore(px) }
+  /** 获取段前间距（px） */
+  getParagraphSpacingBefore(): number { return this.adapt.getParagraphSpacingBefore() }
+  /** 设置段后间距（px） */
+  executeSetParagraphSpacingAfter(px: number): void { this.adapt.setParagraphSpacingAfter(px) }
+  /** 获取段后间距（px） */
+  getParagraphSpacingAfter(): number { return this.adapt.getParagraphSpacingAfter() }
   /**
    * 获取当前选区范围。
    * @returns 选区范围对象，无选区时返回 null
@@ -660,9 +680,9 @@ export class Command {
    */
   executeReplaceRange(range: any): void { this.adapt.replaceRange(range) }
   /**
-   * 设置群组。
+   * 设置群组，返回 groupId 或 null。
    */
-  executeSetGroup(): void { this.adapt.setGroup() }
+  executeSetGroup(): string | null { return this.adapt.setGroup() }
   /**
    * 定位到指定群组。
    * @param id 群组 ID
@@ -716,4 +736,20 @@ export class Command {
    * @param groupId 群组 ID
    */
   executeDeleteGroup(groupId: string): void { this.adapt.deleteGroup(groupId) }
+  /**
+   * 获取文档全文纯文本（所有 text run 的 value 拼接）。
+   * @returns 文档全文字符串
+   */
+  executeGetFullText(): string { return this.adapt.getFullText() }
+  /**
+   * 跳转到指定页码（通过设置滚动位置）。
+   * @param pageNo 页码索引（从 0 开始）
+   */
+  executeJumpToPage(pageNo: number): void { this.adapt.jumpToPage(pageNo) }
+  /**
+   * 定位到指定修订 ID 的首个元素位置。
+   * @param id 修订唯一标识
+   * @returns 是否找到并定位成功
+   */
+  executeLocateRevision(id: string): boolean { return this.adapt.locateRevision(id) }
 }

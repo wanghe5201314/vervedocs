@@ -51,24 +51,24 @@ interface IEditorOption {
   width?: number                // 页面宽度（毫米）
   height?: number               // 页面高度（毫米）
   scale?: number                // 缩放比例（0-1）
-  
+
   // 边距设置
   margins?: [number, number, number, number]  // [上, 右, 下, 左]（毫米）
-  
+
   // 页眉页脚
   header?: IHeader              // 页眉配置
   footer?: IFooter              // 页脚配置
-  
+
   // 水印
   watermark?: IWatermark        // 水印配置
-  
+
   // 字体
   defaultFont?: string          // 默认字体
   defaultSize?: number          // 默认字号
-  
+
   // 模式
   mode?: EditorMode             // 编辑模式：edit | readonly | form | print
-  
+
   // 其他
   placeholder?: IPlaceholder    // 占位符配置
   pageNumber?: IPageNumber      // 页码配置
@@ -86,7 +86,7 @@ interface IElement {
   id?: string                   // 元素 ID
   type?: ElementType            // 元素类型
   value: string                 // 文本内容
-  
+
   // 文本样式
   font?: string                 // 字体
   size?: number                 // 字号
@@ -96,27 +96,27 @@ interface IElement {
   strikeout?: boolean           // 删除线
   color?: string                // 文字颜色
   highlight?: string            // 高亮颜色
-  
+
   // 段落样式
   rowFlex?: RowFlex             // 对齐方式
   rowMargin?: number            // 行距
-  
+
   // 图片属性
   width?: number                // 图片宽度
   height?: number               // 图片高度
   imgDisplay?: ImageDisplay     // 图片显示模式
-  
+
   // 表格属性（type: 'table'）
   trList?: ITr[]                // 表格行列表
-  
+
   // 列表属性
   listType?: ListType           // 列表类型
   listStyle?: ListStyle         // 列表样式
   listId?: string               // 列表组 ID
-  
+
   // 超链接
   url?: string                  // 链接地址
-  
+
   // 控件属性
   control?: IControl            // 控件配置
 }
@@ -279,18 +279,18 @@ const images = editor.command.getPageThumbnails()
 
 ## 事件监听
 
-编辑器通过 `listener` 提供分组事件订阅 API，每个分组返回取消订阅函数。所有事件名使用 kebab-case。
+编辑器通过 `listener` 提供分组事件订阅 API，每个分组返回取消订阅函数。所有事件名使用 camelCase，命名空间方法不带 on 前缀、不带 Change 后缀，以 Listener 结尾。
 
 ### 内容事件
 
 ```typescript
 // 内容变更（文本增删/格式修改等）
-const off = editor.listener.content.onChange(() => {
+const off = editor.listener.content.contentListener(() => {
   console.log('内容已变化')
 })
 
 // 文档保存完成
-editor.listener.content.onSaved(() => {
+editor.listener.content.savedListener(() => {
   console.log('已保存')
 })
 
@@ -302,17 +302,17 @@ off()
 
 ```typescript
 // 选区变更（光标移动/选区改变）
-editor.listener.range.onChange((range) => {
+editor.listener.range.rangeListener((range) => {
   console.log('当前选区:', range)
 })
 
-// 选区样式变更（bold/italic 等回显状态）
-editor.listener.range.onStyleChange((style) => {
+// 格式变更（bold/italic 等回显状态）
+editor.listener.range.formatListener((style) => {
   console.log('当前样式:', style)
 })
 
 // 光标位置变更
-editor.listener.range.onPositionChange((pos) => {
+editor.listener.range.positionListener((pos) => {
   console.log('光标位置:', pos)
 })
 ```
@@ -321,22 +321,22 @@ editor.listener.range.onPositionChange((pos) => {
 
 ```typescript
 // 缩放比例变更
-editor.listener.page.onScaleChange((scale) => {
+editor.listener.page.pageScaleListener((scale) => {
   console.log('缩放比例:', scale)
 })
 
 // 页面尺寸变更（宽高）
-editor.listener.page.onSizeChange((size) => {
+editor.listener.page.pageSizeListener((size) => {
   console.log('页面尺寸:', size)
 })
 
 // 总页数变更
-editor.listener.page.onCountChange((count) => {
+editor.listener.page.pageCountListener((count) => {
   console.log('总页数:', count)
 })
 
 // 当前页码变更
-editor.listener.page.onCurrentNoChange((pageNo) => {
+editor.listener.page.currentPageNoListener((pageNo) => {
   console.log('当前页码:', pageNo)
 })
 ```
@@ -345,7 +345,7 @@ editor.listener.page.onCurrentNoChange((pageNo) => {
 
 ```typescript
 // 目录变更（由核心 Worker 后台计算后自动推送）
-editor.listener.toc.onChange((toc) => {
+editor.listener.toc.tocListener((toc) => {
   console.log('目录已更新:', toc)
 })
 ```
@@ -354,7 +354,7 @@ editor.listener.toc.onChange((toc) => {
 
 ```typescript
 // 缩略图变更（由核心 afterRender 自动生成并推送）
-editor.listener.thumbnail.onChange((images) => {
+editor.listener.thumbnail.thumbnailListener((images) => {
   console.log('缩略图数量:', images.length)
 })
 ```
@@ -363,7 +363,7 @@ editor.listener.thumbnail.onChange((images) => {
 
 ```typescript
 // 编辑器能力变更（readonly/disabled/canUndo/canRedo）
-editor.listener.ability.onChange((ability) => {
+editor.listener.ability.abilityListener((ability) => {
   console.log('编辑器能力:', ability)
 })
 ```
@@ -372,7 +372,7 @@ editor.listener.ability.onChange((ability) => {
 
 ```typescript
 // 编辑区域切换（正文/页眉/页脚）
-editor.listener.zone.onChange((zone) => {
+editor.listener.zone.zoneListener((zone) => {
   console.log('当前区域:', zone)  // 'main' | 'header' | 'footer'
 })
 ```
@@ -381,12 +381,12 @@ editor.listener.zone.onChange((zone) => {
 
 ```typescript
 // 编辑器获得焦点
-editor.listener.lifecycle.onFocus(() => {
+editor.listener.lifecycle.focusListener(() => {
   console.log('获得焦点')
 })
 
 // 编辑器失去焦点
-editor.listener.lifecycle.onBlur(() => {
+editor.listener.lifecycle.blurListener(() => {
   console.log('失去焦点')
 })
 ```
@@ -395,17 +395,17 @@ editor.listener.lifecycle.onBlur(() => {
 
 ```typescript
 // 请求插入图片（右键菜单触发）
-editor.listener.request.onInsertImage(() => {
+editor.listener.request.requestInsertImageListener(() => {
   console.log('请求插入图片')
 })
 
 // 请求插入超链接
-editor.listener.request.onInsertHyperlink(() => {
+editor.listener.request.requestInsertHyperlinkListener(() => {
   console.log('请求插入超链接')
 })
 
 // 请求插入公式
-editor.listener.request.onInsertFormula(() => {
+editor.listener.request.requestInsertFormulaListener(() => {
   console.log('请求插入公式')
 })
 ```
@@ -413,19 +413,19 @@ editor.listener.request.onInsertFormula(() => {
 ### 底层事件 API
 
 ```typescript
-// 直接通过事件名订阅（kebab-case）
-const off = editor.listener.on('content-change', () => {
+// 直接通过事件名订阅（camelCase）
+const off = editor.listener.on('contentChange', () => {
   console.log('内容已变化')
 })
 
 // 取消订阅
-editor.listener.off('content-change', handler)
+editor.listener.off('contentChange', handler)
 
 // 所有可用事件名：
-// 'content-change' | 'saved' | 'range-change' | 'range-style-change' | 'position-change'
-// 'page-scale-change' | 'page-size-change' | 'page-count-change' | 'current-page-no-change'
-// 'toc-change' | 'thumbnail-change' | 'ability-change' | 'zone-change'
-// 'focus' | 'blur' | 'request-insert-image' | 'request-insert-hyperlink' | 'request-insert-formula'
+// 'contentChange' | 'saved' | 'rangeChange' | 'formatChange' | 'positionChange'
+// 'pageScaleChange' | 'pageSizeChange' | 'pageCountChange' | 'currentPageNoChange'
+// 'tocChange' | 'thumbnailChange' | 'abilityChange' | 'zoneChange'
+// 'focus' | 'blur' | 'requestInsertImage' | 'requestInsertHyperlink' | 'requestInsertFormula'
 ```
 
 ## 插件系统
@@ -483,7 +483,7 @@ import {
   DocxEditor,
   Editor,       // DocxEditor 别名
   Command,
-  
+
   // 枚举
   RowFlex,
   VerticalAlign,
@@ -500,7 +500,7 @@ import {
   TitleLevel,
   ListType,
   ListStyle,
-  
+
   // 类型
   IElement,
   IEditorData,
@@ -508,7 +508,7 @@ import {
   IEditorResult,
   IWatermark,
   IRange,
-  
+
   // 工具函数
   splitText,
   getElementListByHTML,

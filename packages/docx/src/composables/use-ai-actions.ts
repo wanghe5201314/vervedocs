@@ -37,7 +37,7 @@ export function useAIActions(options: {
     /** 获取当前选中的文本内容 */
     const getText = (): string => {
       try {
-        return instance.command!.getRangeText?.() || ''
+        return instance.command!.executeExtractSelectionText() || ''
       } catch {
         return ''
       }
@@ -46,10 +46,7 @@ export function useAIActions(options: {
     /** 获取文档全文内容 */
     const getFullText = (): string => {
       try {
-        const result = instance.command!.getValue?.()
-        const main = result?.data?.main
-        if (!Array.isArray(main)) return ''
-        return main.map((el: any) => el.value || '').join('')
+        return instance.command!.executeGetFullText?.() || ''
       } catch {
         return ''
       }

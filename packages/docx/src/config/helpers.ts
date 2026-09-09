@@ -24,24 +24,7 @@ export function sizeLabelToValue(label: string): number {
 }
 
 /**
- * 磅（pt）转像素（px）
- * @param {number} pt 磅值
- * @returns {number} 转换后的像素值（保留两位小数）
- */
-export function ptToPx(pt: number): number {
-  return Math.round(pt * (96 / 72) * 100) / 100
-}
 
-/**
- * 像素（px）转磅（pt）
- * @param {number} px 像素值
- * @returns {number} 转换后的磅值（保留一位小数）
- */
-export function pxToPt(px: number): number {
-  return Math.round(px * (72 / 96) * 2) / 2
-}
-
-/**
  * 将 UI 常量应用到根元素的 CSS 变量
  * @returns {void} 无返回值
  */

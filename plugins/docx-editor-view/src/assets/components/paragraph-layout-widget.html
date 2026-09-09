@@ -1,0 +1,164 @@
+<div class="pw-panel-mask">
+  <div class="pw-panel">
+    <div class="pw-panel-title">段落</div>
+
+    <div class="pw-tabs">
+      <div class="pw-tab pw-tab-active" data-tab="indent">缩进和间距</div>
+      <div class="pw-tab" data-tab="break">换行和分页</div>
+      <div class="pw-tab" data-tab="cjk">中文版式</div>
+    </div>
+
+    <div class="pw-panel-body">
+      <!-- ===== Tab 1：缩进和间距 ===== -->
+      <div class="pw-pane pw-pane-active" data-pane="indent">
+
+        <fieldset class="pw-group">
+          <legend>常规</legend>
+          <div class="pw-grid">
+            <div class="pw-field">
+              <span class="pw-field-label">对齐方式</span>
+              <select id="pw-align" class="pw-ctrl">
+                <option value="left">左对齐</option>
+                <option value="center">居中对齐</option>
+                <option value="right">右对齐</option>
+                <option value="justify">两端对齐</option>
+                <option value="distribute">分散对齐</option>
+              </select>
+            </div>
+            <div class="pw-field">
+              <span class="pw-field-label">大纲级别</span>
+              <select id="pw-outline" class="pw-ctrl">
+                <option value="">正文文本</option>
+                <option value="first">1 级</option>
+                <option value="second">2 级</option>
+                <option value="third">3 级</option>
+                <option value="fourth">4 级</option>
+                <option value="fifth">5 级</option>
+                <option value="sixth">6 级</option>
+              </select>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="pw-group">
+          <legend>缩进</legend>
+          <div class="pw-grid">
+            <div class="pw-field">
+              <span class="pw-field-label">文本之前</span>
+              <input type="number" id="pw-indent-left" class="pw-ctrl" value="0" min="0" step="0.01">
+              <span class="pw-unit">厘米</span>
+            </div>
+            <div class="pw-field">
+              <span class="pw-field-label">特殊格式</span>
+              <select id="pw-special" class="pw-ctrl">
+                <option value="none">无</option>
+                <option value="firstLine">首行缩进</option>
+                <option value="hanging">悬挂缩进</option>
+              </select>
+            </div>
+            <div class="pw-field">
+              <span class="pw-field-label">文本之后</span>
+              <input type="number" id="pw-indent-right" class="pw-ctrl" value="0" min="0" step="0.01">
+              <span class="pw-unit">厘米</span>
+            </div>
+            <div class="pw-field">
+              <span class="pw-field-label">度量值</span>
+              <input type="number" id="pw-special-value" class="pw-ctrl" value="0" min="0" step="0.01" disabled>
+              <span class="pw-unit">厘米</span>
+            </div>
+          </div>
+          <label class="pw-check"><input type="checkbox" disabled> 如果定义了文档网格，则自动调整右缩进</label>
+        </fieldset>
+
+        <fieldset class="pw-group">
+          <legend>间距</legend>
+          <div class="pw-grid">
+            <div class="pw-field">
+              <span class="pw-field-label">段前</span>
+              <input type="number" id="pw-spacing-before" class="pw-ctrl" value="0" min="0" step="0.5">
+              <span class="pw-unit">磅</span>
+            </div>
+            <div class="pw-field">
+              <span class="pw-field-label">行距</span>
+              <select id="pw-lh-type" class="pw-ctrl">
+                <option value="single">单倍行距</option>
+                <option value="1.5">1.5 倍行距</option>
+                <option value="double">双倍行距</option>
+                <option value="atLeast">最小值</option>
+                <option value="exact">固定值</option>
+                <option value="multiple">多倍行距</option>
+              </select>
+            </div>
+            <div class="pw-field">
+              <span class="pw-field-label">段后</span>
+              <input type="number" id="pw-spacing-after" class="pw-ctrl" value="0" min="0" step="0.5">
+              <span class="pw-unit">磅</span>
+            </div>
+            <div class="pw-field">
+              <span class="pw-field-label">设置值</span>
+              <input type="number" id="pw-lh-value" class="pw-ctrl" value="1" min="0" step="0.05" disabled>
+              <span class="pw-unit" id="pw-lh-unit">磅</span>
+            </div>
+          </div>
+          <label class="pw-check"><input type="checkbox" disabled> 如果定义了文档网格，则与网格对齐</label>
+        </fieldset>
+
+        <div class="pw-preview-box">
+          <div class="pw-preview-label">预览</div>
+          <div class="pw-preview" id="pw-preview">段落预览文本</div>
+        </div>
+      </div>
+
+      <!-- ===== Tab 2：换行和分页 ===== -->
+      <div class="pw-pane" data-pane="break">
+        <fieldset class="pw-group">
+          <legend>分页</legend>
+          <label class="pw-check"><input type="checkbox" id="pw-widow" disabled> 孤行控制</label>
+          <label class="pw-check"><input type="checkbox" id="pw-keep-next" disabled> 与下段同页</label>
+          <label class="pw-check"><input type="checkbox" id="pw-page-break-before" disabled> 段前分页</label>
+        </fieldset>
+        <fieldset class="pw-group">
+          <legend>换行</legend>
+          <label class="pw-check"><input type="checkbox" id="pw-suppress-line-num" disabled> 取消行号</label>
+          <label class="pw-check"><input type="checkbox" id="pw-suppress-auto-hyphen" disabled> 取消断字</label>
+        </fieldset>
+        <div class="pw-placeholder">该功能将在后续版本支持</div>
+      </div>
+
+      <!-- ===== Tab 3：中文版式 ===== -->
+      <div class="pw-pane" data-pane="cjk">
+        <fieldset class="pw-group">
+          <legend>换行</legend>
+          <label class="pw-check"><input type="checkbox" id="pw-word-wrap" disabled> 按中文习惯换行</label>
+          <label class="pw-check"><input type="checkbox" id="pw-overflow-punct" disabled> 允许标点溢出边界</label>
+          <label class="pw-check"><input type="checkbox" id="pw-allow-break-word" disabled> 允许西文在单词中间换行</label>
+        </fieldset>
+        <fieldset class="pw-group">
+          <legend>字符间距</legend>
+          <label class="pw-check"><input type="checkbox" id="pw-compress-punct" disabled> 允许行首标点压缩</label>
+          <label class="pw-check"><input type="checkbox" id="pw-auto-space-cjk-west" disabled> 自动调整中文与西文的间距</label>
+          <label class="pw-check"><input type="checkbox" id="pw-auto-space-cjk-num" disabled> 自动调整中文与数字的间距</label>
+        </fieldset>
+        <fieldset class="pw-group">
+          <legend>文字对齐方式</legend>
+          <div class="pw-field">
+            <span class="pw-field-label">对齐</span>
+            <select id="pw-text-align" class="pw-ctrl" disabled>
+              <option value="auto">自动</option>
+              <option value="top">顶端对齐</option>
+              <option value="center">居中</option>
+              <option value="baseline">基线对齐</option>
+              <option value="bottom">底端对齐</option>
+            </select>
+          </div>
+        </fieldset>
+        <div class="pw-placeholder">该功能将在后续版本支持</div>
+      </div>
+    </div>
+
+    <div class="pw-panel-actions">
+      <button type="button" id="pw-cancel">取消</button>
+      <button type="button" id="pw-ok">确定</button>
+    </div>
+  </div>
+</div>

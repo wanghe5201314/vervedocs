@@ -92,7 +92,7 @@ export class SelectionToolbarWidget {
         alignItems: 'center', justifyContent: 'center', lineHeight: '0',
       } as CSSStyleDeclaration)
       const sp = document.createElement('span')
-      sp.className = 'material-icons'
+      sp.className = 'material-symbols-outlined'
       sp.textContent = icon
       sp.style.cssText = 'font-size:18px;color:#3D4757;'
       el.appendChild(sp)
@@ -156,6 +156,7 @@ export class SelectionToolbarWidget {
     const colorBtn = document.createElement('input')
     colorBtn.type = 'color'
     colorBtn.value = '#000000'
+    colorBtn.dataset.cmd = 'executeColor'
     Object.assign(colorBtn.style, {
       width: '32px', height: '28px', border: '1px solid #ddd',
       borderRadius: '4px', cursor: 'pointer', padding: '0', background: 'transparent',
@@ -169,6 +170,7 @@ export class SelectionToolbarWidget {
     const hlBtn = document.createElement('input')
     hlBtn.type = 'color'
     hlBtn.value = '#ffff00'
+    hlBtn.dataset.cmd = 'executeHighlight'
     Object.assign(hlBtn.style, {
       width: '32px', height: '28px', border: '1px solid #ddd',
       borderRadius: '4px', cursor: 'pointer', padding: '0', background: 'transparent',
@@ -217,7 +219,8 @@ export class SelectionToolbarWidget {
     if (!rect) { tb.style.display = 'none'; return }
     const pageOffsetX = this.deps.getPageOffsetX()
     const x = Math.round(rect.x + pageOffsetX)
-    const y = Math.round(rect.y - this.deps.getScrollY()) - rect.height - 8
+    const gap = Math.max(10, Math.round(rect.height * 0.5))
+    const y = Math.round(rect.y - this.deps.getScrollY()) - rect.height - gap
     tb.style.display = 'flex'
     tb.style.left = `${Math.max(4, Math.min(x, this.deps.getViewportWidth() - tb.offsetWidth - 4))}px`
     tb.style.top = `${Math.max(4, y)}px`
@@ -248,9 +251,10 @@ export class SelectionToolbarWidget {
       }
     }
 
-    // 回显字号
+    // 回显字号（run.size 是 px，选项值是 pt，需要转换）
     if (sizeSel) {
-      const size = String(run.size ?? '')
+      const sizePt = Math.round(Number(run.size ?? 0) * (72 / 96) * 2) / 2
+      const size = String(sizePt)
       for (let i = 0; i < sizeSel.options.length; i++) {
         if (sizeSel.options[i].value === size) { sizeSel.options[i].selected = true; break }
       }
@@ -271,6 +275,17 @@ export class SelectionToolbarWidget {
         active = String(run.rowFlex ?? 'left') === args[0]
       }
       btn.style.background = active ? '#e8eaf6' : 'transparent'
+    }
+
+    // 回显字体颜色和高亮颜色
+    const colorInputs = tb.querySelectorAll<HTMLInputElement>('input[type=color][data-cmd]')
+    for (let i = 0; i < colorInputs.length; i++) {
+      const input = colorInputs[i]
+      if (input.dataset.cmd === 'executeColor') {
+        input.value = String(run.color ?? '#000000')
+      } else if (input.dataset.cmd === 'executeHighlight') {
+        input.value = String(run.highlight ?? '#ffff00')
+      }
     }
   }
 

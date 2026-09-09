@@ -119,7 +119,7 @@ export class WordEditor {
       onStatusChange: (payload: any) => this.options.onStatusChange?.(payload)
     }))
     this.app = createApp(root)
-    this.app.use(ConfigProvider, { locale: zhCN })
+    this.app.use(ConfigProvider, { locale: zhCN, componentSize: 'small', theme: { components: { Input: { borderRadius: 0 }, Button: { borderRadius: 0 } } } })
     this.app.mount(host)
   }
 

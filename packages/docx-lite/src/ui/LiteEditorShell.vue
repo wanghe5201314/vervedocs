@@ -402,7 +402,7 @@ const createEditor = () => {
     ...(props.options as IEditorOption | undefined)
   })
 
-  editor.value.listener.content.onChange(() => {
+  editor.value.listener.content.contentListener(() => {
     void updateWordCount()
     refreshTocLater()
     props.onChange?.()
@@ -411,7 +411,7 @@ const createEditor = () => {
     }
   })
 
-  editor.value.listener.page.onSizeChange((size: { width: number; height: number }) => {
+  editor.value.listener.page.pageSizeListener((size: { width: number; height: number }) => {
     statusPageText.value = `共 ${Math.round(size.height / 1123) || 1} 页`
     props.onPageChange?.(Math.round(size.height / 1123) || 1)
     if (isMobile.value) {
@@ -419,14 +419,14 @@ const createEditor = () => {
     }
   })
 
-  editor.value.listener.page.onScaleChange((scale: number) => {
+  editor.value.listener.page.pageScaleListener((scale: number) => {
     zoomText.value = `${Math.round(scale * 100)}%`
     props.onScaleChange?.(scale)
   })
 
-  editor.value.listener.request.onInsertImage(() => { insertImage() })
-  editor.value.listener.request.onInsertHyperlink(() => { showPopup('link') })
-  editor.value.listener.request.onInsertFormula(() => { showPopup('formula') })
+  editor.value.listener.request.requestInsertImageListener(() => { insertImage() })
+  editor.value.listener.request.requestInsertHyperlinkListener(() => { showPopup('link') })
+  editor.value.listener.request.requestInsertFormulaListener(() => { showPopup('formula') })
 
 
   props.onReady?.(editor.value)

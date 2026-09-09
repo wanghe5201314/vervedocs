@@ -775,11 +775,9 @@ const handleReady = (...args: any[]) => {
   }
 
   if (instance?.listener) {
-    const origContentChange = instance.listener.contentChange
-    instance.listener.contentChange = (...a: any[]) => {
-      origContentChange?.(...a)
+    instance.listener.content.contentListener(() => {
       updateRevisionList()
-    }
+    })
   }
 
   installCommentCallbacks(instance)

@@ -149,7 +149,7 @@ export class ImageWidget {
       btn.title = title
       btn.style.cssText = 'border:none;background:transparent;cursor:pointer;padding:5px;border-radius:4px;display:flex;align-items:center;justify-content:center;transition:background .15s;'
       const sp = document.createElement('span')
-      sp.className = 'material-icons'
+      sp.className = 'material-symbols-outlined'
       sp.textContent = icon
       sp.style.cssText = 'font-size:18px;color:#333;'
       btn.appendChild(sp)
@@ -180,7 +180,7 @@ export class ImageWidget {
     bar.appendChild(mkBtn('image', '替换图片', () => this.fire('executeReplaceImage')))
     bar.appendChild(mkBtn('download', '保存图片', () => this.fire('executeSaveImage')))
     const delBtn = mkBtn('delete', '删除图片', () => this.fire('executeDeleteImage'))
-    const delIcon = delBtn.querySelector('.material-icons') as HTMLElement
+    const delIcon = delBtn.querySelector('.material-symbols-outlined') as HTMLElement
     delBtn.addEventListener('mouseenter', () => { delIcon.style.color = '#e53935' })
     delBtn.addEventListener('mouseleave', () => { delIcon.style.color = '#333' })
     bar.appendChild(delBtn)

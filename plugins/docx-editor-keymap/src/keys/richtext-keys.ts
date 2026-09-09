@@ -112,7 +112,7 @@ export const richtextKeys: IRegisterShortcut[] = [
     key: KeyMap.J,
     mod: true,
     callback: (command: Command) => {
-      command.executeSetRowFlex(ROW_FLEX.ALIGNMENT)
+      command.executeSetRowFlex(ROW_FLEX.JUSTIFY)
     }
   },
   /** Ctrl/Cmd + Shift + J：分散对齐 */
@@ -121,7 +121,7 @@ export const richtextKeys: IRegisterShortcut[] = [
     mod: true,
     shift: true,
     callback: (command: Command) => {
-      command.executeSetRowFlex(ROW_FLEX.JUSTIFY)
+      command.executeSetRowFlex(ROW_FLEX.DISTRIBUTE)
     }
   }
 ]

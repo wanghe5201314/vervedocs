@@ -1,5 +1,5 @@
 import { nextTick } from 'vue'
-import { PaperDirection } from '@vervedoc/core'
+import { adjustFloatImagePositions } from '@vervedoc/core'
 import { replaceDocument } from '@/composables/use-replace-document'
 import { adaptStyles, adaptNumbering, adaptTheme } from '@/utils/docx-meta-adapter'
 
@@ -84,26 +84,7 @@ export function useEditorImport(options: {
         return
       }
       const editorOptions = inst.command.getOptions?.()
-      const margins = editorOptions?.margins || [96, 120, 96, 120]
-      const paperDirection = editorOptions?.paperDirection
-      const marginTop = paperDirection === PaperDirection.HORIZONTAL ? margins[1] : margins[0]
-      const marginLeft = paperDirection === PaperDirection.HORIZONTAL ? margins[0] : margins[3]
-      const defaultSize = editorOptions?.defaultSize || 14
-      for (let li = 0; li < main.length; li++) {
-        const el = main[li]
-        if (el.imgDisplay && el.imgDisplay !== 'inline' && el.imgDisplay !== 'block' && el.imgFloatPosition) {
-          let fontSize = defaultSize
-          for (let ni = li + 1; ni < Math.min(li + 10, main.length); ni++) {
-            if (main[ni].size && main[ni].value && main[ni].value.trim()) {
-              fontSize = main[ni].size
-              break
-            }
-          }
-          const ascent = fontSize * 0.8
-          el.imgFloatPosition.x += marginLeft
-          el.imgFloatPosition.y += marginTop + ascent
-        }
-      }
+      adjustFloatImagePositions(main, editorOptions)
 
       await replaceDocument(
         { getEditorInstance, refreshCatalog },

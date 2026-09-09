@@ -4,52 +4,10 @@
  * 纯 DOM 实现，无框架依赖。支持子菜单、图标、快捷键、分隔线。
  */
 
+import './assets/css/context-menu.css'
+
 /** CSS 类名前缀，所有菜单相关样式均以此为前缀 */
 const PREFIX = 'ce-table-context-menu'
-
-/** 样式是否已注入到 document.head 的标记，避免重复注入 */
-let styleInjected = false
-/**
- * 将菜单所需 CSS 一次性注入到 document.head。
- * 内部通过 styleInjected 标记保证仅注入一次。
- * @returns 无返回值
- */
-function injectStyle(): void {
-  if (styleInjected) return
-  styleInjected = true
-  const css = `
-.${PREFIX}{position:fixed;background:#fff;border:1px solid #e7e7e7;border-radius:0;box-shadow:0 10px 28px rgba(15,23,42,.12);padding:6px 0;min-width:176px;z-index:9999;font-family:"Microsoft YaHei","PingFang SC",sans-serif;font-size:13px;color:#303133;user-select:none;overflow:hidden}
-.${PREFIX}__item{min-height:33px;padding:0 12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:16px;line-height:1;white-space:nowrap;transition:background-color .15s ease}
-.${PREFIX}__item:hover{background-color:#f5f7fa}
-.${PREFIX}__item.disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
-.${PREFIX}__item.disabled:hover{background-color:transparent}
-.${PREFIX}__item.danger .${PREFIX}__label,.${PREFIX}__item.danger .${PREFIX}__icon{color:#d14343}
-.${PREFIX}__main,.${PREFIX}__meta{display:inline-flex;align-items:center}
-.${PREFIX}__main{gap:10px;min-width:0;flex:1 1 auto}
-.${PREFIX}__meta{gap:8px;flex:0 0 auto}
-.${PREFIX}__icon{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;flex-shrink:0;font-size:16px;color:#646a73}
-.${PREFIX}__item:hover .${PREFIX}__icon{color:#303133}
-.${PREFIX}__label{font-size:12px;color:#303133;font-weight:400}
-.${PREFIX}__shortcut{color:#909399;font-size:11px}
-.${PREFIX}__arrow{color:#909399;font-size:14px;display:inline-flex;align-items:center}
-.${PREFIX}__divider{height:1px;background-color:#ebeef5;margin:6px 0}
-.${PREFIX}--sub{min-width:190px}
-.${PREFIX}__input-wrap{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto}
-.${PREFIX}__input{width:42px;height:22px;border:1px solid #dcdfe6;border-radius:2px;text-align:center;font-size:12px;color:#303133;background:#fff;outline:none;cursor:default}
-.${PREFIX}__input:focus{border-color:#409eff}
-.${PREFIX}__input-unit{font-size:11px;color:#909399;white-space:nowrap}
-.${PREFIX}__item--with-input{padding-right:8px}
-.${PREFIX}__color-wrap{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto}
-.${PREFIX}__color-input{width:28px;height:22px;border:1px solid #dcdfe6;border-radius:2px;cursor:pointer;padding:0;background:#fff;overflow:hidden}
-.${PREFIX}__color-input::-webkit-color-swatch-wrapper{padding:1px}
-.${PREFIX}__color-input::-webkit-color-swatch{border:none;border-radius:1px}
-.${PREFIX}__color-clear{font-size:11px;color:#909399;cursor:pointer;padding:2px 4px;border-radius:2px;white-space:nowrap}
-.${PREFIX}__color-clear:hover{background:#f5f7fa;color:#303133}
-`
-  const el = document.createElement('style')
-  el.textContent = css
-  document.head.appendChild(el)
-}
 
 /**
  * 菜单项内嵌数字输入框配置。
@@ -84,7 +42,7 @@ export interface MenuItemColorPicker {
 export interface MenuItem {
   /** 显示文本；值为 "---" 时渲染为分隔线 */
   label: string
-  /** material-icons 图标名，可选 */
+  /** material-symbols-outlined 图标名，可选 */
   icon?: string
   /** 快捷键提示文本（仅展示，不绑定按键），可选 */
   shortcut?: string
@@ -102,7 +60,7 @@ export interface MenuItem {
   onClick?: (value?: number | string) => void
 }
 
-/** material-icons 图标名映射表，供外部通过 getIcons() 引用 */
+/** material-symbols-outlined 图标名映射表，供外部通过 getIcons() 引用 */
 const SVG = {
   insertRowAbove: 'table_rows',
   insertRowBelow: 'table_rows',
@@ -110,7 +68,7 @@ const SVG = {
   insertColRight: 'view_column',
   deleteRow: 'delete',
   deleteCol: 'delete',
-  splitCell: 'split',
+  splitCell: 'splitscreen',
   selectAll: 'select_all',
   alignLeft: 'format_align_left',
   alignCenter: 'format_align_center',
@@ -147,7 +105,7 @@ export class ContextMenu {
    * @returns 无返回值
    */
   show(x: number, y: number, items: MenuItem[]): void {
-    injectStyle()
+
     this.hide()
     this.menuEl = this.buildMenu(items, false)
     this.menuEl.style.left = `${x}px`
@@ -204,7 +162,7 @@ export class ContextMenu {
 
     if (item.icon) {
       const icon = document.createElement('span')
-      icon.className = `material-icons ${PREFIX}__icon`
+      icon.className = `material-symbols-outlined ${PREFIX}__icon`
       icon.textContent = item.icon
       main.appendChild(icon)
     }
@@ -227,7 +185,7 @@ export class ContextMenu {
 
     if (item.submenu) {
       const arrow = document.createElement('span')
-      arrow.className = `material-icons ${PREFIX}__arrow`
+      arrow.className = `material-symbols-outlined ${PREFIX}__arrow`
       arrow.textContent = SVG.arrow
       meta.appendChild(arrow)
     }
@@ -402,7 +360,7 @@ export class ContextMenu {
   }
 
   /**
-   * 获取内置 material-icons 图标名映射表。
+   * 获取内置 material-symbols-outlined 图标名映射表。
    * @returns 图标名映射对象
    */
   static getIcons() { return SVG }

@@ -15,7 +15,7 @@ import type {
   CommentComponentBridge,
   EditorInterface,
 } from './types'
-import { subscribeEventBus } from './event-bus'
+
 
 /**
  * Yjs 与编辑器双向绑定器
@@ -172,11 +172,10 @@ export class YjsBinding {
       if (this.isApplyingRemote) return
       this.pushEditorToYDoc()
     }
-    this.contentChangeSubscription = subscribeEventBus(
-      this.editor.eventBus,
-      'contentChange',
-      this.contentChangeHandler as any
+    const unsub = this.editor.listener.content.contentListener(
+      this.contentChangeHandler
     )
+    this.contentChangeSubscription = { unsubscribe: unsub }
   }
 
   /** 将编辑器当前内容全量同步到 Y.Doc */

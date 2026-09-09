@@ -25,15 +25,7 @@ export function useEditorPage(options: { getEditorInstance: () => EditorInstance
   function pageJump(index: number) {
     const instance = getEditorInstance()
     if (!instance) return
-    const pageHeight = instance.command.getPaperHeight()
-    const opts = instance.command.getOptions()
-    const pageGap = Number(opts.pageGap ?? 24) * Number(opts.scale ?? 1)
-    // 通过 draw.getScroller() 获取 scroller，其 parentElement 为可滚动的 wrapper
-    const scroller = instance.draw?.getScroller?.()
-    const wrapper = scroller?.parentElement
-    if (wrapper) {
-      wrapper.scrollTop = index * (pageHeight + pageGap)
-    }
+    instance.command.executeJumpToPage(index)
   }
 
   /**

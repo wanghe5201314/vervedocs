@@ -1,0 +1,109 @@
+<div class="fw-panel-mask">
+  <div class="fw-panel">
+    <div class="fw-panel-title">字体</div>
+
+    <div class="fw-tabs">
+      <div class="fw-tab fw-tab-active" data-tab="font">字体</div>
+      <div class="fw-tab" data-tab="spacing">字符间距</div>
+    </div>
+
+    <div class="fw-panel-body">
+      <!-- ===== Tab 1：字体 ===== -->
+      <div class="fw-pane fw-pane-active" data-pane="font">
+        <fieldset class="fw-group">
+          <legend>字体</legend>
+          <div class="fw-row">
+            <span class="fw-label">中文字体</span>
+            <select id="fw-font-cjk" class="fw-input"></select>
+          </div>
+          <div class="fw-row">
+
+            <span class="fw-label">字形</span>
+            <select id="fw-style" class="fw-input">
+              <option value="regular">常规</option>
+              <option value="italic">倾斜</option>
+              <option value="bold">加粗</option>
+              <option value="bold-italic">加粗倾斜</option>
+            </select>
+          </div>
+          <div class="fw-row">
+            <span class="fw-label">字号</span>
+            <select id="fw-size" class="fw-input"></select>
+          </div>
+          <div class="fw-row">
+            <span class="fw-label">颜色</span>
+            <input type="color" id="fw-color" class="fw-color" value="#000000">
+          </div>
+        </fieldset>
+
+        <fieldset class="fw-group">
+          <legend>效果</legend>
+          <div class="fw-check-grid">
+            <label class="fw-check"><input type="checkbox" id="fw-strikeout"> 删除线</label>
+            <label class="fw-check"><input type="checkbox" id="fw-underline"> 下划线</label>
+            <label class="fw-check"><input type="checkbox" id="fw-superscript"> 上标</label>
+            <label class="fw-check"><input type="checkbox" id="fw-subscript"> 下标</label>
+            <label class="fw-check"><input type="checkbox" id="fw-double-strikeout"> 双删除线</label>
+            <label class="fw-check"><input type="checkbox" id="fw-hidden"> 隐藏</label>
+          </div>
+        </fieldset>
+
+        <div class="fw-preview-box">
+          <div class="fw-preview-label">预览</div>
+          <div class="fw-preview" id="fw-preview">字体预览文本 ABCabc 123</div>
+        </div>
+      </div>
+
+      <!-- ===== Tab 2：字符间距 ===== -->
+      <div class="fw-pane" data-pane="spacing">
+        <fieldset class="fw-group">
+          <legend>间距</legend>
+          <div class="fw-row">
+            <span class="fw-label">缩放</span>
+            <select id="fw-scale" class="fw-input">
+              <option value="100">100%</option>
+              <option value="90">90%</option>
+              <option value="80">80%</option>
+              <option value="66">66%</option>
+              <option value="50">50%</option>
+              <option value="200">200%</option>
+              <option value="150">150%</option>
+            </select>
+          </div>
+          <div class="fw-row">
+            <span class="fw-label">间距</span>
+            <select id="fw-spacing-type" class="fw-input">
+              <option value="normal">标准</option>
+              <option value="expanded">加宽</option>
+              <option value="condensed">紧缩</option>
+            </select>
+            <input type="number" id="fw-spacing-value" class="fw-input fw-sm" value="0" min="0" step="0.1">
+            <span class="fw-unit">磅</span>
+          </div>
+          <div class="fw-row">
+            <span class="fw-label">位置</span>
+            <select id="fw-position-type" class="fw-input">
+              <option value="normal">标准</option>
+              <option value="raised">提升</option>
+              <option value="lowered">降低</option>
+            </select>
+            <input type="number" id="fw-position-value" class="fw-input fw-sm" value="0" min="0" step="0.1">
+            <span class="fw-unit">磅</span>
+          </div>
+        </fieldset>
+
+        <div class="fw-preview-box">
+          <div class="fw-preview-label">预览</div>
+          <div class="fw-preview" id="fw-preview-spacing">字符间距预览 ABCabc 123</div>
+        </div>
+
+        <div class="fw-placeholder">间距与位置功能将在后续版本支持</div>
+      </div>
+    </div>
+
+    <div class="fw-panel-actions">
+      <button type="button" id="fw-cancel">取消</button>
+      <button type="button" id="fw-ok">确定</button>
+    </div>
+  </div>
+</div>

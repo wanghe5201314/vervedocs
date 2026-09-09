@@ -1,4 +1,4 @@
-import './assets/fonts/material-icons/material-icons.css'
+import './assets/fonts/material-symbols/material-symbols.css'
 
 export * from './text-measure'
 export * from './layout-types'

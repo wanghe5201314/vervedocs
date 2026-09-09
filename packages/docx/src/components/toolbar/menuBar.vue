@@ -1,124 +1,110 @@
 <template>
-  <div class="office-ribbon" :class="{ 'is-readonly': isLocked, 'simple-mode': simpleMode }">
-    <!-- Tab 标签页 -->
-    <div class="ribbon-tabs-bar">
-      <a-dropdown :trigger="['click']" placement="bottomLeft" @openChange="handleFileDropdownChange">
-        <div
-          class="ribbon-tab is-file-tab"
-          :class="{ active: fileDropdownOpen }"
-        >
-          <span class="ribbon-tab-label">文件</span>
-        </div>
-        <template #overlay>
-          <FileTab :is-importing="isImporting" @command="handleCommand" />
-        </template>
-      </a-dropdown>
-      <div
-        v-for="tab in visibleTabs.filter(t => t.key !== 'file')"
-        :key="tab.key"
-        class="ribbon-tab"
-        :class="{
-          active: activeTab === tab.key
-        }"
-        @click="activeTab = tab.key"
+  <div
+    class="office-ribbon"
+    :class="{
+      'is-readonly': isLocked,
+      'non-home-tab': activeTab !== 'home'
+    }"
+  >
+    <VdRibbonTab v-model:active-key="activeTab">
+      <VdRibbonTabItem item-key="file" mode="dropdown" title="文件">
+        <FileTab :is-importing="isImporting" @command="handleCommand" />
+      </VdRibbonTabItem>
+
+      <VdRibbonTabItem item-key="home" title="开始">
+        <HomeTab
+          :current-font="currentFont"
+          :current-size="currentSize"
+          :is-bold="isBold"
+          :is-italic="isItalic"
+          :is-underline="isUnderline"
+          :is-strikeout="isStrikeout"
+          :font-color="fontColor"
+          :highlight-color="highlightColor"
+          :row-flex="rowFlex"
+          :current-title-label="currentTitleLabel"
+          :has-selection="hasSelection"
+          :current-character-scale="currentCharacterScale"
+          @command="handleCommand"
+          @font="handleFontChange"
+          @size="handleSizeChange"
+          @font-color="handleFontColor"
+          @highlight="handleHighlight"
+          @row-flex="handleRowFlex"
+          @line-height="handleLineHeight"
+          @bullet="handleBullet"
+          @number="handleNumber"
+          @title="handleTitle"
+          @character-scale="handleCharacterScale"
+        />
+      </VdRibbonTabItem>
+
+      <VdRibbonTabItem item-key="insert" title="插入">
+        <InsertTab :has-selection="hasSelection" @command="handleCommand" />
+      </VdRibbonTabItem>
+
+      <VdRibbonTabItem item-key="layout" title="页面">
+        <LayoutTab
+          :selected-bg-color="selectedBgColor"
+          :current-paper-size-name="currentPaperSizeName"
+          @command="handleCommand"
+        />
+      </VdRibbonTabItem>
+
+      <VdRibbonTabItem item-key="reference" title="引用">
+        <ReferenceTab @command="handleCommand" />
+      </VdRibbonTabItem>
+
+      <VdRibbonTabItem item-key="review" title="审阅">
+        <ReviewTab
+          :has-selection="hasSelection"
+          :has-active-comment-group="hasActiveCommentGroup"
+          :is-track-changes="isTrackChanges"
+          :revision-count="revisionCount"
+          :revision-display-mode="revisionDisplayMode"
+          :document-stats="documentStats"
+          @command="handleCommand"
+        />
+      </VdRibbonTabItem>
+
+      <VdRibbonTabItem item-key="view" title="视图">
+        <ViewTab
+          :zoom-percent="zoomPercent"
+          :current-editor-mode="currentEditorMode"
+          :is-mode-locked="isLocked"
+          :toc-visible="tocVisible"
+          :show-toolbar="toolbarVisible"
+          :show-bottom-nav="bottomNavVisible"
+          :show-line-break="showLineBreak"
+          :eye-care-enabled="isEyeCareEnabled"
+          @command="handleCommand"
+        />
+      </VdRibbonTabItem>
+
+      <VdRibbonTabItem
+        v-if="showCollaborationMenu"
+        item-key="collaboration"
+        title="协同"
       >
-        <span class="ribbon-tab-label">{{ tab.label }}</span>
-      </div>
-      <!-- 工具栏切换 -->
-      <a-dropdown :trigger="['click']" class="ribbon-mode-switch">
-        <div class="ribbon-mode-btn" :title="simpleMode ? '简约模式' : '专业模式'">
-          <VdIcon name="chevron-down" />
-        </div>
-        <template #overlay>
-          <a-menu @click="({ key }: any) => handleSwitchToolbar(key)">
-            <a-menu-item key="professional" :class="{ 'is-active': !simpleMode }">
-              <span class="mi"><VdIcon name="view-headline" /><span>专业工具栏</span></span>
-            </a-menu-item>
-            <a-menu-item key="simple" :class="{ 'is-active': simpleMode }">
-              <span class="mi"><VdIcon name="view-column-outline" /><span>简约工具栏</span></span>
-            </a-menu-item>
-          </a-menu>
-        </template>
-      </a-dropdown>
-    </div>
+        <CollaborationTab
+          :cursor-collaboration-enabled="cursorCollaborationEnabled"
+          :selection-collaboration-enabled="selectionCollaborationEnabled"
+          @command="handleCommand"
+        />
+      </VdRibbonTabItem>
 
-    <!-- Ribbon 面板 -->
-    <div class="ribbon-panel" :class="{ 'non-home-tab': activeTab !== 'home' }">
-      <HomeTab
-        v-if="activeTab === 'home'"
-        :current-font="currentFont"
-        :current-size="currentSize"
-        :is-bold="isBold"
-        :is-italic="isItalic"
-        :is-underline="isUnderline"
-        :is-strikeout="isStrikeout"
-        :font-color="fontColor"
-        :highlight-color="highlightColor"
-        :row-flex="rowFlex"
-        :current-title-label="currentTitleLabel"
-        :has-selection="hasSelection"
-        :current-character-scale="currentCharacterScale"
-        @command="handleCommand"
-        @font="handleFontChange"
-        @size="handleSizeChange"
-        @font-color="handleFontColor"
-        @highlight="handleHighlight"
-        @row-flex="handleRowFlex"
-        @line-height="handleLineHeight"
-        @bullet="handleBullet"
-        @number="handleNumber"
-        @title="handleTitle"
-        @character-scale="handleCharacterScale"
-      />
-      <InsertTab v-else-if="activeTab === 'insert'" :has-selection="hasSelection" @command="handleCommand" />
-      <LayoutTab
-        v-else-if="activeTab === 'layout'"
-        :selected-bg-color="selectedBgColor"
-        :current-paper-size-name="currentPaperSizeName"
-        @command="handleCommand"
-      />
-      <ReferenceTab v-else-if="activeTab === 'reference'" @command="handleCommand" />
-      <ReviewTab
-        v-else-if="activeTab === 'review'"
-        :has-selection="hasSelection"
-        :has-active-comment-group="hasActiveCommentGroup"
-        :is-track-changes="isTrackChanges"
-        :revision-count="revisionCount"
-        :revision-display-mode="revisionDisplayMode"
-        :document-stats="documentStats"
-        @command="handleCommand"
-      />
-      <ViewTab
-        v-else-if="activeTab === 'view'"
-        :zoom-percent="zoomPercent"
-        :current-editor-mode="currentEditorMode"
-        :is-mode-locked="isLocked"
-        :toc-visible="tocVisible"
-        :show-toolbar="toolbarVisible"
-        :show-bottom-nav="bottomNavVisible"
-
-        :show-line-break="showLineBreak"
-        :eye-care-enabled="isEyeCareEnabled"
-        @command="handleCommand"
-      />
-      <CollaborationTab
-        v-else-if="activeTab === 'collaboration'"
-        :cursor-collaboration-enabled="cursorCollaborationEnabled"
-        :selection-collaboration-enabled="selectionCollaborationEnabled"
-        @command="handleCommand"
-      />
-
-      <HelpTab v-else-if="activeTab === 'help'" @command="handleCommand" />
-    </div>
+      <VdRibbonTabItem item-key="help" title="帮助">
+        <HelpTab @command="handleCommand" />
+      </VdRibbonTabItem>
+    </VdRibbonTab>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { VdIcon } from '@vervedoc/ui'
+import { VdRibbonTab, VdRibbonTabItem } from '@vervedoc/ui'
 import { editorStateStore } from '@/stores/editor-state'
 import { TITLE_LEVEL_MAP, ptToPx } from '@vervedoc/core'
-import { RIBBON_TABS } from '@/config/constants'
 import FileTab from '@/components/ribbon/fileTab.vue'
 import HomeTab from '@/components/ribbon/homeTab.vue'
 import InsertTab from '@/components/ribbon/insertTab.vue'
@@ -127,7 +113,6 @@ import ReferenceTab from '@/components/ribbon/referenceTab.vue'
 import ReviewTab from '@/components/ribbon/reviewTab.vue'
 import ViewTab from '@/components/ribbon/viewTab.vue'
 import CollaborationTab from '@/components/ribbon/collaborationTab.vue'
-
 import HelpTab from '@/components/ribbon/helpTab.vue'
 
 const emit = defineEmits(['command'])
@@ -144,7 +129,6 @@ const props = defineProps<{
   }
   revisionCount?: number
   tocVisible?: boolean
-
   toolbarVisible?: boolean
   bottomNavVisible?: boolean
   showCollaborationMenu?: boolean
@@ -154,10 +138,6 @@ const props = defineProps<{
 
 /** 当前激活的 Ribbon 标签页 */
 const activeTab = ref<string>('home')
-/** 文件下拉菜单是否展开 */
-const fileDropdownOpen = ref(false)
-/** 是否为简约工具栏模式 */
-const simpleMode = ref(false)
 
 /** 当前字体 */
 const currentFont = ref('SimSun, serif')
@@ -227,31 +207,10 @@ watch(() => editorState.level, v => { currentTitle.value = v })
 /** 当前标题级别的中文标签 */
 const currentTitleLabel = computed(() => currentTitle.value ? TITLE_LEVEL_MAP[currentTitle.value] || '正文' : '正文')
 
-/** 可见的 Ribbon 标签页列表，协同标签页根据配置显示 */
-const visibleTabs = computed(() =>
-  RIBBON_TABS.filter(tab => tab.key !== 'collaboration' || props.showCollaborationMenu)
-)
-
 /** 挂载时检测护眼模式是否已启用 */
 onMounted(() => {
   isEyeCareEnabled.value = document.body.classList.contains('eye-care-mode')
 })
-
-/**
- * 处理文件下拉菜单展开/收起
- * @param open - 是否展开
- */
-const handleFileDropdownChange = (open: boolean) => {
-  fileDropdownOpen.value = open
-}
-
-/**
- * 处理工具栏模式切换
- * @param mode - 'simple' 或 'professional'
- */
-const handleSwitchToolbar = (mode: string) => {
-  simpleMode.value = mode === 'simple'
-}
 
 /**
  * 统一命令处理入口，分发工具栏、修订、模式、纸张、护眼等命令
@@ -260,9 +219,6 @@ const handleSwitchToolbar = (mode: string) => {
  */
 const handleCommand = (cmd: string, ...args: any[]) => {
   switch (cmd) {
-    case 'switchToolbar':
-      simpleMode.value = args[0] === 'simple'
-      return
     case 'toggleTrackChanges':
       isTrackChanges.value = args[0] !== undefined ? args[0] : !isTrackChanges.value
       if (isTrackChanges.value) currentEditorMode.value = 'revision'
@@ -302,7 +258,6 @@ const handleCommand = (cmd: string, ...args: any[]) => {
     case 'toggleBottomNav':
       emit('command', 'bottomNavVisible', !props.bottomNavVisible)
       return
-
     case 'toggleToolbar':
       emit('command', 'toolbarVisible', !props.toolbarVisible)
       return
@@ -407,121 +362,23 @@ const handleRowFlex = (v: string) => emit('command', 'rowFlex', v)
 </script>
 
 <style scoped>
-.office-ribbon {
-  background: var(--vd-ribbon-surface, #fff);
-  border-bottom: 1px solid var(--vd-ribbon-border, #d8dce6);
-}
 .office-ribbon.is-readonly {
   pointer-events: none;
   opacity: 0.6;
 }
 
-/* Tab 标签页 */
-.ribbon-tabs-bar {
-  display: flex;
-  align-items: center;
-  background: var(--vd-ribbon-topbar-bg, var(--tabs-bg-color, linear-gradient(180deg, #2a63c8 0%, #1f57b8 100%)));
-  border-bottom: none;
-  padding: 0 8px;
-}
-.ribbon-tab {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 26px;
-  min-width: 52px;
-  padding: 0 12px;
-  cursor: pointer;
-  font-size: 13px;
-  color: var(--vd-ribbon-topbar-text, rgba(255, 255, 255, 0.94));
-  border-radius: 4px 4px 0 0;
-  position: relative;
-  user-select: none;
-  transition: background-color 0.15s, color 0.15s, opacity 0.15s;
-}
-.ribbon-tab:hover {
-  background: var(--vd-ribbon-topbar-hover, rgba(255, 255, 255, 0.12));
-  color: var(--vd-ribbon-topbar-text, #fff);
-}
-.ribbon-tab.active {
-  background: var(--vd-ribbon-surface, #fff);
-  color: var(--vd-ribbon-active-text, #1f57b8);
-
-}
-.ribbon-tab.active::after {
-  display: none;
-}
-.ribbon-tab.is-file-tab {
-  min-width: 48px;
-  margin-right: 4px;
-  background: var(--vd-ribbon-file-tab-bg, rgba(0, 0, 0, 0.16));
-  border-radius: 3px 3px 0 0;
-}
-.ribbon-tab.is-file-tab:hover {
-  background: var(--vd-ribbon-file-tab-hover, rgba(0, 0, 0, 0.22));
-}
-.ribbon-tab.is-file-tab.active {
-  background: var(--vd-ribbon-surface, #fff);
-  color: var(--vd-ribbon-active-text, #1f57b8);
-}
-.ribbon-tab-label {
-  line-height: 1;
-  white-space: nowrap;
-}
-
-/* 工具栏模式切换 */
-.ribbon-mode-switch {
-  margin-left: auto;
-}
-.ribbon-mode-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  margin-right: 0;
-  cursor: pointer;
-  border-radius: 4px 4px 0 0;
-  color: var(--vd-ribbon-topbar-text, rgba(255, 255, 255, 0.92));
-}
-.ribbon-mode-btn:hover {
-  background: var(--vd-ribbon-topbar-hover, rgba(255, 255, 255, 0.14));
-}
-
-/* Ribbon 面板 */
-.ribbon-panel {
-  background: #f1f1f1;
-  min-height: 66px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  box-shadow: inset 0 -1px 0 var(--vd-ribbon-shadow, #e6eaf2);
-}
-
-/* 简约模式：缩小面板高度 */
-.office-ribbon.simple-mode .ribbon-panel {
-  min-height: 56px;
-}
-.office-ribbon.simple-mode :deep(.ribbon-btn-lg) {
-  height: 38px;
-  min-width: 36px;
-}
-.office-ribbon.simple-mode :deep(.ribbon-btn-lg .ribbon-btn-icon svg),
-.office-ribbon.simple-mode :deep(.ribbon-btn-lg .ribbon-btn-icon i) {
-  font-size: 18px;
-}
-
 /* 非 home 选项卡：与 home 选项卡高度一致，图标 28px */
-.ribbon-panel.non-home-tab :deep(.ribbon-tab-panel) {
+.office-ribbon.non-home-tab :deep(.ribbon-tab-panel) {
   min-height: 70px;
 }
-.ribbon-panel.non-home-tab :deep(.ribbon-tab-panel .ribbon-group) {
+.office-ribbon.non-home-tab :deep(.ribbon-tab-panel .ribbon-group) {
   min-height: 70px;
 }
-.ribbon-panel.non-home-tab :deep(.ribbon-btn-lg .ribbon-btn-icon svg),
-.ribbon-panel.non-home-tab :deep(.ribbon-btn-lg .ribbon-btn-icon i) {
+.office-ribbon.non-home-tab :deep(.ribbon-btn-lg .ribbon-btn-icon svg),
+.office-ribbon.non-home-tab :deep(.ribbon-btn-lg .ribbon-btn-icon i) {
   font-size: 28px;
 }
-.ribbon-panel.non-home-tab :deep(.ribbon-btn-lg .ribbon-btn-text) {
+.office-ribbon.non-home-tab :deep(.ribbon-btn-lg .ribbon-btn-text) {
   font-weight: 400;
 }
 </style>
@@ -535,25 +392,5 @@ const handleRowFlex = (v: string) => emit('command', 'rowFlex', v)
 }
 .ribbon-tab-panel .ribbon-group {
   min-height: 70px;
-}
-
-
-/* 简约模式 */
-.office-ribbon.simple-mode .ribbon-tab-panel {
-  min-height: 52px;
-}
-.office-ribbon.simple-mode .ribbon-tab-panel .ribbon-group {
-  min-height: 52px;
-}
-
-/* antd 菜单图标 */
-.ribbon-tabs-bar .mi {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-}
-.ribbon-tabs-bar .is-active {
-  color: var(--vd-ribbon-active-text, #1f57b8);
 }
 </style>

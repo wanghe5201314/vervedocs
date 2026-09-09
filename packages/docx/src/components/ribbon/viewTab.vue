@@ -1,35 +1,35 @@
 <template>
   <div class="ribbon-tab-panel">
     <!-- 视图模式 -->
-    <RibbonGroup title="视图模式">
+    <VdRibbonGroup title="视图模式">
       <a-dropdown :trigger="['click']">
-        <RibbonButton :icon="currentModeIcon" text="编辑模式" title="编辑模式" size="large" has-arrow :disabled="isModeLocked" />
+        <VdRibbonButton :icon="currentModeIcon" text="编辑模式" title="编辑模式" size="large" has-arrow :disabled="isModeLocked" />
         <template #overlay>
           <a-menu @click="({ key }: any) => handleModeSelect(key)">
             <a-menu-item v-for="mode in EDITOR_MODE_LIST" :key="mode.value" :disabled="isModeLocked" :title="mode.title">
               <div class="mi-row mi-row--toggle">
-                <span class="mi"><VIcon :name="mode.icon" /><span>{{ mode.label }}</span></span>
-                <span class="menu-toggle-check"><VIcon v-if="currentEditorMode === mode.value" name="check" /></span>
+                <span class="mi"><VdIcon :name="mode.icon" /><span>{{ mode.label }}</span></span>
+                <span class="menu-toggle-check"><VdIcon v-if="currentEditorMode === mode.value" name="check" /></span>
               </div>
             </a-menu-item>
           </a-menu>
         </template>
       </a-dropdown>
-    </RibbonGroup>
+    </VdRibbonGroup>
 
     <!-- 缩放 -->
-    <RibbonGroup title="页面缩放">
+    <VdRibbonGroup title="页面缩放">
       <div class="view-zoom-layout">
         <div class="view-zoom-select-wrap">
           <a-dropdown :trigger="['click']">
             <button class="view-zoom-select" type="button" title="缩放">
               <span>{{ zoomPercent }}%</span>
-              <VIcon name="chevron-down" />
+              <VdIcon name="chevron-down" />
             </button>
             <template #overlay>
               <a-menu @click="({ key }: any) => emit('command', 'pageScale', Number(key) / 100)">
                 <a-menu-item v-for="z in ZOOM_LEVELS" :key="z">
-                  <span class="zoom-check"><VIcon v-if="zoomPercent === z" name="check" /></span>{{ z }}%
+                  <span class="zoom-check"><VdIcon v-if="zoomPercent === z" name="check" /></span>{{ z }}%
                 </a-menu-item>
               </a-menu>
             </template>
@@ -37,14 +37,14 @@
           <div class="view-zoom-caption">缩放</div>
         </div>
         <div class="view-zoom-actions">
-          <RibbonButton icon="fit-to-page-outline" text="适合页面" title="适合页面" command="fitPage" />
-          <RibbonButton icon="arrow-expand-horizontal" text="适应宽度" title="适应宽度" command="fitWidth" />
+          <VdRibbonButton icon="fit-to-page-outline" text="适合页面" title="适合页面" @click="emit('command', 'fitPage')" />
+          <VdRibbonButton icon="arrow-expand-horizontal" text="适应宽度" title="适应宽度" @click="emit('command', 'fitWidth')" />
         </div>
       </div>
-    </RibbonGroup>
+    </VdRibbonGroup>
 
     <!-- 显示 -->
-    <RibbonGroup title="显示">
+    <VdRibbonGroup title="显示">
       <div class="view-toggle-grid">
         <button
           class="view-check-btn"
@@ -54,7 +54,7 @@
           @click="handleCommand('toggleToolbar')"
         >
           <span class="view-check-box">
-            <VIcon v-if="showToolbar" name="check" />
+            <VdIcon v-if="showToolbar" name="check" />
           </span>
           <span class="view-check-label">始终显示工具栏</span>
         </button>
@@ -66,7 +66,7 @@
           @click="handleCommand('toggleBottomNav')"
         >
           <span class="view-check-box">
-            <VIcon v-if="showBottomNav" name="check" />
+            <VdIcon v-if="showBottomNav" name="check" />
           </span>
           <span class="view-check-label">状态栏</span>
         </button>
@@ -78,7 +78,7 @@
           @click="handleCommand('toggleToc')"
         >
           <span class="view-check-box">
-            <VIcon v-if="tocVisible" name="check" />
+            <VdIcon v-if="tocVisible" name="check" />
           </span>
           <span class="view-check-label">左面板</span>
         </button>
@@ -90,7 +90,7 @@
           @click="handleCommand('toggleLineBreak')"
         >
           <span class="view-check-box">
-            <VIcon v-if="showLineBreak" name="check" />
+            <VdIcon v-if="showLineBreak" name="check" />
           </span>
           <span class="view-check-label">换行符</span>
         </button>
@@ -103,21 +103,22 @@
           @click="handleCommand('toggleEyeCare')"
         >
           <span class="view-check-box">
-            <VIcon v-if="eyeCareEnabled" name="check" />
+            <VdIcon v-if="eyeCareEnabled" name="check" />
           </span>
           <span class="view-check-label">护眼模式</span>
         </button>
       </div>
-    </RibbonGroup>
+    </VdRibbonGroup>
   </div>
 </template>
 
 <script setup lang="ts">
+import { VdRibbonButton, VdRibbonGroup, VdIcon } from '@vervedoc/ui'
 import { computed } from 'vue'
-import { VIcon } from '@vervedoc/icons'
+
 import { EDITOR_MODE_LIST, ZOOM_LEVELS } from '@/config/constants'
-import RibbonGroup from './ribbonGroup.vue'
-import RibbonButton from './ribbonButton.vue'
+
+
 
 const emit = defineEmits<{
   (e: 'command', cmd: string, ...args: any[]): void

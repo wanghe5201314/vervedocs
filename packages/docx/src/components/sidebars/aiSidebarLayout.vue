@@ -58,7 +58,7 @@
                 @click="handleQuickAction(action.value)"
               >
                 <div class="action-tile-icon">
-                  <VIcon :name="action.icon" />
+                  <VdIcon :name="action.icon" />
                 </div>
                 <div class="action-tile-body">
                   <span class="action-tile-title">{{ action.label }}</span>
@@ -128,7 +128,7 @@
               :disabled="aiState.operation.loading"
               @click="handleContinueWriting"
             >
-              <VIcon name="pen-plus" />
+              <VdIcon name="pen-plus" />
               <span>从光标处续写</span>
             </button>
           </section>
@@ -146,7 +146,7 @@
               :disabled="aiState.operation.loading"
               @click="handleLayoutSuggestion"
             >
-              <VIcon name="auto-fix" />
+              <VdIcon name="auto-fix" />
               <span>获取排版建议</span>
             </button>
           </section>
@@ -162,7 +162,7 @@
               :disabled="aiState.operation.loading"
               @click="handleDocAnalysis"
             >
-              <VIcon name="file-search-outline" />
+              <VdIcon name="file-search-outline" />
               <span>开始分析</span>
             </button>
           </section>
@@ -176,7 +176,7 @@
               :disabled="aiState.operation.loading"
               @click="handleDocSummarize"
             >
-              <VIcon name="text-box-check-outline" />
+              <VdIcon name="text-box-check-outline" />
               <span>生成摘要</span>
             </button>
           </section>
@@ -196,7 +196,7 @@
               :disabled="aiState.operation.loading"
               @click="handleImageAlt"
             >
-              <VIcon name="image-text" />
+              <VdIcon name="image-text" />
               <span>生成图片描述</span>
             </button>
           </section>
@@ -234,7 +234,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { CloseOutlined, RobotOutlined } from '@ant-design/icons-vue'
-import { VIcon } from '@vervedoc/icons'
+import { VdIcon } from '@vervedoc/ui'
 import { AIAction, TranslateLanguage } from '@vervedoc/docx-editor-ai'
 import { aiStateStore } from '@/stores/ai-state'
 import { editorStateStore } from '@/stores/editor-state'

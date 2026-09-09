@@ -2,44 +2,45 @@
   <div class="file-dropdown-menu">
     <a-menu @click="handleMenuClick">
       <a-menu-item key="new">
-        <div class="file-item-row"><span class="file-mi"><VIcon name="file-plus-outline" /><span>新建文档</span></span></div>
+        <div class="file-item-row"><span class="file-mi"><VdIcon name="file-plus-outline" /><span>新建文档</span></span></div>
       </a-menu-item>
       <a-menu-item key="import">
-        <div class="file-item-row"><span class="file-mi"><VIcon name="file-import-outline" /><span>导入文档</span></span><span class="shortcut">Ctrl+Alt+O</span></div>
+        <div class="file-item-row"><span class="file-mi"><VdIcon name="file-import-outline" /><span>导入文档</span></span><span class="shortcut">Ctrl+Alt+O</span></div>
       </a-menu-item>
       <a-menu-item key="save">
-        <div class="file-item-row"><span class="file-mi"><VIcon name="content-save-outline" /><span>保存</span></span><span class="shortcut">Ctrl+S</span></div>
+        <div class="file-item-row"><span class="file-mi"><VdIcon name="content-save-outline" /><span>保存</span></span><span class="shortcut">Ctrl+S</span></div>
       </a-menu-item>
       <a-sub-menu key="export" popup-class-name="file-export-submenu">
         <template #title>
-          <div class="file-item-row"><span class="file-mi"><VIcon name="download-outline" /><span>下载为</span></span></div>
+          <div class="file-item-row"><span class="file-mi"><VdIcon name="download-outline" /><span>下载为</span></span></div>
         </template>
         <a-menu-item key="export-docx">
-          <div class="file-item-row"><span class="file-mi"><VIcon name="file-document-outline" /><span>Word 文档 (.docx)</span></span></div>
+          <div class="file-item-row"><span class="file-mi"><VdIcon name="file-document-outline" /><span>Word 文档 (.docx)</span></span></div>
         </a-menu-item>
       </a-sub-menu>
       <a-menu-item key="print">
-        <div class="file-item-row"><span class="file-mi"><VIcon name="printer-outline" /><span>打印</span></span><span class="shortcut">Ctrl+P</span></div>
+        <div class="file-item-row"><span class="file-mi"><VdIcon name="printer-outline" /><span>打印</span></span><span class="shortcut">Ctrl+P</span></div>
       </a-menu-item>
       <a-menu-item key="preview">
-        <div class="file-item-row"><span class="file-mi"><VIcon name="eye-outline" /><span>预览</span></span></div>
+        <div class="file-item-row"><span class="file-mi"><VdIcon name="eye-outline" /><span>预览</span></span></div>
       </a-menu-item>
       <a-menu-item key="rename">
-        <div class="file-item-row"><span class="file-mi"><VIcon name="rename-box" /><span>重命名</span></span></div>
+        <div class="file-item-row"><span class="file-mi"><VdIcon name="rename-box" /><span>重命名</span></span></div>
       </a-menu-item>
       <a-menu-divider />
       <a-menu-item key="protectDoc">
-        <div class="file-item-row"><span class="file-mi"><VIcon name="shield-lock-outline" /><span>保护文档</span></span></div>
+        <div class="file-item-row"><span class="file-mi"><VdIcon name="shield-lock-outline" /><span>保护文档</span></span></div>
       </a-menu-item>
       <a-menu-item key="versionHistory">
-        <div class="file-item-row"><span class="file-mi"><VIcon name="history" /><span>版本历史</span></span></div>
+        <div class="file-item-row"><span class="file-mi"><VdIcon name="history" /><span>版本历史</span></span></div>
       </a-menu-item>
     </a-menu>
   </div>
 </template>
 
 <script setup lang="ts">
-import { VIcon } from '@vervedoc/icons'
+import { VdIcon } from '@vervedoc/ui'
+
 
 const emit = defineEmits<{
   (e: 'command', cmd: string, ...args: any[]): void

@@ -50,7 +50,8 @@
     "@typescript-eslint/eslint-plugin": "^8.16.0",
     "@typescript-eslint/parser": "^8.16.0",
     "@vitejs/plugin-vue": "catalog:",
-    "@vervedoc/icons": "workspace:^",
+    "@vervedoc/design": "workspace:^",
+    "@vervedoc/ui": "workspace:^",
     "@vue/language-core": "^3.1.8",
     "esbuild": "^0.28.0",
     "eslint": "catalog:",
@@ -85,7 +86,8 @@
   },
   "peerDependencies": {
     "@vervedoc/docx-editor-collaboration": "workspace:^",
-    "@vervedoc/icons": "workspace:^",
+    "@vervedoc/design": "workspace:^",
+    "@vervedoc/ui": "workspace:^",
     "prismjs": "1.30.0",
     "vue": "catalog:"
   },

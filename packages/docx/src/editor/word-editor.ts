@@ -3,6 +3,7 @@ import 'ant-design-vue/dist/reset.css'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
 import { ConfigProvider } from 'ant-design-vue'
 import '@/styles/index.css'
+import '@vervedoc/design/styles.css'
 
 
 import '@/assets/iconfont/iconfont.js'

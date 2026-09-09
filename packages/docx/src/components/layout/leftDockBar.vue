@@ -10,7 +10,7 @@
           aria-label="搜索"
           @click="emit('select', 'search')"
         >
-          <VIcon name="magnify" :size="18" />
+          <VdIcon name="magnify" :size="18" />
         </button>
       </a-tooltip>
 
@@ -23,7 +23,7 @@
           aria-label="目录"
           @click="emit('select', 'toc')"
         >
-          <VIcon name="table-of-contents" :size="18" />
+          <VdIcon name="table-of-contents" :size="18" />
         </button>
       </a-tooltip>
 
@@ -36,7 +36,7 @@
           aria-label="章节"
           @click="emit('select', 'section')"
         >
-          <VIcon name="format-section" :size="18" />
+          <VdIcon name="format-section" :size="18" />
         </button>
       </a-tooltip>
 
@@ -49,7 +49,7 @@
           aria-label="书签"
           @click="emit('select', 'bookmark')"
         >
-          <VIcon name="bookmark-outline" :size="18" />
+          <VdIcon name="bookmark-outline" :size="18" />
         </button>
       </a-tooltip>
 
@@ -62,7 +62,7 @@
           aria-label="AI 助手"
           @click="emit('select', 'ai')"
         >
-          <VIcon name="robot-outline" :size="18" />
+          <VdIcon name="robot-outline" :size="18" />
         </button>
       </a-tooltip>
 
@@ -75,7 +75,7 @@
           aria-label="修订"
           @click="emit('select', 'revision')"
         >
-          <VIcon name="pencil-plus" :size="18" />
+          <VdIcon name="pencil-plus" :size="18" />
         </button>
       </a-tooltip>
 
@@ -84,7 +84,7 @@
 </template>
 
 <script setup lang="ts">
-import { VIcon } from '@vervedoc/icons'
+import { VdIcon } from '@vervedoc/ui'
 
 type DockKey = 'search' | 'toc' | 'section' | 'ai' | 'revision' | 'bookmark' | ''
 

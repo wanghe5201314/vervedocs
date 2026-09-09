@@ -1,13 +1,13 @@
 <template>
   <div class="ribbon-tab-panel">
     <!-- 目录 -->
-    <RibbonGroup title="目录">
+    <VdRibbonGroup title="目录">
       <a-dropdown
         v-model:open="dropdownOpen"
         :trigger="['click']"
         overlay-class-name="gdocs-toc-submenu-popper"
       >
-        <RibbonButton icon="table-of-contents" text="自动目录" title="插入自动目录" size="large" has-arrow />
+        <VdRibbonButton icon="table-of-contents" text="自动目录" title="插入自动目录" size="large" has-arrow />
         <template #overlay>
           <div class="toc-submenu-panel">
             <div class="toc-submenu-list">
@@ -19,7 +19,7 @@
                 @mouseenter="handlePreviewHover(opt.type)"
                 @click="handleTocInsert(opt.type)"
               >
-                <span class="mi"><VIcon name="table-of-contents" /></span>
+                <span class="mi"><VdIcon name="table-of-contents" /></span>
                 <span class="toc-submenu-label">{{ opt.label }}</span>
               </div>
             </div>
@@ -44,23 +44,24 @@
           </div>
         </template>
       </a-dropdown>
-      <RibbonButton icon="delete-outline" text="删除目录" title="删除目录" size="large" command="tocRemove" />
-    </RibbonGroup>
+      <VdRibbonButton icon="delete-outline" text="删除目录" title="删除目录" size="large" @click="emit('command', 'tocRemove')" />
+    </VdRibbonGroup>
 
     <!-- 书签与脚注 -->
-    <RibbonGroup title="书签与脚注">
-      <RibbonButton icon="bookmark-outline" text="书签" title="书签" size="large" command="bookmark" />
-      <RibbonButton icon="format-annotation-plus" text="脚注" title="脚注" size="large" command="footnote" />
-    </RibbonGroup>
+    <VdRibbonGroup title="书签与脚注">
+      <VdRibbonButton icon="bookmark-outline" text="书签" title="书签" size="large" @click="emit('command', 'bookmark')" />
+      <VdRibbonButton icon="format-annotation-plus" text="脚注" title="脚注" size="large" @click="emit('command', 'footnote')" />
+    </VdRibbonGroup>
   </div>
 </template>
 
 <script setup lang="ts">
+import { VdRibbonButton, VdRibbonGroup, VdIcon } from '@vervedoc/ui'
 import { ref, computed, inject, watch } from 'vue'
-import { VIcon } from '@vervedoc/icons'
+
 import type { IAutoTocItem } from '@vervedoc/core'
-import RibbonGroup from './ribbonGroup.vue'
-import RibbonButton from './ribbonButton.vue'
+
+
 
 interface IAutoTocResult {
   toc1: IAutoTocItem[]

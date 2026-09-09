@@ -1,28 +1,28 @@
 <template>
   <div class="ribbon-tab-panel">
     <!-- 页面 -->
-    <RibbonGroup title="页面">
-      <RibbonButton icon="file-document-outline" text="空白页" title="插入空白页" size="large" command="insertBlankPageBefore" />
+    <VdRibbonGroup title="页面">
+      <VdRibbonButton icon="file-document-outline" text="空白页" title="插入空白页" size="large" @click="emit('command', 'insertBlankPageBefore')" />
       <a-dropdown :trigger="['click']">
-        <RibbonButton icon="format-page-break" text="分页" title="分页" size="large" has-arrow />
+        <VdRibbonButton icon="format-page-break" text="分页" title="分页" size="large" has-arrow />
         <template #overlay>
           <a-menu @click="({ key }: any) => emit('command', key)">
-            <a-menu-item key="pageBreak"><span class="mi"><VIcon name="format-page-break" /><span>分页符</span></span></a-menu-item>
-            <a-menu-item key="lineBreak"><span class="mi"><VIcon name="separator-line-break" /><span>换行符</span></span></a-menu-item>
+            <a-menu-item key="pageBreak"><span class="mi"><VdIcon name="format-page-break" /><span>分页符</span></span></a-menu-item>
+            <a-menu-item key="lineBreak"><span class="mi"><VdIcon name="separator-line-break" /><span>换行符</span></span></a-menu-item>
             <a-menu-divider />
-            <a-menu-item key="sectionBreakNextPage"><span class="mi"><VIcon name="file-document-outline" /><span>下一页分节符</span></span></a-menu-item>
-            <a-menu-item key="sectionBreakContinuous"><span class="mi"><VIcon name="format-section" /><span>连续分节符</span></span></a-menu-item>
-            <a-menu-item key="sectionBreakEvenPage"><span class="mi"><VIcon name="numeric-2-box-outline" /><span>偶数页分节符</span></span></a-menu-item>
-            <a-menu-item key="sectionBreakOddPage"><span class="mi"><VIcon name="numeric-1-box-outline" /><span>奇数页分节符</span></span></a-menu-item>
+            <a-menu-item key="sectionBreakNextPage"><span class="mi"><VdIcon name="file-document-outline" /><span>下一页分节符</span></span></a-menu-item>
+            <a-menu-item key="sectionBreakContinuous"><span class="mi"><VdIcon name="format-section" /><span>连续分节符</span></span></a-menu-item>
+            <a-menu-item key="sectionBreakEvenPage"><span class="mi"><VdIcon name="numeric-2-box-outline" /><span>偶数页分节符</span></span></a-menu-item>
+            <a-menu-item key="sectionBreakOddPage"><span class="mi"><VdIcon name="numeric-1-box-outline" /><span>奇数页分节符</span></span></a-menu-item>
           </a-menu>
         </template>
       </a-dropdown>
-    </RibbonGroup>
+    </VdRibbonGroup>
 
     <!-- 表格 -->
-    <RibbonGroup title="表格">
+    <VdRibbonGroup title="表格">
       <a-popover placement="bottom" :overlayStyle="{ width: '260px' }" trigger="click" v-model:open="tablePopoverVisible">
-        <RibbonButton icon="table" text="表格" title="插入表格" size="large" has-arrow />
+        <VdRibbonButton icon="table" text="表格" title="插入表格" size="large" has-arrow />
         <template #content>
           <a-card size="small" class="ribbon-popover-card" :bordered="false" :bodyStyle="{ padding: '8px' }">
             <div class="table-selector">
@@ -38,29 +38,29 @@
           </a-card>
         </template>
       </a-popover>
-    </RibbonGroup>
+    </VdRibbonGroup>
 
     <!-- 插图 -->
-    <RibbonGroup title="插图">
-      <RibbonButton icon="image-outline" text="图片" title="插入图片" size="large" command="image" />
-      <RibbonButton icon="video-outline" text="视频" title="插入视频" size="large" command="video" />
-      <RibbonButton icon="music-note" text="音频" title="插入音频" size="large" command="audio" />
-      <RibbonButton icon="stacked_bar_chart" text="图表" title="插入图表" size="large" command="insertChart" />
-    </RibbonGroup>
+    <VdRibbonGroup title="插图">
+      <VdRibbonButton icon="image-outline" text="图片" title="插入图片" size="large" @click="emit('command', 'image')" />
+      <VdRibbonButton icon="video-outline" text="视频" title="插入视频" size="large" @click="emit('command', 'video')" />
+      <VdRibbonButton icon="music-note" text="音频" title="插入音频" size="large" @click="emit('command', 'audio')" />
+      <VdRibbonButton icon="stacked_bar_chart" text="图表" title="插入图表" size="large" @click="emit('command', 'insertChart')" />
+    </VdRibbonGroup>
 
     <!-- 链接 -->
-    <RibbonGroup title="链接">
-      <RibbonButton icon="link-variant" text="超链接" title="插入超链接 (Ctrl+K)" size="large" command="hyperlink" />
+    <VdRibbonGroup title="链接">
+      <VdRibbonButton icon="link-variant" text="超链接" title="插入超链接 (Ctrl+K)" size="large" @click="emit('command', 'hyperlink')" />
       <a-dropdown :trigger="['click']">
-        <RibbonButton icon="functions" text="公式" title="公式" size="large" has-arrow />
+        <VdRibbonButton icon="functions" text="公式" title="公式" size="large" has-arrow />
         <template #overlay>
           <a-menu @click="({ key }: any) => handleFormulaMenuClick(String(key))">
             <a-menu-item key="latex">
-              <span class="mi"><VIcon name="functions" /><span>插入LaTeX公式</span></span>
+              <span class="mi"><VdIcon name="functions" /><span>插入LaTeX公式</span></span>
             </a-menu-item>
             <a-sub-menu v-for="cat in FORMULA_CATEGORIES" :key="'formula-' + cat.name">
               <template #title>
-                <span class="mi"><VIcon :name="cat.icon" /><span>{{ cat.name }}</span></span>
+                <span class="mi"><VdIcon :name="cat.icon" /><span>{{ cat.name }}</span></span>
               </template>
               <a-menu-item v-for="f in cat.formulas" :key="'f-' + f.name" @click.stop="handleInsertFormula(f.latex)">
                 <div class="formula-item">
@@ -72,13 +72,13 @@
           </a-menu>
         </template>
       </a-dropdown>
-    </RibbonGroup>
+    </VdRibbonGroup>
 
     <!-- 分隔符 -->
-    <RibbonGroup title="分隔符">
+    <VdRibbonGroup title="分隔符">
 
       <a-popover placement="bottom" :overlayStyle="{ width: '220px' }" trigger="click" v-model:open="separatorPopoverVisible">
-        <RibbonButton icon="separator-horizontal-line" text="分割线" title="分割线" size="large" has-arrow />
+        <VdRibbonButton icon="separator-horizontal-line" text="分割线" title="分割线" size="large" has-arrow />
         <template #content>
           <a-card size="small" class="ribbon-popover-card" :bordered="false" :bodyStyle="{ padding: '8px' }">
             <div class="separator-list">
@@ -89,26 +89,27 @@
           </a-card>
         </template>
       </a-popover>
-    </RibbonGroup>
+    </VdRibbonGroup>
 
 
     <!-- 符号 -->
-    <RibbonGroup title="符号">
-      <RibbonButton icon="calendar-clock" text="日期和时间" title="日期和时间" size="large" command="insertDate" />
-      <RibbonButton icon="barcode" text="条形码" title="条形码" size="large" command="barcode" />
-      <RibbonButton icon="qrcode" text="二维码" title="二维码" size="large" command="qrcode" />
-      <RibbonButton icon="draw" text="电子签名" title="电子签名" size="large" command="signature" />
-    </RibbonGroup>
+    <VdRibbonGroup title="符号">
+      <VdRibbonButton icon="calendar-clock" text="日期和时间" title="日期和时间" size="large" @click="emit('command', 'insertDate')" />
+      <VdRibbonButton icon="barcode" text="条形码" title="条形码" size="large" @click="emit('command', 'barcode')" />
+      <VdRibbonButton icon="qrcode" text="二维码" title="二维码" size="large" @click="emit('command', 'qrcode')" />
+      <VdRibbonButton icon="draw" text="电子签名" title="电子签名" size="large" @click="emit('command', 'signature')" />
+    </VdRibbonGroup>
   </div>
 </template>
 
 <script setup lang="ts">
+import { VdRibbonButton, VdRibbonGroup, VdIcon } from '@vervedoc/ui'
 import { ref } from 'vue'
-import { VIcon } from '@vervedoc/icons'
+
 import { SEPARATOR_STYLES } from '@vervedoc/core'
 import { FORMULA_CATEGORIES } from '@/config/constants'
-import RibbonGroup from './ribbonGroup.vue'
-import RibbonButton from './ribbonButton.vue'
+
+
 
 const emit = defineEmits<{
   (e: 'command', cmd: string, ...args: any[]): void
@@ -205,16 +206,16 @@ const getSeparatorStyle = (sep: any) => {
   width: 100%;
   margin-top: 6px;
   padding: 5px 8px;
-  border: 1px solid var(--app-ribbon-border-soft, #e3e8f2);
+  border: 1px solid var(--vd-ribbon-border-soft, #e3e8f2);
   border-radius: 4px;
   background: #fff;
-  color: var(--app-ribbon-text, #3c4043);
+  color: var(--vd-ribbon-text, #3c4043);
   font-size: 12px;
   cursor: pointer;
 }
 .table-more-btn:hover {
-  border-color: var(--app-ribbon-active-text, #1f57b8);
-  background: var(--app-ribbon-hover-bg, #edf2fb);
+  border-color: var(--vd-ribbon-active-text, #1f57b8);
+  background: var(--vd-ribbon-hover-bg, #edf2fb);
 }
 .formula-item {
   display: flex;
@@ -224,10 +225,10 @@ const getSeparatorStyle = (sep: any) => {
 }
 .formula-name {
   font-size: 12px;
-  color: var(--app-ribbon-text, #3c4043);
+  color: var(--vd-ribbon-text, #3c4043);
 }
 .formula-preview {
   font-size: 11px;
-  color: var(--app-ribbon-text-muted, #7a8191);
+  color: var(--vd-ribbon-text-muted, #7a8191);
 }
 </style>

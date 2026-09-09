@@ -2,9 +2,9 @@
   <div class="compact-toolbar" :class="{ 'simple-mode': simpleMode }">
     <!-- 第一行：文字处理 -->
     <div class="toolbar-row">
-      <button class="tb" @click="emit('cmd', 'undo')" title="撤销"><VIcon name="undo" /></button>
-      <button class="tb" @click="emit('cmd', 'redo')" title="重做"><VIcon name="redo" /></button>
-      <button class="tb" @click="emit('cmd', 'painter')" title="格式刷"><VIcon name="format-paint" /></button>
+      <button class="tb" @click="emit('cmd', 'undo')" title="撤销"><VdIcon name="undo" /></button>
+      <button class="tb" @click="emit('cmd', 'redo')" title="重做"><VdIcon name="redo" /></button>
+      <button class="tb" @click="emit('cmd', 'painter')" title="格式刷"><VdIcon name="format-paint" /></button>
       <a-divider type="vertical" />
       <a-select :value="currentFont" size="small" style="width: 120px" @change="(v: any) => emit('font', String(v))">
         <a-select-option v-for="f in fontList" :key="f.value" :label="f.label" :value="f.value"><span :style="{ fontFamily: f.value }">{{ f.label }}</span></a-select-option>
@@ -12,17 +12,17 @@
       <a-select :value="sizeValueToLabel(currentSize)" size="small" style="width: 65px" @change="(v: any) => emit('size', sizeLabelToValue(String(v)))">
         <a-select-option v-for="s in sizeList" :key="s.label" :label="s.label" :value="s.label" />
       </a-select>
-      <button class="tb" @click="emit('cmd', 'sizeAdd')" title="增大"><VIcon name="plus" /></button>
-      <button class="tb" @click="emit('cmd', 'sizeMinus')" title="减小"><VIcon name="minus" /></button>
+      <button class="tb" @click="emit('cmd', 'sizeAdd')" title="增大"><VdIcon name="plus" /></button>
+      <button class="tb" @click="emit('cmd', 'sizeMinus')" title="减小"><VdIcon name="minus" /></button>
       <a-divider type="vertical" />
-      <button class="tb" :class="{ active: isBold }" @click="emit('cmd', 'bold')" title="加粗"><VIcon name="format-bold" /></button>
-      <button class="tb" :class="{ active: isItalic }" @click="emit('cmd', 'italic')" title="斜体"><VIcon name="format-italic" /></button>
-      <button class="tb" :class="{ active: isUnderline }" @click="emit('cmd', 'underline')" title="下划线"><VIcon name="format-underline" /></button>
-      <button class="tb" :class="{ active: isStrikeout }" @click="emit('cmd', 'strikeout')" title="删除线"><VIcon name="format-strikethrough" /></button>
-      <button class="tb" @click="emit('cmd', 'superscript')" title="上标"><VIcon name="format-superscript" /></button>
-      <button class="tb" @click="emit('cmd', 'subscript')" title="下标"><VIcon name="format-subscript" /></button>
+      <button class="tb" :class="{ active: isBold }" @click="emit('cmd', 'bold')" title="加粗"><VdIcon name="format-bold" /></button>
+      <button class="tb" :class="{ active: isItalic }" @click="emit('cmd', 'italic')" title="斜体"><VdIcon name="format-italic" /></button>
+      <button class="tb" :class="{ active: isUnderline }" @click="emit('cmd', 'underline')" title="下划线"><VdIcon name="format-underline" /></button>
+      <button class="tb" :class="{ active: isStrikeout }" @click="emit('cmd', 'strikeout')" title="删除线"><VdIcon name="format-strikethrough" /></button>
+      <button class="tb" @click="emit('cmd', 'superscript')" title="上标"><VdIcon name="format-superscript" /></button>
+      <button class="tb" @click="emit('cmd', 'subscript')" title="下标"><VdIcon name="format-subscript" /></button>
       <a-popover placement="bottom" :overlayStyle="{ width: '260px' }" trigger="click">
-        <button class="tb color-btn" title="字体颜色"><VIcon name="format-color-text" /><span class="color-bar" :style="{ backgroundColor: fontColor }"></span></button>
+        <button class="tb color-btn" title="字体颜色"><VdIcon name="format-color-text" /><span class="color-bar" :style="{ backgroundColor: fontColor }"></span></button>
         <template #content>
           <div class="color-panel">
             <div class="color-grid"><button v-for="c in COLOR_PALETTE" :key="c" class="color-cell" :style="{ backgroundColor: c }" @click="emit('fontColor', c)"></button></div>
@@ -34,7 +34,7 @@
         </template>
       </a-popover>
       <a-popover placement="bottom" :overlayStyle="{ width: '260px' }" trigger="click">
-        <button class="tb color-btn" title="高亮"><VIcon name="format-color-highlight" /><span class="color-bar" :style="{ backgroundColor: highlightColor }"></span></button>
+        <button class="tb color-btn" title="高亮"><VdIcon name="format-color-highlight" /><span class="color-bar" :style="{ backgroundColor: highlightColor }"></span></button>
         <template #content>
           <div class="color-panel">
             <div class="color-grid"><button v-for="c in COLOR_PALETTE" :key="c" class="color-cell" :style="{ backgroundColor: c }" @click="emit('highlight', c)"></button></div>
@@ -47,7 +47,7 @@
       </a-popover>
       <a-divider type="vertical" />
       <a-dropdown :trigger="['click']">
-        <button class="tb has-text style-btn"><span class="btn-text">{{ firstLineIndentLabel }}</span><VIcon name="chevron-down" class="arrow" /></button>
+        <button class="tb has-text style-btn"><span class="btn-text">{{ firstLineIndentLabel }}</span><VdIcon name="chevron-down" class="arrow" /></button>
         <template #overlay>
           <a-menu @click="({ key }: any) => emit('cmd', 'firstLineIndent', Number(key) * INDENT_PX_PER_CHAR)">
             <a-menu-item v-for="o in firstLineIndentOptions" :key="o.value">{{ o.label }}</a-menu-item>
@@ -55,7 +55,7 @@
         </template>
       </a-dropdown>
       <a-dropdown :trigger="['click']">
-        <button class="tb has-text style-btn"><span class="btn-text">{{ currentTitleLabel }}</span><VIcon name="chevron-down" class="arrow" /></button>
+        <button class="tb has-text style-btn"><span class="btn-text">{{ currentTitleLabel }}</span><VdIcon name="chevron-down" class="arrow" /></button>
         <template #overlay>
           <a-menu @click="({ key }: any) => emit('title', key === 'null' ? null : key)">
             <a-menu-item key="null">正文</a-menu-item>
@@ -68,13 +68,13 @@
           </a-menu>
         </template>
       </a-dropdown>
-      <button class="tb" :class="{ active: rowFlex === 'left' || !rowFlex }" @click="emit('rowFlex', 'left')" title="左对齐"><VIcon name="format-align-left" /></button>
-      <button class="tb" :class="{ active: rowFlex === 'center' }" @click="emit('rowFlex', 'center')" title="居中"><VIcon name="format-align-center" /></button>
-      <button class="tb" :class="{ active: rowFlex === 'right' }" @click="emit('rowFlex', 'right')" title="右对齐"><VIcon name="format-align-right" /></button>
-      <button class="tb" :class="{ active: rowFlex === 'alignment' }" @click="emit('rowFlex', 'alignment')" title="两端对齐"><VIcon name="format-align-justify" /></button>
+      <button class="tb" :class="{ active: rowFlex === 'left' || !rowFlex }" @click="emit('rowFlex', 'left')" title="左对齐"><VdIcon name="format-align-left" /></button>
+      <button class="tb" :class="{ active: rowFlex === 'center' }" @click="emit('rowFlex', 'center')" title="居中"><VdIcon name="format-align-center" /></button>
+      <button class="tb" :class="{ active: rowFlex === 'right' }" @click="emit('rowFlex', 'right')" title="右对齐"><VdIcon name="format-align-right" /></button>
+      <button class="tb" :class="{ active: rowFlex === 'alignment' }" @click="emit('rowFlex', 'alignment')" title="两端对齐"><VdIcon name="format-align-justify" /></button>
       <a-divider type="vertical" />
       <a-dropdown :trigger="['click']">
-        <button class="tb" title="行距"><VIcon name="format-line-spacing" /><VIcon name="chevron-down" class="arrow" /></button>
+        <button class="tb" title="行距"><VdIcon name="format-line-spacing" /><VdIcon name="chevron-down" class="arrow" /></button>
         <template #overlay>
           <a-menu @click="({ key }: any) => emit('lineHeight', Number(key))">
             <a-menu-item v-for="lh in LINE_HEIGHT_OPTIONS" :key="lh.value">{{ lh.label }}</a-menu-item>
@@ -82,7 +82,7 @@
         </template>
       </a-dropdown>
       <a-popover placement="bottom" :overlayStyle="{ width: '400px' }" trigger="click" v-model:open="bulletPopoverVisible">
-        <button class="tb" title="项目符号"><VIcon name="format-list-bulleted" /><VIcon name="chevron-down" class="arrow" /></button>
+        <button class="tb" title="项目符号"><VdIcon name="format-list-bulleted" /><VdIcon name="chevron-down" class="arrow" /></button>
         <template #content>
           <div class="list-panel">
             <div class="list-panel-title">预设样式</div>
@@ -101,7 +101,7 @@
         </template>
       </a-popover>
       <a-popover placement="bottom" :overlayStyle="{ width: '335px' }" trigger="click">
-        <button class="tb" title="编号"><VIcon name="format-list-numbered" /><VIcon name="chevron-down" class="arrow" /></button>
+        <button class="tb" title="编号"><VdIcon name="format-list-numbered" /><VdIcon name="chevron-down" class="arrow" /></button>
         <template #content>
           <div class="list-panel">
             <div class="list-panel-title">编号</div>
@@ -118,15 +118,15 @@
           </div>
         </template>
       </a-popover>
-      <button class="tb" @click="emit('cmd', 'indentStep', 'sub')" title="减少缩进"><VIcon name="format-indent-decrease" /></button>
-      <button class="tb" @click="emit('cmd', 'indentStep', 'add')" title="增加缩进"><VIcon name="format-indent-increase" /></button>
-      <button class="tb" @click="emit('cmd', 'format')" title="清除格式"><VIcon name="format-clear" /></button>
+      <button class="tb" @click="emit('cmd', 'indentStep', 'sub')" title="减少缩进"><VdIcon name="format-indent-decrease" /></button>
+      <button class="tb" @click="emit('cmd', 'indentStep', 'add')" title="增加缩进"><VdIcon name="format-indent-increase" /></button>
+      <button class="tb" @click="emit('cmd', 'format')" title="清除格式"><VdIcon name="format-clear" /></button>
     </div>
 
     <!-- 第二行：插入与工具 -->
     <div class="toolbar-row">
       <a-popover placement="bottom" :overlayStyle="{ width: '260px' }" trigger="click" v-model:open="tablePopoverVisible">
-        <button class="tb" title="表格"><VIcon name="table" /><VIcon name="chevron-down" class="arrow" /></button>
+        <button class="tb" title="表格"><VdIcon name="table" /><VdIcon name="chevron-down" class="arrow" /></button>
         <template #content>
           <div class="table-selector">
             <div class="table-title">插入表格</div>
@@ -139,19 +139,19 @@
           </div>
         </template>
       </a-popover>
-      <button class="tb" @click="emit('cmd', 'image')" title="图片"><VIcon name="image-outline" /></button>
-      <button class="tb" @click="emit('cmd', 'video')" title="视频"><VIcon name="video-outline" /></button>
-      <button class="tb" @click="emit('cmd', 'audio')" title="音频"><VIcon name="music-note" /></button>
-      <button class="tb" @click="emit('cmd', 'insertChart')" title="图表"><VIcon name="chart-bar" /></button>
+      <button class="tb" @click="emit('cmd', 'image')" title="图片"><VdIcon name="image-outline" /></button>
+      <button class="tb" @click="emit('cmd', 'video')" title="视频"><VdIcon name="video-outline" /></button>
+      <button class="tb" @click="emit('cmd', 'audio')" title="音频"><VdIcon name="music-note" /></button>
+      <button class="tb" @click="emit('cmd', 'insertChart')" title="图表"><VdIcon name="chart-bar" /></button>
 
       <a-divider type="vertical" />
-      <button class="tb" @click="emit('cmd', 'hyperlink')" title="链接"><VIcon name="link-variant" /></button>
-      <button class="tb" @click="emit('cmd', 'bookmark')" title="书签"><VIcon name="bookmark-outline" /></button>
-      <button class="tb" @click="emit('cmd', 'latex')" title="公式"><VIcon name="function-variant" /></button>
+      <button class="tb" @click="emit('cmd', 'hyperlink')" title="链接"><VdIcon name="link-variant" /></button>
+      <button class="tb" @click="emit('cmd', 'bookmark')" title="书签"><VdIcon name="bookmark-outline" /></button>
+      <button class="tb" @click="emit('cmd', 'latex')" title="公式"><VdIcon name="function-variant" /></button>
 
       <a-divider type="vertical" />
       <a-popover placement="bottom" overlayClassName="compact-popover" :overlayStyle="{ width: '220px' }" trigger="click" v-model:open="separatorPopoverVisible">
-        <button class="tb" title="分割线"><VIcon name="minus" /><VIcon name="chevron-down" class="arrow" /></button>
+        <button class="tb" title="分割线"><VdIcon name="minus" /><VdIcon name="chevron-down" class="arrow" /></button>
         <template #content>
           <a-card size="small" title="分割线类型" :bordered="true" class="separator-card">
             <div class="separator-list">
@@ -171,15 +171,15 @@
         </template>
       </a-popover>
       <a-divider type="vertical" />
-      <button class="tb" @click="emit('cmd', 'pageBreak')" title="分页"><VIcon name="format-page-break" /></button>
+      <button class="tb" @click="emit('cmd', 'pageBreak')" title="分页"><VdIcon name="format-page-break" /></button>
       <a-divider type="vertical" />
-      <button class="tb" @click="emit('cmd', 'barcode')" title="条形码"><VIcon name="barcode" /></button>
-      <button class="tb" @click="emit('cmd', 'qrcode')" title="二维码"><VIcon name="qrcode" /></button>
-      <button class="tb" @click="emit('cmd', 'addWatermark')" title="水印"><VIcon name="watermark" /></button>
-      <button class="tb" @click="emit('cmd', 'signature')" title="签名"><VIcon name="draw" /></button>
-      <button class="tb" @click="emit('cmd', 'insertDate')" title="日期"><VIcon name="calendar-clock" /></button>
+      <button class="tb" @click="emit('cmd', 'barcode')" title="条形码"><VdIcon name="barcode" /></button>
+      <button class="tb" @click="emit('cmd', 'qrcode')" title="二维码"><VdIcon name="qrcode" /></button>
+      <button class="tb" @click="emit('cmd', 'addWatermark')" title="水印"><VdIcon name="watermark" /></button>
+      <button class="tb" @click="emit('cmd', 'signature')" title="签名"><VdIcon name="draw" /></button>
+      <button class="tb" @click="emit('cmd', 'insertDate')" title="日期"><VdIcon name="calendar-clock" /></button>
       <a-dropdown :trigger="['click']">
-        <button class="tb" title="页眉页脚"><VIcon name="page-layout-header-footer" /><VIcon name="chevron-down" class="arrow" /></button>
+        <button class="tb" title="页眉页脚"><VdIcon name="page-layout-header-footer" /><VdIcon name="chevron-down" class="arrow" /></button>
         <template #overlay>
           <a-menu @click="({ key }: any) => emit('cmd', key)">
             <a-menu-item key="header">编辑页眉</a-menu-item>
@@ -191,12 +191,12 @@
         </template>
       </a-dropdown>
       <a-divider type="vertical" />
-      <button class="tb" @click="emit('cmd', 'openSearchPanel')" title="搜索与替换"><VIcon name="magnify" /></button>
-      <button class="tb" :disabled="!props.hasSelection" @click="emit('cmd', 'comment')" title="新建批注"><VIcon name="comment-plus-outline" /></button>
+      <button class="tb" @click="emit('cmd', 'openSearchPanel')" title="搜索与替换"><VdIcon name="magnify" /></button>
+      <button class="tb" :disabled="!props.hasSelection" @click="emit('cmd', 'comment')" title="新建批注"><VdIcon name="comment-plus-outline" /></button>
 
-      <button class="tb" @click="emit('cmd', 'spellcheck')" title="拼写检查"><VIcon name="spellcheck" /></button>
+      <button class="tb" @click="emit('cmd', 'spellcheck')" title="拼写检查"><VdIcon name="spellcheck" /></button>
       <a-popover placement="bottom" :overlayStyle="{ width: '280px' }" trigger="click" v-model:open="wordCountVisible">
-        <button class="tb" title="字数统计"><VIcon name="counter" /></button>
+        <button class="tb" title="字数统计"><VdIcon name="counter" /></button>
         <template #content>
           <div class="wordcount-panel">
             <div class="wc-header">字数统计</div>
@@ -220,7 +220,7 @@ import { computed, ref } from 'vue'
 import { EDITOR_FONT_OPTIONS, EDITOR_SIZE_OPTIONS, BULLET_STYLES, NUMBER_STYLES, LINE_HEIGHT_OPTIONS, SEPARATOR_STYLES } from '@vervedoc/core'
 import { sizeValueToLabel, sizeLabelToValue } from '@/config/helpers'
 import { COLOR_PALETTE } from '@/config/constants'
-import { VIcon } from '@vervedoc/icons'
+import { VdIcon } from '@vervedoc/ui'
 
 /** 每字符首行缩进像素值 */
 const INDENT_PX_PER_CHAR = 14

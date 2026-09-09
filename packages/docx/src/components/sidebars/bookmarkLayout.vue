@@ -2,7 +2,7 @@
   <div class="bookmark-sidebar" editor-component="bookmark-sidebar">
     <div class="sidebar-header">
       <div class="sidebar-title-wrap">
-        <VIcon name="bookmark-outline" :size="16" />
+        <VdIcon name="bookmark-outline" :size="16" />
         <span class="sidebar-title">书签</span>
       </div>
       <div class="sidebar-close" @click="emit('close')" title="关闭">
@@ -53,7 +53,7 @@
           @dblclick="handleLocate(item.name)"
         >
           <div class="bookmark-item-main">
-            <VIcon name="bookmark-outline" :size="14" class="bookmark-item-icon" />
+            <VdIcon name="bookmark-outline" :size="14" class="bookmark-item-icon" />
             <span class="bookmark-item-name" :title="item.name">{{ item.name }}</span>
           </div>
           <div class="bookmark-item-meta">
@@ -89,7 +89,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { CloseOutlined, RightOutlined, DeleteOutlined } from '@ant-design/icons-vue'
-import { VIcon } from '@vervedoc/icons'
+import { VdIcon } from '@vervedoc/ui'
 import type { IBookmarkApi } from '@/composables/use-bookmarks'
 
 const props = defineProps<{

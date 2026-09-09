@@ -1,11 +1,11 @@
 ﻿<template>
   <div class="ribbon-tab-panel">
     <!-- 剪贴板 -->
-    <RibbonGroup title="剪贴板">
-      <RibbonButton icon="undo" title="撤销 (Ctrl+Z)" command="undo" />
-      <RibbonButton icon="redo" title="重做 (Ctrl+Y)" command="redo" />
+    <VdRibbonGroup title="剪贴板">
+      <VdRibbonButton icon="undo" title="撤销 (Ctrl+Z)" @click="emit('command', 'undo')" />
+      <VdRibbonButton icon="redo" title="重做 (Ctrl+Y)" @click="emit('command', 'redo')" />
       <a-dropdown :trigger="['click']">
-        <RibbonButton
+        <VdRibbonButton
           icon="content-paste"
           text="粘贴"
           title="粘贴"
@@ -16,12 +16,12 @@
           <a-menu @click="({ key }: any) => emit('command', key)">
             <a-menu-item key="paste"
               ><span class="mi"
-                ><VIcon name="content-paste" /><span>粘贴</span></span
+                ><VdIcon name="content-paste" /><span>粘贴</span></span
               ></a-menu-item
             >
             <a-menu-item key="pasteNoFormat"
               ><span class="mi"
-                ><VIcon name="clipboard-text-outline" /><span
+                ><VdIcon name="clipboard-text-outline" /><span
                   >无格式粘贴</span
                 ></span
               ></a-menu-item
@@ -29,23 +29,19 @@
           </a-menu>
         </template>
       </a-dropdown>
-      <RibbonButton
+      <VdRibbonButton
         icon="content-cut"
         title="剪切 (Ctrl+X)"
-        :disabled="!hasSelection"
-        command="cut"
-      />
-      <RibbonButton
+        :disabled="!hasSelection" @click="emit('command', 'cut')" />
+      <VdRibbonButton
         icon="content-copy"
         title="复制 (Ctrl+C)"
-        :disabled="!hasSelection"
-        command="copy"
-      />
-      <RibbonButton icon="format-paint" title="格式刷" command="painter" />
-    </RibbonGroup>
+        :disabled="!hasSelection" @click="emit('command', 'copy')" />
+      <VdRibbonButton icon="format-paint" title="格式刷" @click="emit('command', 'painter')" />
+    </VdRibbonGroup>
 
     <!-- 字体 -->
-    <RibbonGroup title="字体">
+    <VdRibbonGroup title="字体">
       <a-select
         :value="currentFont"
         size="small"
@@ -74,44 +70,34 @@
           :value="s.label"
         />
       </a-select>
-      <RibbonButton icon="plus" title="增大字号" command="sizeAdd" />
-      <RibbonButton icon="minus" title="减小字号" command="sizeMinus" />
-      <RibbonButton
+      <VdRibbonButton icon="plus" title="增大字号" @click="emit('command', 'sizeAdd')" />
+      <VdRibbonButton icon="minus" title="减小字号" @click="emit('command', 'sizeMinus')" />
+      <VdRibbonButton
         icon="format-bold"
         title="加粗 (Ctrl+B)"
-        :active="isBold"
-        command="bold"
-      />
-      <RibbonButton
+        :active="isBold" @click="emit('command', 'bold')" />
+      <VdRibbonButton
         icon="format-italic"
         title="斜体 (Ctrl+I)"
-        :active="isItalic"
-        command="italic"
-      />
-      <RibbonButton
+        :active="isItalic" @click="emit('command', 'italic')" />
+      <VdRibbonButton
         icon="format-underline"
         title="下划线 (Ctrl+U)"
-        :active="isUnderline"
-        command="underline"
-      />
-      <RibbonButton
+        :active="isUnderline" @click="emit('command', 'underline')" />
+      <VdRibbonButton
         icon="format-strikethrough"
         title="删除线"
-        :active="isStrikeout"
-        command="strikeout"
-      />
-      <RibbonButton
+        :active="isStrikeout" @click="emit('command', 'strikeout')" />
+      <VdRibbonButton
         icon="format-superscript"
-        title="上标"
-        command="superscript"
-      />
-      <RibbonButton icon="format-subscript" title="下标" command="subscript" />
+        title="上标" @click="emit('command', 'superscript')" />
+      <VdRibbonButton icon="format-subscript" title="下标" @click="emit('command', 'subscript')" />
       <a-popover
         placement="bottom"
         :overlayStyle="{ width: '260px' }"
         trigger="click"
       >
-        <RibbonButton
+        <VdRibbonButton
           icon="format-color-text"
           title="字体颜色"
           :color-bar="fontColor"
@@ -155,7 +141,7 @@
         :overlayStyle="{ width: '260px' }"
         trigger="click"
       >
-        <RibbonButton
+        <VdRibbonButton
           icon="format-color-highlight"
           title="高亮"
           :color-bar="highlightColor"
@@ -195,7 +181,7 @@
         </template>
       </a-popover>
       <a-dropdown :trigger="['click']">
-        <RibbonButton icon="format-letter-case" title="字符缩放" has-arrow />
+        <VdRibbonButton icon="format-letter-case" title="字符缩放" has-arrow />
         <template #overlay>
           <a-menu @click="({ key }: any) => handleCharacterScale(key)">
             <a-menu-item
@@ -215,32 +201,32 @@
           </a-menu>
         </template>
       </a-dropdown>
-    </RibbonGroup>
+    </VdRibbonGroup>
 
     <!-- 段落 -->
-    <RibbonGroup title="段落">
+    <VdRibbonGroup title="段落">
       <a-dropdown :trigger="['click']">
-        <RibbonButton icon="format-align-left" title="对齐方式" has-arrow />
+        <VdRibbonButton icon="format-align-left" title="对齐方式" has-arrow />
         <template #overlay>
           <a-menu @click="({ key }: any) => emit('rowFlex', key)">
             <a-menu-item key="left"
               ><span class="mi"
-                ><VIcon name="format-align-left" /><span>左对齐</span></span
+                ><VdIcon name="format-align-left" /><span>左对齐</span></span
               ></a-menu-item
             >
             <a-menu-item key="center"
               ><span class="mi"
-                ><VIcon name="format-align-center" /><span>居中对齐</span></span
+                ><VdIcon name="format-align-center" /><span>居中对齐</span></span
               ></a-menu-item
             >
             <a-menu-item key="right"
               ><span class="mi"
-                ><VIcon name="format-align-right" /><span>右对齐</span></span
+                ><VdIcon name="format-align-right" /><span>右对齐</span></span
               ></a-menu-item
             >
             <a-menu-item key="alignment"
               ><span class="mi"
-                ><VIcon name="format-align-justify" /><span
+                ><VdIcon name="format-align-justify" /><span
                   >两端对齐</span
                 ></span
               ></a-menu-item
@@ -248,36 +234,24 @@
           </a-menu>
         </template>
       </a-dropdown>
-      <RibbonButton
+      <VdRibbonButton
         icon="format-align-left"
         title="左对齐"
-        :active="rowFlex === 'left' || !rowFlex"
-        command="rowFlex"
-        command-args="left"
-      />
-      <RibbonButton
+        :active="rowFlex === 'left' || !rowFlex" @click="emit('command', 'rowFlex', 'left')" />
+      <VdRibbonButton
         icon="format-align-center"
         title="居中"
-        :active="rowFlex === 'center'"
-        command="rowFlex"
-        command-args="center"
-      />
-      <RibbonButton
+        :active="rowFlex === 'center'" @click="emit('command', 'rowFlex', 'center')" />
+      <VdRibbonButton
         icon="format-align-right"
         title="右对齐"
-        :active="rowFlex === 'right'"
-        command="rowFlex"
-        command-args="right"
-      />
-      <RibbonButton
+        :active="rowFlex === 'right'" @click="emit('command', 'rowFlex', 'right')" />
+      <VdRibbonButton
         icon="format-align-justify"
         title="两端对齐"
-        :active="rowFlex === 'alignment'"
-        command="rowFlex"
-        command-args="alignment"
-      />
+        :active="rowFlex === 'alignment'" @click="emit('command', 'rowFlex', 'alignment')" />
       <a-dropdown :trigger="['click']">
-        <RibbonButton icon="format-line-spacing" title="行距" has-arrow />
+        <VdRibbonButton icon="format-line-spacing" title="行距" has-arrow />
         <template #overlay>
           <a-menu @click="({ key }: any) => emit('lineHeight', Number(key))">
             <a-menu-item v-for="lh in LINE_HEIGHT_OPTIONS" :key="lh.value">{{
@@ -291,7 +265,7 @@
         :overlayStyle="{ width: '400px' }"
         trigger="click"
       >
-        <RibbonButton icon="format-list-bulleted" title="项目符号" has-arrow />
+        <VdRibbonButton icon="format-list-bulleted" title="项目符号" has-arrow />
         <template #content>
           <a-card
             size="small"
@@ -332,7 +306,7 @@
         :overlayStyle="{ width: '335px' }"
         trigger="click"
       >
-        <RibbonButton icon="format-list-numbered" title="编号" has-arrow />
+        <VdRibbonButton icon="format-list-numbered" title="编号" has-arrow />
         <template #content>
           <a-card
             size="small"
@@ -368,20 +342,14 @@
           </a-card>
         </template>
       </a-popover>
-      <RibbonButton
+      <VdRibbonButton
         icon="format-indent-decrease"
-        title="减少缩进"
-        command="indentStep"
-        command-args="sub"
-      />
-      <RibbonButton
+        title="减少缩进" @click="emit('command', 'indentStep', 'sub')" />
+      <VdRibbonButton
         icon="format-indent-increase"
-        title="增加缩进"
-        command="indentStep"
-        command-args="add"
-      />
+        title="增加缩进" @click="emit('command', 'indentStep', 'add')" />
       <a-dropdown :trigger="['click']">
-        <RibbonButton text="首行缩进" title="首行缩进" has-arrow />
+        <VdRibbonButton text="首行缩进" title="首行缩进" has-arrow />
         <template #overlay>
           <a-menu
             @click="
@@ -399,12 +367,12 @@
           </a-menu>
         </template>
       </a-dropdown>
-    </RibbonGroup>
+    </VdRibbonGroup>
 
     <!-- 样式 -->
-    <RibbonGroup title="样式">
+    <VdRibbonGroup title="样式">
       <a-dropdown :trigger="['click']">
-        <RibbonButton :text="currentTitleLabel" title="标题级别" has-arrow />
+        <VdRibbonButton :text="currentTitleLabel" title="标题级别" has-arrow />
         <template #overlay>
           <a-menu
             @click="
@@ -421,37 +389,30 @@
           </a-menu>
         </template>
       </a-dropdown>
-      <RibbonButton
+      <VdRibbonButton
         icon="format-clear"
-        title="清除格式 (Ctrl+\)"
-        command="format"
-      />
-    </RibbonGroup>
+        title="清除格式 (Ctrl+\)" @click="emit('command', 'format')" />
+    </VdRibbonGroup>
 
     <!-- 编辑 -->
-    <RibbonGroup title="编辑">
-      <RibbonButton
+    <VdRibbonGroup title="编辑">
+      <VdRibbonButton
         icon="magnify"
-        title="查找 (Ctrl+F)"
-        command="openSearchPanel"
-      />
-      <RibbonButton
+        title="查找 (Ctrl+F)" @click="emit('command', 'openSearchPanel')" />
+      <VdRibbonButton
         icon="select-all"
-        title="全选 (Ctrl+A)"
-        command="selectAll"
-      />
-      <RibbonButton
+        title="全选 (Ctrl+A)" @click="emit('command', 'selectAll')" />
+      <VdRibbonButton
         icon="delete-outline"
         title="删除"
-        :disabled="!hasSelection"
-        command="delete"
-      />
-    </RibbonGroup>
+        :disabled="!hasSelection" @click="emit('command', 'delete')" />
+    </VdRibbonGroup>
   </div>
 </template>
 
 <script setup lang="ts">
-import { VIcon } from '@vervedoc/icons'
+import { VdRibbonButton, VdRibbonGroup, VdIcon } from '@vervedoc/ui'
+
 import {
   EDITOR_FONT_OPTIONS,
   EDITOR_SIZE_OPTIONS,
@@ -465,8 +426,8 @@ import {
   CHARACTER_SCALE_OPTIONS,
   FIRST_LINE_INDENT_OPTIONS
 } from '@/config/constants'
-import RibbonGroup from './ribbonGroup.vue'
-import RibbonButton from './ribbonButton.vue'
+
+
 
 /** 每字符首行缩进像素值 */
 const INDENT_PX_PER_CHAR = 14

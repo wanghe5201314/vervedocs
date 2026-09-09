@@ -1,9 +1,9 @@
 <template>
   <div class="ribbon-tab-panel">
     <!-- 页面设置 -->
-    <RibbonGroup title="页面设置">
+    <VdRibbonGroup title="页面设置">
       <a-dropdown :trigger="['click']">
-        <RibbonButton icon="layout-paper-direction" text="纸张方向" title="纸张方向" size="large" has-arrow />
+        <VdRibbonButton icon="layout-paper-direction" text="纸张方向" title="纸张方向" size="large" has-arrow />
         <template #overlay>
           <a-card size="small" :bordered="false" class="ribbon-overlay-card" :bodyStyle="{ padding: '0' }">
             <div class="direction-panel">
@@ -20,7 +20,7 @@
         </template>
       </a-dropdown>
       <a-dropdown :trigger="['click']">
-        <RibbonButton icon="layout-paper-size" text="纸张大小" title="纸张大小" size="large" has-arrow />
+        <VdRibbonButton icon="layout-paper-size" text="纸张大小" title="纸张大小" size="large" has-arrow />
         <template #overlay>
           <a-card size="small" :bordered="false" class="ribbon-overlay-card" :bodyStyle="{ padding: '0' }">
             <div class="size-panel">
@@ -36,7 +36,7 @@
         </template>
       </a-dropdown>
       <a-dropdown :trigger="['click']" overlayClassName="gdocs-menu-popper gdocs-margin-popper">
-        <RibbonButton icon="aspect_ratio" text="页边距" title="页边距" size="large" has-arrow />
+        <VdRibbonButton icon="aspect_ratio" text="页边距" title="页边距" size="large" has-arrow />
         <template #overlay>
           <a-card size="small" :bordered="false" class="ribbon-overlay-card" :bodyStyle="{ padding: '0' }">
             <div class="margin-presets">
@@ -53,12 +53,12 @@
         </template>
       </a-dropdown>
       <a-dropdown :trigger="['click']">
-        <RibbonButton icon="layout-page-color" text="页面颜色" title="页面颜色" size="large" has-arrow />
+        <VdRibbonButton icon="layout-page-color" text="页面颜色" title="页面颜色" size="large" has-arrow />
         <template #overlay>
           <a-card size="small" :bordered="false" class="ribbon-overlay-card" :bodyStyle="{ padding: '0' }">
             <div class="bg-menu">
               <div class="bg-item" @click="emit('command', 'setPaperBackground', '#FFFFFF')">
-                <span class="bg-check"><VIcon v-if="selectedBgColor === '#FFFFFF'" name="check" /></span>
+                <span class="bg-check"><VdIcon v-if="selectedBgColor === '#FFFFFF'" name="check" /></span>
                 <span class="bg-item-text">无填充</span>
               </div>
               <div class="bg-divider"></div>
@@ -70,27 +70,27 @@
           </a-card>
         </template>
       </a-dropdown>
-    </RibbonGroup>
+    </VdRibbonGroup>
 
     <!-- 分栏 -->
-    <RibbonGroup title="分栏">
-      <RibbonButton icon="layout-column-one" text="一栏" title="一栏" size="large" command="columns" command-args="1" />
-      <RibbonButton icon="layout-column-two" text="两栏" title="两栏" size="large" command="columns" command-args="2" />
-      <RibbonButton icon="layout-column-three" text="三栏" title="三栏" size="large" command="columns" command-args="3" />
-    </RibbonGroup>
+    <VdRibbonGroup title="分栏">
+      <VdRibbonButton icon="layout-column-one" text="一栏" title="一栏" size="large" @click="emit('command', 'columns', 1)" />
+      <VdRibbonButton icon="layout-column-two" text="两栏" title="两栏" size="large" @click="emit('command', 'columns', 2)" />
+      <VdRibbonButton icon="layout-column-three" text="三栏" title="三栏" size="large" @click="emit('command', 'columns', 3)" />
+    </VdRibbonGroup>
 
 
     <!-- 水印 -->
-    <RibbonGroup title="水印">
+    <VdRibbonGroup title="水印">
       <a-dropdown :trigger="['click']">
-        <RibbonButton icon="watermark" text="水印" title="水印" size="large" has-arrow />
+        <VdRibbonButton icon="watermark" text="水印" title="水印" size="large" has-arrow />
         <template #overlay>
           <a-card size="small" class="watermark-card">
             <div class="dropdown-card-title">水印</div>
             <div class="wm-section">
               <div class="wm-section-title">自定义水印</div>
               <button class="wm-custom-add" @click="emit('command', 'addWatermark')">
-                <VIcon name="plus" />
+                <VdIcon name="plus" />
                 <span>点击添加</span>
               </button>
             </div>
@@ -107,22 +107,23 @@
             </div>
             <div class="dropdown-card-footer">
               <button class="dropdown-footer-btn" @click="emit('command', 'deleteWatermark')">
-                <span class="mi"><VIcon name="delete-outline" /><span>删除水印</span></span>
+                <span class="mi"><VdIcon name="delete-outline" /><span>删除水印</span></span>
               </button>
             </div>
           </a-card>
         </template>
       </a-dropdown>
-    </RibbonGroup>
+    </VdRibbonGroup>
   </div>
 </template>
 
 <script setup lang="ts">
-import { VIcon } from '@vervedoc/icons'
+import { VdRibbonButton, VdRibbonGroup, VdIcon } from '@vervedoc/ui'
+
 import { PaperDirection, PAPER_SIZE_LIST, MARGIN_PRESETS } from '@vervedoc/core'
 import { BG_COLOR_PALETTE, WATERMARK_PRESETS } from '@/config/constants'
-import RibbonGroup from './ribbonGroup.vue'
-import RibbonButton from './ribbonButton.vue'
+
+
 
 /** 纸张大小选项列表，附带显示用的厘米尺寸 */
 const paperSizes = PAPER_SIZE_LIST.map(p => ({
@@ -149,7 +150,7 @@ defineProps<{
 .dropdown-card-title {
   font-size: 13px;
   font-weight: 600;
-  color: var(--app-ribbon-text, #3c4043);
+  color: var(--vd-ribbon-text, #3c4043);
   margin-bottom: 8px;
 }
 .ribbon-overlay-card {
@@ -163,7 +164,7 @@ defineProps<{
 }
 .wm-section-title {
   font-size: 12px;
-  color: var(--app-ribbon-text-muted, #7a8191);
+  color: var(--vd-ribbon-text-muted, #7a8191);
   margin-bottom: 6px;
 }
 .wm-custom-add {
@@ -172,21 +173,21 @@ defineProps<{
   align-items: center;
   justify-content: center;
   gap: 6px;
-  border: 1px dashed var(--app-ribbon-border, #d8dce6);
+  border: 1px dashed var(--vd-ribbon-border, #d8dce6);
   border-radius: 4px;
   background: #fff;
-  color: var(--app-ribbon-text, #3c4043);
+  color: var(--vd-ribbon-text, #3c4043);
   padding: 8px 10px;
   cursor: pointer;
 }
 .wm-custom-add:hover {
-  border-color: var(--app-ribbon-active-text, #1f57b8);
-  background: var(--app-ribbon-hover-bg, #edf2fb);
+  border-color: var(--vd-ribbon-active-text, #1f57b8);
+  background: var(--vd-ribbon-hover-bg, #edf2fb);
 }
 .dropdown-card-footer {
   margin-top: 10px;
   padding-top: 8px;
-  border-top: 1px solid var(--app-ribbon-border-soft, #e3e8f2);
+  border-top: 1px solid var(--vd-ribbon-border-soft, #e3e8f2);
 }
 .dropdown-footer-btn {
   width: 100%;
@@ -196,9 +197,9 @@ defineProps<{
   padding: 6px 8px;
   text-align: left;
   cursor: pointer;
-  color: var(--app-ribbon-text, #3c4043);
+  color: var(--vd-ribbon-text, #3c4043);
 }
 .dropdown-footer-btn:hover {
-  background: var(--app-ribbon-hover-bg, #edf2fb);
+  background: var(--vd-ribbon-hover-bg, #edf2fb);
 }
 </style>

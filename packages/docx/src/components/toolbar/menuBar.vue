@@ -27,15 +27,15 @@
       <!-- 工具栏切换 -->
       <a-dropdown :trigger="['click']" class="ribbon-mode-switch">
         <div class="ribbon-mode-btn" :title="simpleMode ? '简约模式' : '专业模式'">
-          <VIcon name="chevron-down" />
+          <VdIcon name="chevron-down" />
         </div>
         <template #overlay>
           <a-menu @click="({ key }: any) => handleSwitchToolbar(key)">
             <a-menu-item key="professional" :class="{ 'is-active': !simpleMode }">
-              <span class="mi"><VIcon name="view-headline" /><span>专业工具栏</span></span>
+              <span class="mi"><VdIcon name="view-headline" /><span>专业工具栏</span></span>
             </a-menu-item>
             <a-menu-item key="simple" :class="{ 'is-active': simpleMode }">
-              <span class="mi"><VIcon name="view-column-outline" /><span>简约工具栏</span></span>
+              <span class="mi"><VdIcon name="view-column-outline" /><span>简约工具栏</span></span>
             </a-menu-item>
           </a-menu>
         </template>
@@ -43,7 +43,7 @@
     </div>
 
     <!-- Ribbon 面板 -->
-    <div class="ribbon-panel" :class="{ 'non-home-tab': activeTab !== 'home' }" @ribbon-command="handleDomRibbonCommand">
+    <div class="ribbon-panel" :class="{ 'non-home-tab': activeTab !== 'home' }">
       <HomeTab
         v-if="activeTab === 'home'"
         :current-font="currentFont"
@@ -115,7 +115,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { VIcon } from '@vervedoc/icons'
+import { VdIcon } from '@vervedoc/ui'
 import { editorStateStore } from '@/stores/editor-state'
 import { TITLE_LEVEL_MAP } from '@vervedoc/core'
 import { ptToPx, pxToPt } from '@/config/helpers'
@@ -340,16 +340,6 @@ const handleCommand = (cmd: string, ...args: any[]) => {
 }
 
 /**
- * 处理 DOM ribbon-command 自定义事件
- * @param event - 自定义事件
- */
-const handleDomRibbonCommand = (event: Event) => {
-  const detail = (event as Event & { detail?: { cmd?: string, args?: any[] } }).detail
-  if (!detail?.cmd) return
-  handleCommand(detail.cmd, ...(detail.args || []))
-}
-
-/**
  * 处理字体变更
  * @param font - 字体名称
  */
@@ -419,8 +409,8 @@ const handleRowFlex = (v: string) => emit('command', 'rowFlex', v)
 
 <style scoped>
 .office-ribbon {
-  background: var(--app-ribbon-surface, #fff);
-  border-bottom: 1px solid var(--app-ribbon-border, #d8dce6);
+  background: var(--vd-ribbon-surface, #fff);
+  border-bottom: 1px solid var(--vd-ribbon-border, #d8dce6);
 }
 .office-ribbon.is-readonly {
   pointer-events: none;
@@ -431,7 +421,7 @@ const handleRowFlex = (v: string) => emit('command', 'rowFlex', v)
 .ribbon-tabs-bar {
   display: flex;
   align-items: center;
-  background: var(--app-ribbon-topbar-bg, var(--tabs-bg-color, linear-gradient(180deg, #2a63c8 0%, #1f57b8 100%)));
+  background: var(--vd-ribbon-topbar-bg, var(--tabs-bg-color, linear-gradient(180deg, #2a63c8 0%, #1f57b8 100%)));
   border-bottom: none;
   padding: 0 8px;
 }
@@ -444,19 +434,19 @@ const handleRowFlex = (v: string) => emit('command', 'rowFlex', v)
   padding: 0 12px;
   cursor: pointer;
   font-size: 13px;
-  color: var(--app-ribbon-topbar-text, rgba(255, 255, 255, 0.94));
+  color: var(--vd-ribbon-topbar-text, rgba(255, 255, 255, 0.94));
   border-radius: 4px 4px 0 0;
   position: relative;
   user-select: none;
   transition: background-color 0.15s, color 0.15s, opacity 0.15s;
 }
 .ribbon-tab:hover {
-  background: var(--app-ribbon-topbar-hover, rgba(255, 255, 255, 0.12));
-  color: var(--app-ribbon-topbar-text, #fff);
+  background: var(--vd-ribbon-topbar-hover, rgba(255, 255, 255, 0.12));
+  color: var(--vd-ribbon-topbar-text, #fff);
 }
 .ribbon-tab.active {
-  background: var(--app-ribbon-surface, #fff);
-  color: var(--app-ribbon-active-text, #1f57b8);
+  background: var(--vd-ribbon-surface, #fff);
+  color: var(--vd-ribbon-active-text, #1f57b8);
 
 }
 .ribbon-tab.active::after {
@@ -465,15 +455,15 @@ const handleRowFlex = (v: string) => emit('command', 'rowFlex', v)
 .ribbon-tab.is-file-tab {
   min-width: 48px;
   margin-right: 4px;
-  background: var(--app-ribbon-file-tab-bg, rgba(0, 0, 0, 0.16));
+  background: var(--vd-ribbon-file-tab-bg, rgba(0, 0, 0, 0.16));
   border-radius: 3px 3px 0 0;
 }
 .ribbon-tab.is-file-tab:hover {
-  background: var(--app-ribbon-file-tab-hover, rgba(0, 0, 0, 0.22));
+  background: var(--vd-ribbon-file-tab-hover, rgba(0, 0, 0, 0.22));
 }
 .ribbon-tab.is-file-tab.active {
-  background: var(--app-ribbon-surface, #fff);
-  color: var(--app-ribbon-active-text, #1f57b8);
+  background: var(--vd-ribbon-surface, #fff);
+  color: var(--vd-ribbon-active-text, #1f57b8);
 }
 .ribbon-tab-label {
   line-height: 1;
@@ -493,10 +483,10 @@ const handleRowFlex = (v: string) => emit('command', 'rowFlex', v)
   margin-right: 0;
   cursor: pointer;
   border-radius: 4px 4px 0 0;
-  color: var(--app-ribbon-topbar-text, rgba(255, 255, 255, 0.92));
+  color: var(--vd-ribbon-topbar-text, rgba(255, 255, 255, 0.92));
 }
 .ribbon-mode-btn:hover {
-  background: var(--app-ribbon-topbar-hover, rgba(255, 255, 255, 0.14));
+  background: var(--vd-ribbon-topbar-hover, rgba(255, 255, 255, 0.14));
 }
 
 /* Ribbon 面板 */
@@ -505,7 +495,7 @@ const handleRowFlex = (v: string) => emit('command', 'rowFlex', v)
   min-height: 66px;
   overflow-x: auto;
   overflow-y: hidden;
-  box-shadow: inset 0 -1px 0 var(--app-ribbon-shadow, #e6eaf2);
+  box-shadow: inset 0 -1px 0 var(--vd-ribbon-shadow, #e6eaf2);
 }
 
 /* 简约模式：缩小面板高度 */
@@ -565,6 +555,6 @@ const handleRowFlex = (v: string) => emit('command', 'rowFlex', v)
   font-size: 13px;
 }
 .ribbon-tabs-bar .is-active {
-  color: var(--app-ribbon-active-text, #1f57b8);
+  color: var(--vd-ribbon-active-text, #1f57b8);
 }
 </style>

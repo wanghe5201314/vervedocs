@@ -71,7 +71,8 @@
     "@univerjs/thread-comment": "^0.25.1",
     "@univerjs/thread-comment-ui": "^0.25.1",
     "@univerjs/ui": "^0.25.1",
-    "@vervedoc/icons": "workspace:^",
+    "@vervedoc/design": "workspace:^",
+    "@vervedoc/ui": "workspace:^",
     "vue": "catalog:"
   },
   "peerDependenciesMeta": {
@@ -84,7 +85,8 @@
     "@mdi/js": "catalog:",
     "@types/node": "catalog:",
     "@vervedoc/docx-editor-collaboration": "workspace:^",
-    "@vervedoc/icons": "workspace:^",
+    "@vervedoc/design": "workspace:^",
+    "@vervedoc/ui": "workspace:^",
     "@ant-design/icons-vue": "catalog:",
     "@vitejs/plugin-vue": "catalog:",
     "ant-design-vue": "catalog:",

@@ -1,4 +1,5 @@
 import './assets/iconfont/iconfont.css'
+import '@vervedoc/design/styles.css'
 import './assets/iconfont/iconfont.js'
 
 import { version } from '../package.json'

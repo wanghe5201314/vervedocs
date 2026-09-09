@@ -1,19 +1,19 @@
 <template>
   <div class="ribbon-tab-panel">
     <!-- 比较 -->
-    <RibbonGroup title="比较">
-      <RibbonButton icon="compare" text="比较文档" title="比较文档" size="large" command="compare" />
-    </RibbonGroup>
+    <VdRibbonGroup title="比较">
+      <VdRibbonButton icon="compare" text="比较文档" title="比较文档" size="large" @click="emit('command', 'compare')" />
+    </VdRibbonGroup>
 
     <!-- AI 助手 -->
-    <RibbonGroup title="AI 助手">
-      <RibbonButton icon="dock-right" text="AI 面板" title="打开 AI 面板" size="large" command="openAIPanel" />
-      <RibbonButton icon="auto-fix" text="润色" title="AI 润色" size="large" :disabled="!hasSelection" command="aiPolish" />
-      <RibbonButton icon="text-box-check-outline" text="总结" title="AI 总结" size="large" :disabled="!hasSelection" command="aiSummarize" />
-      <RibbonButton icon="pen-plus" text="续写" title="AI 续写" size="large" command="aiContinue" />
-      <RibbonButton icon="spellcheck" text="语法" title="修正语法" size="large" :disabled="!hasSelection" command="aiFixGrammar" />
+    <VdRibbonGroup title="AI 助手">
+      <VdRibbonButton icon="dock-right" text="AI 面板" title="打开 AI 面板" size="large" @click="emit('command', 'openAIPanel')" />
+      <VdRibbonButton icon="auto-fix" text="润色" title="AI 润色" size="large" :disabled="!hasSelection" @click="emit('command', 'aiPolish')" />
+      <VdRibbonButton icon="text-box-check-outline" text="总结" title="AI 总结" size="large" :disabled="!hasSelection" @click="emit('command', 'aiSummarize')" />
+      <VdRibbonButton icon="pen-plus" text="续写" title="AI 续写" size="large" @click="emit('command', 'aiContinue')" />
+      <VdRibbonButton icon="spellcheck" text="语法" title="修正语法" size="large" :disabled="!hasSelection" @click="emit('command', 'aiFixGrammar')" />
       <a-dropdown :trigger="['click']">
-        <RibbonButton icon="translate" text="翻译" title="AI 翻译" size="large" has-arrow :disabled="!hasSelection" />
+        <VdRibbonButton icon="translate" text="翻译" title="AI 翻译" size="large" has-arrow :disabled="!hasSelection" />
         <template #overlay>
           <a-menu @click="({ key }: any) => emit('command', 'aiTranslate', key)">
             <a-menu-item key="en">翻译为英文</a-menu-item>
@@ -23,17 +23,18 @@
           </a-menu>
         </template>
       </a-dropdown>
-      <RibbonButton icon="file-search-outline" text="分析" title="全文分析" size="large" command="aiDocAnalysis" />
-      <RibbonButton icon="page-layout-body" text="排版" title="排版建议" size="large" command="aiLayout" />
-      <RibbonButton icon="cog-outline" text="设置" title="AI 设置" size="large" command="aiSettings" />
-    </RibbonGroup>
+      <VdRibbonButton icon="file-search-outline" text="分析" title="全文分析" size="large" @click="emit('command', 'aiDocAnalysis')" />
+      <VdRibbonButton icon="page-layout-body" text="排版" title="排版建议" size="large" @click="emit('command', 'aiLayout')" />
+      <VdRibbonButton icon="cog-outline" text="设置" title="AI 设置" size="large" @click="emit('command', 'aiSettings')" />
+    </VdRibbonGroup>
 
   </div>
 </template>
 
 <script setup lang="ts">
-import RibbonGroup from './ribbonGroup.vue'
-import RibbonButton from './ribbonButton.vue'
+import { VdRibbonButton, VdRibbonGroup } from '@vervedoc/ui'
+
+
 
 const emit = defineEmits<{
   (e: 'command', cmd: string, ...args: any[]): void

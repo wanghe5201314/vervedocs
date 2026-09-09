@@ -50,11 +50,11 @@
 
       <div class="actions">
         <a-button :disabled="!canReplaceCurrent" @click="replaceCurrent">
-          <VIcon name="find-replace" />
+          <VdIcon name="find-replace" />
           替换
         </a-button>
         <a-button :disabled="!canReplaceAll" @click="replaceAll">
-          <VIcon name="check-all" />
+          <VdIcon name="check-all" />
           全部替换
         </a-button>
       </div>
@@ -86,7 +86,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { CloseOutlined, DownOutlined, SearchOutlined, UpOutlined } from '@ant-design/icons-vue'
-import { VIcon } from '@vervedoc/icons'
+import { VdIcon } from '@vervedoc/ui'
 import type { IEditorSearchApi, ISearchMatch } from '@/composables/use-editor-search'
 
 const props = defineProps<{

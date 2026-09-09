@@ -1,0 +1,29 @@
+:root {
+  /* Generic tokens */
+  --vd-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --vd-font-size: 14px;
+  --vd-radius-sm: 4px;
+  --vd-space-1: 2px;
+  --vd-space-2: 4px;
+  --vd-space-3: 6px;
+  --vd-space-4: 8px;
+
+  /* Ribbon tokens */
+  --vd-ribbon-brand: #1f57b8;
+  --vd-ribbon-brand-strong: #2a63c8;
+  --vd-ribbon-topbar-bg: linear-gradient(180deg, var(--vd-ribbon-brand-strong) 0%, var(--vd-ribbon-brand) 100%);
+  --vd-ribbon-topbar-text: #ffffff;
+  --vd-ribbon-topbar-text-muted: rgba(255, 255, 255, 0.86);
+  --vd-ribbon-topbar-hover: rgba(255, 255, 255, 0.14);
+  --vd-ribbon-file-tab-bg: rgba(0, 0, 0, 0.16);
+  --vd-ribbon-file-tab-hover: rgba(0, 0, 0, 0.22);
+  --vd-ribbon-surface: #ffffff;
+  --vd-ribbon-border: #d8dce6;
+  --vd-ribbon-border-soft: #e3e8f2;
+  --vd-ribbon-shadow: #e6eaf2;
+  --vd-ribbon-text: #3c4043;
+  --vd-ribbon-text-muted: #7a8191;
+  --vd-ribbon-hover-bg: #edf2fb;
+  --vd-ribbon-active-bg: #dce8ff;
+  --vd-ribbon-active-text: #1f57b8;
+}

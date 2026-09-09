@@ -1,17 +1,17 @@
 <template>
   <div class="ribbon-tab-panel">
-    <RibbonGroup title="帮助">
-      <RibbonButton icon="keyboard-outline" text="快捷键" title="键盘快捷键 (Ctrl+/)" size="large" command="openShortcuts" />
-      <RibbonButton icon="message-outline" text="反馈" title="提出功能建议" size="large" command="feedback" />
-    </RibbonGroup>
+    <VdRibbonGroup title="帮助">
+      <VdRibbonButton icon="keyboard-outline" text="快捷键" title="键盘快捷键 (Ctrl+/)" size="large" @click="emit('command', 'openShortcuts')" />
+      <VdRibbonButton icon="message-outline" text="反馈" title="提出功能建议" size="large" @click="emit('command', 'feedback')" />
+    </VdRibbonGroup>
   </div>
 </template>
 
 <script setup lang="ts">
-import RibbonGroup from './ribbonGroup.vue'
-import RibbonButton from './ribbonButton.vue'
+import { VdRibbonButton, VdRibbonGroup } from '@vervedoc/ui'
 
-defineEmits<{
+
+const emit = defineEmits<{
   (e: 'command', cmd: string, ...args: any[]): void
 }>()
 </script>

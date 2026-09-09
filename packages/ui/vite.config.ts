@@ -17,13 +17,12 @@ export default defineConfig({
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
-      name: 'VerveDocIcons',
+      name: 'VerveDocUi',
       formats: ['es'],
-      fileName: 'vervedoc-icons'
+      fileName: 'vervedoc-ui'
     },
-    assetsInlineLimit: 200000,
     rollupOptions: {
-      external: ['vue'],
+      external: ['vue', '@vervedoc/design', /^@vervedoc\/design\//],
       output: {
         globals: {
           vue: 'Vue'

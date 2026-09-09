@@ -20,7 +20,7 @@
       <a-tooltip placement="top">
         <template #title><span style="font-size: 11px">切换纸张方向</span></template>
         <div class="footer-item" @click="handleTogglePaperDirection">
-          <VIcon name="page-layout-header-footer" />
+          <VdIcon name="page-layout-header-footer" />
           {{ selectedPaperDirectionName }}
         </div>
       </a-tooltip>
@@ -29,7 +29,7 @@
       <div class="footer-item">
         <a-dropdown :trigger="['click']">
           <span class="dropdown-link">
-             <VIcon name="crop-portrait" />
+             <VdIcon name="crop-portrait" />
             {{ selectedPaperName }}
           </span>
           <template #overlay>
@@ -88,7 +88,7 @@ import { PAPER_SIZE_LIST, PaperDirection } from '@vervedoc/core'
 
 
 import type { DocumentMeta } from '@/types/document'
-import { VIcon } from '@vervedoc/icons'
+import { VdIcon } from '@vervedoc/ui'
 
 const props = defineProps<{
   documentMeta: DocumentMeta

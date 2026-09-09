@@ -92,8 +92,10 @@ export default defineConfig({
         /^@vervedoc\/docx-editor-collaboration\//,
         /^@vervedoc\/docx-editor/,
         /^@vervedoc\/core/,
-        '@vervedoc/icons',
-        /^@vervedoc\/icons\//,
+        '@vervedoc/design',
+        /^@vervedoc\/design\//,
+        '@vervedoc/ui',
+        /^@vervedoc\/ui\//,
       ],
       output: {
         dir: 'dist',

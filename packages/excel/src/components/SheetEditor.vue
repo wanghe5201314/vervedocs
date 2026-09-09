@@ -28,16 +28,16 @@
           <div v-if="activeMenuTab === 'file'" class="ribbon-tab-panel">
             <div class="ribbon-group">
               <div class="ribbon-group-content">
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="handleCreateNewWorkbook()" title="新建表格"><VIcon name="plus" /><span>新建</span></button>
-                <button class="ribbon-btn-lg" @click="handleSave()" title="保存"><VIcon name="content-save-outline" /><span>保存</span></button>
-                <button class="ribbon-btn-lg" @click="handlePrint()" title="打印"><VIcon name="printer-outline" /><span>打印</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="handleCreateNewWorkbook()" title="新建表格"><VdIcon name="plus" /><span>新建</span></button>
+                <button class="ribbon-btn-lg" @click="handleSave()" title="保存"><VdIcon name="content-save-outline" /><span>保存</span></button>
+                <button class="ribbon-btn-lg" @click="handlePrint()" title="打印"><VdIcon name="printer-outline" /><span>打印</span></button>
               </div>
               <div class="ribbon-group-title">文件</div>
             </div>
             <div class="ribbon-group">
               <div class="ribbon-group-content">
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="triggerImportExcel()" title="导入表格"><VIcon name="file-excel-box" /><span>导入</span></button>
-                <button class="ribbon-btn-lg" @click="handleExportExcel()" title="导出 Excel"><VIcon name="file-excel-box" /><span>导出</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="triggerImportExcel()" title="导入表格"><VdIcon name="file-excel-box" /><span>导入</span></button>
+                <button class="ribbon-btn-lg" @click="handleExportExcel()" title="导出 Excel"><VdIcon name="file-excel-box" /><span>导出</span></button>
               </div>
               <div class="ribbon-group-title">导入导出</div>
             </div>
@@ -53,10 +53,10 @@
                 <a-select v-model:value="toolbarState.fontSize" size="small" style="width: 60px" :disabled="readOnly" @change="updateCellStyle()">
                   <a-select-option v-for="s in sizeOptions" :key="s.value + '-' + s.label" :label="s.label" :value="s.value" />
                 </a-select>
-                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.bold }" @click="toggleStyle('bold')" title="粗体 (Ctrl+B)"><VIcon name="format-bold" /><span>加粗</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.italic }" @click="toggleStyle('italic')" title="斜体 (Ctrl+I)"><VIcon name="format-italic" /><span>斜体</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.underline }" @click="toggleStyle('underline')" title="下划线 (Ctrl+U)"><VIcon name="format-underline" /><span>下划线</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.strikethrough }" @click="toggleStyle('strikethrough')" title="删除线"><VIcon name="format-strikethrough" /><span>删除线</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.bold }" @click="toggleStyle('bold')" title="粗体 (Ctrl+B)"><VdIcon name="format-bold" /><span>加粗</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.italic }" @click="toggleStyle('italic')" title="斜体 (Ctrl+I)"><VdIcon name="format-italic" /><span>斜体</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.underline }" @click="toggleStyle('underline')" title="下划线 (Ctrl+U)"><VdIcon name="format-underline" /><span>下划线</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.strikethrough }" @click="toggleStyle('strikethrough')" title="删除线"><VdIcon name="format-strikethrough" /><span>删除线</span></button>
               </div>
               <div class="ribbon-group-title">字体</div>
             </div>
@@ -70,7 +70,7 @@
                     </div></div>
                   </template>
                   <template #default>
-                    <button class="ribbon-btn-lg color-btn" :disabled="readOnly" title="字体颜色"><VIcon name="format-color-text" /><span>字色</span><span class="color-bar" :style="{ backgroundColor: toolbarState.fontColor || '#000000' }"></span></button>
+                    <button class="ribbon-btn-lg color-btn" :disabled="readOnly" title="字体颜色"><VdIcon name="format-color-text" /><span>字色</span><span class="color-bar" :style="{ backgroundColor: toolbarState.fontColor || '#000000' }"></span></button>
                   </template>
                 </a-popover>
                 <a-popover placement="bottom" :width="260" trigger="click">
@@ -81,7 +81,7 @@
                     </div></div>
                   </template>
                   <template #default>
-                    <button class="ribbon-btn-lg color-btn" :disabled="readOnly" title="填充颜色"><VIcon name="format-color-fill" /><span>填充</span><span class="color-bar" :style="{ backgroundColor: toolbarState.bgColor || '#ffffff' }"></span></button>
+                    <button class="ribbon-btn-lg color-btn" :disabled="readOnly" title="填充颜色"><VdIcon name="format-color-fill" /><span>填充</span><span class="color-bar" :style="{ backgroundColor: toolbarState.bgColor || '#ffffff' }"></span></button>
                   </template>
                 </a-popover>
               </div>
@@ -94,21 +94,21 @@
                   <template #content>
                     <div class="align-panel">
                       <div class="align-group-label">水平对齐</div>
-                      <button class="align-btn" :class="{ active: toolbarState.align === 'left' }" @click="setAlign('left')"><VIcon name="format-align-left" /><span>左对齐</span></button>
-                      <button class="align-btn" :class="{ active: toolbarState.align === 'center' }" @click="setAlign('center')"><VIcon name="format-align-center" /><span>居中</span></button>
-                      <button class="align-btn" :class="{ active: toolbarState.align === 'right' }" @click="setAlign('right')"><VIcon name="format-align-right" /><span>右对齐</span></button>
+                      <button class="align-btn" :class="{ active: toolbarState.align === 'left' }" @click="setAlign('left')"><VdIcon name="format-align-left" /><span>左对齐</span></button>
+                      <button class="align-btn" :class="{ active: toolbarState.align === 'center' }" @click="setAlign('center')"><VdIcon name="format-align-center" /><span>居中</span></button>
+                      <button class="align-btn" :class="{ active: toolbarState.align === 'right' }" @click="setAlign('right')"><VdIcon name="format-align-right" /><span>右对齐</span></button>
                       <div class="align-group-divider"></div>
                       <div class="align-group-label">垂直对齐</div>
-                      <button class="align-btn" :class="{ active: toolbarState.verticalAlign === 'top' }" @click="setVerticalAlign('top')"><VIcon name="format-vertical-align-top" /><span>顶部</span></button>
-                      <button class="align-btn" :class="{ active: toolbarState.verticalAlign === 'middle' }" @click="setVerticalAlign('middle')"><VIcon name="format-vertical-align-center" /><span>居中</span></button>
-                      <button class="align-btn" :class="{ active: toolbarState.verticalAlign === 'bottom' }" @click="setVerticalAlign('bottom')"><VIcon name="format-vertical-align-bottom" /><span>底部</span></button>
+                      <button class="align-btn" :class="{ active: toolbarState.verticalAlign === 'top' }" @click="setVerticalAlign('top')"><VdIcon name="format-vertical-align-top" /><span>顶部</span></button>
+                      <button class="align-btn" :class="{ active: toolbarState.verticalAlign === 'middle' }" @click="setVerticalAlign('middle')"><VdIcon name="format-vertical-align-center" /><span>居中</span></button>
+                      <button class="align-btn" :class="{ active: toolbarState.verticalAlign === 'bottom' }" @click="setVerticalAlign('bottom')"><VdIcon name="format-vertical-align-bottom" /><span>底部</span></button>
                     </div>
                   </template>
                   <template #default>
-                    <button class="ribbon-btn-lg" :disabled="readOnly" title="对齐方式"><VIcon :name="'format-align-' + (toolbarState.align || 'left')" /><span>对齐</span></button>
+                    <button class="ribbon-btn-lg" :disabled="readOnly" title="对齐方式"><VdIcon :name="'format-align-' + (toolbarState.align || 'left')" /><span>对齐</span></button>
                   </template>
                 </a-popover>
-                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.wrap === 'wrap' }" @click="toggleWrap()" title="自动换行"><VIcon name="text-wrap" /><span>换行</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.wrap === 'wrap' }" @click="toggleWrap()" title="自动换行"><VdIcon name="text-wrap" /><span>换行</span></button>
               </div>
               <div class="ribbon-group-title">对齐</div>
             </div>
@@ -123,10 +123,10 @@
                   <a-select-option label="货币" value="currency" />
                   <a-select-option label="日期" value="date" />
                 </a-select>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="quickFormat('currency')" title="货币格式 (¥)"><VIcon name="currency-usd" /><span>货币</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="quickFormat('percent')" title="百分比格式 (%)"><VIcon name="percent" /><span>百分比</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="changeDecimal(-1)" title="减少小数位"><VIcon name="decimal-decrease" /><span>减位</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="changeDecimal(1)" title="增加小数位"><VIcon name="decimal-increase" /><span>增位</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="quickFormat('currency')" title="货币格式 (¥)"><VdIcon name="currency-usd" /><span>货币</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="quickFormat('percent')" title="百分比格式 (%)"><VdIcon name="percent" /><span>百分比</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="changeDecimal(-1)" title="减少小数位"><VdIcon name="decimal-decrease" /><span>减位</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="changeDecimal(1)" title="增加小数位"><VdIcon name="decimal-increase" /><span>增位</span></button>
               </div>
               <div class="ribbon-group-title">数字</div>
             </div>
@@ -146,22 +146,22 @@
                     </div></div>
                   </template>
                   <template #default>
-                    <button class="ribbon-btn-lg" :disabled="readOnly" title="边框"><VIcon name="grid" /><span>边框</span></button>
+                    <button class="ribbon-btn-lg" :disabled="readOnly" title="边框"><VdIcon name="grid" /><span>边框</span></button>
                   </template>
                 </a-popover>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="handleMergeCells()" title="合并单元格"><VIcon name="table-merge-cells" /><span>合并</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="handleUnmergeCells()" title="取消合并"><VIcon name="table-split-cell" /><span>取消合并</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="clearSelectedFormat()" title="清除格式"><VIcon name="format-clear" /><span>清格式</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="handleMergeCells()" title="合并单元格"><VdIcon name="table-merge-cells" /><span>合并</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="handleUnmergeCells()" title="取消合并"><VdIcon name="table-split-cell" /><span>取消合并</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="clearSelectedFormat()" title="清除格式"><VdIcon name="format-clear" /><span>清格式</span></button>
               </div>
               <div class="ribbon-group-title">单元格</div>
             </div>
 
             <div class="ribbon-group">
               <div class="ribbon-group-content">
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="showRowHeightDialog = true" title="行高"><VIcon name="arrow-expand-vertical" /><span>行高</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="autoFitRowHeight()" title="自动行高"><VIcon name="arrow-fit-vertical" /><span>自动行高</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="showColWidthDialog = true" title="列宽"><VIcon name="arrow-expand-horizontal" /><span>列宽</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="autoFitColWidth()" title="自动列宽"><VIcon name="arrow-fit-horizontal" /><span>自动列宽</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="showRowHeightDialog = true" title="行高"><VdIcon name="arrow-expand-vertical" /><span>行高</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="autoFitRowHeight()" title="自动行高"><VdIcon name="arrow-fit-vertical" /><span>自动行高</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="showColWidthDialog = true" title="列宽"><VdIcon name="arrow-expand-horizontal" /><span>列宽</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="autoFitColWidth()" title="自动列宽"><VdIcon name="arrow-fit-horizontal" /><span>自动列宽</span></button>
               </div>
               <div class="ribbon-group-title">行列</div>
             </div>
@@ -170,33 +170,33 @@
           <div v-else-if="activeMenuTab === 'edit'" class="ribbon-tab-panel">
             <div class="ribbon-group">
               <div class="ribbon-group-content">
-                <button class="ribbon-btn-lg" :disabled="readOnly || !canUndo" @click="handleUndo()" title="撤销 (Ctrl+Z)"><VIcon name="undo" /><span>撤销</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly || !canRedo" @click="handleRedo()" title="重做 (Ctrl+Y)"><VIcon name="redo" /><span>重做</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="handleFormatPainter()" :class="{ active: formatPainterActive }" title="格式刷"><VIcon name="format-paint" /><span>格式刷</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly || !canUndo" @click="handleUndo()" title="撤销 (Ctrl+Z)"><VdIcon name="undo" /><span>撤销</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly || !canRedo" @click="handleRedo()" title="重做 (Ctrl+Y)"><VdIcon name="redo" /><span>重做</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="handleFormatPainter()" :class="{ active: formatPainterActive }" title="格式刷"><VdIcon name="format-paint" /><span>格式刷</span></button>
               </div>
               <div class="ribbon-group-title">操作</div>
             </div>
             <div class="ribbon-group">
               <div class="ribbon-group-content">
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="handleCut()" title="剪切 (Ctrl+X)"><VIcon name="content-cut" /><span>剪切</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="handleCopy()" title="复制 (Ctrl+C)"><VIcon name="content-copy" /><span>复制</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="handlePaste()" title="粘贴 (Ctrl+V)"><VIcon name="content-paste" /><span>粘贴</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="handleCut()" title="剪切 (Ctrl+X)"><VdIcon name="content-cut" /><span>剪切</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="handleCopy()" title="复制 (Ctrl+C)"><VdIcon name="content-copy" /><span>复制</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="handlePaste()" title="粘贴 (Ctrl+V)"><VdIcon name="content-paste" /><span>粘贴</span></button>
               </div>
               <div class="ribbon-group-title">剪贴板</div>
             </div>
             <div class="ribbon-group">
               <div class="ribbon-group-content">
-                <button class="ribbon-btn-lg" @click="selectAll()" title="全选 (Ctrl+A)"><VIcon name="select-all" /><span>全选</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="deleteSelectedContent()" title="删除内容 (Delete)"><VIcon name="delete-outline" /><span>删除</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="clearSelectedFormat()" title="清除格式"><VIcon name="format-clear" /><span>清格式</span></button>
-                <button class="ribbon-btn-lg" @click="openUniverReplaceDialog()" title="查找和替换 (Ctrl+H)"><VIcon name="magnify" /><span>查找</span></button>
+                <button class="ribbon-btn-lg" @click="selectAll()" title="全选 (Ctrl+A)"><VdIcon name="select-all" /><span>全选</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="deleteSelectedContent()" title="删除内容 (Delete)"><VdIcon name="delete-outline" /><span>删除</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="clearSelectedFormat()" title="清除格式"><VdIcon name="format-clear" /><span>清格式</span></button>
+                <button class="ribbon-btn-lg" @click="openUniverReplaceDialog()" title="查找和替换 (Ctrl+H)"><VdIcon name="magnify" /><span>查找</span></button>
               </div>
               <div class="ribbon-group-title">编辑</div>
             </div>
             <div class="ribbon-group">
               <div class="ribbon-group-content">
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="deleteRow()" title="删除行"><VIcon name="table-row-remove" /><span>删行</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="deleteCol()" title="删除列"><VIcon name="table-column-remove" /><span>删列</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="deleteRow()" title="删除行"><VdIcon name="table-row-remove" /><span>删行</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="deleteCol()" title="删除列"><VdIcon name="table-column-remove" /><span>删列</span></button>
               </div>
               <div class="ribbon-group-title">行列</div>
             </div>
@@ -205,32 +205,32 @@
           <div v-else-if="activeMenuTab === 'view'" class="ribbon-tab-panel">
             <div class="ribbon-group">
               <div class="ribbon-group-content">
-                <button class="ribbon-btn-lg" @click="toggleGridlines()" :class="{ active: showGridlines }" title="网格线"><VIcon name="grid" /><span>网格线</span></button>
-                <button class="ribbon-btn-lg" @click="showFormulaBar = !showFormulaBar" :class="{ active: showFormulaBar }" title="编辑栏"><VIcon name="function-variant" /><span>编辑栏</span></button>
+                <button class="ribbon-btn-lg" @click="toggleGridlines()" :class="{ active: showGridlines }" title="网格线"><VdIcon name="grid" /><span>网格线</span></button>
+                <button class="ribbon-btn-lg" @click="showFormulaBar = !showFormulaBar" :class="{ active: showFormulaBar }" title="编辑栏"><VdIcon name="function-variant" /><span>编辑栏</span></button>
               </div>
               <div class="ribbon-group-title">显示</div>
             </div>
             <div class="ribbon-group">
               <div class="ribbon-group-content">
-                <button class="ribbon-btn-lg" @click="setZoom(50)" :class="{ active: zoomLevel === 50 }" title="50%"><VIcon name="magnify-minus" /><span>50%</span></button>
-                <button class="ribbon-btn-lg" @click="setZoom(75)" :class="{ active: zoomLevel === 75 }" title="75%"><VIcon name="magnify-minus" /><span>75%</span></button>
-                <button class="ribbon-btn-lg" @click="setZoom(100)" :class="{ active: zoomLevel === 100 }" title="100%"><VIcon name="magnify" /><span>100%</span></button>
-                <button class="ribbon-btn-lg" @click="setZoom(125)" :class="{ active: zoomLevel === 125 }" title="125%"><VIcon name="magnify-plus" /><span>125%</span></button>
-                <button class="ribbon-btn-lg" @click="setZoom(150)" :class="{ active: zoomLevel === 150 }" title="150%"><VIcon name="magnify-plus" /><span>150%</span></button>
-                <button class="ribbon-btn-lg" @click="setZoom(200)" :class="{ active: zoomLevel === 200 }" title="200%"><VIcon name="magnify-plus" /><span>200%</span></button>
+                <button class="ribbon-btn-lg" @click="setZoom(50)" :class="{ active: zoomLevel === 50 }" title="50%"><VdIcon name="magnify-minus" /><span>50%</span></button>
+                <button class="ribbon-btn-lg" @click="setZoom(75)" :class="{ active: zoomLevel === 75 }" title="75%"><VdIcon name="magnify-minus" /><span>75%</span></button>
+                <button class="ribbon-btn-lg" @click="setZoom(100)" :class="{ active: zoomLevel === 100 }" title="100%"><VdIcon name="magnify" /><span>100%</span></button>
+                <button class="ribbon-btn-lg" @click="setZoom(125)" :class="{ active: zoomLevel === 125 }" title="125%"><VdIcon name="magnify-plus" /><span>125%</span></button>
+                <button class="ribbon-btn-lg" @click="setZoom(150)" :class="{ active: zoomLevel === 150 }" title="150%"><VdIcon name="magnify-plus" /><span>150%</span></button>
+                <button class="ribbon-btn-lg" @click="setZoom(200)" :class="{ active: zoomLevel === 200 }" title="200%"><VdIcon name="magnify-plus" /><span>200%</span></button>
               </div>
               <div class="ribbon-group-title">缩放</div>
             </div>
             <div class="ribbon-group">
               <div class="ribbon-group-content">
-                <button class="ribbon-btn-lg" @click="toggleFreezeRow()" :class="{ active: frozenRows > 0 }" title="冻结首行"><VIcon name="snowflake" /><span>{{ frozenRows > 0 ? '取消冻结行' : '冻结首行' }}</span></button>
-                <button class="ribbon-btn-lg" @click="toggleFreezeCol()" :class="{ active: frozenCols > 0 }" title="冻结首列"><VIcon name="snowflake" /><span>{{ frozenCols > 0 ? '取消冻结列' : '冻结首列' }}</span></button>
+                <button class="ribbon-btn-lg" @click="toggleFreezeRow()" :class="{ active: frozenRows > 0 }" title="冻结首行"><VdIcon name="snowflake" /><span>{{ frozenRows > 0 ? '取消冻结行' : '冻结首行' }}</span></button>
+                <button class="ribbon-btn-lg" @click="toggleFreezeCol()" :class="{ active: frozenCols > 0 }" title="冻结首列"><VdIcon name="snowflake" /><span>{{ frozenCols > 0 ? '取消冻结列' : '冻结首列' }}</span></button>
               </div>
               <div class="ribbon-group-title">冻结</div>
             </div>
             <div class="ribbon-group">
               <div class="ribbon-group-content">
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="toggleUniverFilter()" title="筛选"><VIcon name="filter-outline" /><span>筛选</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="toggleUniverFilter()" title="筛选"><VdIcon name="filter-outline" /><span>筛选</span></button>
               </div>
               <div class="ribbon-group-title">筛选</div>
             </div>
@@ -240,24 +240,24 @@
           <div v-else-if="activeMenuTab === 'insert'" class="ribbon-tab-panel">
             <div class="ribbon-group">
               <div class="ribbon-group-content">
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="insertRow('above')" title="在上方插入行"><VIcon name="table-row-plus-before" /><span>上方插行</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="insertRow('below')" title="在下方插入行"><VIcon name="table-row-plus-after" /><span>下方插行</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="insertCol('left')" title="在左侧插入列"><VIcon name="table-column-plus-before" /><span>左侧插列</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="insertCol('right')" title="在右侧插入列"><VIcon name="table-column-plus-after" /><span>右侧插列</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="insertRow('above')" title="在上方插入行"><VdIcon name="table-row-plus-before" /><span>上方插行</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="insertRow('below')" title="在下方插入行"><VdIcon name="table-row-plus-after" /><span>下方插行</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="insertCol('left')" title="在左侧插入列"><VdIcon name="table-column-plus-before" /><span>左侧插列</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="insertCol('right')" title="在右侧插入列"><VdIcon name="table-column-plus-after" /><span>右侧插列</span></button>
               </div>
               <div class="ribbon-group-title">行列</div>
             </div>
             <div class="ribbon-group">
               <div class="ribbon-group-content">
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="openUniverHyperlink()" title="插入链接"><VIcon name="link-variant" /><span>链接</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="insertImage()" title="插入图片"><VIcon name="image-outline" /><span>图片</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="openUniverHyperlink()" title="插入链接"><VdIcon name="link-variant" /><span>链接</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="insertImage()" title="插入图片"><VdIcon name="image-outline" /><span>图片</span></button>
               </div>
               <div class="ribbon-group-title">链接</div>
             </div>
             <div class="ribbon-group">
               <div class="ribbon-group-content">
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="openUniverNote()" title="便签"><VIcon name="note-text-outline" /><span>便签</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="openUniverThreadComment()" title="评论"><VIcon name="comment-plus-outline" /><span>评论</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="openUniverNote()" title="便签"><VdIcon name="note-text-outline" /><span>便签</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="openUniverThreadComment()" title="评论"><VdIcon name="comment-plus-outline" /><span>评论</span></button>
               </div>
               <div class="ribbon-group-title">批注</div>
             </div>
@@ -274,7 +274,7 @@
                     </div>
                   </template>
                   <template #default>
-                    <button class="ribbon-btn-lg" :disabled="readOnly" title="函数"><VIcon name="sigma" /><span>函数</span></button>
+                    <button class="ribbon-btn-lg" :disabled="readOnly" title="函数"><VdIcon name="sigma" /><span>函数</span></button>
                   </template>
                 </a-popover>
               </div>
@@ -288,26 +288,26 @@
           <div v-else-if="activeMenuTab === 'format'" class="ribbon-tab-panel">
             <div class="ribbon-group">
               <div class="ribbon-group-content">
-                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.wrap === 'clip' }" @click="setWrap('clip')" title="裁剪"><VIcon name="crop" /><span>裁剪</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.wrap === 'overflow' }" @click="setWrap('overflow')" title="溢出"><VIcon name="arrow-right" /><span>溢出</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.wrap === 'clip' }" @click="setWrap('clip')" title="裁剪"><VdIcon name="crop" /><span>裁剪</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.wrap === 'overflow' }" @click="setWrap('overflow')" title="溢出"><VdIcon name="arrow-right" /><span>溢出</span></button>
               </div>
               <div class="ribbon-group-title">换行</div>
             </div>
             <div class="ribbon-group">
               <div class="ribbon-group-content">
-                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.rotation === 0 }" @click="setRotation(0)" title="无旋转"><VIcon name="format-text-rotation-none" /><span>无旋转</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.rotation === 45 }" @click="setRotation(45)" title="向上倾斜"><VIcon name="format-text-rotation-up" /><span>向上</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.rotation === -45 }" @click="setRotation(-45)" title="向下倾斜"><VIcon name="format-text-rotation-down" /><span>向下</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.rotation === 90 }" @click="setRotation(90)" title="竖排文字"><VIcon name="format-text-rotation-vertical" /><span>竖排</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.rotation === 0 }" @click="setRotation(0)" title="无旋转"><VdIcon name="format-text-rotation-none" /><span>无旋转</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.rotation === 45 }" @click="setRotation(45)" title="向上倾斜"><VdIcon name="format-text-rotation-up" /><span>向上</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.rotation === -45 }" @click="setRotation(-45)" title="向下倾斜"><VdIcon name="format-text-rotation-down" /><span>向下</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" :class="{ active: toolbarState.rotation === 90 }" @click="setRotation(90)" title="竖排文字"><VdIcon name="format-text-rotation-vertical" /><span>竖排</span></button>
               </div>
               <div class="ribbon-group-title">旋转</div>
             </div>
             <div class="ribbon-group">
               <div class="ribbon-group-content">
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="hideRow()" title="隐藏行"><VIcon name="eye-off-outline" /><span>隐藏行</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="unhideRow()" title="取消隐藏行"><VIcon name="eye-outline" /><span>显示行</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="hideCol()" title="隐藏列"><VIcon name="eye-off-outline" /><span>隐藏列</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="unhideCol()" title="取消隐藏列"><VIcon name="eye-outline" /><span>显示列</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="hideRow()" title="隐藏行"><VdIcon name="eye-off-outline" /><span>隐藏行</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="unhideRow()" title="取消隐藏行"><VdIcon name="eye-outline" /><span>显示行</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="hideCol()" title="隐藏列"><VdIcon name="eye-off-outline" /><span>隐藏列</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="unhideCol()" title="取消隐藏列"><VdIcon name="eye-outline" /><span>显示列</span></button>
               </div>
               <div class="ribbon-group-title">隐藏</div>
             </div>
@@ -316,15 +316,15 @@
           <div v-else-if="activeMenuTab === 'data'" class="ribbon-tab-panel">
             <div class="ribbon-group">
               <div class="ribbon-group-content">
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="openUniverSort('asc')" title="升序排序"><VIcon name="sort-ascending" /><span>升序</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="openUniverSort('desc')" title="降序排序"><VIcon name="sort-descending" /><span>降序</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="openUniverSort('asc')" title="升序排序"><VdIcon name="sort-ascending" /><span>升序</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="openUniverSort('desc')" title="降序排序"><VdIcon name="sort-descending" /><span>降序</span></button>
               </div>
               <div class="ribbon-group-title">排序</div>
             </div>
             <div class="ribbon-group">
               <div class="ribbon-group-content">
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="openUniverDataValidation()" title="数据验证"><VIcon name="check-circle-outline" /><span>验证</span></button>
-                <button class="ribbon-btn-lg" :disabled="readOnly" @click="removeDuplicates()" title="删除重复值"><VIcon name="table-minus" /><span>去重</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="openUniverDataValidation()" title="数据验证"><VdIcon name="check-circle-outline" /><span>验证</span></button>
+                <button class="ribbon-btn-lg" :disabled="readOnly" @click="removeDuplicates()" title="删除重复值"><VdIcon name="table-minus" /><span>去重</span></button>
               </div>
               <div class="ribbon-group-title">数据工具</div>
             </div>
@@ -333,9 +333,9 @@
           <div v-else-if="activeMenuTab === 'collab' && collabConnectionState === 'connected'" class="ribbon-tab-panel">
             <div class="ribbon-group">
               <div class="ribbon-group-content">
-                <button class="ribbon-btn-lg" @click="toggleSyncSelection()" :class="{ active: syncSelectionEnabled }" title="显示/隐藏他人选区"><VIcon name="cursor-default" /><span>{{ syncSelectionEnabled ? '隐藏选区' : '显示选区' }}</span></button>
-                <button class="ribbon-btn-lg" @click="toggleSyncFilter()" :class="{ active: syncFilterEnabled }" title="显示/隐藏他人筛选"><VIcon name="filter-outline" /><span>{{ syncFilterEnabled ? '隐藏筛选' : '显示筛选' }}</span></button>
-                <button class="ribbon-btn-lg" @click="toggleSyncSort()" :class="{ active: syncSortEnabled }" title="显示/隐藏他人排序"><VIcon name="sort-ascending" /><span>{{ syncSortEnabled ? '隐藏排序' : '显示排序' }}</span></button>
+                <button class="ribbon-btn-lg" @click="toggleSyncSelection()" :class="{ active: syncSelectionEnabled }" title="显示/隐藏他人选区"><VdIcon name="cursor-default" /><span>{{ syncSelectionEnabled ? '隐藏选区' : '显示选区' }}</span></button>
+                <button class="ribbon-btn-lg" @click="toggleSyncFilter()" :class="{ active: syncFilterEnabled }" title="显示/隐藏他人筛选"><VdIcon name="filter-outline" /><span>{{ syncFilterEnabled ? '隐藏筛选' : '显示筛选' }}</span></button>
+                <button class="ribbon-btn-lg" @click="toggleSyncSort()" :class="{ active: syncSortEnabled }" title="显示/隐藏他人排序"><VdIcon name="sort-ascending" /><span>{{ syncSortEnabled ? '隐藏排序' : '显示排序' }}</span></button>
               </div>
               <div class="ribbon-group-title">协同显示</div>
             </div>
@@ -344,7 +344,7 @@
           <div v-else-if="activeMenuTab === 'help'" class="ribbon-tab-panel">
             <div class="ribbon-group">
               <div class="ribbon-group-content">
-                <button class="ribbon-btn-lg" @click="showShortcutsDialog = true" title="键盘快捷键"><VIcon name="keyboard-outline" /><span>快捷键</span></button>
+                <button class="ribbon-btn-lg" @click="showShortcutsDialog = true" title="键盘快捷键"><VdIcon name="keyboard-outline" /><span>快捷键</span></button>
               </div>
               <div class="ribbon-group-title">帮助</div>
             </div>
@@ -420,7 +420,7 @@ import { message } from 'ant-design-vue'
 import type { Univer as UniverType } from '@univerjs/core'
 import type { FUniver } from '@univerjs/core/facade'
 import type { FRange, FWorkbook, FWorksheet } from '@univerjs/sheets/facade'
-import { VIcon } from '@vervedoc/icons'
+import { VdIcon } from '@vervedoc/ui'
 import UnifiedTopHeader from './UnifiedTopHeader.vue'
 import type { ExcelExportCallback, ExcelImportCallback, IWorkbook } from '../types'
 import { cellKey, columnLabel } from '../utils/cell'

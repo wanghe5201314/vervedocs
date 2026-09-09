@@ -3,7 +3,7 @@
     <div class="sidebar-header">
       <div class="sidebar-title-wrap">
         <div class="sidebar-title-row">
-          <VIcon name="pencil-plus" class="sidebar-title-icon" />
+          <VdIcon name="pencil-plus" class="sidebar-title-icon" />
           <span class="sidebar-title">修订记录</span>
         </div>
         <div class="header-stats">
@@ -13,7 +13,7 @@
         </div>
       </div>
       <div class="sidebar-close" @click="emit('close')" title="关闭">
-        <VIcon name="close" />
+        <VdIcon name="close" />
       </div>
     </div>
 
@@ -56,17 +56,17 @@
               <div class="revision-actions">
                 <template v-if="item.kind === 'revision'">
                   <button class="action-btn accept" type="button" @click.stop="props.revisionAPI.accept(item.id)">
-                    <VIcon name="check" />
+                    <VdIcon name="check" />
                     接受
                   </button>
                   <button class="action-btn reject" type="button" @click.stop="props.revisionAPI.reject(item.id)">
-                    <VIcon name="close" />
+                    <VdIcon name="close" />
                     拒绝
                   </button>
                 </template>
                 <template v-else>
                   <button class="action-btn review-comment" type="button" @click.stop="props.commentAPI.remove(item.id)">
-                    <VIcon name="delete-outline" />
+                    <VdIcon name="delete-outline" />
                     删除
                   </button>
                 </template>
@@ -87,7 +87,7 @@
 </template>
 
 <script setup lang="ts">
-import { VIcon } from '@vervedoc/icons'
+import { VdIcon } from '@vervedoc/ui'
 import { computed } from 'vue'
 import type { IEditorCommentApi } from '@/composables/use-editor-comments'
 import type { IRevisionApi } from '@/composables/use-editor-revisions'

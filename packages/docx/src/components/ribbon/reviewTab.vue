@@ -1,10 +1,10 @@
 <template>
   <div class="ribbon-tab-panel">
     <!-- 校对 -->
-    <RibbonGroup title="校对">
-      <RibbonButton icon="spellcheck" text="拼写检查" title="拼写检查" size="large" command="spellcheck" />
+    <VdRibbonGroup title="校对">
+      <VdRibbonButton icon="spellcheck" text="拼写检查" title="拼写检查" size="large" @click="emit('command', 'spellcheck')" />
       <a-popover placement="bottom" :overlayStyle="{ width: '280px' }" trigger="click">
-        <RibbonButton icon="counter" text="字数统计" title="字数统计" size="large" />
+        <VdRibbonButton icon="counter" text="字数统计" title="字数统计" size="large" />
         <template #content>
           <a-card size="small" class="ribbon-popover-card" :bordered="false" :bodyStyle="{ padding: '4px' }">
             <div class="wordcount-panel">
@@ -21,20 +21,20 @@
           </a-card>
         </template>
       </a-popover>
-    </RibbonGroup>
+    </VdRibbonGroup>
 
     <!-- 批注 -->
-    <RibbonGroup title="批注">
-      <RibbonButton icon="comment-plus-outline" text="新建批注" title="新建批注 (Ctrl+Alt+M)" size="large" :disabled="!hasSelection" command="comment" />
-      <RibbonButton icon="delete-outline" text="删除批注" title="删除当前批注" size="large" :disabled="!hasActiveCommentGroup" command="commentDeleteCurrent" />
-    </RibbonGroup>
+    <VdRibbonGroup title="批注">
+      <VdRibbonButton icon="comment-plus-outline" text="新建批注" title="新建批注 (Ctrl+Alt+M)" size="large" :disabled="!hasSelection" @click="emit('command', 'comment')" />
+      <VdRibbonButton icon="delete-outline" text="删除批注" title="删除当前批注" size="large" :disabled="!hasActiveCommentGroup" @click="emit('command', 'commentDeleteCurrent')" />
+    </VdRibbonGroup>
 
     <!-- 修订 -->
-    <RibbonGroup title="修订">
-      <RibbonButton icon="pencil-plus" text="修订模式" title="修订模式" size="large" :active="isTrackChanges" command="toggleTrackChanges" />
+    <VdRibbonGroup title="修订">
+      <VdRibbonButton icon="pencil-plus" text="修订模式" title="修订模式" size="large" :active="isTrackChanges" @click="emit('command', 'toggleTrackChanges')" />
       <div class="review-ribbon-actions">
         <a-dropdown :trigger="['click']">
-          <RibbonButton icon="eye-outline" text="显示标记" :title="currentRevisionDisplayModeLabel" size="large" has-arrow />
+          <VdRibbonButton icon="eye-outline" text="显示标记" :title="currentRevisionDisplayModeLabel" size="large" has-arrow />
           <template #overlay>
             <a-menu class="review-mode-menu" @click="({ key }: any) => emit('command', 'revisionDisplayMode', key)">
               <a-menu-item v-for="option in revisionDisplayModeOptions" :key="option.value">
@@ -47,10 +47,10 @@
         </a-dropdown>
       </div>
       <div class="review-revision-actions">
-        <RibbonButton icon="arrow-left" text="上一处修订" title="上一处修订" size="large" :disabled="!hasRevisions" command="previousRevision" />
-        <RibbonButton icon="arrow-right" text="下一处修订" title="下一处修订" size="large" :disabled="!hasRevisions" command="nextRevision" />
+        <VdRibbonButton icon="arrow-left" text="上一处修订" title="上一处修订" size="large" :disabled="!hasRevisions" @click="emit('command', 'previousRevision')" />
+        <VdRibbonButton icon="arrow-right" text="下一处修订" title="下一处修订" size="large" :disabled="!hasRevisions" @click="emit('command', 'nextRevision')" />
         <a-dropdown :trigger="['click']">
-          <RibbonButton icon="check" text="接受" title="接受修订" size="large" :disabled="!hasRevisions" has-arrow />
+          <VdRibbonButton icon="check" text="接受" title="接受修订" size="large" :disabled="!hasRevisions" has-arrow />
           <template #overlay>
             <a-menu @click="({ key }: any) => emit('command', key)">
               <a-menu-item key="acceptRevisionCurrent">接受当前修订</a-menu-item>
@@ -59,7 +59,7 @@
           </template>
         </a-dropdown>
         <a-dropdown :trigger="['click']">
-          <RibbonButton icon="close" text="拒绝" title="拒绝修订" size="large" :disabled="!hasRevisions" has-arrow />
+          <VdRibbonButton icon="close" text="拒绝" title="拒绝修订" size="large" :disabled="!hasRevisions" has-arrow />
           <template #overlay>
             <a-menu @click="({ key }: any) => emit('command', key)">
               <a-menu-item key="rejectRevisionCurrent">拒绝当前修订</a-menu-item>
@@ -68,16 +68,17 @@
           </template>
         </a-dropdown>
       </div>
-    </RibbonGroup>
+    </VdRibbonGroup>
 
   </div>
 </template>
 
 <script setup lang="ts">
+import { VdRibbonButton, VdRibbonGroup } from '@vervedoc/ui'
 import { computed } from 'vue'
 
-import RibbonGroup from './ribbonGroup.vue'
-import RibbonButton from './ribbonButton.vue'
+
+
 
 const emit = defineEmits<{
   (e: 'command', cmd: string, ...args: any[]): void

@@ -41,13 +41,13 @@ export function addBucket(buckets: Map<string, DrawCommand[]>, key: string, cmd:
 }
 
 /** 将 hex 颜色转为半透明高亮色（批注/修订文本背景） */
-export function groupHighlightColor(color: string): string {
+export function groupHighlightColor(color: string, active = false): string {
   const m = color.match(/^#([0-9a-f]{6})$/i)
   if (m) {
     const r = parseInt(m[1].slice(0, 2), 16)
     const g = parseInt(m[1].slice(2, 4), 16)
     const b = parseInt(m[1].slice(4, 6), 16)
-    return `rgba(${r},${g},${b},0.18)`
+    return `rgba(${r},${g},${b},${active ? 0.3 : 0.18})`
   }
   return color
 }
@@ -81,15 +81,16 @@ export function paintParagraph(ctx: PaintCtx, b: ParagraphBlock, opts: PaintOpti
   const groupColors = opts.groupColors
   for (const line of b.lines) {
     for (const inl of line.inlines) {
-      if (inl.bgColor) {
-        bgRects.push({ x: inl.x, y: inl.y, w: inl.width, h: line.height, color: inl.bgColor })
-      }
-      const activeGroupId = opts.activeGroupId
-      if (activeGroupId && groupColors && inl.groupIds?.includes(activeGroupId)) {
-        const gc = groupColors[activeGroupId]
-        if (gc) {
-          bgRects.push({ x: inl.x, y: inl.y, w: inl.width, h: line.height, color: groupHighlightColor(gc.color) })
+      const hasGroupHighlight = !!(groupColors && inl.groupIds?.some(gid => groupColors[gid]))
+      if (hasGroupHighlight) {
+        for (const gid of inl.groupIds!) {
+          const gc = groupColors![gid]
+          if (gc) {
+            bgRects.push({ x: inl.x, y: inl.y, w: inl.width, h: line.height, color: groupHighlightColor(gc.color, gid === opts.activeGroupId) })
+          }
         }
+      } else if (inl.bgColor) {
+        bgRects.push({ x: inl.x, y: inl.y, w: inl.width, h: line.height, color: inl.bgColor })
       }
       const font = fontOf(inl)
       const key = `${font}||${inl.color}`

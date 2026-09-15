@@ -5,11 +5,11 @@ declare module '*.vue' {
 }
 
 declare module '@vervedoc/docx-editor-chart' {
-  export class EchartsChartRenderer {
-    constructor(echartsInstance?: any)
+  export class ChartJsRenderer {
+    constructor(chartInstance?: any)
     renderToDataUrl(option: any, width: number, height: number, pixelRatio?: number): string
     generateOption(chartType: string, tableData: any, config: any, subtype?: string): any
     extractTableData(tableElement: any, range?: any): any
   }
-  export function createChartPlugin(options?: { echarts?: any }): (editor: any) => void
+  export function createChartPlugin(options?: { chart?: any }): any
 }

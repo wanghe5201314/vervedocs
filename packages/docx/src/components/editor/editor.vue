@@ -6,11 +6,14 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import DocxEditor, { IElement } from '@vervedoc/core'
+import { createCommentPlugin, createRevisionPlugin } from '@vervedoc/docx-editor-comment'
+import { createChartPlugin } from '@vervedoc/docx-editor-chart'
+import type { CommentPlugin } from '@vervedoc/docx-editor-comment'
 import { debounce } from '@/utils'
 import { editorStateStore } from '@/stores/editor-state'
 import { useEditorImport } from '@/composables/use-editor-import'
 import { useEditorMedia } from '@/composables/use-editor-media'
-import { useEditorChart } from '@/composables/use-editor-chart'
+
 import { useEditorHeaderFooter } from '@/composables/use-editor-header-footer'
 import { useEditorBreaks } from '@/composables/use-editor-breaks'
 import { useEditorTable } from '@/composables/use-editor-table'
@@ -74,20 +77,13 @@ const {
 
 const {
   image: imageFn,
-  audio: audioFn,
-  video: videoFn,
+
 } = useEditorMedia({
   getEditorInstance: () => editorInstance,
 })
 
 const {
-  insertChartCore: insertChartCoreFn,
-  updateChartCore: updateChartCoreFn,
-} = useEditorChart({
-  getEditorInstance: () => editorInstance,
-})
 
-const {
   header: headerFn, footer: footerFn, mainZone: mainZoneFn,
   clearHeader: clearHeaderFn, clearFooter: clearFooterFn,
 } = useEditorHeaderFooter({ getEditorInstance: () => editorInstance })
@@ -200,6 +196,11 @@ const initEditor = async () => {
       options
     )
 
+    // 注册可选功能插件（批注/修订/图表）
+    editorInstance.use(createCommentPlugin())
+    editorInstance.use(createRevisionPlugin())
+    editorInstance.use(createChartPlugin())
+
 
     // 保存实例到全局，供cypress使用
     ;(window as any).editor = editorInstance
@@ -226,7 +227,9 @@ const setupEditorListeners = () => {
 
   const syncAbility = () => {
     if (!editorInstance?.command?.getIsReadonly) return
-    const { startIndex, endIndex } = editorInstance.command.getRange()
+    const range = editorInstance.command.getRange()
+    if (!range) return
+    const { startIndex, endIndex } = range
     const focused = !!(~startIndex || ~endIndex)
     const ability = {
       focused,
@@ -401,8 +404,7 @@ const executeCommand = (command: string, ...args: any[]) => {
     refreshCatalog: async () => refreshCatalog(),
     replaceRange: (range: any) => editorInstance.command.executeReplaceRange(range),
     insertElementList: (elements: any[]) => editorInstance.command.executeInsertElementList(elements),
-    insertChartCore: (data: any) => insertChartCoreFn(data),
-    updateChartCore: (id: string, patch: any) => updateChartCoreFn(id, patch),
+    requestInsertChart: () => editorInstance.dispatchCommand('requestInsertChart'),
     setGroup: () => editorInstance.command.executeSetGroup(),
     deleteGroup: (id: string) => editorInstance.command.executeDeleteGroup(id),
     locationGroup: (id: string) => editorInstance.command.executeLocationGroup(id),
@@ -477,10 +479,8 @@ const executeCommand = (command: string, ...args: any[]) => {
     tableBorderWidth: tableBorderWidthFn,
     tableBorderExternalWidth: tableBorderExternalWidthFn,
 
-    // 图片/音频/视频
+    // 图片
     image: imageFn,
-    audio: audioFn,
-    video: videoFn,
 
 
     // 超链接
@@ -560,9 +560,13 @@ const executeCommand = (command: string, ...args: any[]) => {
     // 模式切换
     mode: (mode: string) => editorInstance.command.executeSetMode(mode),
 
-    // 签名 - 现在由 App.vue 处理
+    // 签名 - 打开对话框由上层处理
     signature: () => {
       emit('command', 'signature')
+    },
+    // 签名确认后插入图片
+    signatureImage: (dataUrl: string) => {
+      editorInstance.command.executeInsertSignature(dataUrl)
     },
 
     // 条形码
@@ -598,9 +602,9 @@ const executeCommand = (command: string, ...args: any[]) => {
     },
 
     comment: () => {
-      const c = editorInstance.comment
-      c.addComment()
-      c.render()
+      const c = editorInstance.getPlugin('comment') as CommentPlugin | undefined
+      c?.add()
+      c?.render()
     }
   }
 

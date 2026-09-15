@@ -212,8 +212,32 @@ export interface TableBlock extends BlockBase {
   colWidths: number[]
 }
 
+/** 嵌入块：iframe 等 DOM 挂载块的布局结果 */
+export interface EmbedBlock extends BlockBase {
+  /** 块类型固定为 'block' */
+  kind: 'block'
+  /** 对应的源节点（IBlockElement，含 block/metrics 字段） */
+  block: IElement
+  /** 父容器路径 */
+  parentPath: Path
+  /** 在父容器中的索引 */
+  indexInParent: number
+}
+
+/** 图表块：canvas drawImage 渲染，结构同 ImageBlock 但 kind 为 'chart' */
+export interface ChartBlock extends BlockBase {
+  /** 块类型固定为 'chart' */
+  kind: 'chart'
+  /** 对应的源节点（IBlockElement，含 block.chartBlock/metrics 字段） */
+  block: IElement
+  /** 父容器路径 */
+  parentPath: Path
+  /** 在父容器中的索引 */
+  indexInParent: number
+}
+
 /** 块节点联合类型：所有块级布局节点的联合 */
-export type BlockNode = ParagraphBlock | ImageBlock | PageBreakBlock | SeparatorBlock | TableBlock
+export type BlockNode = ParagraphBlock | ImageBlock | PageBreakBlock | SeparatorBlock | TableBlock | EmbedBlock | ChartBlock
 
 /** 页面布局结果 */
 export interface PageLayout {

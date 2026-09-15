@@ -52,11 +52,11 @@ export function useEditorComments(options: {
   } | null
   /** 获取批注组件实例 */
   getCommentComponent: () => {
-    getComments?: () => IComment[]
-    addComment?: (userName?: string) => IComment | null
-    deleteComment?: (id: string) => void
-    locateComment?: (id: string) => void
-    buildCommentsFromMetas?: (metas: any[]) => void
+    getAll?: () => IComment[]
+    add?: (userName?: string) => IComment | null
+    delete?: (id: string) => void
+    locate?: (id: string) => void
+    buildFromMetas?: (metas: any[]) => void
     render?: () => void
   } | null
   /** 获取当前激活批注组 ID */
@@ -75,7 +75,7 @@ export function useEditorComments(options: {
    */
   function sync(groupId?: string): IComment[] {
     const commentComp = getCommentComponent()
-    commentList.value = [...(commentComp?.getComments?.() ?? [])]
+    commentList.value = [...(commentComp?.getAll?.() ?? [])]
     activeGroupId.value =
       groupId
       || getActiveGroupId?.()
@@ -109,7 +109,7 @@ export function useEditorComments(options: {
    * @returns {IComment | null} 创建的批注对象，失败时返回 null
    */
   function create(userName: string = '当前用户'): IComment | null {
-    const comment = getCommentComponent()?.addComment?.(userName) ?? null
+    const comment = getCommentComponent()?.add?.(userName) ?? null
     sync(comment?.groupId)
     render()
     return comment
@@ -121,7 +121,7 @@ export function useEditorComments(options: {
    */
   function remove(id: string): void {
     if (!id) return
-    getCommentComponent()?.deleteComment?.(id)
+    getCommentComponent()?.delete?.(id)
     sync()
     render()
   }
@@ -138,7 +138,7 @@ export function useEditorComments(options: {
       || ''
     if (!targetGroupId) return
     const currentComment = getCommentComponent()
-      ?.getComments?.()
+      ?.getAll?.()
       ?.find(item => item.groupId === targetGroupId)
     if (currentComment?.id) {
       remove(currentComment.id)
@@ -155,7 +155,7 @@ export function useEditorComments(options: {
    */
   function locate(id: string): void {
     if (!id) return
-    getCommentComponent()?.locateComment?.(id)
+    getCommentComponent()?.locate?.(id)
   }
 
   /**
@@ -163,7 +163,7 @@ export function useEditorComments(options: {
    * @param {any[]} metas 批注元数据数组
    */
   function load(metas: any[]): void {
-    getCommentComponent()?.buildCommentsFromMetas?.(metas ?? [])
+    getCommentComponent()?.buildFromMetas?.(metas ?? [])
     sync()
     render()
   }

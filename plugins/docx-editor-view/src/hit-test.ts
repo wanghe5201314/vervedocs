@@ -76,6 +76,12 @@ function hitBlocks(blocks: BlockNode[], x: number, y: number, ox: number, oy: nu
     } else if (b.kind === 'image') {
       const p: Path = [...b.parentPath, b.indexInParent]
       return { path: p, offset: 0 }
+    } else if (b.kind === 'block') {
+      const p: Path = [...b.parentPath, b.indexInParent]
+      return { path: p, offset: 0 }
+    } else if (b.kind === 'chart') {
+      const p: Path = [...b.parentPath, b.indexInParent]
+      return { path: p, offset: 0 }
     }
   }
   return null

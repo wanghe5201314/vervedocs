@@ -14,27 +14,12 @@ interface EditorInstance {
   command?: any
   listener?: any
   eventBus?: any
-  /** core 提供的批注回调注入入口 */
-  setCommentCallbacks?: (callbacks: any) => void
-  /** core 提供的修订回调注入入口 */
-  setRevisionCallbacks?: (callbacks: any) => void
-  /** core 提供的批注只读视图 */
-  getCommentView?: () => CommentViewLike | null
-  /** core 提供的修订只读视图 */
-  getRevisionView?: () => any
+  /** 获取已注册插件实例（批注/修订等可选功能） */
+  getPlugin?: <T>(name: string) => T | undefined
 }
 
 /**
- * core 暴露的批注只读视图（与 `@vervedoc/core` 中的 `CommentView` 结构等价）。
- * 这里以本地接口的形式声明，避免协作 composable 反向依赖 core。
- */
-interface CommentViewLike {
-  getComments(): any[]
-  setComments(comments: any[]): void
-  render(): void
-}
 
-/**
  * 协作用户信息
  */
 interface CollabUser {
@@ -86,25 +71,27 @@ export function useCollaboration(options: {
   const collabOffFns: (() => void)[] = []
 
   /**
-   * 通过 core 的合法入口注入批注协作回调。
+   * 通过插件实例注入批注协作回调。
    *
-   * 该函数**只调用** core 暴露的 `setCommentCallbacks` 与 `getCommentView`，
-   * 不再直接接触 `editor.comment.install(...)`，避免覆盖 core 内部装配的 `CommentHost`。
+   * 通过 `editor.getPlugin('comment')` 拿到 CommentPlugin 实例后调用 `setCallbacks`，
+   * 避免接触 core 内部装配的 PluginHost。
    *
-   * @param targetInstance 目标编辑器实例（必须实现 core 的合法入口）
+   * @param targetInstance 目标编辑器实例
    */
   const installCommentCallbacks = (targetInstance: EditorInstance | null) => {
     if (!targetInstance) return
-    if (typeof targetInstance.setCommentCallbacks !== 'function') {
-      // 兼容旧版本 core：给出明确警告，但不再回退到 comment.install 覆盖，避免回归
-      console.warn(
-        '[useCollaboration] 当前 editor 实例未提供 setCommentCallbacks，' +
-        '请升级 @vervedoc/core 至最新版本；协作回调本次不会安装。'
-      )
+    const commentPlugin = targetInstance.getPlugin?.<{
+      setCallbacks(c: any): void
+      getAll(): any[]
+      setAll(c: any[]): void
+      render(): void
+    }>('comment')
+    if (!commentPlugin) {
+      console.warn('[useCollaboration] 未注册 comment 插件，协作回调本次不会安装。')
       return
     }
 
-    targetInstance.setCommentCallbacks({
+    commentPlugin.setCallbacks({
       onSave: () => { collabPlugin?.syncComments() },
       onDelete: () => { collabPlugin?.syncComments() },
       onReply: () => { collabPlugin?.syncComments() },
@@ -113,11 +100,7 @@ export function useCollaboration(options: {
       onRequestSave: () => { if (!isSuppressSaveOnce()) scheduleSave() }
     })
 
-    // 通过 core 的只读视图与协作插件绑定，视图内部不允许 install / 覆盖 host
-    const commentView = targetInstance.getCommentView?.() || null
-    if (commentView) {
-      collabPlugin?.bindCommentComponent(commentView as any)
-    }
+    collabPlugin?.bindCommentComponent(commentPlugin as any)
   }
 
   /**

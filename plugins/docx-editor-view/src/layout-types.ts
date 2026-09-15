@@ -13,6 +13,8 @@ export type {
   ImageBlock,
   PageBreakBlock,
   SeparatorBlock,
+  EmbedBlock,
+  ChartBlock,
   TableCellLayout,
   TableRowLayout,
   TableBlock,

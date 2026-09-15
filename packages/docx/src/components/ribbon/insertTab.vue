@@ -43,8 +43,7 @@
     <!-- 插图 -->
     <VdRibbonGroup title="插图">
       <VdRibbonButton icon="image-outline" text="图片" title="插入图片" size="large" @click="emit('command', 'image')" />
-      <VdRibbonButton icon="video-outline" text="视频" title="插入视频" size="large" @click="emit('command', 'video')" />
-      <VdRibbonButton icon="music-note" text="音频" title="插入音频" size="large" @click="emit('command', 'audio')" />
+
       <VdRibbonButton icon="stacked_bar_chart" text="图表" title="插入图表" size="large" @click="emit('command', 'insertChart')" />
     </VdRibbonGroup>
 

@@ -21,6 +21,7 @@ import { hitTest } from './hit-test'
 import { locateCaret, computeSelectionRects } from './caret-rect'
 import { TableWidget } from './widgets/table-widget'
 import { ImageWidget } from './widgets/image-widget'
+import { ChartWidget } from './widgets/chart-widget'
 import { ParagraphWidget } from './widgets/paragraph-widget'
 import { HeaderFooterWidget, type Zone } from './widgets/header-footer-widget'
 import { RulerWidget } from './widgets/ruler-widget'
@@ -148,6 +149,7 @@ export class Draw {
   /** 抑制下一次悬浮工具栏显示（段落手柄选中时用） */
   private _suppressToolbar = false
 
+
   /** 当前编辑区域：正文 / 页眉 / 页脚 */
   private zone: Zone = 'main'
   /** zone 变化回调（由 core 装配，用于驱动 UI 标签显示） */
@@ -157,6 +159,8 @@ export class Draw {
   private tableWidget: TableWidget | null = null
   /** 图片交互 widget（选中 + 缩放手柄 + 右键菜单） */
   private imageWidget: ImageWidget | null = null
+  /** 图表交互 widget（选中 + 缩放手柄 + 编辑/删除工具栏） */
+  private chartWidget: ChartWidget | null = null
   /** 段落格式悬浮 widget */
   private paragraphWidget: ParagraphWidget | null = null
   /** 页眉页脚交互 widget */
@@ -199,6 +203,7 @@ export class Draw {
       container.style.position = 'relative'
     }
     container.style.overflow = 'hidden'
+    container.style.background = '#E2E2E2'
 
     // scroller 是可滚动容器（自身溢出出现滚动条）
     this.wrapper = document.createElement('div')
@@ -206,7 +211,8 @@ export class Draw {
     this.wrapper.style.position = 'absolute'
     this.wrapper.style.inset = '0'
     this.wrapper.style.overflow = 'auto'
-    this.wrapper.style.background = '#E2E2E2'
+    this.wrapper.style.background = 'transparent'
+    this.wrapper.style.zIndex = '5'
 
     // 撑起文档总高度的占位元素
     this.scroller = document.createElement('div')
@@ -240,6 +246,7 @@ export class Draw {
       this.ro.observe(container)
     }
     this.canvasHost.addEventListener('vervedocs:image-loaded', () => this.scheduleRender())
+    this.canvasHost.addEventListener('vervedocs:chart-loaded', () => this.scheduleRender())
 
     // Range 变化时触发光标重绘 + 悬浮工具栏 + 工具栏样式同步
     if (deps.listener && this.range) {
@@ -254,6 +261,7 @@ export class Draw {
           this.selectionToolbarWidget?.update()
           this.tableWidget?.update()
           this.imageWidget?.update()
+          this.chartWidget?.update()
           this.paragraphWidget?.update()
         }
       })
@@ -346,6 +354,19 @@ export class Draw {
       focusInput: () => this.focusInput()
     })
     this.imageWidget.create()
+    this.chartWidget = new ChartWidget({
+      getLayout: () => this.layout,
+      getRange: () => this.range ?? null,
+      getContainerRect: () => this.canvasHost.getBoundingClientRect(),
+      getScrollY: () => this.scrollY,
+      getPageOffsetX: () => this.getPageOffsetX(),
+      onCommand: (cmd: string, ...args: any[]) => this.onCommand?.(cmd, ...args),
+      onUpdateChartSizeLive: (path: Path, width: number, height: number) => this.updateChartSizeLive(path, width, height),
+      getEventBus: () => this.eventBus,
+      hit: (clientX: number, clientY: number) => this.hit(clientX, clientY),
+      focusInput: () => this.focusInput()
+    })
+    this.chartWidget.create()
     this.paragraphWidget = new ParagraphWidget({
       getLayout: () => this.layout,
       getRange: () => this.range ?? null,
@@ -476,6 +497,11 @@ export class Draw {
     // 图片选中/缩放
     if (this.imageWidget?.handleMouseDown(e)) {
       this.eventBus?.emit('imageMousedown', e)
+      return
+    }
+
+    // 图表选中/缩放
+    if (this.chartWidget?.handleMouseDown(e)) {
       return
     }
 
@@ -870,6 +896,22 @@ export class Draw {
   }
 
   /**
+   * 拖拽缩放图表过程中实时更新尺寸（不写文档历史，仅刷新显示）。
+   * @param path 图表路径
+   * @param width 新宽度
+   * @param height 新高度
+   */
+  updateChartSizeLive(path: Path, width: number, height: number): void {
+    const el = getByPath(this.document.elements, path)
+    if (!el || el.type !== 'block') return
+    const metrics = (el as unknown as { metrics?: { width: number; height: number } }).metrics
+    if (!metrics) return
+    metrics.width = Math.max(1, Math.round(width))
+    metrics.height = Math.max(1, Math.round(height))
+    this.reformatAndRender()
+  }
+
+  /**
    * 设置页边距并重排+重渲染。
    * @param margins [top, right, bottom, left]
    */
@@ -981,6 +1023,7 @@ export class Draw {
     return this.getActiveDocument().elements
   }
 
+
   /** 供 commands 组件访问 RangeManager（路径接口） */
   getRange(): RangeManager | null {
     return this.range ?? null
@@ -1078,6 +1121,7 @@ export class Draw {
     if (this.caretTimer != null) { clearInterval(this.caretTimer); this.caretTimer = null }
     this.tableWidget?.destroy()
     this.imageWidget?.destroy()
+    this.chartWidget?.destroy()
     this.paragraphWidget?.destroy()
     this.headerFooterWidget?.destroy()
     this.rulerWidget?.destroy()
@@ -1133,7 +1177,7 @@ export class Draw {
     const dirty: number[] = []
     const walk = (blocks: BlockNode[]) => {
       for (const b of blocks) {
-        if (b.kind === 'paragraph' || b.kind === 'image' || b.kind === 'pageBreak' || b.kind === 'separator') {
+        if (b.kind === 'paragraph' || b.kind === 'image' || b.kind === 'pageBreak' || b.kind === 'separator' || b.kind === 'block') {
           const sig = signBlock(b)
           const reusedId = this.lastSignatureToId.get(sig)
           if (reusedId != null) {
@@ -1227,7 +1271,7 @@ export class Draw {
     const m = new Map<number, { x: number; y: number; width: number; height: number }>()
     const collect = (blocks: BlockNode[], originX: number, originY: number) => {
       for (const b of blocks) {
-        if (b.kind === 'paragraph' || b.kind === 'image' || b.kind === 'separator' || b.kind === 'pageBreak' || b.kind === 'table') {
+        if (b.kind === 'paragraph' || b.kind === 'image' || b.kind === 'separator' || b.kind === 'pageBreak' || b.kind === 'table' || b.kind === 'block') {
           m.set(b.id, { x: originX + b.rect.x, y: originY + b.rect.y, width: b.rect.width, height: b.rect.height })
         }
       }
@@ -1320,6 +1364,8 @@ export class Draw {
       this.renderer.render(this.layout, this.scrollY, this.viewportHeight, dirtyRect)
       this.renderCaretIfAny()
       this.selectionToolbarWidget?.update()
+      this.imageWidget?.update()
+      this.chartWidget?.update()
       if (!this._pendingSkipAfterRender) {
         this.afterRender?.()
       }

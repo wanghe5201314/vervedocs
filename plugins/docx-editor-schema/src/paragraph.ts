@@ -19,8 +19,8 @@ import type { IElement } from './types'
 import { BLOCK_LEVEL_TYPES } from './constants'
 
 export interface IParagraphGroup {
-  /** 段落类型：normal / title / list / table / image / pageBreak / separator */
-  kind: 'normal' | 'title' | 'list' | 'table' | 'image' | 'pageBreak' | 'separator'
+  /** 段落类型：normal / title / list / table / image / pageBreak / separator / block */
+  kind: 'normal' | 'title' | 'list' | 'table' | 'image' | 'pageBreak' | 'separator' | 'block'
   /** 段落对应的父节点（当 kind !== 'normal' 时即为该节点自身；kind='normal' 时为 null） */
   block: IElement | null
   /** 段落包含的顶层节点在父数组中的索引区间 [start, end)（含 start 不含 end） */

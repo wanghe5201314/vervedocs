@@ -20,9 +20,9 @@ interface EditorInstance {
  */
 interface CommentComponent {
   /** 获取所有评论 */
-  getComments: () => any[]
+  getAll: () => any[]
   /** 序列化评论为可保存结构 */
-  serializeComments: () => any
+  serialize: () => any
 }
 
 /**
@@ -62,8 +62,8 @@ export function useEditorSave(options: {
     if (content) {
       const extras: Record<string, unknown> = {}
       const commentComp = getCommentComponent()
-      if (commentComp && commentComp.getComments().length > 0) {
-        extras.comments = commentComp.serializeComments()
+      if (commentComp && commentComp.getAll().length > 0) {
+        extras.comments = commentComp.serialize()
       }
       const revisions = instance?.command?.getRevisions?.()
       if (revisions && revisions.length > 0) {

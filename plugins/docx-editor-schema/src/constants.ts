@@ -44,7 +44,7 @@ export const PARAGRAPH_CONTAINER_TYPES = new Set(['title', 'list'])
 
 /** 段落级块类型（占独立段） */
 export const BLOCK_LEVEL_TYPES = new Set([
-  'title', 'list', 'table', 'image', 'pageBreak', 'separator'
+  'title', 'list', 'table', 'image', 'pageBreak', 'separator', 'block'
 ])
 
 /** 列表类型 */

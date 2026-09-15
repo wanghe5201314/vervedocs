@@ -48,8 +48,7 @@
     "@vervedoc/docx-editor-schema": "workspace:^",
     "@vervedoc/docx-editor-state": "workspace:^",
     "@vervedoc/docx-editor-transform": "workspace:^",
-    "@vervedoc/docx-editor-view": "workspace:^",
-    "plyr": "^3.8.4"
+    "@vervedoc/docx-editor-view": "workspace:^"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",

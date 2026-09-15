@@ -27,17 +27,25 @@ export interface RevisionCallbacks {
 }
 
 export class RevisionComponent {
+  /** 宿主契约（由 core 注入） */
   private _command: CommentHost | null = null
+  /** 气泡挂载容器（Draw scroller） */
   private _container: HTMLDivElement | null = null
+  /** 修订 overlay 容器 */
   private _overlayContainer: HTMLDivElement | null = null
+  /** 修订气泡 DOM 映射（revisionId → 气泡元素） */
   private _balloonDoms: Map<string, HTMLDivElement> = new Map()
+  /** 生命周期回调 */
   private _callbacks: RevisionCallbacks = {}
+  /** 锚点竖线 DOM 元素列表 */
   private _anchorLineEls: HTMLDivElement[] = []
 
+  /** 修订高亮颜色（取编辑器选项 revisionColor，默认 #e60000） */
   private get _revisionColor(): string {
     return this._command?.getOptions?.()?.revisionColor || '#e60000'
   }
 
+  /** 注入宿主契约并创建 overlay 容器（由 createRevisionPlugin 的 install 调用） */
   public install(command: CommentHost): this {
     if (this._command && this._command !== command) {
       console.warn(
@@ -58,6 +66,7 @@ export class RevisionComponent {
     return this
   }
 
+  /** 设置修订生命周期回调 */
   public setCallbacks(callbacks: RevisionCallbacks): this {
     this._callbacks = callbacks || {}
     return this
@@ -129,7 +138,7 @@ export class RevisionComponent {
     acceptBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m9.55 18.2-5.4-5.4 1.41-1.4 3.99 3.98 8.89-8.88 1.41 1.41-10.3 10.29Z" fill="currentColor"/></svg>'
     acceptBtn.addEventListener('mouseenter', () => { acceptBtn.style.background = '#f0f0f0' })
     acceptBtn.addEventListener('mouseleave', () => { acceptBtn.style.background = 'transparent' })
-    acceptBtn.addEventListener('click', () => { this.acceptRevision(balloon.revisionId) })
+    acceptBtn.addEventListener('click', () => { this.accept(balloon.revisionId) })
 
     const rejectBtn = document.createElement('button')
     rejectBtn.title = '拒绝修订'
@@ -140,7 +149,7 @@ export class RevisionComponent {
     rejectBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m18.3 5.71-1.41-1.41L12 9.17 7.11 4.3 5.7 5.71 10.59 10.6 5.7 15.49l1.41 1.41L12 12.01l4.89 4.89 1.41-1.41-4.89-4.89 4.89-4.89Z" fill="currentColor"/></svg>'
     rejectBtn.addEventListener('mouseenter', () => { rejectBtn.style.background = '#f0f0f0' })
     rejectBtn.addEventListener('mouseleave', () => { rejectBtn.style.background = 'transparent' })
-    rejectBtn.addEventListener('click', () => { this.rejectRevision(balloon.revisionId) })
+    rejectBtn.addEventListener('click', () => { this.reject(balloon.revisionId) })
 
     actions.append(acceptBtn, rejectBtn)
     metaText.append(authorSpan, dateSpan)
@@ -231,7 +240,7 @@ export class RevisionComponent {
     return parts.length ? `设置格式: ${parts.join('，')}` : '设置格式'
   }
 
-  private _getRevisions(): Array<{
+  private _getAll(): Array<{
     id: string; type: 'insert' | 'delete' | 'format'; author: string; date: string; content: string; firstIndex: number; lastIndex: number
   }> {
     if (!this._command) return []
@@ -265,10 +274,11 @@ export class RevisionComponent {
     return Array.from(revisionMap.values())
   }
 
-  public getRevisions(): Array<{
+  /** 获取全部修订列表（从文档元素中提取 revisionId） */
+  public getAll(): Array<{
     id: string; type: 'insert' | 'delete' | 'format'; author: string; date: string; content: string
   }> {
-    return this._getRevisions().map(r => ({
+    return this._getAll().map(r => ({
       id: r.id,
       type: r.type,
       author: r.author,
@@ -277,6 +287,7 @@ export class RevisionComponent {
     }))
   }
 
+  /** 刷新修订气泡 DOM 渲染（收集修订 + 计算锚点 + 绘制气泡/竖线） */
   public update() {
     if (!this._command) return
     const options = this._command.getOptions?.()
@@ -286,7 +297,7 @@ export class RevisionComponent {
       return
     }
 
-    const revisions = this._getRevisions()
+    const revisions = this._getAll()
     if (revisions.length === 0) {
       this._clear()
       this._restoreContainerWidth()
@@ -439,7 +450,8 @@ export class RevisionComponent {
     this._balloonDoms.clear()
   }
 
-  public acceptRevision(revisionId: string) {
+  /** 接受指定修订：插入型保留、删除型移除、格式型还原 */
+  public accept(revisionId: string) {
     if (!this._command) return
     this._hideAnchorLines()
     const elementList = this._command.getElementList?.()
@@ -470,7 +482,8 @@ export class RevisionComponent {
     this._callbacks.onAccept?.(revisionId)
   }
 
-  public rejectRevision(revisionId: string) {
+  /** 拒绝指定修订：插入型移除、删除型保留、格式型还原 */
+  public reject(revisionId: string) {
     if (!this._command) return
     this._hideAnchorLines()
     const elementList = this._command.getElementList?.()
@@ -501,7 +514,8 @@ export class RevisionComponent {
     this._callbacks.onReject?.(revisionId)
   }
 
-  public acceptAllRevisions() {
+  /** 接受文档中的所有修订 */
+  public acceptAll() {
     if (!this._command) return
     const elementList = this._command.getElementList?.()
     if (!elementList) return
@@ -525,7 +539,8 @@ export class RevisionComponent {
     this._command.renderDraw?.({ isSubmitHistory: true })
   }
 
-  public rejectAllRevisions() {
+  /** 拒绝文档中的所有修订 */
+  public rejectAll() {
     if (!this._command) return
     const elementList = this._command.getElementList?.()
     if (!elementList) return
@@ -549,6 +564,7 @@ export class RevisionComponent {
     this._command.renderDraw?.({ isSubmitHistory: true })
   }
 
+  /** 销毁实例：清除 DOM、解引用宿主 */
   public destroy() {
     this._clear()
     this._restoreContainerWidth()

@@ -709,28 +709,29 @@ export class Command {
    */
   executeSetTableBorderExternalWidth(width: number): void { this.adapt.setTableBorderExternalWidth(width) }
   /**
-   * 插入音频。
-   * @param src 音频源 URL
-   * @param options 选项，可指定 name
-   */
-  executeInsertAudio(src: string, options?: { name?: string }): void { this.adapt.insertAudio(src, options) }
-  /**
-   * 插入视频。
-   * @param src 视频源 URL
-   * @param options 选项，可指定 name
-   */
-  executeInsertVideo(src: string, options?: { name?: string }): void { this.adapt.insertVideo(src, options) }
-  /**
+
    * 插入图表。
-   * @param payload 图表参数，包含 type 及可选 data 等
+   * @param payload 图表参数：chartType/subtype/dataSource/config/width/height
    */
-  executeInsertChart(payload: { type: string; data?: unknown; [key: string]: unknown }): void { this.adapt.insertChart(payload) }
+  executeInsertChart(payload: { chartType: string; subtype?: string; dataSource: any; config?: any; width?: number; height?: number }): void { this.adapt.insertChart(payload) }
   /**
    * 更新图表属性。
    * @param id 图表 ID
    * @param patch 属性补丁对象
    */
   executeUpdateChart(id: string, patch: Record<string, unknown>): void { this.adapt.updateChart(id, patch) }
+  /**
+   * 更新图表尺寸。
+   * @param path 图表路径
+   * @param width 新宽度
+   * @param height 新高度
+   */
+  executeUpdateChartSize(path: Path, width: number, height: number): void { this.adapt.updateChartSize(path, width, height) }
+  /**
+   * 删除块元素（图表等）。
+   * @param path 块路径
+   */
+  executeDeleteBlock(path: Path): void { this.adapt.deleteBlock(path) }
   /**
    * 删除指定群组。
    * @param groupId 群组 ID

@@ -140,8 +140,7 @@
         </template>
       </a-popover>
       <button class="tb" @click="emit('cmd', 'image')" title="图片"><VdIcon name="image-outline" /></button>
-      <button class="tb" @click="emit('cmd', 'video')" title="视频"><VdIcon name="video-outline" /></button>
-      <button class="tb" @click="emit('cmd', 'audio')" title="音频"><VdIcon name="music-note" /></button>
+
       <button class="tb" @click="emit('cmd', 'insertChart')" title="图表"><VdIcon name="chart-bar" /></button>
 
       <a-divider type="vertical" />

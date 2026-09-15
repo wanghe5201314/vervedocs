@@ -26,8 +26,7 @@ export function useDialogs(options: {
   const insertTableDialogVisible = ref(false)
   /** 表格边框对话框是否可见 */
   const tableBordersDialogVisible = ref(false)
-  /** 图表对话框是否可见 */
-  const chartDialogVisible = ref(false)
+
   /** LaTeX 公式对话框是否可见 */
   const latexDialogVisible = ref(false)
   /** 条形码对话框是否可见 */
@@ -140,19 +139,7 @@ export function useDialogs(options: {
   }
 
   /**
-   * 处理插入图表确认
-   * @param payload 图表配置数据
-   */
-  const handleInsertChartConfirm = (payload: any) => {
-    const p = payload && typeof payload === 'object' ? payload : {}
-    executeCommand('insertChartCore', {
-      chartType: p.chartType,
-      subtype: p.subtype,
-      tableData: p.tableData
-    })
-  }
 
-  /**
    * 处理插入表格确认
    * @param payload 表格行列与边框配置
    */
@@ -184,7 +171,7 @@ export function useDialogs(options: {
     bookmarkDialogVisible,
     insertTableDialogVisible,
     tableBordersDialogVisible,
-    chartDialogVisible,
+
     latexDialogVisible,
     barcodeDialogVisible,
     qrcodeDialogVisible,
@@ -209,7 +196,7 @@ export function useDialogs(options: {
 
     handleDateConfirm,
     handleTocConfirm,
-    handleInsertChartConfirm,
+
     handleInsertTableDialogConfirm,
     handleTableBordersConfirm
   }

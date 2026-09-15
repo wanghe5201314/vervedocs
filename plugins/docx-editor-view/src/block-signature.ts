@@ -17,6 +17,14 @@ export function signBlock(b: BlockNode): string {
   }
   if (b.kind === 'pageBreak') return `pb|${b.parentPath.join('.')}|${b.indexInParent}`
   if (b.kind === 'separator') return `sep|${b.parentPath.join('.')}|${b.indexInParent}|${b.rect.width}x${b.rect.height}`
+  if (b.kind === 'block') {
+    const el = b.block as unknown as { id?: string }
+    return `blk|${el.id ?? ''}|${b.parentPath.join('.')}|${b.indexInParent}|${b.rect.width}x${b.rect.height}`
+  }
+  if (b.kind === 'chart') {
+    const el = b.block as unknown as { id?: string; block?: { chartBlock?: Record<string, unknown> } }
+    return `chart|${el.id ?? ''}|${b.rect.width}x${b.rect.height}|${JSON.stringify(el.block?.chartBlock ?? '')}`
+  }
   return `unk`
 }
 

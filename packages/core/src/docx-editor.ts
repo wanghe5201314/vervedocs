@@ -4,54 +4,16 @@
  * 全新构造，零兼容：只接受 IDocxDocumentMeta。
  */
 
-import type { IDocxDocumentMeta, IEditorOption } from '@vervedoc/docx-editor-schema'
+import type { IDocxDocumentMeta, IEditorOption, EditorPlugin, PluginHost } from '@vervedoc/docx-editor-schema'
 import { cloneTree, formatElementTree, mergeOption } from '@vervedoc/docx-editor-schema'
 import { EventBus, Listener, RangeManager } from '@vervedoc/docx-editor-state'
 import { Draw } from '@vervedoc/docx-editor-view'
+import { CommandChain } from './command-chain'
 import { Command, CommandAdapt } from '@vervedoc/docx-editor-transform'
-import { CommentComponent, RevisionComponent } from '@vervedoc/docx-editor-comment'
-import type { CommentHost, DocxCommentMeta, RevisionCallbacks, CommentCallbacks } from '@vervedoc/docx-editor-comment'
 import { Search, BlockParticle, DateParticle, LaTexParticle, ControlComponent } from '@vervedoc/docx-editor-commands'
 import { HistoryComponent } from '@vervedoc/docx-editor-history'
 import { ShortcutHandler } from './shortcut'
 import { WorkerManager } from './workers/worker-manager'
-
-export type { DocxCommentMeta, RevisionCallbacks, CommentCallbacks }
-
-/**
- * 批注组件的只读视图（对外暴露给协作层 / 业务层使用）。
- *
- * 通过该视图**只能**读取批注数据、触发一次重渲染，无法访问 / 替换内部 `CommentHost`。
- * 若要注入回调，请使用 {@link DocxEditor.setCommentCallbacks}。
- */
-export interface CommentView {
-  /** 获取当前批注列表 */
-  getComments(): any[]
-  /** 覆盖批注列表（远端同步等场景） */
-  setComments(comments: any[]): void
-  /** 触发气泡重新渲染 */
-  render(): void
-}
-
-/**
- * 修订组件的只读视图。
- */
-export interface RevisionView {
-  /** 获取当前修订列表（公开信息） */
-  getRevisions(): Array<{
-    id: string; type: 'insert' | 'delete' | 'format'; author: string; date: string; content: string
-  }>
-  /** 触发气泡重新计算与渲染 */
-  update(): void
-  /** 接受指定修订 */
-  acceptRevision(id: string): void
-  /** 拒绝指定修订 */
-  rejectRevision(id: string): void
-  /** 接受所有修订 */
-  acceptAllRevisions(): void
-  /** 拒绝所有修订 */
-  rejectAllRevisions(): void
-}
 
 /**
  * DocxEditor 文档编辑器主类
@@ -70,22 +32,14 @@ export class DocxEditor {
   public draw: Draw
   /** 命令入口（executeXxx 系列方法） */
   public command: Command
-  /**
-   * 批注组件（**内部装配**，禁止外部直接调用其 `install` 方法覆盖宿主）。
-   *
-   * 外部消费者请使用：
-   * - {@link DocxEditor.setCommentCallbacks} 注入回调
-   * - {@link DocxEditor.getCommentView} 获取只读视图
-   */
-  public readonly comment: CommentComponent
-  /**
-   * 修订组件（**内部装配**，禁止外部直接调用其 `install` 方法覆盖宿主）。
-   *
-   * 外部消费者请使用：
-   * - {@link DocxEditor.setRevisionCallbacks} 注入回调
-   * - {@link DocxEditor.getRevisionView} 获取只读视图
-   */
-  public readonly revision: RevisionComponent
+  /** 已注册插件表（按 name 索引） */
+  private plugins = new Map<string, EditorPlugin>()
+  /** 插件命令注册表（命令名 → 处理函数），责任链中插件命令 handler 查此表分发 */
+  private pluginCommands = new Map<string, (...args: any[]) => any>()
+  /** 命令分发责任链 */
+  private commandChain = new CommandChain()
+  /** 插件宿主契约实例，构造完成后赋值，use(plugin) 时注入给插件 */
+  private pluginHost: PluginHost | null = null
   /** 搜索组件 */
   public search: Search
   /** 块级粒子组件（图片/视频/音频/图表等块级元素） */
@@ -142,8 +96,6 @@ export class DocxEditor {
     this.eventBus = new EventBus()
     this.range = new RangeManager(this.listener)
 
-    this.comment = new CommentComponent()
-    this.revision = new RevisionComponent()
 
     // 渲染后联动通过 after-render 事件订阅，Draw 只 emit 事件不直接耦合各组件
     this.wireAfterRenderHooks()
@@ -171,32 +123,7 @@ export class DocxEditor {
       afterRender: () => {
         this.listener.emit('afterRender')
       },
-      onCommand: (command: string, ...args: any[]) => {
-        if (command === 'requestInsertImage') { this.listener.emit('requestInsertImage'); return }
-        if (command === 'requestInsertHyperlink') { this.listener.emit('requestInsertHyperlink'); return }
-        if (command === 'requestInsertFormula') { this.listener.emit('requestInsertFormula'); return }
-        if (command === 'requestInsertComment') { this.comment.addComment(); return }
-
-        if (command === 'executeCopy') {
-          const text = this.command.executeCopy()
-          if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {})
-          return
-        }
-        if (command === 'executeCut') {
-          const text = this.command.executeCut()
-          if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {})
-          return
-        }
-        if (command === 'executePaste') {
-          if (navigator.clipboard) {
-            navigator.clipboard.readText().then(text => this.command.executePaste(text)).catch(() => {})
-          }
-          return
-        }
-        if (!this.command) return
-        const fn = (this.command as unknown as Record<string, ((...a: any[]) => any) | undefined>)[command]
-        if (typeof fn === 'function') return fn.call(this.command, ...args)
-      },
+      onCommand: (command: string, ...args: any[]) => this.commandChain.dispatch(command, ...args),
       onZoneChange: (zone) => {
         this.listener.emit('zoneChange', zone)
       }
@@ -249,6 +176,45 @@ export class DocxEditor {
     )
     this.command = new Command(adapt)
 
+    // 构建命令分发责任链：事件重定向 → 插件命令 → 剪贴板 → 核心命令兜底
+    this.commandChain
+      .use((cmd, _args, next) => {
+        if (cmd === 'requestInsertImage') { this.listener.emit('requestInsertImage'); return }
+        if (cmd === 'requestInsertHyperlink') { this.listener.emit('requestInsertHyperlink'); return }
+        if (cmd === 'requestInsertFormula') { this.listener.emit('requestInsertFormula'); return }
+        return next()
+      })
+      .use((cmd, args, next) => {
+        const pluginCmd = this.pluginCommands.get(cmd)
+        if (typeof pluginCmd === 'function') return pluginCmd(...args)
+        return next()
+      })
+      .use((cmd, _args, next) => {
+        if (cmd === 'executeCopy') {
+          const text = this.command.executeCopy()
+          if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {})
+          return
+        }
+        if (cmd === 'executeCut') {
+          const text = this.command.executeCut()
+          if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {})
+          return
+        }
+        if (cmd === 'executePaste') {
+          if (navigator.clipboard) {
+            navigator.clipboard.readText().then(text => this.command.executePaste(text)).catch(() => {})
+          }
+          return
+        }
+        return next()
+      })
+      .use((cmd, args, _next) => {
+        if (!this.command) return undefined
+        const fn = (this.command as unknown as Record<string, ((...a: any[]) => any) | undefined>)[cmd]
+        if (typeof fn === 'function') return fn.call(this.command, ...args)
+        return undefined
+      })
+
     // 历史管理：创建 HistoryManager 注入 CommandAdapt
     this.history = new HistoryComponent()
     const historyManager = this.history.install({
@@ -267,10 +233,10 @@ export class DocxEditor {
     this.control.install(this.draw)
 
 
-    // 构造批注/修订组件所需的宿主契约（桥接视图与文档查询接口）
-    // ⚠️ 该对象是 CommentHost 的唯一合法实现，外部严禁替换。
+    // 构造插件宿主契约（桥接视图与文档查询接口），供 use(plugin) 时注入
+    // ⚠️ 该对象是 PluginHost 的唯一合法实现，外部严禁替换。
     const drawRef = this.draw
-    const commentHost: CommentHost = {
+    this.pluginHost = {
       getContainer: () => drawRef.getScroller(),
       getPositionList: () => null,
       getRevisionAnchor: (revisionId: string) => {
@@ -295,8 +261,8 @@ export class DocxEditor {
         }
       },
       executeSetGroup: () => this.command?.executeSetGroup() ?? null,
-      executeDeleteGroup: () => {},
-      executeLocationGroup: () => {},
+      executeDeleteGroup: (groupId: string) => { this.command?.executeDeleteGroup(groupId) },
+      executeLocationGroup: (groupId: string) => { this.command?.executeLocationGroup(groupId) },
       executeUpdateOptions: (opts: any) => {
         Object.assign(editorOptions, opts)
         drawRef.setDocument(drawRef.getDocument())
@@ -304,16 +270,17 @@ export class DocxEditor {
       spliceElementList: (list: any[], idx: number, deleteCount: number) => { list.splice(idx, deleteCount) },
       renderDraw: () => { drawRef.setDocument(drawRef.getDocument()) },
       setActiveGroup: (groupId: string | null) => { drawRef.setActiveGroup(groupId) },
+      getEventBus: () => this.eventBus,
+      executeInsertChart: (payload: any) => { this.command?.executeInsertChart(payload) },
+      executeUpdateChart: (id: string, patch: Record<string, unknown>) => { this.command?.executeUpdateChart(id, patch) }
     }
-    this.comment.install(commentHost)
-    this.comment.setEventBus(this.eventBus)
-    this.revision.install(commentHost)
-    adapt.setCommentHandler(this.comment)
 
-    // 从文档中自动加载批注数据
-    if (doc.comments && doc.comments.length > 0) {
-      this.comment.buildCommentsFromMetas(doc.comments)
-    }
+    // 订阅 transform 的文档替换事件，通知插件同步数据（反转原 setCommentHandler 耦合）
+    this.listener.on('documentSet', (d: IDocxDocumentMeta) => {
+      for (const plugin of this.plugins.values()) {
+        plugin.hooks?.onSetDocument?.(d)
+      }
+    })
 
     // 初始化 Worker，推送初始文档数据
     this.worker = new WorkerManager()
@@ -330,13 +297,15 @@ export class DocxEditor {
   /**
    * 订阅 after-render 生命周期事件，集中管理渲染后各组件的联动。
    *
-   * Draw 只 emit `after-render` 事件，不直接调用 comment/revision/block/control/worker，
-   * 各组件的联动逻辑在此集中订阅，新增组件只需在此追加订阅即可，无需修改 Draw 回调签名。
+   * Draw 只 emit `after-render` 事件，不直接调用插件/block/control/worker，
+   * 已注册插件的 `hooks.afterRender` 在此遍历调用，核心组件联动也在此集中订阅。
    */
   private wireAfterRenderHooks(): void {
     this.listener.lifecycle.afterRenderListener(() => {
-      this.comment.render()
-      this.revision.update()
+      for (const plugin of this.plugins.values()) {
+        plugin.hooks?.afterRender?.()
+      }
+      this.renderEmbedBlocks()
       this.block?.clear()
       this.control?.clear()
       this.worker?.updateElements(this.draw.getDocument().elements)
@@ -346,13 +315,32 @@ export class DocxEditor {
   }
 
   /**
+   * 渲染嵌入块（iframe）：遍历 layout 中 kind === 'block' 的节点，
+   * 调 BlockParticle.render 挂载/复用 DOM。chart 已由 canvas drawImage 渲染，不在此处理。
+   */
+  private renderEmbedBlocks(): void {
+    if (!this.block) return
+    const layout = this.draw.getLayout()
+    if (!layout) return
+    for (const page of layout.pages) {
+      for (const b of page.blocks) {
+        if (b.kind === 'block') {
+          const x = page.contentRect.x + b.rect.x
+          const y = page.contentRect.y + b.rect.y
+          this.block.render(page.index, b.block, x, y)
+        }
+      }
+    }
+  }
+
+  /**
    * 获取当前文档元数据
    * @returns 文档元数据（含 elements/sections/comments 等）
    */
   getDocument(): IDocxDocumentMeta { return this.draw.getDocument() }
 
   /**
-   * 设置文档元数据，重置 zone 到 main 并同步批注
+   * 设置文档元数据，重置 zone 到 main 并通知插件同步数据
    * @param doc 文档元数据（必须包含 elements 数组）
    * @throws {TypeError} doc 非 IDocxDocumentMeta 时抛出
    */
@@ -362,84 +350,73 @@ export class DocxEditor {
     }
     // 重置 zone 到 main，避免在 header/footer 区域时数据写入错误位置
     this.draw.setZone('main')
-    // 同步批注数据
-    if (doc.comments && doc.comments.length > 0) {
-      this.comment.buildCommentsFromMetas(doc.comments)
-    } else {
-      this.comment.buildCommentsFromMetas([])
-    }
     this.draw.setDocument(doc)
+    // 通知插件同步数据（批注/修订等）
+    for (const plugin of this.plugins.values()) {
+      plugin.hooks?.onSetDocument?.(doc)
+    }
     // 通知 Worker 文档数据更新
     this.worker.updateElements(doc.elements)
   }
 
   // ============================================================
-  //   批注 / 修订 —— 唯一合法的外部注入入口
+  //   插件注册 —— 可选功能（批注/修订等）的唯一合法入口
   // ============================================================
 
   /**
-   * 追加 / 替换批注回调集合。
+   * 注册插件。core 在注册时自动注入 PluginHost、登记命令表；
+   * 若文档已加载，立即触发 `hooks.onSetDocument` 以同步初始数据。
    *
-   * 该方法是外部（协作层、业务层）为批注注入行为的**唯一合法通道**。
-   * 它不会触碰 core 内部装配的 `CommentHost`，从而避免出现气泡消失等回归问题。
+   * 核心引擎（view/transform）保持内置硬编码，不通过此方法注册。
    *
-   * @param callbacks 批注回调集合（onSave / onDelete / onReply / onResolve / onCancel / onRequestSave）
+   * @param plugin 满足 EditorPlugin 契约的插件实例
    */
-  setCommentCallbacks(callbacks: CommentCallbacks): void {
-    this.comment.setCallbacks(callbacks)
-  }
-
-  /**
-   * 追加 / 替换修订回调集合。
-   *
-   * 与 {@link DocxEditor.setCommentCallbacks} 同理，是外部为修订注入行为的唯一合法通道。
-   *
-   * @param callbacks 修订回调集合（onAccept / onReject 等）
-   */
-  setRevisionCallbacks(callbacks: RevisionCallbacks): void {
-    this.revision.setCallbacks(callbacks)
-  }
-
-  /**
-   * 获取批注组件的只读视图。
-   *
-   * 用于协作层进行数据同步 / 触发重渲染，**不暴露** `_host` 与 `install`，
-   * 从而保护 core 内部装配。
-   */
-  getCommentView(): CommentView {
-    const comp = this.comment
-    return {
-      getComments: () => comp.getComments(),
-      setComments: (list: any[]) => comp.setComments(list),
-      render: () => comp.render()
+  use(plugin: EditorPlugin): void {
+    if (this.plugins.has(plugin.name)) {
+      console.warn(`[DocxEditor] 插件 "${plugin.name}" 已注册，忽略重复注册`)
+      return
+    }
+    this.plugins.set(plugin.name, plugin)
+    if (this.pluginHost) plugin.install(this.pluginHost)
+    if (plugin.commands) {
+      for (const [name, fn] of Object.entries(plugin.commands)) {
+        this.pluginCommands.set(name, fn)
+      }
+    }
+    // 若文档已加载，通知插件同步初始数据
+    if (plugin.hooks?.onSetDocument) {
+      plugin.hooks.onSetDocument(this.draw.getDocument())
     }
   }
 
   /**
-   * 获取修订组件的只读视图。
+   * 获取已注册插件实例，供宿主层调用插件特有方法。
+   *
+   * @param name 插件名称
+   * @returns 插件实例，未注册时返回 undefined
    */
-  getRevisionView(): RevisionView {
-    const comp = this.revision
-    return {
-      getRevisions: () => comp.getRevisions(),
-      update: () => comp.update(),
-      acceptRevision: (id: string) => comp.acceptRevision(id),
-      rejectRevision: (id: string) => comp.rejectRevision(id),
-      acceptAllRevisions: () => comp.acceptAllRevisions(),
-      rejectAllRevisions: () => comp.rejectAllRevisions()
-    }
+  getPlugin<T extends EditorPlugin>(name: string): T | undefined {
+    return this.plugins.get(name) as T | undefined
   }
 
   /**
-   * 销毁编辑器实例，释放所有资源（DOM/事件监听/定时器/组件）
+   * 分发命令到责任链（供宿主层触发插件命令）
+   */
+  dispatchCommand(command: string, ...args: any[]): any {
+    return this.commandChain.dispatch(command, ...args)
+  }
+
+  /**
+   * 销毁编辑器实例，释放所有资源（DOM/事件监听/定时器/组件/插件）
    */
   destroy(): void {
+    for (const plugin of this.plugins.values()) {
+      plugin.destroy?.()
+    }
     this.block?.destroy()
     this.date?.clearDatePicker()
     this.control?.destroy()
     this.history?.destroy()
-    this.comment.destroy()
-    this.revision.destroy()
     this.draw.destroy()
     this.worker.destroy()
     this.listener = new Listener()

@@ -15,9 +15,10 @@
 
 import type {
   BlockNode, DocumentLayout, PageLayout,
-  ParagraphBlock, ImageBlock, TableBlock, SeparatorBlock
+  ParagraphBlock, ImageBlock, TableBlock, SeparatorBlock, ChartBlock
 } from './layout-types'
 import type { IGroupColor } from '@vervedoc/docx-editor-schema'
+import { getChartRenderer } from '@vervedoc/docx-editor-schema'
 import { paintParagraph, type PaintCtx } from './block-painter'
 
 
@@ -98,6 +99,9 @@ export class CanvasRenderer {
   private blockCache = new Map<number, BlockCache>()
   /** 待重建位图的 block id 集合 */
   private dirtyBlocks = new Set<number>()
+
+  /** 当前帧的文档布局（供 drawChartInto 查找表格数据源） */
+  private currentLayout: DocumentLayout | null = null
 
 
   /** 水印 widget（可选，设置后在每页渲染完成后绘制水印） */
@@ -564,6 +568,7 @@ export class CanvasRenderer {
    *   - 主 canvas：clear + drawImage
    */
   render(layout: DocumentLayout, scrollY: number, viewportHeight: number, dirtyRect?: { x: number; y: number; width: number; height: number } | null): void {
+    this.currentLayout = layout
     const ct = this.contentCtx
     const w = this.cssWidth
     const h = this.cssHeight
@@ -717,6 +722,7 @@ export class CanvasRenderer {
   ): void {
     aliveIds.add(b.id)
     if (b.kind === 'pageBreak') return
+    if (b.kind === 'block') return
     const bx = originX + b.rect.x
     const by = originY + b.rect.y
 
@@ -887,6 +893,7 @@ export class CanvasRenderer {
       }
     }
     else if (b.kind === 'image') this.drawImageInto(ctx, b, 0, 0)
+    else if (b.kind === 'chart') this.drawChartInto(ctx, b, 0, 0)
 
     if (off) return off.transferToImageBitmap()
     return c!
@@ -946,6 +953,97 @@ export class CanvasRenderer {
       ctx.strokeRect(x + 0.5, y + 0.5, b.rect.width - 1, b.rect.height - 1)
       ctx.fillStyle = '#f5f5f5'
       ctx.fillRect(x, y, b.rect.width, b.rect.height)
+    }
+  }
+
+  /**
+   * 将图表块绘制到目标 ctx：从 chartBlock 数据生成 dataUrl，加载为 Image 后 drawImage。
+   * 数据源变更时由 signBlock 触发 bitmap 重建。
+   */
+  private drawChartInto(ctx: PaintCtx, b: ChartBlock, x: number, y: number): void {
+    const el = b.block as unknown as {
+      id?: string
+      block?: { chartBlock?: Record<string, unknown> }
+    }
+    const chartBlock = el.block?.chartBlock
+    if (!chartBlock) return
+
+    const renderer = getChartRenderer()
+    if (!renderer) {
+      ctx.strokeStyle = '#cccccc'
+      ctx.strokeRect(x + 0.5, y + 0.5, b.rect.width - 1, b.rect.height - 1)
+      ctx.fillStyle = '#f5f5f5'
+      ctx.fillRect(x, y, b.rect.width, b.rect.height)
+      ctx.fillStyle = '#999'
+      ctx.font = '14px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText('图表插件未加载', x + b.rect.width / 2, y + b.rect.height / 2)
+      return
+    }
+
+    const cacheKey = `chart|${el.id ?? ''}|${JSON.stringify(chartBlock)}`
+    let img = this.imageCache.get(cacheKey)
+    if (!img) {
+      const option = this.getChartOption(chartBlock, renderer)
+      const width = Math.max(10, Math.round(b.rect.width))
+      const height = Math.max(10, Math.round(b.rect.height))
+      const dataUrl = renderer.renderToDataUrl(option, width, height, 2)
+      img = new Image()
+      img.onload = () => {
+        this.dirtyBlocks.add(b.id)
+        this.container.dispatchEvent(new CustomEvent('vervedocs:chart-loaded', { detail: { id: el.id } }))
+      }
+      img.src = dataUrl
+      this.imageCache.set(cacheKey, img)
+    }
+
+    if (img.complete && img.naturalWidth > 0) {
+      try {
+        ctx.drawImage(img, x, y, b.rect.width, b.rect.height)
+      } catch { /* ignore */ }
+    } else {
+      ctx.strokeStyle = '#cccccc'
+      ctx.strokeRect(x + 0.5, y + 0.5, b.rect.width - 1, b.rect.height - 1)
+      ctx.fillStyle = '#f5f5f5'
+      ctx.fillRect(x, y, b.rect.width, b.rect.height)
+    }
+  }
+
+  /**
+   * 根据图表数据源生成图表配置选项。
+   * manual 数据直接使用；table 数据从布局中查找对应表格元素提取。
+   */
+  private getChartOption(chartBlock: Record<string, unknown>, renderer: ReturnType<typeof getChartRenderer>): any {
+    const { dataSource, chartType, config, subtype } = chartBlock as {
+      dataSource: { type: string; manualData?: any; tableId?: string; range?: any }
+      chartType: string
+      config?: any
+      subtype?: string
+    }
+
+    if (dataSource?.type === 'manual' && dataSource.manualData) {
+      return renderer!.generateOption(chartType, dataSource.manualData, config, subtype)
+    }
+
+    if (dataSource?.type === 'table' && dataSource.tableId && this.currentLayout) {
+      for (const page of this.currentLayout.pages) {
+        for (const blk of page.blocks) {
+          if (blk.kind === 'table') {
+            const tableEl = blk.block as unknown as { type?: string; id?: string }
+            if (tableEl.type === 'table' && tableEl.id === dataSource.tableId) {
+              const tableData = renderer!.extractTableData(tableEl, dataSource.range)
+              return renderer!.generateOption(chartType, tableData, config, subtype)
+            }
+          }
+        }
+      }
+    }
+
+    return {
+      type: 'bar',
+      data: { labels: [], datasets: [] },
+      options: { plugins: { title: { display: true, text: '暂无数据' } } }
     }
   }
 

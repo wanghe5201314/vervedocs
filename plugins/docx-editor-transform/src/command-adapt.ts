@@ -81,8 +81,7 @@ export class CommandAdapt {
   private _searchIdx = 0
   /** 历史管理器实例，未设置时为 null */
   private _historyManager: IHistoryManager | null = null
-  /** 批注处理器，用于构建与恢复批注，未设置时为 null */
-  private _commentHandler: { buildCommentsFromMetas(c: unknown[]): void; restoreComments(c: unknown[]): void } | null = null
+
 
   /**
    * 创建 CommandAdapt 实例。
@@ -104,13 +103,6 @@ export class CommandAdapt {
     this._historyManager = hm
   }
 
-  /**
-   * 设置批注处理器。
-   * @param handler 批注处理器，包含 buildCommentsFromMetas 与 restoreComments 方法
-   */
-  setCommentHandler(handler: { buildCommentsFromMetas(c: unknown[]): void; restoreComments(c: unknown[]): void }): void {
-    this._commentHandler = handler
-  }
 
   /** 计算当前页面内容区宽度（pageWidth - 左右边距） */
   private getContentWidth(): number {
@@ -144,6 +136,36 @@ export class CommandAdapt {
     this.listener?.emit('abilityChange', this.getAbility())
   }
 
+  /**
+   * 模板方法：获取活动文档 → 执行修改动作 → 提交（重渲染 + 历史 + 事件）。
+   *
+   * 命令方法只需提供修改逻辑（action），无需手动调 `_commit`。
+   * action 返回 `false` 时跳过提交（用于校验失败提前退出）。
+   *
+   * @param action 修改动作，接收 doc 引用直接 mutate，返回 false 跳过提交
+   * @param coalesceKey 历史合并键（如 'text' 用于连续输入合并为一条撤销记录）
+   *
+   * @example
+   * ```ts
+   * setBold(): void {
+   *   this.execute(doc => {
+   *     const pos = this.range.getFocus()
+   *     if (!pos) return false
+   *     // ... mutate doc
+   *   })
+   * }
+   * ```
+   */
+  protected execute(
+    action: (doc: IDocxDocumentMeta) => boolean | void,
+    coalesceKey?: string
+  ): void {
+    const doc = this.draw.getActiveDocument()
+    if (action(doc) !== false) {
+      this._commit(doc, coalesceKey)
+    }
+  }
+
   /* -------------------- 文本编辑 -------------------- */
 
   /**
@@ -165,6 +187,7 @@ export class CommandAdapt {
       const after = t.value.slice(pos.offset)
       t.value = before + text + after
       this.range.setCaret({ path: pos.path.slice() as Path, offset: pos.offset + text.length })
+      // 不可迁移：前置 deleteSelection() 可能已 commit
       this._commit(doc, 'text')
     }
   }
@@ -197,6 +220,7 @@ export class CommandAdapt {
         const t = node as ITextElement
         t.value = t.value.slice(0, start.offset) + t.value.slice(end.offset)
         this.range.setCaret({ path: start.path.slice() as Path, offset: start.offset })
+        // 不可迁移：方法返回 boolean，且有多个 _commit 分支
         this._commit(doc, 'text')
         return true
       }
@@ -226,6 +250,7 @@ export class CommandAdapt {
     }
 
     this.range.setCaret({ path: start.path.slice() as Path, offset: start.offset })
+    // 不可迁移：方法返回 boolean，且有多个 _commit 分支
     this._commit(doc, 'text')
     return true
   }
@@ -313,6 +338,7 @@ export class CommandAdapt {
       if (pos.offset > 0) {
         t.value = t.value.slice(0, pos.offset - 1) + t.value.slice(pos.offset)
         this.range.setCaret({ path: pos.path.slice() as Path, offset: pos.offset - 1 })
+        // 不可迁移：多个 _commit 在不同分支
         this._commit(doc, 'text')
       } else {
         // 与前一个 text run 合并
@@ -330,6 +356,7 @@ export class CommandAdapt {
             const newPath = pos.path.slice() as Path
             newPath[newPath.length - 1] = idx - 1
             this.range.setCaret({ path: newPath, offset: newOffset })
+            // 不可迁移：多个 _commit 在不同分支
             this._commit(doc, 'text')
           }
         }
@@ -342,49 +369,50 @@ export class CommandAdapt {
    */
   deleteForward(): void {
     if (this.deleteSelection()) return
-    const pos = this.range.getFocus()
-    if (!pos) return
-    const doc = this.draw.getActiveDocument()
-    const node = getByPath(doc.elements, pos.path)
-    if (!node || node.type !== 'text') return
-    const t = node as ITextElement
-    if (pos.offset < t.value.length) {
+    this.execute(doc => {
+      const pos = this.range.getFocus()
+      if (!pos) return false
+      const node = getByPath(doc.elements, pos.path)
+      if (!node || node.type !== 'text') return false
+      const t = node as ITextElement
+      if (pos.offset >= t.value.length) return false
       t.value = t.value.slice(0, pos.offset) + t.value.slice(pos.offset + 1)
-      this._commit(doc, 'text')
-    }
+      return
+    }, 'text')
   }
 
   /** Enter 换段：在当前 text run 内切成两半，第二半为新 run；对普通段落即插入零宽段分隔 */
   splitParagraph(): void {
     if (this.deleteSelection()) return
-    const pos = this.range.getFocus()
-    if (!pos) return
-    const doc = this.draw.getActiveDocument()
-    const node = getByPath(doc.elements, pos.path)
-    const parent = getParentContainer(doc.elements, pos.path)
-    if (!node || !parent) return
-    if (node.type !== 'text') return
-    const t = node as ITextElement
-    const idx = pos.path[pos.path.length - 1] as number
+    this.execute(doc => {
+      const pos = this.range.getFocus()
+      if (!pos) return false
+      const node = getByPath(doc.elements, pos.path)
+      const parent = getParentContainer(doc.elements, pos.path)
+      if (!node || !parent) return false
+      if (node.type !== 'text') return false
+      const t = node as ITextElement
+      const idx = pos.path[pos.path.length - 1] as number
 
-    const before = t.value.slice(0, pos.offset)
-    const after = t.value.slice(pos.offset)
-    t.value = before
-    // 插入段落分隔标记 + 后半 text
-    const sep: ITextElement = { type: 'text', value: '\u200B' } as ITextElement
-    const rest: ITextElement = { type: 'text', value: after } as ITextElement
-    // 继承字体/字号
-    const anyT = t as unknown as Record<string, unknown>
-    for (const k of ['font', 'size', 'bold', 'color']) {
-      if (anyT[k] != null) {
-        (rest as unknown as Record<string, unknown>)[k] = anyT[k]
+      const before = t.value.slice(0, pos.offset)
+      const after = t.value.slice(pos.offset)
+      t.value = before
+      // 插入段落分隔标记 + 后半 text
+      const sep: ITextElement = { type: 'text', value: '\u200B' } as ITextElement
+      const rest: ITextElement = { type: 'text', value: after } as ITextElement
+      // 继承字体/字号
+      const anyT = t as unknown as Record<string, unknown>
+      for (const k of ['font', 'size', 'bold', 'color']) {
+        if (anyT[k] != null) {
+          (rest as unknown as Record<string, unknown>)[k] = anyT[k]
+        }
       }
-    }
-    parent.splice(idx + 1, 0, sep, rest)
-    const newPath = pos.path.slice() as Path
-    newPath[newPath.length - 1] = idx + 2
-    this.range.setCaret({ path: newPath, offset: 0 })
-    this._commit(doc, 'text')
+      parent.splice(idx + 1, 0, sep, rest)
+      const newPath = pos.path.slice() as Path
+      newPath[newPath.length - 1] = idx + 2
+      this.range.setCaret({ path: newPath, offset: 0 })
+      return
+    }, 'text')
   }
 
   /* -------------------- 光标移动 -------------------- */
@@ -455,25 +483,26 @@ export class CommandAdapt {
    * @param flex 对齐方式：'left' | 'center' | 'right' | 'justify' | 'alignment' | 'distribute'
    */
   setRowFlex(flex: 'left' | 'center' | 'right' | 'justify' | 'alignment' | 'distribute'): void {
-    const doc = this.draw.getActiveDocument()
-    const ordered = this.range.getOrdered()
-    const pos = ordered?.start ?? this.range.getFocus()
-    if (!pos) return
-    const parent = getParentContainer(doc.elements, pos.path)
-    if (!parent) return
-    const cursorIdx = pos.path[pos.path.length - 1] as number
-    const groups = splitParagraphs(parent)
-    for (const g of groups) {
-      if (cursorIdx < g.start || cursorIdx >= g.end) continue
-      if (g.block) {
-        ;(g.block as unknown as Record<string, unknown>).rowFlex = flex
+    this.execute(doc => {
+      const ordered = this.range.getOrdered()
+      const pos = ordered?.start ?? this.range.getFocus()
+      if (!pos) return false
+      const parent = getParentContainer(doc.elements, pos.path)
+      if (!parent) return false
+      const cursorIdx = pos.path[pos.path.length - 1] as number
+      const groups = splitParagraphs(parent)
+      for (const g of groups) {
+        if (cursorIdx < g.start || cursorIdx >= g.end) continue
+        if (g.block) {
+          ;(g.block as unknown as Record<string, unknown>).rowFlex = flex
+        }
+        for (const r of g.runs) {
+          ;(r as unknown as Record<string, unknown>).rowFlex = flex
+        }
+        return
       }
-      for (const r of g.runs) {
-        ;(r as unknown as Record<string, unknown>).rowFlex = flex
-      }
-      this._commit(doc)
-      return
-    }
+      return false
+    })
   }
 
   /**
@@ -482,24 +511,25 @@ export class CommandAdapt {
    * @param rule 行高规则，默认 'auto'
    */
   setLineHeight(lh: number, rule: 'auto' | 'exact' | 'atLeast' = 'auto'): void {
-    const doc = this.draw.getActiveDocument()
-    const pos = this.range.getFocus()
-    if (!pos) return
-    const parent = getParentContainer(doc.elements, pos.path)
-    if (!parent) return
-    const cursorIdx = pos.path[pos.path.length - 1] as number
-    const groups = splitParagraphs(parent)
-    for (const g of groups) {
-      if (cursorIdx < g.start || cursorIdx >= g.end) continue
-      const targets = g.block ? [g.block, ...g.runs] : g.runs
-      for (const r of targets) {
-        const any = r as unknown as Record<string, unknown>
-        any.lineHeight = lh
-        any.lineHeightRule = rule
+    this.execute(doc => {
+      const pos = this.range.getFocus()
+      if (!pos) return false
+      const parent = getParentContainer(doc.elements, pos.path)
+      if (!parent) return false
+      const cursorIdx = pos.path[pos.path.length - 1] as number
+      const groups = splitParagraphs(parent)
+      for (const g of groups) {
+        if (cursorIdx < g.start || cursorIdx >= g.end) continue
+        const targets = g.block ? [g.block, ...g.runs] : g.runs
+        for (const r of targets) {
+          const any = r as unknown as Record<string, unknown>
+          any.lineHeight = lh
+          any.lineHeightRule = rule
+        }
+        return
       }
-      this._commit(doc)
-      return
-    }
+      return false
+    })
   }
 
   /**
@@ -507,24 +537,25 @@ export class CommandAdapt {
    * @param margin 段前段后间距数值
    */
   setRowMargin(margin: number): void {
-    const doc = this.draw.getActiveDocument()
-    const pos = this.range.getFocus()
-    if (!pos) return
-    const parent = getParentContainer(doc.elements, pos.path)
-    if (!parent) return
-    const cursorIdx = pos.path[pos.path.length - 1] as number
-    const groups = splitParagraphs(parent)
-    for (const g of groups) {
-      if (cursorIdx < g.start || cursorIdx >= g.end) continue
-      const targets = g.block ? [g.block, ...g.runs] : g.runs
-      for (const r of targets) {
-        const any = r as unknown as Record<string, unknown>
-        any.paragraphSpacingBefore = margin
-        any.paragraphSpacingAfter = margin
+    this.execute(doc => {
+      const pos = this.range.getFocus()
+      if (!pos) return false
+      const parent = getParentContainer(doc.elements, pos.path)
+      if (!parent) return false
+      const cursorIdx = pos.path[pos.path.length - 1] as number
+      const groups = splitParagraphs(parent)
+      for (const g of groups) {
+        if (cursorIdx < g.start || cursorIdx >= g.end) continue
+        const targets = g.block ? [g.block, ...g.runs] : g.runs
+        for (const r of targets) {
+          const any = r as unknown as Record<string, unknown>
+          any.paragraphSpacingBefore = margin
+          any.paragraphSpacingAfter = margin
+        }
+        return
       }
-      this._commit(doc)
-      return
-    }
+      return false
+    })
   }
 
   /* -------------------- run 样式 -------------------- */
@@ -643,13 +674,14 @@ export class CommandAdapt {
    * @param fn 对目标 run 的变更函数
    */
   private mutateRun(fn: (run: ITextElement) => void): void {
-    const pos = this.range.getFocus()
-    if (!pos) return
-    const doc = this.draw.getActiveDocument()
-    const node = getByPath(doc.elements, pos.path)
-    if (!node || node.type !== 'text') return
-    fn(node as ITextElement)
-    this._commit(doc)
+    this.execute(doc => {
+      const pos = this.range.getFocus()
+      if (!pos) return false
+      const node = getByPath(doc.elements, pos.path)
+      if (!node || node.type !== 'text') return false
+      fn(node as ITextElement)
+      return
+    })
   }
 
   /**
@@ -665,6 +697,7 @@ export class CommandAdapt {
       const node = getByPath(doc.elements, pos.path)
       if (!node || node.type !== 'text') return
       fn(node as ITextElement)
+      // 不可迁移：多个分支各自 commit
       this._commit(doc)
       return
     }
@@ -679,6 +712,7 @@ export class CommandAdapt {
       const node = getByPath(doc.elements, pos.path)
       if (!node || node.type !== 'text') return
       fn(node as ITextElement)
+      // 不可迁移：多个分支各自 commit
       this._commit(doc)
       return
     }
@@ -693,6 +727,7 @@ export class CommandAdapt {
     } else {
       for (const r of selectedRuns) fn(r)
     }
+    // 不可迁移：多个分支各自 commit
     this._commit(doc)
   }
 
@@ -802,6 +837,7 @@ export class CommandAdapt {
         const t = cur as ITitleElement
         const firstChild = (t.valueList ?? [])[0]
         parent[idx] = firstChild ?? { type: 'text', value: '' } as IElement
+        // 不可迁移：多个 _commit 在不同分支
         this._commit(doc)
       }
       return
@@ -815,6 +851,7 @@ export class CommandAdapt {
       }
       parent[idx] = wrap
     }
+    // 不可迁移：多个 _commit 在不同分支
     this._commit(doc)
   }
 
@@ -824,31 +861,32 @@ export class CommandAdapt {
    * @param style 列表样式
    */
   setList(type: ListTypeName, style: string): void {
-    const pos = this.range.getFocus()
-    if (!pos) return
-    const doc = this.draw.getActiveDocument()
-    const parent = getParentContainer(doc.elements, pos.path)
-    if (!parent) return
-    const idx = pos.path[pos.path.length - 1] as number
-    const cur = parent[idx]
-    if (!cur) return
-    if (cur.type === 'list') {
-      const l = cur as IListElement
-      if (l.listType === type && l.listStyle === style) {
-        const firstChild = (l.valueList ?? [])[0]
-        parent[idx] = firstChild ?? { type: 'text', value: '' } as IElement
-      } else {
-        l.listType = type
-        l.listStyle = style
+    this.execute(doc => {
+      const pos = this.range.getFocus()
+      if (!pos) return false
+      const parent = getParentContainer(doc.elements, pos.path)
+      if (!parent) return false
+      const idx = pos.path[pos.path.length - 1] as number
+      const cur = parent[idx]
+      if (!cur) return false
+      if (cur.type === 'list') {
+        const l = cur as IListElement
+        if (l.listType === type && l.listStyle === style) {
+          const firstChild = (l.valueList ?? [])[0]
+          parent[idx] = firstChild ?? { type: 'text', value: '' } as IElement
+        } else {
+          l.listType = type
+          l.listStyle = style
+        }
+      } else if (cur.type === 'text') {
+        const wrap: IListElement = {
+          type: 'list', value: '', listType: type, listStyle: style, listLevel: 0,
+          valueList: [cloneTree(cur)]
+        }
+        parent[idx] = wrap
       }
-    } else if (cur.type === 'text') {
-      const wrap: IListElement = {
-        type: 'list', value: '', listType: type, listStyle: style, listLevel: 0,
-        valueList: [cloneTree(cur)]
-      }
-      parent[idx] = wrap
-    }
-    this._commit(doc)
+      return
+    })
   }
 
   /* -------------------- 表格 -------------------- */
@@ -860,37 +898,38 @@ export class CommandAdapt {
    * @param availableWidth 可用宽度，省略时取内容区宽度
    */
   insertTable(rows: number, cols: number, availableWidth?: number): void {
-    const doc = this.draw.getActiveDocument()
-    const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
-    const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
-    if (!parent) return
-    const idx = (pos.path[pos.path.length - 1] as number) + 1
-    const contentWidth = availableWidth ?? this.getContentWidth()
-    const colWidth = contentWidth / cols
-    const table: ITableElement = {
-      type: 'table',
-      value: '',
-      colgroup: Array.from({ length: cols }, () => ({ width: colWidth })),
-      trList: Array.from({ length: rows }, () => ({
-        height: 32,
-        tdList: Array.from({ length: cols }, () => ({
-          width: colWidth,
-          colspan: 1,
-          rowspan: 1,
-          value: [{ type: 'text', value: '' } as IElement],
-          verticalAlign: 'top' as const,
-          borderStyle: {
-            top: { width: 1, color: '#000', style: 'solid' as const },
-            right: { width: 1, color: '#000', style: 'solid' as const },
-            bottom: { width: 1, color: '#000', style: 'solid' as const },
-            left: { width: 1, color: '#000', style: 'solid' as const }
-          },
-          padding: [5, 5, 5, 5] as [number, number, number, number]
+    this.execute(doc => {
+      const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
+      const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
+      if (!parent) return false
+      const idx = (pos.path[pos.path.length - 1] as number) + 1
+      const contentWidth = availableWidth ?? this.getContentWidth()
+      const colWidth = contentWidth / cols
+      const table: ITableElement = {
+        type: 'table',
+        value: '',
+        colgroup: Array.from({ length: cols }, () => ({ width: colWidth })),
+        trList: Array.from({ length: rows }, () => ({
+          height: 32,
+          tdList: Array.from({ length: cols }, () => ({
+            width: colWidth,
+            colspan: 1,
+            rowspan: 1,
+            value: [{ type: 'text', value: '' } as IElement],
+            verticalAlign: 'top' as const,
+            borderStyle: {
+              top: { width: 1, color: '#000', style: 'solid' as const },
+              right: { width: 1, color: '#000', style: 'solid' as const },
+              bottom: { width: 1, color: '#000', style: 'solid' as const },
+              left: { width: 1, color: '#000', style: 'solid' as const }
+            },
+            padding: [5, 5, 5, 5] as [number, number, number, number]
+          }))
         }))
-      }))
-    }
-    parent.splice(idx, 0, table)
-    this._commit(doc)
+      }
+      parent.splice(idx, 0, table)
+      return
+    })
   }
 
   /**
@@ -939,18 +978,20 @@ export class CommandAdapt {
    * @param count 插入行数，默认 1
    */
   insertTableRow(position: 'above' | 'below', count = 1): void {
-    const ctx = this.getTableContext()
-    if (!ctx) return
-    const { doc, table, trIndex } = ctx
-    const insertAt = position === 'above' ? trIndex : trIndex + 1
-    for (let i = 0; i < count; i++) {
-      const newRow = cloneTree(table.trList[trIndex])
-      for (const td of newRow.tdList) {
-        td.value = [{ type: 'text', value: '' } as IElement]
+    this.execute(_doc => {
+      const ctx = this.getTableContext()
+      if (!ctx) return false
+      const { table, trIndex } = ctx
+      const insertAt = position === 'above' ? trIndex : trIndex + 1
+      for (let i = 0; i < count; i++) {
+        const newRow = cloneTree(table.trList[trIndex])
+        for (const td of newRow.tdList) {
+          td.value = [{ type: 'text', value: '' } as IElement]
+        }
+        table.trList.splice(insertAt + i, 0, newRow)
       }
-      table.trList.splice(insertAt + i, 0, newRow)
-    }
-    this._commit(doc)
+      return
+    })
   }
 
   /**
@@ -959,66 +1000,74 @@ export class CommandAdapt {
    * @param count 插入列数，默认 1
    */
   insertTableCol(position: 'left' | 'right', count = 1): void {
-    const ctx = this.getTableContext()
-    if (!ctx) return
-    const { doc, table, tdIndex } = ctx
-    const totalWidth = table.colgroup.reduce((s, c) => s + c.width, 0)
-    const newColCount = table.colgroup.length + count
-    const colWidth = totalWidth / newColCount
-    const insertAt = position === 'left' ? tdIndex : tdIndex + 1
-    for (let i = 0; i < count; i++) {
-      for (const tr of table.trList) {
-        const newTd = this.makeEmptyTd(colWidth)
-        tr.tdList.splice(insertAt + i, 0, newTd)
+    this.execute(_doc => {
+      const ctx = this.getTableContext()
+      if (!ctx) return false
+      const { table, tdIndex } = ctx
+      const totalWidth = table.colgroup.reduce((s, c) => s + c.width, 0)
+      const newColCount = table.colgroup.length + count
+      const colWidth = totalWidth / newColCount
+      const insertAt = position === 'left' ? tdIndex : tdIndex + 1
+      for (let i = 0; i < count; i++) {
+        for (const tr of table.trList) {
+          const newTd = this.makeEmptyTd(colWidth)
+          tr.tdList.splice(insertAt + i, 0, newTd)
+        }
+        table.colgroup.splice(insertAt + i, 0, { width: colWidth })
       }
-      table.colgroup.splice(insertAt + i, 0, { width: colWidth })
-    }
-    for (const tr of table.trList) {
-      for (const td of tr.tdList) td.width = colWidth
-    }
-    for (const c of table.colgroup) c.width = colWidth
-    this._commit(doc)
+      for (const tr of table.trList) {
+        for (const td of tr.tdList) td.width = colWidth
+      }
+      for (const c of table.colgroup) c.width = colWidth
+      return
+    })
   }
 
   /** 删除当前表格行（至少保留一行）。 */
   deleteTableRow(): void {
-    const ctx = this.getTableContext()
-    if (!ctx) return
-    const { doc, table, trIndex } = ctx
-    if (table.trList.length <= 1) return
-    table.trList.splice(trIndex, 1)
-    this._commit(doc)
+    this.execute(_doc => {
+      const ctx = this.getTableContext()
+      if (!ctx) return false
+      const { table, trIndex } = ctx
+      if (table.trList.length <= 1) return false
+      table.trList.splice(trIndex, 1)
+      return
+    })
   }
 
   /** 删除当前表格列（至少保留一列）。 */
   deleteTableCol(): void {
-    const ctx = this.getTableContext()
-    if (!ctx) return
-    const { doc, table, tdIndex } = ctx
-    if (table.trList[0].tdList.length <= 1) return
-    for (const tr of table.trList) {
-      tr.tdList.splice(tdIndex, 1)
-    }
-    table.colgroup.splice(tdIndex, 1)
-    this._commit(doc)
+    this.execute(_doc => {
+      const ctx = this.getTableContext()
+      if (!ctx) return false
+      const { table, tdIndex } = ctx
+      if (table.trList[0].tdList.length <= 1) return false
+      for (const tr of table.trList) {
+        tr.tdList.splice(tdIndex, 1)
+      }
+      table.colgroup.splice(tdIndex, 1)
+      return
+    })
   }
 
   /** 将当前单元格拆分为两个单元格，并均分原列宽。 */
   splitTableCell(): void {
-    const ctx = this.getTableContext()
-    if (!ctx) return
-    const { doc, table, trIndex, tdIndex } = ctx
-    const td = table.trList[trIndex].tdList[tdIndex]
-    const newTd = this.makeEmptyTd(td.width)
-    table.trList[trIndex].tdList.splice(tdIndex + 1, 0, newTd)
-    const colWidth = td.width / 2
-    td.width = colWidth
-    newTd.width = colWidth
-    if (table.colgroup[tdIndex]) {
-      const totalWidth = table.colgroup[tdIndex].width
-      table.colgroup.splice(tdIndex, 1, { width: colWidth }, { width: totalWidth - colWidth })
-    }
-    this._commit(doc)
+    this.execute(_doc => {
+      const ctx = this.getTableContext()
+      if (!ctx) return false
+      const { table, trIndex, tdIndex } = ctx
+      const td = table.trList[trIndex].tdList[tdIndex]
+      const newTd = this.makeEmptyTd(td.width)
+      table.trList[trIndex].tdList.splice(tdIndex + 1, 0, newTd)
+      const colWidth = td.width / 2
+      td.width = colWidth
+      newTd.width = colWidth
+      if (table.colgroup[tdIndex]) {
+        const totalWidth = table.colgroup[tdIndex].width
+        table.colgroup.splice(tdIndex, 1, { width: colWidth }, { width: totalWidth - colWidth })
+      }
+      return
+    })
   }
 
   /** 选中当前表格的全部内容。 */
@@ -1043,95 +1092,104 @@ export class CommandAdapt {
 
   /** 合并选区内单元格 */
   mergeTableCells(): void {
-    const ctx = this.getTableContext()
-    if (!ctx) return
-    const { doc, table } = ctx
+    this.execute(_doc => {
+      const ctx = this.getTableContext()
+      if (!ctx) return false
+      const { table } = ctx
 
-    const ordered = this.range.getOrdered()
-    if (!ordered) return
-    const { start, end } = ordered
-    if (start.path.length < 5 || end.path.length < 5) return
-    if (start.path[0] !== end.path[0]) return
+      const ordered = this.range.getOrdered()
+      if (!ordered) return false
+      const { start, end } = ordered
+      if (start.path.length < 5 || end.path.length < 5) return false
+      if (start.path[0] !== end.path[0]) return false
 
-    const minRow = Math.min(start.path[2] as number, end.path[2] as number)
-    const maxRow = Math.max(start.path[2] as number, end.path[2] as number)
-    const minCol = Math.min(start.path[4] as number, end.path[4] as number)
-    const maxCol = Math.max(start.path[4] as number, end.path[4] as number)
+      const minRow = Math.min(start.path[2] as number, end.path[2] as number)
+      const maxRow = Math.max(start.path[2] as number, end.path[2] as number)
+      const minCol = Math.min(start.path[4] as number, end.path[4] as number)
+      const maxCol = Math.max(start.path[4] as number, end.path[4] as number)
 
-    if (minRow === maxRow && minCol === maxCol) return
+      if (minRow === maxRow && minCol === maxCol) return false
 
-    const firstTd = table.trList[minRow]?.tdList[minCol]
-    if (!firstTd) return
+      const firstTd = table.trList[minRow]?.tdList[minCol]
+      if (!firstTd) return false
 
-    const allContent: IElement[] = []
-    for (let r = minRow; r <= maxRow; r++) {
-      for (let c = minCol; c <= maxCol; c++) {
-        const td = table.trList[r]?.tdList[c]
-        if (td && !td.merged) {
-          for (const el of td.value) allContent.push(el)
+      const allContent: IElement[] = []
+      for (let r = minRow; r <= maxRow; r++) {
+        for (let c = minCol; c <= maxCol; c++) {
+          const td = table.trList[r]?.tdList[c]
+          if (td && !td.merged) {
+            for (const el of td.value) allContent.push(el)
+          }
         }
       }
-    }
 
-    firstTd.colspan = maxCol - minCol + 1
-    firstTd.rowspan = maxRow - minRow + 1
-    firstTd.value = allContent.length > 0 ? allContent : [{ type: 'text', value: '' } as IElement]
-    firstTd.width = table.colgroup.slice(minCol, maxCol + 1).reduce((s, c) => s + c.width, 0)
+      firstTd.colspan = maxCol - minCol + 1
+      firstTd.rowspan = maxRow - minRow + 1
+      firstTd.value = allContent.length > 0 ? allContent : [{ type: 'text', value: '' } as IElement]
+      firstTd.width = table.colgroup.slice(minCol, maxCol + 1).reduce((s, c) => s + c.width, 0)
 
-    for (let r = minRow; r <= maxRow; r++) {
-      for (let c = minCol; c <= maxCol; c++) {
-        if (r === minRow && c === minCol) continue
-        const td = table.trList[r]?.tdList[c]
-        if (td) {
-          td.merged = true
-          td.value = []
+      for (let r = minRow; r <= maxRow; r++) {
+        for (let c = minCol; c <= maxCol; c++) {
+          if (r === minRow && c === minCol) continue
+          const td = table.trList[r]?.tdList[c]
+          if (td) {
+            td.merged = true
+            td.value = []
+          }
         }
       }
-    }
-
-    this._commit(doc)
+      return
+    })
   }
 
   /** 删除整个表格 */
   deleteTable(): void {
-    const ctx = this.getTableContext()
-    if (!ctx) return
-    const { doc, tableIndex } = ctx
-    doc.elements.splice(tableIndex, 1)
-    this._commit(doc)
+    this.execute(doc => {
+      const ctx = this.getTableContext()
+      if (!ctx) return false
+      const { tableIndex } = ctx
+      doc.elements.splice(tableIndex, 1)
+      return
+    })
   }
 
   /** 设置当前单元格垂直对齐 */
   setCellVerticalAlign(align: VerticalAlign): void {
-    const ctx = this.getTableContext()
-    if (!ctx) return
-    const { doc, table, trIndex, tdIndex } = ctx
-    const td = table.trList[trIndex]?.tdList[tdIndex]
-    if (!td) return
-    td.verticalAlign = align
-    this._commit(doc)
+    this.execute(_doc => {
+      const ctx = this.getTableContext()
+      if (!ctx) return false
+      const { table, trIndex, tdIndex } = ctx
+      const td = table.trList[trIndex]?.tdList[tdIndex]
+      if (!td) return false
+      td.verticalAlign = align
+      return
+    })
   }
 
   /** 设置当前单元格底纹颜色 */
   setCellBackground(color: string): void {
-    const ctx = this.getTableContext()
-    if (!ctx) return
-    const { doc, table, trIndex, tdIndex } = ctx
-    const td = table.trList[trIndex]?.tdList[tdIndex]
-    if (!td) return
-    td.backgroundColor = color
-    this._commit(doc)
+    this.execute(_doc => {
+      const ctx = this.getTableContext()
+      if (!ctx) return false
+      const { table, trIndex, tdIndex } = ctx
+      const td = table.trList[trIndex]?.tdList[tdIndex]
+      if (!td) return false
+      td.backgroundColor = color
+      return
+    })
   }
 
   /** 切换当前行重复表头 */
   toggleRepeatHeader(): void {
-    const ctx = this.getTableContext()
-    if (!ctx) return
-    const { doc, table, trIndex } = ctx
-    const tr = table.trList[trIndex]
-    if (!tr) return
-    tr.pagingRepeat = !tr.pagingRepeat
-    this._commit(doc)
+    this.execute(_doc => {
+      const ctx = this.getTableContext()
+      if (!ctx) return false
+      const { table, trIndex } = ctx
+      const tr = table.trList[trIndex]
+      if (!tr) return false
+      tr.pagingRepeat = !tr.pagingRepeat
+      return
+    })
   }
 
   /**
@@ -1152,6 +1210,7 @@ export class CommandAdapt {
       const td = tr.tdList[colIndex]
       if (td && !td.merged) td.width = w
     }
+    // 不可迁移：doc 来自 this.draw.getDocument() 而非 getActiveDocument()
     this._commit(doc)
   }
 
@@ -1169,6 +1228,7 @@ export class CommandAdapt {
     if (rowIndex < 0 || rowIndex >= t.trList.length) return
     const h = Math.max(20, Math.round(height))
     t.trList[rowIndex].height = h
+    // 不可迁移：doc 来自 this.draw.getDocument() 而非 getActiveDocument()
     this._commit(doc)
   }
 
@@ -1181,17 +1241,17 @@ export class CommandAdapt {
    * @param height 高度，当 src 为字符串时生效，默认 150
    */
   insertImage(src: string | { value: string; width: number; height: number }, width?: number, height?: number): void {
-    const doc = this.draw.getActiveDocument()
-    const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
-    const imgSrc = typeof src === 'string' ? src : src.value
-    const imgW = typeof src === 'string' ? (width ?? 200) : src.width
-    const imgH = typeof src === 'string' ? (height ?? 150) : src.height
-    const img: IElement = { type: 'image', value: imgSrc, width: imgW, height: imgH } as unknown as IElement
-    const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
-    if (!parent) return
-    const idx = (pos.path[pos.path.length - 1] as number) + 1
-    parent.splice(idx, 0, img)
-    this._commit(doc)
+    this.execute(doc => {
+      const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
+      const imgSrc = typeof src === 'string' ? src : src.value
+      const imgW = typeof src === 'string' ? (width ?? 200) : src.width
+      const imgH = typeof src === 'string' ? (height ?? 150) : src.height
+      const img: IElement = { type: 'image', value: imgSrc, width: imgW, height: imgH } as unknown as IElement
+      const topLevelIndex = (pos.path[0] as number) ?? doc.elements.length
+      const idx = Math.min(topLevelIndex + 1, doc.elements.length)
+      doc.elements.splice(idx, 0, img)
+      return
+    })
   }
 
   /** 插入电子签名图片，固定 100×100 */
@@ -1204,14 +1264,15 @@ export class CommandAdapt {
    * @param payload LaTeX 参数，包含 latex/svg/width/height
    */
   insertLatex(payload: { latex: string; svg: string; width: number; height: number }): void {
-    const doc = this.draw.getActiveDocument()
-    const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
-    const el: IElement = { type: 'latex', value: payload.latex, laTexSVG: payload.svg, width: payload.width, height: payload.height } as unknown as IElement
-    const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
-    if (!parent) return
-    const idx = (pos.path[pos.path.length - 1] as number) + 1
-    parent.splice(idx, 0, el)
-    this._commit(doc)
+    this.execute(doc => {
+      const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
+      const el: IElement = { type: 'latex', value: payload.latex, laTexSVG: payload.svg, width: payload.width, height: payload.height } as unknown as IElement
+      const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
+      if (!parent) return false
+      const idx = (pos.path[pos.path.length - 1] as number) + 1
+      parent.splice(idx, 0, el)
+      return
+    })
   }
 
   /**
@@ -1221,12 +1282,13 @@ export class CommandAdapt {
    * @param height 新高度
    */
   updateImageSize(path: Path, width: number, height: number): void {
-    const doc = this.draw.getActiveDocument()
-    const el = getByPath(doc.elements, path)
-    if (!el || el.type !== 'image') return
-    ;(el as unknown as { width: number; height: number }).width = Math.max(1, Math.round(width))
-    ;(el as unknown as { width: number; height: number }).height = Math.max(1, Math.round(height))
-    this._commit(doc)
+    this.execute(doc => {
+      const el = getByPath(doc.elements, path)
+      if (!el || el.type !== 'image') return false
+      ;(el as unknown as { width: number; height: number }).width = Math.max(1, Math.round(width))
+      ;(el as unknown as { width: number; height: number }).height = Math.max(1, Math.round(height))
+      return
+    })
   }
 
   /**
@@ -1234,14 +1296,15 @@ export class CommandAdapt {
    * @param path 图片路径
    */
   deleteImage(path: Path): void {
-    const doc = this.draw.getActiveDocument()
-    const parent = getParentContainer(doc.elements, path)
-    if (!parent) return
-    const idx = path[path.length - 1]
-    if (typeof idx !== 'number' || idx < 0 || idx >= parent.length) return
-    if (parent[idx].type !== 'image') return
-    parent.splice(idx, 1)
-    this._commit(doc)
+    this.execute(doc => {
+      const parent = getParentContainer(doc.elements, path)
+      if (!parent) return false
+      const idx = path[path.length - 1]
+      if (typeof idx !== 'number' || idx < 0 || idx >= parent.length) return false
+      if (parent[idx].type !== 'image') return false
+      parent.splice(idx, 1)
+      return
+    })
   }
 
   /**
@@ -1256,6 +1319,7 @@ export class CommandAdapt {
     img.onload = () => {
       el.width = img.naturalWidth
       el.height = img.naturalHeight
+      // 不可迁移：_commit 在异步 onload 回调内
       this._commit(doc)
     }
     img.src = el.value
@@ -1267,11 +1331,12 @@ export class CommandAdapt {
    * @param align 对齐方式：'left' | 'center' | 'right'
    */
   imageAlign(path: Path, align: 'left' | 'center' | 'right'): void {
-    const doc = this.draw.getActiveDocument()
-    const el = getByPath(doc.elements, path)
-    if (!el || el.type !== 'image') return
-    ;(el as unknown as { rowFlex: string }).rowFlex = align
-    this._commit(doc)
+    this.execute(doc => {
+      const el = getByPath(doc.elements, path)
+      if (!el || el.type !== 'image') return false
+      ;(el as unknown as { rowFlex: string }).rowFlex = align
+      return
+    })
   }
 
   /**
@@ -1297,6 +1362,7 @@ export class CommandAdapt {
           el.value = value
           el.width = img.naturalWidth
           el.height = img.naturalHeight
+          // 不可迁移：_commit 在异步嵌套回调内
           this._commit(doc)
         }
         img.src = value
@@ -1311,12 +1377,13 @@ export class CommandAdapt {
    * @param path 图片路径
    */
   rotateImage(path: Path): void {
-    const doc = this.draw.getActiveDocument()
-    const el = getByPath(doc.elements, path) as unknown as { type: string; rotate?: number; width: number; height: number } | null
-    if (!el || el.type !== 'image') return
-    const cur = el.rotate ?? 0
-    el.rotate = (cur + 90) % 360
-    this._commit(doc)
+    this.execute(doc => {
+      const el = getByPath(doc.elements, path) as unknown as { type: string; rotate?: number; width: number; height: number } | null
+      if (!el || el.type !== 'image') return false
+      const cur = el.rotate ?? 0
+      el.rotate = (cur + 90) % 360
+      return
+    })
   }
 
   /**
@@ -1341,23 +1408,25 @@ export class CommandAdapt {
    * @param mode 环绕模式：'block' | 'surround' | 'floatTop' | 'floatBottom'
    */
   imageWrap(path: Path, mode: 'block' | 'surround' | 'floatTop' | 'floatBottom'): void {
-    const doc = this.draw.getActiveDocument()
-    const el = getByPath(doc.elements, path) as unknown as { type: string; imgDisplay?: string; rowFlex?: string } | null
-    if (!el || el.type !== 'image') return
-    el.imgDisplay = mode
-    if (mode === 'surround' || mode === 'floatTop' || mode === 'floatBottom') el.rowFlex = 'center'
-    this._commit(doc)
+    this.execute(doc => {
+      const el = getByPath(doc.elements, path) as unknown as { type: string; imgDisplay?: string; rowFlex?: string } | null
+      if (!el || el.type !== 'image') return false
+      el.imgDisplay = mode
+      if (mode === 'surround' || mode === 'floatTop' || mode === 'floatBottom') el.rowFlex = 'center'
+      return
+    })
   }
 
   /** 在当前光标处插入分页符。 */
   insertPageBreak(): void {
-    const doc = this.draw.getActiveDocument()
-    const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
-    const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
-    if (!parent) return
-    const idx = (pos.path[pos.path.length - 1] as number) + 1
-    parent.splice(idx, 0, { type: 'pageBreak', value: 'manual' } as IElement)
-    this._commit(doc)
+    this.execute(doc => {
+      const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
+      const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
+      if (!parent) return false
+      const idx = (pos.path[pos.path.length - 1] as number) + 1
+      parent.splice(idx, 0, { type: 'pageBreak', value: 'manual' } as IElement)
+      return
+    })
   }
 
   /**
@@ -1365,15 +1434,16 @@ export class CommandAdapt {
    * @param payload 超链接参数，包含 url 与 valueList
    */
   insertHyperlink(payload: { url: string; valueList: IElement[] }): void {
-    const doc = this.draw.getActiveDocument()
-    const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
-    const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
-    if (!parent) return
-    const idx = (pos.path[pos.path.length - 1] as number) + 1
-    const link: IElement = { type: 'hyperlink', value: payload.url } as unknown as IElement
-    ;(link as unknown as Record<string, unknown>).valueList = payload.valueList.map(r => ({ ...r, type: 'text' } as IElement))
-    parent.splice(idx, 0, link)
-    this._commit(doc)
+    this.execute(doc => {
+      const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
+      const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
+      if (!parent) return false
+      const idx = (pos.path[pos.path.length - 1] as number) + 1
+      const link: IElement = { type: 'hyperlink', value: payload.url } as unknown as IElement
+      ;(link as unknown as Record<string, unknown>).valueList = payload.valueList.map(r => ({ ...r, type: 'text' } as IElement))
+      parent.splice(idx, 0, link)
+      return
+    })
   }
 
   /**
@@ -1400,19 +1470,20 @@ export class CommandAdapt {
     } else {
       normalized = { lineType: 'solid', lineWidth: 1, dashArray: [0, 0] }
     }
-    const doc = this.draw.getActiveDocument()
-    const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
-    const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
-    if (!parent) return
-    const idx = (pos.path[pos.path.length - 1] as number) + 1
-    const sep: IElement = { type: 'separator', value: '' } as unknown as IElement
-    const sepAny = sep as unknown as Record<string, unknown>
-    if (normalized.lineType != null) sepAny.lineType = normalized.lineType
-    if (normalized.lineWidth != null) sepAny.lineWidth = normalized.lineWidth
-    if (normalized.dashArray != null) sepAny.dashArray = normalized.dashArray
-    if (normalized.color != null) sepAny.color = normalized.color
-    parent.splice(idx, 0, sep)
-    this._commit(doc)
+    this.execute(doc => {
+      const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
+      const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
+      if (!parent) return false
+      const idx = (pos.path[pos.path.length - 1] as number) + 1
+      const sep: IElement = { type: 'separator', value: '' } as unknown as IElement
+      const sepAny = sep as unknown as Record<string, unknown>
+      if (normalized.lineType != null) sepAny.lineType = normalized.lineType
+      if (normalized.lineWidth != null) sepAny.lineWidth = normalized.lineWidth
+      if (normalized.dashArray != null) sepAny.dashArray = normalized.dashArray
+      if (normalized.color != null) sepAny.color = normalized.color
+      parent.splice(idx, 0, sep)
+      return
+    })
   }
 
   /** 插入换行符 */
@@ -1466,22 +1537,11 @@ export class CommandAdapt {
       },
       styles: payload.styles ?? prev.styles,
       numbering: payload.numbering ?? prev.numbering,
-      theme: payload.theme ?? prev.theme
+      theme: payload.theme ?? prev.theme,
+      comments: (payload.comments ?? []) as any
     })
-    // 批注处理：序列化批注 restoreComments，DocxCommentMeta[] buildCommentsFromMetas，空则清空
-    if (this._commentHandler) {
-      const comments = payload.comments
-      if (Array.isArray(comments) && comments.length > 0) {
-        const isSerialized = !!comments[0] && typeof comments[0] === 'object' && 'groupId' in (comments[0] as object)
-        if (isSerialized) {
-          this._commentHandler.restoreComments(comments)
-        } else {
-          this._commentHandler.buildCommentsFromMetas(comments)
-        }
-      } else {
-        this._commentHandler.buildCommentsFromMetas([])
-      }
-    }
+    // 通知文档已替换，由 core 订阅后通知插件同步批注数据（反转原 setCommentHandler 耦合）
+    this.listener?.emit('documentSet', this.draw.getDocument())
     if (this._historyManager) {
       this._historyManager.push(
         { doc: cloneTree(this.draw.getDocument()), range: this.range.getRange() },
@@ -1608,22 +1668,23 @@ export class CommandAdapt {
     const items = type === 1 ? result.toc1 : type === 2 ? result.toc2 : result.toc3
     if (items.length === 0) return
 
-    const doc = this.draw.getActiveDocument()
-    const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
-    const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
-    if (!parent) return
-    const idx = (pos.path[pos.path.length - 1] as number) + 1
+    this.execute(doc => {
+      const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
+      const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
+      if (!parent) return false
+      const idx = (pos.path[pos.path.length - 1] as number) + 1
 
-    const tocElements: IElement[] = items.map(item => ({
-      type: 'text',
-      valueList: [{
+      const tocElements: IElement[] = items.map(item => ({
         type: 'text',
-        value: '  '.repeat(item.level - 1) + item.name + ' ' + '\u00b7'.repeat(Math.max(3, 50 - item.name.length - item.level * 2)) + ' ' + String(item.pageNo)
-      }]
-    } as unknown as IElement))
+        valueList: [{
+          type: 'text',
+          value: '  '.repeat(item.level - 1) + item.name + ' ' + '\u00b7'.repeat(Math.max(3, 50 - item.name.length - item.level * 2)) + ' ' + String(item.pageNo)
+        }]
+      } as unknown as IElement))
 
-    parent.splice(idx, 0, ...tocElements)
-    this._commit(doc)
+      parent.splice(idx, 0, ...tocElements)
+      return
+    })
   }
 
   /* -------------------- 页面 / 打印 -------------------- */
@@ -1847,6 +1908,7 @@ export class CommandAdapt {
         const h = this._searchHits[i]
         if (isSamePath(h.path, hit.path)) { h.start += delta; h.end += delta }
       }
+      // 不可迁移：方法返回 boolean
       this._commit(doc)
     }
     this._searchIdx++
@@ -1988,6 +2050,7 @@ export class CommandAdapt {
     const collapsed = isSamePath(range.anchor.path, range.focus.path) && range.anchor.offset === range.focus.offset
     bookmarks.push({ name: payload.name, range, collapsed })
     doc.bookmarks = bookmarks
+    // 不可迁移：doc 来自 this.draw.getDocument() 而非 getActiveDocument()
     this._commit(doc)
   }
 
@@ -1999,6 +2062,7 @@ export class CommandAdapt {
     const doc = this.draw.getDocument()
     if (!doc.bookmarks) return
     doc.bookmarks = doc.bookmarks.filter(b => b.name !== payload.name)
+    // 不可迁移：doc 来自 this.draw.getDocument() 而非 getActiveDocument()
     this._commit(doc)
   }
 
@@ -2052,36 +2116,37 @@ export class CommandAdapt {
     const items = type === 1 ? result.toc1 : type === 2 ? result.toc2 : result.toc3
     if (items.length === 0) return
 
-    const doc = this.draw.getActiveDocument()
-    const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
-    const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
-    if (!parent) return
-    const idx = (pos.path[pos.path.length - 1] as number) + 1
+    this.execute(doc => {
+      const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
+      const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
+      if (!parent) return false
+      const idx = (pos.path[pos.path.length - 1] as number) + 1
 
-    const tocId = Date.now().toString()
-    const tocElements: IElement[] = items.map(item => ({
-      type: 'text',
-      valueList: [{
+      const tocId = Date.now().toString()
+      const tocElements: IElement[] = items.map(item => ({
         type: 'text',
-        value: '  '.repeat(item.level - 1) + item.name + ' ' + '\u00b7'.repeat(Math.max(3, 50 - item.name.length - item.level * 2)) + ' ' + String(item.pageNo)
-      }],
-      tocId
-    } as unknown as IElement))
+        valueList: [{
+          type: 'text',
+          value: '  '.repeat(item.level - 1) + item.name + ' ' + '\u00b7'.repeat(Math.max(3, 50 - item.name.length - item.level * 2)) + ' ' + String(item.pageNo)
+        }],
+        tocId
+      } as unknown as IElement))
 
-    parent.splice(idx, 0, ...tocElements)
-    this._commit(doc)
+      parent.splice(idx, 0, ...tocElements)
+      return
+    })
   }
 
   /** 删除所有目录元素（带 tocId 标识的元素） */
   removeToc(): void {
-    const doc = this.draw.getActiveDocument()
-    const elements = doc.elements
-    for (let i = elements.length - 1; i >= 0; i--) {
-      if ((elements[i] as unknown as { tocId?: string }).tocId) {
-        elements.splice(i, 1)
+    this.execute(doc => {
+      const elements = doc.elements
+      for (let i = elements.length - 1; i >= 0; i--) {
+        if ((elements[i] as unknown as { tocId?: string }).tocId) {
+          elements.splice(i, 1)
+        }
       }
-    }
-    this._commit(doc)
+    })
   }
 
   /* -------------------- 撤销 / 重做 -------------------- */
@@ -2261,6 +2326,7 @@ export class CommandAdapt {
       }
     }
     this.range.setCaret({ path: pos.path.slice() as Path, offset: pos.offset })
+    // 不可迁移：前置 deleteSelection() 可能已 commit
     this._commit(doc, 'text')
   }
 
@@ -2337,22 +2403,23 @@ export class CommandAdapt {
    * @param indentPx 缩进像素值
    */
   setParagraphFirstLineIndent(indentPx: number): void {
-    const doc = this.draw.getActiveDocument()
-    const pos = this.range.getFocus()
-    if (!pos) return
-    const parent = getParentContainer(doc.elements, pos.path)
-    if (!parent) return
-    const cursorIdx = pos.path[pos.path.length - 1] as number
-    const groups = splitParagraphs(parent)
-    for (const g of groups) {
-      if (cursorIdx < g.start || cursorIdx >= g.end) continue
-      const targets = g.block ? [g.block, ...g.runs] : g.runs
-      for (const r of targets) {
-        (r as unknown as Record<string, unknown>).paragraphFirstLineIndent = indentPx
+    this.execute(doc => {
+      const pos = this.range.getFocus()
+      if (!pos) return false
+      const parent = getParentContainer(doc.elements, pos.path)
+      if (!parent) return false
+      const cursorIdx = pos.path[pos.path.length - 1] as number
+      const groups = splitParagraphs(parent)
+      for (const g of groups) {
+        if (cursorIdx < g.start || cursorIdx >= g.end) continue
+        const targets = g.block ? [g.block, ...g.runs] : g.runs
+        for (const r of targets) {
+          (r as unknown as Record<string, unknown>).paragraphFirstLineIndent = indentPx
+        }
+        return
       }
-      this._commit(doc)
-      return
-    }
+      return false
+    })
   }
 
   /**
@@ -2395,22 +2462,23 @@ export class CommandAdapt {
    * @param value 属性值
    */
   private setParagraphAttr(key: string, value: number): void {
-    const doc = this.draw.getActiveDocument()
-    const pos = this.range.getFocus()
-    if (!pos) return
-    const parent = getParentContainer(doc.elements, pos.path)
-    if (!parent) return
-    const cursorIdx = pos.path[pos.path.length - 1] as number
-    const groups = splitParagraphs(parent)
-    for (const g of groups) {
-      if (cursorIdx < g.start || cursorIdx >= g.end) continue
-      const targets = g.block ? [g.block, ...g.runs] : g.runs
-      for (const r of targets) {
-        (r as unknown as Record<string, unknown>)[key] = value
+    this.execute(doc => {
+      const pos = this.range.getFocus()
+      if (!pos) return false
+      const parent = getParentContainer(doc.elements, pos.path)
+      if (!parent) return false
+      const cursorIdx = pos.path[pos.path.length - 1] as number
+      const groups = splitParagraphs(parent)
+      for (const g of groups) {
+        if (cursorIdx < g.start || cursorIdx >= g.end) continue
+        const targets = g.block ? [g.block, ...g.runs] : g.runs
+        for (const r of targets) {
+          (r as unknown as Record<string, unknown>)[key] = value
+        }
+        return
       }
-      this._commit(doc)
-      return
-    }
+      return false
+    })
   }
 
   /**
@@ -2504,7 +2572,7 @@ export class CommandAdapt {
       type: null, bold: false, italic: false, underline: false, strikeout: false,
       doubleStrikeout: false, hidden: false, superscript: false, subscript: false,
       color: '', highlight: '', font: '', size: 0, level: null,
-      rowFlex: 'left', lineHeight: 1.5, paragraphFirstLineIndent: 0,
+      rowFlex: 'left', lineHeight: 1.5, lineHeightRule: 'auto', paragraphFirstLineIndent: 0,
       characterScale: 100, painter: !!this._paintFmt,
       undo: this._historyManager?.canUndo() ?? false,
       redo: this._historyManager?.canRedo() ?? false
@@ -2551,6 +2619,7 @@ export class CommandAdapt {
       level: el.type === 'title' ? (el.level as string) ?? null : null,
       rowFlex: (paraEl.rowFlex as string) ?? 'left',
       lineHeight: (paraEl.lineHeight as number) ?? 1.5,
+      lineHeightRule: (paraEl.lineHeightRule as string) ?? 'auto',
       paragraphFirstLineIndent: (paraEl.paragraphFirstLineIndent as number) ?? 0,
       characterScale: (el.characterScale as number) ?? 100,
       painter: !!this._paintFmt,
@@ -2704,21 +2773,42 @@ export class CommandAdapt {
     this.range.setRange(range)
   }
 
-  /** 将当前选区内的顶层元素标记为同一群组，返回 groupId 或 null。 */
+  /** 将当前选区内的元素标记为同一群组，返回 groupId 或 null。 */
   setGroup(): string | null {
     const doc = this.draw.getActiveDocument()
     const ordered = this.range.getOrdered()
     if (!ordered) return null
+    const groupId = `g_${Date.now()}`
     const startPath = ordered.start.path
     const endPath = ordered.end.path
+
+    // 顶层段落选区：对段落元素打 groupId
     if (startPath.length === 1 && endPath.length === 1) {
-      const groupId = `g_${Date.now()}`
       const start = startPath[0] as number
       const end = endPath[0] as number
       for (let i = start; i <= end; i++) {
         const el = doc.elements[i]
         if (el) (el as unknown as Record<string, unknown>).groupId = groupId
       }
+      // 不可迁移：方法返回 string|null，且在循环中 commit 后 return
+      this._commit(doc)
+      return groupId
+    }
+
+    // inline 级选区/光标：对所在段落的 run 追加 groupIds
+    const pos = ordered.start
+    const parent = getParentContainer(doc.elements, pos.path)
+    if (!parent) return null
+    const cursorIdx = pos.path[pos.path.length - 1] as number
+    const groups = splitParagraphs(parent)
+    for (const g of groups) {
+      if (cursorIdx < g.start || cursorIdx >= g.end) continue
+      for (const r of g.runs) {
+        const any = r as unknown as Record<string, unknown>
+        const ids = (any.groupIds as string[] | undefined) ?? []
+        if (!ids.includes(groupId)) any.groupIds = [...ids, groupId]
+      }
+      // 不可迁移：方法返回 string|null，且在循环中 commit 后 return
       this._commit(doc)
       return groupId
     }
@@ -2753,15 +2843,16 @@ export class CommandAdapt {
       : t === 'outside' || t === 'external' || t === 'box' ? 'outside'
       : t === 'all' || t === 'full' || t === '' ? 'all'
       : t
-    const doc = this.draw.getActiveDocument()
-    const pos = this.range.getFocus()
-    if (!pos) return
-    const table = this._findEnclosingTable(doc.elements, pos.path)
-    if (!table) return
-    const t2 = table as unknown as { border?: Record<string, unknown> }
-    if (!t2.border) t2.border = {}
-    t2.border.style = resolved
-    this._commit(doc)
+    this.execute(doc => {
+      const pos = this.range.getFocus()
+      if (!pos) return false
+      const table = this._findEnclosingTable(doc.elements, pos.path)
+      if (!table) return false
+      const t2 = table as unknown as { border?: Record<string, unknown> }
+      if (!t2.border) t2.border = {}
+      t2.border.style = resolved
+      return
+    })
   }
 
   /**
@@ -2769,15 +2860,16 @@ export class CommandAdapt {
    * @param color 颜色值
    */
   setTableBorderColor(color: string): void {
-    const doc = this.draw.getActiveDocument()
-    const pos = this.range.getFocus()
-    if (!pos) return
-    const table = this._findEnclosingTable(doc.elements, pos.path)
-    if (!table) return
-    const t = table as unknown as { border?: Record<string, unknown> }
-    if (!t.border) t.border = {}
-    t.border.color = color
-    this._commit(doc)
+    this.execute(doc => {
+      const pos = this.range.getFocus()
+      if (!pos) return false
+      const table = this._findEnclosingTable(doc.elements, pos.path)
+      if (!table) return false
+      const t = table as unknown as { border?: Record<string, unknown> }
+      if (!t.border) t.border = {}
+      t.border.color = color
+      return
+    })
   }
 
   /**
@@ -2785,15 +2877,16 @@ export class CommandAdapt {
    * @param width 宽度数值
    */
   setTableBorderWidth(width: number): void {
-    const doc = this.draw.getActiveDocument()
-    const pos = this.range.getFocus()
-    if (!pos) return
-    const table = this._findEnclosingTable(doc.elements, pos.path)
-    if (!table) return
-    const t = table as unknown as { border?: Record<string, unknown> }
-    if (!t.border) t.border = {}
-    t.border.width = width
-    this._commit(doc)
+    this.execute(doc => {
+      const pos = this.range.getFocus()
+      if (!pos) return false
+      const table = this._findEnclosingTable(doc.elements, pos.path)
+      if (!table) return false
+      const t = table as unknown as { border?: Record<string, unknown> }
+      if (!t.border) t.border = {}
+      t.border.width = width
+      return
+    })
   }
 
   /**
@@ -2801,15 +2894,16 @@ export class CommandAdapt {
    * @param width 宽度数值
    */
   setTableBorderExternalWidth(width: number): void {
-    const doc = this.draw.getActiveDocument()
-    const pos = this.range.getFocus()
-    if (!pos) return
-    const table = this._findEnclosingTable(doc.elements, pos.path)
-    if (!table) return
-    const t = table as unknown as { border?: Record<string, unknown> }
-    if (!t.border) t.border = {}
-    t.border.externalWidth = width
-    this._commit(doc)
+    this.execute(doc => {
+      const pos = this.range.getFocus()
+      if (!pos) return false
+      const table = this._findEnclosingTable(doc.elements, pos.path)
+      if (!table) return false
+      const t = table as unknown as { border?: Record<string, unknown> }
+      if (!t.border) t.border = {}
+      t.border.externalWidth = width
+      return
+    })
   }
 
   /**
@@ -2827,71 +2921,94 @@ export class CommandAdapt {
     return null
   }
 
-  /* -------------------- 媒体插入 -------------------- */
-
-  /**
-   * 在当前光标处插入音频元素。
-   * @param src 音频源 URL
-   * @param options 选项，可指定 name
-   */
-  insertAudio(src: string, options?: { name?: string }): void {
-    const doc = this.draw.getActiveDocument()
-    const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
-    const el: IElement = { type: 'audio', value: src, name: options?.name ?? '音频' } as unknown as IElement
-    const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
-    if (!parent) return
-    const idx = (pos.path[pos.path.length - 1] as number) + 1
-    parent.splice(idx, 0, el)
-    this._commit(doc)
-  }
-
-  /**
-   * 在当前光标处插入视频元素。
-   * @param src 视频源 URL
-   * @param options 选项，可指定 name
-   */
-  insertVideo(src: string, options?: { name?: string }): void {
-    const doc = this.draw.getActiveDocument()
-    const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
-    const el: IElement = { type: 'video', value: src, name: options?.name ?? '视频' } as unknown as IElement
-    const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
-    if (!parent) return
-    const idx = (pos.path[pos.path.length - 1] as number) + 1
-    parent.splice(idx, 0, el)
-    this._commit(doc)
-  }
 
   /* -------------------- 图表 -------------------- */
 
   /**
-   * 在当前光标处插入图表元素。
-   * @param payload 图表参数，包含 type 及可选 data 等
+   * 在当前光标处插入图表元素（构造 IBlockElement 嵌套结构）。
+   * @param payload 图表参数：chartType/subtype/dataSource/config/width/height
    */
-  insertChart(payload: { type: string; data?: unknown; [key: string]: unknown }): void {
-    const doc = this.draw.getActiveDocument()
-    const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
-    const el: IElement = { ...payload, type: 'chart', value: '' } as unknown as IElement
-    const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
-    if (!parent) return
-    const idx = (pos.path[pos.path.length - 1] as number) + 1
-    parent.splice(idx, 0, el)
-    this._commit(doc)
+  insertChart(payload: { chartType: string; subtype?: string; dataSource: any; config?: any; width?: number; height?: number }): void {
+    this.execute(doc => {
+      const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
+      const el: IElement = {
+        type: 'block',
+        value: '',
+        id: `chart_${Date.now()}`,
+        block: {
+          type: 'chart',
+          chartBlock: {
+            chartType: payload.chartType,
+            dataSource: payload.dataSource,
+            config: payload.config,
+            subtype: payload.subtype
+          }
+        },
+        metrics: {
+          width: payload.width ?? 420,
+          height: payload.height ?? 320
+        }
+      } as unknown as IElement
+      // chart 是块级元素，始终插入到顶层 doc.elements（光标可能在 title/list/table 等嵌套结构内，
+      // 取 path[0] 作为顶层索引，插入到该顶层元素之后）
+      const topLevelIndex = (pos.path[0] as number) ?? doc.elements.length
+      const idx = Math.min(topLevelIndex + 1, doc.elements.length)
+      doc.elements.splice(idx, 0, el)
+      return
+    })
   }
 
   /**
-   * 更新指定图表的属性。
-   * @param id 图表 ID
+   * 更新指定图表的属性（写入 block.chartBlock）。
+   * @param id 图表元素 ID
    * @param patch 属性补丁对象
    */
   updateChart(id: string, patch: Record<string, unknown>): void {
-    const doc = this.draw.getActiveDocument()
-    walkTree(doc.elements, (node) => {
-      const n = node as unknown as { type: string; id?: string }
-      if (n.type === 'chart' && n.id === id) {
-        Object.assign(n, patch)
-      }
+    this.execute(doc => {
+      walkTree(doc.elements, (node) => {
+        const n = node as unknown as {
+          type: string; id?: string
+          block?: { type: string; chartBlock?: Record<string, unknown> }
+        }
+        if (n.type === 'block' && n.id === id && n.block?.type === 'chart' && n.block.chartBlock) {
+          Object.assign(n.block.chartBlock, patch)
+        }
+      })
     })
-    this._commit(doc)
+  }
+
+  /**
+   * 更新指定路径图表块的尺寸（写入 metrics.width/height）。
+   * @param path 图表路径
+   * @param width 新宽度
+   * @param height 新高度
+   */
+  updateChartSize(path: Path, width: number, height: number): void {
+    this.execute(doc => {
+      const el = getByPath(doc.elements, path)
+      if (!el || el.type !== 'block') return false
+      const metrics = (el as unknown as { metrics?: { width: number; height: number } }).metrics
+      if (!metrics) return false
+      metrics.width = Math.max(1, Math.round(width))
+      metrics.height = Math.max(1, Math.round(height))
+      return
+    })
+  }
+
+  /**
+   * 删除指定路径的块元素（图表等）。
+   * @param path 块路径
+   */
+  deleteBlock(path: Path): void {
+    this.execute(doc => {
+      const parent = getParentContainer(doc.elements, path)
+      if (!parent) return false
+      const idx = path[path.length - 1]
+      if (typeof idx !== 'number' || idx < 0 || idx >= parent.length) return false
+      if (parent[idx].type !== 'block') return false
+      parent.splice(idx, 1)
+      return
+    })
   }
 
   /* -------------------- 评论组删除 -------------------- */
@@ -2901,13 +3018,24 @@ export class CommandAdapt {
    * @param groupId 评论组 ID
    */
   deleteGroup(groupId: string): void {
-    const doc = this.draw.getActiveDocument()
-    const groups = (doc as unknown as { comments?: { groups?: { id: string }[] } }).comments?.groups
-    if (!groups) return
-    const idx = groups.findIndex(g => g.id === groupId)
-    if (idx >= 0) {
-      groups.splice(idx, 1)
-      this._commit(doc)
-    }
+    this.execute(doc => {
+      walkTree(doc.elements, (node) => {
+        const any = node as unknown as Record<string, unknown>
+        const ids = any.groupIds as string[] | undefined
+        if (ids && ids.includes(groupId)) {
+          const next = ids.filter(id => id !== groupId)
+          if (next.length === 0) delete any.groupIds
+          else any.groupIds = next
+        }
+        if (any.groupId === groupId) delete any.groupId
+      })
+      const groups = (doc as unknown as { comments?: { groups?: { id: string }[] } }).comments?.groups
+      if (groups) {
+        const idx = groups.findIndex(g => g.id === groupId)
+        if (idx >= 0) {
+          groups.splice(idx, 1)
+        }
+      }
+    })
   }
 }

@@ -14,10 +14,7 @@ export const EDITOR_PREFIX = 'vervedocs'
 
 /** 嵌入块类型 */
 export enum BlockType {
-  IFRAME = 'iframe',
-  VIDEO = 'video',
-  AUDIO = 'audio',
-  CHART = 'chart'
+  IFRAME = 'iframe'
 }
 
 /** 文本类元素类型集合（用于 Search 匹配） */
@@ -38,19 +35,6 @@ export enum EditorComponent {
 
 /* ========== 嵌入块元素类型 ========== */
 
-/** 视频块数据 */
-export interface IVideoBlockData {
-  src: string
-  poster?: string
-}
-
-/** 音频块数据 */
-export interface IAudioBlockData {
-  src: string
-  name?: string
-  poster?: string
-}
-
 /** iframe 块数据 */
 export interface IIFrameBlockData {
   src?: string
@@ -68,8 +52,6 @@ export interface IChartBlockData {
 /** 块内嵌结构 */
 export interface IBlockContent {
   type: BlockType
-  videoBlock?: IVideoBlockData
-  audioBlock?: IAudioBlockData
   iframeBlock?: IIFrameBlockData
   chartBlock?: IChartBlockData
 }

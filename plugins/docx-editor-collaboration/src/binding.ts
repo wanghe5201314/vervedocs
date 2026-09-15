@@ -154,7 +154,7 @@ export class YjsBinding {
     const comments = this.readCommentsSnapshotFromYDoc()
     this.isApplyingRemote = true
     try {
-      this.commentBridge.setComments(this.cloneSerializable(comments))
+      this.commentBridge.setAll(this.cloneSerializable(comments))
       this.commentBridge.render()
       this.lastCommentsSnapshot = this.cloneSerializable(comments)
     } finally {
@@ -226,7 +226,7 @@ export class YjsBinding {
   syncCommentsFromBridge(): void {
     if (!this.commentBridge || this.isApplyingRemote) return
 
-    const current = this.sanitizeComments(this.commentBridge.getComments())
+    const current = this.sanitizeComments(this.commentBridge.getAll())
     const operations = compare(this.lastCommentsSnapshot, current)
     if (!operations.length) {
       this.lastCommentsSnapshot = this.cloneSerializable(current)

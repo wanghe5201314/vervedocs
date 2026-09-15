@@ -112,10 +112,7 @@
       v-model="tableBordersDialogVisible"
       @confirm="handleTableBordersConfirm"
     />
-    <ChartDialog
-      v-model="chartDialogVisible"
-      @confirm="handleInsertChartConfirm"
-    />
+
     <LaTeXDialog v-model="latexDialogVisible" @confirm="handleLatexConfirm" />
     <BarcodeDialog
       v-model="barcodeDialogVisible"
@@ -192,7 +189,7 @@ import ShortcutsDialog from '@/components/dialogs/shortcutsDialog.vue'
 import HyperlinkDialog from '@/components/dialogs/hyperlinkDialog.vue'
 import BookmarkDialog from '@/components/dialogs/bookmarkDialog.vue'
 import InsertTableDialog from '@/components/dialogs/tableDialog.vue'
-import ChartDialog from '@/components/dialogs/chartDialog.vue'
+
 import LaTeXDialog from '@/components/dialogs/latexDialog.vue'
 import BarcodeDialog from '@/components/dialogs/barcodeDialog.vue'
 import QrcodeDialog from '@/components/dialogs/qrcodeDialog.vue'
@@ -354,16 +351,16 @@ provide('docx-editor:getAutoToc', () => {
  * 获取批注组件实例（供内部 composable 使用，需要写操作能力）
  * @returns 批注组件实例，若不可用则返回 null
  */
-const getCommentComponent = () => getEditorInstance()?.comment ?? null
+const getCommentComponent = () => getEditorInstance()?.getPlugin?.('comment') ?? null
 /**
  * 刷新批注与修订覆盖层，在下一帧同步渲染并同步 API 状态
  */
 const refreshReviewOverlays = () => {
   nextTick(() =>
     requestAnimationFrame(() => {
-      getEditorInstance()?.getCommentView?.()?.render()
+      getEditorInstance()?.getPlugin?.('comment')?.render?.()
       commentAPI.sync()
-      getEditorInstance()?.getRevisionView?.()?.update()
+      getEditorInstance()?.getPlugin?.('revision')?.update?.()
       revisionAPI.sync()
     })
   )
@@ -443,7 +440,7 @@ const {
   bookmarkDialogVisible,
   insertTableDialogVisible,
   tableBordersDialogVisible,
-  chartDialogVisible,
+
   latexDialogVisible,
   barcodeDialogVisible,
   qrcodeDialogVisible,
@@ -468,7 +465,7 @@ const {
 
   handleDateConfirm,
   handleTocConfirm,
-  handleInsertChartConfirm,
+
   handleInsertTableDialogConfirm,
   handleTableBordersConfirm
 } = useDialogs({ executeCommand, documentMeta, emitMetaChange })
@@ -590,19 +587,19 @@ const externalCommentAPI: ExternalCommentApi = {
     return commentAPI.getState()
   },
   create(userName) {
-    return getEditorInstance()?.api?.comment?.create?.(userName) ?? commentAPI.create(userName)
+    return commentAPI.create(userName)
   },
   remove(id) {
-    getEditorInstance()?.api?.comment?.remove?.(id) ?? commentAPI.remove(id)
+    commentAPI.remove(id)
   },
   removeCurrent(groupId) {
     commentAPI.removeCurrent(groupId)
   },
   locate(id) {
-    getEditorInstance()?.api?.comment?.locate?.(id) ?? commentAPI.locate(id)
+    commentAPI.locate(id)
   },
   refresh() {
-    getEditorInstance()?.api?.comment?.refresh?.() ?? commentAPI.render()
+    commentAPI.render()
   }
 }
 
@@ -760,13 +757,11 @@ const handleReady = (...args: any[]) => {
   const instance = getEditorInstance()
 
   if (instance?.command) {
-    // 修订：通过 core 合法入口注入回调，避免覆盖内部 host
-    if (typeof instance.setRevisionCallbacks === 'function') {
-      instance.setRevisionCallbacks({
-        onAccept: (id: string) => executeCommand('acceptRevision', id),
-        onReject: (id: string) => executeCommand('rejectRevision', id)
-      })
-    }
+    // 修订：通过插件实例注入回调
+    instance.getPlugin?.('revision')?.setCallbacks?.({
+      onAccept: (id: string) => executeCommand('acceptRevision', id),
+      onReject: (id: string) => executeCommand('rejectRevision', id)
+    })
     revisionAPI.sync()
   }
 
@@ -876,6 +871,7 @@ const { handleEditorCommand: baseHandleEditorCommand, handleEditorSaved } = useE
  * @param args - 命令参数
  */
 const handleEditorCommand = (command: string, ...args: any[]) => {
+
   baseHandleEditorCommand(command, ...args)
 
 }
@@ -886,7 +882,6 @@ const dialogCommands: Record<string, Ref<boolean>> = {
   bookmark: bookmarkDialogVisible,
   insertTableDialog: insertTableDialogVisible,
   tableBordersDialog: tableBordersDialogVisible,
-  insertChart: chartDialogVisible,
   latex: latexDialogVisible,
   barcode: barcodeDialogVisible,
   qrcode: qrcodeDialogVisible,
@@ -1060,6 +1055,11 @@ const handlePasswordCancel = () => {
  * @param args - 命令参数
  */
 const handleCommand = (command: string, ...args: any[]) => {
+  if (command === 'insertChart') {
+    executeCommand('requestInsertChart')
+    return
+  }
+
   if (command === 'addWatermark' && args.length > 0) {
     executeCommand('addWatermark', args[0])
     return

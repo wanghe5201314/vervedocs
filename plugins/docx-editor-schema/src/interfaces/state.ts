@@ -4,7 +4,7 @@
  * 从 docx-editor-state 包迁移的跨包共享类型。
  */
 
-import type { IRange, IPosition } from '../types'
+import type { IRange, IPosition, IDocxDocumentMeta } from '../types'
 
 /** 选区样式快照 —— 光标所在位置的文本/段落样式状态 */
 export interface IRangeStyle {
@@ -40,6 +40,8 @@ export interface IRangeStyle {
   rowFlex: string
   /** 行高 */
   lineHeight: number
+  /** 行高规则：auto | exact | atLeast | multiple */
+  lineHeightRule: string
   /** 首行缩进（像素） */
   paragraphFirstLineIndent: number
   /** 字符缩放比例 */
@@ -98,6 +100,8 @@ export interface ListenerMap {
   'blur': () => void
   /** 渲染完成后触发（各组件订阅此事件执行联动） */
   'afterRender': () => void
+  /** 文档被整体设置/替换后触发（setValue/replaceDocument 等），插件据此重建自身状态 */
+  'documentSet': (doc: IDocxDocumentMeta) => void
   /** 请求插入图片（右键菜单触发） */
   'requestInsertImage': () => void
   /** 请求插入超链接（右键菜单触发） */
@@ -117,7 +121,7 @@ export interface ListenerMap {
  */
 export interface EventBusMap {
   /** 图表点击 */
-  'chartClick': { chartId: string; chartType: string; dataSource: unknown; config: unknown }
+  'chartClick': { chartId: string; chartType: string; dataSource: unknown; config: unknown; subtype?: string }
   /** 超链接右键菜单点击 */
   'hyperlinkMenuClick': void
   /** 图片鼠标按下 */

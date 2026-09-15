@@ -11,8 +11,8 @@ export interface ReplaceDocumentPayload {
   footer?: any[]
   /**
    * 批注：
-   * - DocxCommentMeta[]（含 author）→ buildCommentsFromMetas
-   * - 序列化批注（含 groupId）→ restoreComments
+   * - DocxCommentMeta[]（含 author）→ buildFromMetas
+   * - 序列化批注（含 groupId）→ restore
    * - 缺省 / 空数组 → 清空批注
    */
   comments?: unknown[]
@@ -62,8 +62,8 @@ export async function replaceDocument(
 
   await nextTick()
   requestAnimationFrame(() => {
-    inst.comment?.render?.()
-    inst.revision?.update?.()
+    inst.getPlugin?.('comment')?.render?.()
+    inst.getPlugin?.('revision')?.update?.()
     deps.syncRevisionList?.()
   })
 

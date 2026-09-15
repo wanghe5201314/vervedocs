@@ -85,7 +85,7 @@ export default defineConfig({
         'docx',
         'jszip',
         'qrcode',
-        'plyr',
+
         'prismjs',
         /^prismjs\//,
         '@vervedoc/docx-editor-collaboration',
@@ -109,7 +109,7 @@ export default defineConfig({
           docx: 'docx',
           jszip: 'JSZip',
           qrcode: 'QRCode',
-          plyr: 'Plyr',
+
           prismjs: 'Prism',
           '@vervedoc/core': 'VerveDocCore',
           '@vervedoc/docx-editor-schema': 'DocxEditorSchema',

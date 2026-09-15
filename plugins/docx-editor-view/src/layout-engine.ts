@@ -20,7 +20,7 @@ import { splitParagraphs, FONT_FAMILY_CSS } from '@vervedoc/docx-editor-schema'
 import type {
   DocumentLayout, PageLayout, BlockNode, ParagraphBlock,
   ImageBlock, PageBreakBlock, SeparatorBlock, TableBlock, TableRowLayout, TableCellLayout,
-  LineBox, InlineBox, Rect
+  EmbedBlock, ChartBlock, LineBox, InlineBox, Rect
 } from './layout-types'
 import { TextMeasure, getSharedMeasure } from './text-measure'
 import { resolveBullet, BULLET_FONT_STACK, BULLET_FONT_STACK_FALLBACK, detectWingdings } from './list-bullet'
@@ -212,6 +212,7 @@ export class LayoutEngine {
    */
   private layoutBlocks(elements: IElement[], parentPath: Path, availableWidth: number): BlockNode[] {
     const paragraphs = splitParagraphs(elements)
+
     const blocks: BlockNode[] = []
     for (let gi = 0; gi < paragraphs.length; gi++) {
       const g = paragraphs[gi]
@@ -271,6 +272,32 @@ export class LayoutEngine {
           indexInParent: g.start,
           rect: { x: 0, y: 0, width: availableWidth, height: sepHeight }
         } as SeparatorBlock)
+      } else if (g.kind === 'block') {
+        const blockEl = g.block as IElement
+        const anyEl = blockEl as unknown as Record<string, unknown>
+        const metrics = anyEl.metrics as { width?: number; height?: number } | undefined
+        const w = Math.max(1, Number(metrics?.width ?? 420))
+        const h = Math.max(1, Number(metrics?.height ?? 320))
+        const innerBlock = anyEl.block as { type?: string } | undefined
+        if (innerBlock?.type === 'chart') {
+          blocks.push({
+            kind: 'chart',
+            id: nextBlockId(),
+            block: blockEl,
+            parentPath,
+            indexInParent: g.start,
+            rect: { x: 0, y: 0, width: w, height: h }
+          } as ChartBlock)
+        } else {
+          blocks.push({
+            kind: 'block',
+            id: nextBlockId(),
+            block: blockEl,
+            parentPath,
+            indexInParent: g.start,
+            rect: { x: 0, y: 0, width: w, height: h }
+          } as EmbedBlock)
+        }
       } else {
         const kind: ParagraphBlock['paragraphKind'] = g.kind === 'normal' ? 'normal' : g.kind
         const runsParentPath: Path = (kind === 'normal')

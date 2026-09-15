@@ -133,8 +133,8 @@ export class ParagraphLayoutWidget {
     const lhValue = this.root!.querySelector<HTMLInputElement>('#pw-lh-value')!
     const lh = Number(style.lineHeight ?? 1.5)
     const rule: string = style.lineHeightRule || 'auto'
-    if (rule === 'exact') { lhType.value = 'exact'; lhValue.value = String(lh) }
-    else if (rule === 'atLeast') { lhType.value = 'atLeast'; lhValue.value = String(lh) }
+    if (rule === 'exact') { lhType.value = 'exact'; lhValue.value = String(Math.round(lh * 72 / 96 * 100) / 100) }
+    else if (rule === 'atLeast') { lhType.value = 'atLeast'; lhValue.value = String(Math.round(lh * 72 / 96 * 100) / 100) }
     else if (lh === 1) { lhType.value = 'single' }
     else if (lh === 1.5) { lhType.value = '1.5' }
     else if (lh === 2) { lhType.value = 'double' }
@@ -210,14 +210,18 @@ export class ParagraphLayoutWidget {
     else if (lhType === '1.5') lh = 1.5
     else if (lhType === 'double') lh = 2
     else lh = Number(lhValue) || 1.5
-    preview.style.lineHeight = String(lh)
+    if (lhType === 'atLeast' || lhType === 'exact') {
+      preview.style.lineHeight = `${lh * 96 / 72}px`
+    } else {
+      preview.style.lineHeight = String(lh)
+    }
 
     let indent = 0
     if (special === 'firstLine') indent = Number(specialValue) || 0
     else if (special === 'hanging') indent = -(Number(specialValue) || 0)
     preview.style.textIndent = `${indent * PX_PER_CM}px`
 
-    preview.textContent = '段落预览文本。这是Word标准段落设置的效果展示，可实时查看缩进与行距变化。'
+    preview.textContent = '段落预览文本'
   }
 
   /** 确定按钮：应用所有设置到编辑器 */
@@ -238,8 +242,8 @@ export class ParagraphLayoutWidget {
     if (lhType === 'single') { lh = 1; rule = 'auto' }
     else if (lhType === '1.5') { lh = 1.5; rule = 'auto' }
     else if (lhType === 'double') { lh = 2; rule = 'auto' }
-    else if (lhType === 'atLeast') { lh = Number(lhValue) || 1; rule = 'atLeast' }
-    else if (lhType === 'exact') { lh = Number(lhValue) || 1; rule = 'exact' }
+    else if (lhType === 'atLeast') { lh = (Number(lhValue) || 1) * 96 / 72; rule = 'atLeast' }
+    else if (lhType === 'exact') { lh = (Number(lhValue) || 1) * 96 / 72; rule = 'exact' }
     else { lh = Number(lhValue) || 1; rule = 'auto' }
     cmd('executeSetLineHeight', lh, rule)
 

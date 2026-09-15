@@ -86,20 +86,30 @@ export interface CommentCallbacks {
 
 export class CommentComponent {
 
+  /** 宿主契约（由 core 注入，提供选区/文档/渲染等能力） */
   private _command: CommentHost | null = null
+  /** 批注数据列表 */
   private _comments: IComment[] = []
+  /** 生命周期回调（保存/删除/回复/解决/取消） */
   private _callbacks: CommentCallbacks = {}
+  /** 批注气泡 overlay 容器（挂载在 Draw scroller 上） */
   private _overlayContainer: HTMLDivElement | null = null
+  /** 批注卡片 DOM 映射（commentId → 卡片元素） */
   private _cardDoms: Map<string, HTMLDivElement> = new Map()
+  /** 锚点竖线 DOM 元素列表 */
   private _anchorLineEls: HTMLDivElement[] = []
+  /** 悬浮提示气泡 DOM */
   private _hoverTooltip: HTMLDivElement | null = null
+  /** 悬浮提示显示定时器 */
   private _hoverTooltipTimer: number | null = null
 
 
+  /** 批注高亮颜色（取编辑器选项 annotationColor，默认 #409eff） */
   private get _annotationColor(): string {
     return this._command?.getOptions?.()?.annotationColor || '#409eff'
   }
 
+  /** 将批注颜色映射同步到编辑器 options.group.groupColors，驱动文档高亮重绘 */
   private _syncGroupColors(): void {
     if (!this._command) return
     const currentOptions = this._command.getOptions?.() || {}
@@ -126,6 +136,7 @@ export class CommentComponent {
     this._eventBus = eventBus
   }
 
+  /** 注入宿主契约（由 createCommentPlugin 的 install 调用） */
   public install(command: CommentHost): this {
     if (this._command && this._command !== command) {
       console.warn(
@@ -138,24 +149,31 @@ export class CommentComponent {
     return this
   }
 
+  /** 设置批注生命周期回调 */
   public setCallbacks(callbacks: CommentCallbacks): this {
     this._callbacks = callbacks || {}
     return this
   }
 
-  public getComments(): IComment[] {
+  /** 获取全部批注列表 */
+  public getAll(): IComment[] {
     return this._comments
   }
 
-  public setComments(comments: IComment[]): void {
+  /** 整体替换批注列表并同步高亮颜色 */
+  public setAll(comments: IComment[]): void {
     this._comments = comments
     this._syncGroupColors()
   }
 
-  public addComment(userName: string = '当前用户'): IComment | null {
+  /** 新建批注：在高亮选区上创建编辑态气泡，返回新批注或 null（无选区时） */
+  public add(userName: string = '当前用户'): IComment | null {
     if (!this._command) return null
     const groupId = this._command.executeSetGroup?.()
-    if (!groupId) return null
+    if (!groupId) {
+      console.warn('[CommentComponent] add 失败：setGroup 返回 null，请检查选区')
+      return null
+    }
     const newComment: IComment = {
       id: groupId,
       groupId,
@@ -171,7 +189,8 @@ export class CommentComponent {
     return newComment
   }
 
-  public deleteComment(id: string): void {
+  /** 删除指定 ID 的批注，清除文档高亮并触发 onDelete 回调 */
+  public delete(id: string): void {
     const idx = this._comments.findIndex(c => c.id === id)
     if (idx !== -1) {
       const comment = this._comments[idx]
@@ -183,20 +202,14 @@ export class CommentComponent {
     }
   }
 
-  public locateComment(id: string): void {
+  /** 定位到指定批注的选区位置 */
+  public locate(id: string): void {
     const comment = this._comments.find(c => c.id === id)
     if (comment) this._command?.executeLocationGroup?.(comment.groupId)
   }
 
-  public saveComment(comment: IComment): void {
-    const idx = this._comments.findIndex(c => c.id === comment.id)
-    if (idx !== -1) {
-      this._comments[idx] = { ...comment, isEditing: false }
-      this._syncGroupColors()
-    }
-  }
-
-  public cancelComment(id: string): void {
+  /** 取消编辑态批注：空内容则删除，有内容则退出编辑态 */
+  private cancel(id: string): void {
     const idx = this._comments.findIndex(c => c.id === id)
     if (idx === -1) return
     const comment = this._comments[idx]
@@ -209,7 +222,8 @@ export class CommentComponent {
     this._syncGroupColors()
   }
 
-  public replyToComment(id: string, content: string, userName: string = '当前用户'): void {
+  /** 回复指定批注 */
+  private reply(id: string, content: string, userName: string = '当前用户'): void {
     const comment = this._comments.find(c => c.id === id)
     if (!comment) return
     if (!comment.replies) comment.replies = []
@@ -224,7 +238,8 @@ export class CommentComponent {
     })
   }
 
-  public resolveComment(id: string, resolved: boolean): void {
+  /** 标记批注为已解决/未解决 */
+  private resolve(id: string, resolved: boolean): void {
     const comment = this._comments.find(c => c.id === id)
     if (comment) {
       comment.status = resolved ? 2 : 1
@@ -232,7 +247,8 @@ export class CommentComponent {
     }
   }
 
-  public serializeComments(): Array<Record<string, unknown>> {
+  /** 序列化批注为可保存结构（含 groupId，用于文档保存） */
+  public serialize(): Array<Record<string, unknown>> {
     return this._comments.map(c => ({
       id: c.id,
       groupId: c.groupId,
@@ -254,7 +270,8 @@ export class CommentComponent {
     }))
   }
 
-  public restoreComments(saved: any[]): void {
+  /** 从序列化结构恢复批注列表（含 groupId，用于文档加载） */
+  public restore(saved: any[]): void {
     const restored: IComment[] = []
     for (const item of saved) {
       if (!item || typeof item !== 'object') continue
@@ -276,7 +293,8 @@ export class CommentComponent {
     this._syncGroupColors()
   }
 
-  public buildCommentsFromMetas(metas: DocxCommentMeta[]): void {
+  /** 从 docx 解析出的批注元数据构建批注列表 */
+  public buildFromMetas(metas: DocxCommentMeta[]): void {
     const newComments: IComment[] = []
     for (const meta of metas) {
       const groupId = 'comment_' + meta.id
@@ -414,6 +432,7 @@ export class CommentComponent {
     this._resolveVerticalOverlaps(sorted)
   }
 
+  /** 刷新批注气泡 DOM 渲染（计算锚点位置 + 创建/更新卡片 + 绘制竖线） */
   public render(): void {
     if (!this._command) return
     const options = this._command.getOptions?.()
@@ -589,7 +608,7 @@ export class CommentComponent {
       '鍒犻櫎鎵规敞',
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M7 21a2 2 0 0 1-2-2V7h14v12a2 2 0 0 1-2 2H7Z" fill="currentColor"/><path d="M9 4h6l1 2h4v1.5H4V6h4l1-2Z" fill="currentColor"/></svg>',
       () => {
-        this.deleteComment(comment.id)
+        this.delete(comment.id)
         this._callbacks.onRequestSave?.()
         this.render()
       }
@@ -600,7 +619,7 @@ export class CommentComponent {
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="m9.55 18.2-5.4-5.4 1.41-1.4 3.99 3.98 8.89-8.88 1.41 1.41-10.3 10.29Z" fill="currentColor"/></svg>',
       () => {
         const resolved = comment.status !== 2
-        this.resolveComment(comment.id, resolved)
+        this.resolve(comment.id, resolved)
         this._callbacks.onResolve?.(comment.id, resolved)
         this._callbacks.onRequestSave?.()
         this.render()
@@ -784,7 +803,7 @@ export class CommentComponent {
       const content = textarea.value.trim()
       if (!content) return
       comment.isReplying = false
-      this.replyToComment(comment.id, content)
+      this.reply(comment.id, content)
       this._callbacks.onReply?.(comment.id, content)
       this._callbacks.onRequestSave?.()
       this._refreshCard(comment.id)
@@ -868,7 +887,7 @@ export class CommentComponent {
 
   private _handleCancel(comment: IComment): void {
     if (!comment.content) {
-      this.cancelComment(comment.id)
+      this.cancel(comment.id)
       this._callbacks.onCancel?.(comment.id)
       this._callbacks.onRequestSave?.()
       this.render()
@@ -967,6 +986,7 @@ export class CommentComponent {
     }
   }
 
+  /** 销毁实例：清除 DOM、解引用宿主与事件总线 */
   public destroy(): void {
     this._clearCards()
     this._hideHoverTooltip()

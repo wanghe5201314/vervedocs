@@ -1,4 +1,5 @@
 import { ref, type Ref } from 'vue'
+import type { RevisionPlugin } from '@vervedoc/docx-editor-comment'
 
 /**
  * 编辑器实例接口
@@ -6,14 +7,8 @@ import { ref, type Ref } from 'vue'
 interface EditorInstance {
   /** 编辑器命令对象 */
   command: any
-  /** 修订视图入口 */
-  getRevisionView?: () => {
-    getRevisions?: () => any[]
-    acceptRevision?: (id: string) => void
-    rejectRevision?: (id: string) => void
-    acceptAllRevisions?: () => void
-    rejectAllRevisions?: () => void
-  } | null
+  /** 获取已注册插件实例 */
+  getPlugin?: <T>(name: string) => T | undefined
 }
 
 /**
@@ -79,7 +74,7 @@ export function useEditorRevisions(options: { getEditorInstance: () => EditorIns
    * @returns {any | null} 修订视图实例，不存在时返回 null
    */
   function getOverlay() {
-    return getEditorInstance()?.getRevisionView?.() ?? null
+    return getEditorInstance()?.getPlugin?.<RevisionPlugin>('revision') ?? null
   }
 
   /**
@@ -87,7 +82,7 @@ export function useEditorRevisions(options: { getEditorInstance: () => EditorIns
    */
   function sync() {
     const overlay = getOverlay()
-    const revisions = overlay?.getRevisions?.()
+    const revisions = overlay?.getAll?.()
     revisionList.value = Array.isArray(revisions)
       ? revisions.map((item: any) => ({
           id: item.id,
@@ -133,7 +128,7 @@ export function useEditorRevisions(options: { getEditorInstance: () => EditorIns
   /** 接受文档中的所有修订 */
   function acceptAll() {
     const overlay = getOverlay()
-    overlay?.acceptAllRevisions?.()
+    overlay?.acceptAll?.()
     sync()
     activeRevisionId.value = ''
   }
@@ -141,7 +136,7 @@ export function useEditorRevisions(options: { getEditorInstance: () => EditorIns
   /** 拒绝文档中的所有修订 */
   function rejectAll() {
     const overlay = getOverlay()
-    overlay?.rejectAllRevisions?.()
+    overlay?.rejectAll?.()
     sync()
     activeRevisionId.value = ''
   }
@@ -154,7 +149,7 @@ export function useEditorRevisions(options: { getEditorInstance: () => EditorIns
     const overlay = getOverlay()
     if (!overlay || !id) return
     const nextActiveId = getNextCandidateId(id)
-    overlay.acceptRevision?.(id)
+    overlay.accept?.(id)
     sync()
     activeRevisionId.value = revisionList.value.some(item => item.id === nextActiveId)
       ? nextActiveId
@@ -169,7 +164,7 @@ export function useEditorRevisions(options: { getEditorInstance: () => EditorIns
     const overlay = getOverlay()
     if (!overlay || !id) return
     const nextActiveId = getNextCandidateId(id)
-    overlay.rejectRevision?.(id)
+    overlay.reject?.(id)
     sync()
     activeRevisionId.value = revisionList.value.some(item => item.id === nextActiveId)
       ? nextActiveId

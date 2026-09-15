@@ -42,13 +42,14 @@ export type {
 export { Command, CommandAdapt } from '@vervedoc/docx-editor-transform'
 export type { IHistoryManager, HistorySnapshot } from '@vervedoc/docx-editor-schema'
 
+// 命令分发责任链
+export { CommandChain } from './command-chain'
+export type { CommandHandler, CommandNext } from './command-chain'
+
 // 历史管理
 export { HistoryManager, HistoryComponent, createSnapshot } from '@vervedoc/docx-editor-history'
 export type { HistorySnapshot as HistorySnapshotType } from '@vervedoc/docx-editor-history'
 
-// 批注 / 修订
-export { CommentComponent, RevisionComponent } from '@vervedoc/docx-editor-comment'
-export type { DocxCommentMeta, RevisionCallbacks, CommentCallbacks } from '@vervedoc/docx-editor-schema'
 
 // commands 扩展（搜索 / 块级媒体 / 日期 / LaTeX / 小工具）
 export {

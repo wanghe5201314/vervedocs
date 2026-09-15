@@ -112,9 +112,9 @@ export interface CollaborationComment {
  */
 export interface CommentComponentBridge {
   /** 获取当前批注列表 */
-  getComments(): CollaborationComment[]
+  getAll(): CollaborationComment[]
   /** 设置批注列表（远端变更回填） */
-  setComments(comments: CollaborationComment[]): void
+  setAll(comments: CollaborationComment[]): void
   /** 触发批注 UI 重新渲染 */
   render(): void
 }

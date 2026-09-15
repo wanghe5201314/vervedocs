@@ -4,10 +4,8 @@
 interface EditorCommand {
   /** 插入图片 */
   executeInsertImage: (payload: any) => void
-  /** 插入音频 */
-  executeInsertAudio: (src: string, options: any) => void
-  /** 插入视频 */
-  executeInsertVideo: (src: string, options?: any) => void
+  /** 插入图片（对象参数） */
+  executeImage: (payload: any) => void
 }
 
 /**
@@ -19,9 +17,9 @@ interface EditorInstance {
 }
 
 /**
- * 媒体（图片/音频/视频）composable
+ * 媒体（图片）composable
  * @param options 配置项
- * @returns 包含图片、音频、视频插入方法的对象
+ * @returns 包含图片插入方法的对象
  */
 export function useEditorMedia(options: {
   /** 获取编辑器实例 */
@@ -79,78 +77,5 @@ export function useEditorMedia(options: {
     }
   }
 
-  /**
-   * 插入音频，支持传入音频地址、配置对象或无参时弹出文件选择框
-   * @param args 音频地址或配置对象，为空时从本地选择文件
-   * @returns 无返回值
-   */
-  function audio(args?: any) {
-    const instance = getEditorInstance()
-    if (!instance) return
-    if (args && typeof args === 'string') {
-      instance.command.executeInsertAudio(args, { name: '音频文件' })
-    } else if (args && args.src) {
-      instance.command.executeInsertAudio(args.src, {
-        name: args.name,
-        width: args.width,
-        height: args.height,
-        poster: args.poster
-      })
-    } else {
-      const input = document.createElement('input')
-      input.type = 'file'
-      input.accept = 'audio/*'
-      input.onchange = (e: Event) => {
-        const target = e.target as HTMLInputElement
-        const file = target.files?.[0]
-        if (file) {
-          const reader = new FileReader()
-          reader.onload = (evt) => {
-            const dataUrl = evt.target?.result as string
-            instance.command.executeInsertAudio(dataUrl, { name: file.name })
-          }
-          reader.readAsDataURL(file)
-        }
-      }
-      input.click()
-    }
-  }
-
-  /**
-   * 插入视频，支持传入视频地址、配置对象或无参时弹出文件选择框
-   * @param args 视频地址或配置对象，为空时从本地选择文件
-   * @returns 无返回值
-   */
-  function video(args?: any) {
-    const instance = getEditorInstance()
-    if (!instance) return
-    if (args && typeof args === 'string') {
-      instance.command.executeInsertVideo(args)
-    } else if (args && args.src) {
-      instance.command.executeInsertVideo(args.src, {
-        width: args.width,
-        height: args.height,
-        poster: args.poster
-      })
-    } else {
-      const input = document.createElement('input')
-      input.type = 'file'
-      input.accept = 'video/*'
-      input.onchange = (e: Event) => {
-        const target = e.target as HTMLInputElement
-        const file = target.files?.[0]
-        if (file) {
-          const reader = new FileReader()
-          reader.onload = (evt) => {
-            const dataUrl = evt.target?.result as string
-            instance.command.executeInsertVideo(dataUrl)
-          }
-          reader.readAsDataURL(file)
-        }
-      }
-      input.click()
-    }
-  }
-
-  return { image, audio, video }
+  return { image }
 }

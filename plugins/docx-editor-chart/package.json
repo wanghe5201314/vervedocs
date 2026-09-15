@@ -1,7 +1,7 @@
 {
   "name": "@vervedoc/docx-editor-chart",
   "version": "1.0.4",
-  "description": "DocxEditor 图表插件 - 基于 ECharts",
+  "description": "DocxEditor 图表插件 - 基于 Chart.js",
   "author": "wanghe",
   "license": "MIT",
   "type": "module",
@@ -43,12 +43,14 @@
     "preview": "vite preview"
   },
   "peerDependencies": {
-    "echarts": "^5.0.0 || ^6.0.0"
+    "chart.js": "^4.0.0"
+  },
+  "dependencies": {
+    "@vervedoc/docx-editor-schema": "workspace:^",
+    "chart.js": "^4.4.0"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
-    "@vervedoc/docx-editor-schema": "workspace:^",
-    "echarts": "^5.6.0",
     "esbuild": "^0.25.5",
     "eslint": "catalog:",
     "eslint-plugin-unused-imports": "catalog:",

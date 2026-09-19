@@ -10,7 +10,7 @@ const tsconfigRootDir = dirname(fileURLToPath(import.meta.url))
 
 export default [
   {
-    ignores: ['node_modules', 'dist', 'site', 'src/assets/iconfont/*.js', 'scripts', 'src/auto-imports.d.ts', 'src/components.d.ts']
+    ignores: ['node_modules', 'dist', 'site', 'scripts', 'src/auto-imports.d.ts', 'src/components.d.ts']
   },
   js.configs.recommended,
   {

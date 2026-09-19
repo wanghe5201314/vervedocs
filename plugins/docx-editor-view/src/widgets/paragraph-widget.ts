@@ -12,6 +12,7 @@ import { TITLE_LEVEL, ROW_FLEX } from '@vervedoc/docx-editor-schema'
 import { ContextMenu, type MenuItem } from '../context-menu'
 import { ParagraphLayoutWidget } from './layout/paragraph-layout-widget'
 import { FontLayoutWidget } from './layout/font-layout-widget'
+import { positionHandle } from './handle-position'
 
 
 /**
@@ -76,6 +77,7 @@ export class ParagraphWidget {
    */
   create(): void {
     this.handle = document.createElement('div')
+    this.handle.className = 'vervedocs-paragraph-handle'
     Object.assign(this.handle.style, {
       position: 'fixed',
       width: '22px',
@@ -134,9 +136,9 @@ export class ParagraphWidget {
 
     const bx = rect.left + pageOffsetX + page.contentRect.x + block.rect.x
     const by = rect.top - scrollY + page.contentRect.y + block.rect.y + firstLine.y
-    this.handle.style.display = 'flex'
-    this.handle.style.left = `${Math.round(bx - 34)}px`
-    this.handle.style.top = `${Math.round(by + (firstLine.height - 22) / 2)}px`
+    if (!positionHandle(this.handle, bx - 34, by + (firstLine.height - 22) / 2, 22, rect)) {
+      this.hide()
+    }
   }
 
   /**

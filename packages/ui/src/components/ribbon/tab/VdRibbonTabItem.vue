@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, inject, provide, toRef, ref } from 'vue'
 import { Dropdown as ADropdown } from 'ant-design-vue'
+import { provideRibbonButtonDefaults, type RibbonButtonAppearance } from '../button/context'
 import {
   RIBBON_TAB_CONTEXT_KEY,
   RIBBON_TAB_ITEM_CONTEXT_KEY,
@@ -14,6 +15,8 @@ const props = withDefaults(
     title?: string
     mode?: RibbonTabMode
     disabled?: boolean
+    /** Overrides ribbon defaults for buttons in this tab only. */
+    buttonDefaults?: RibbonButtonAppearance
   }>(),
   {
     title: undefined,
@@ -21,6 +24,8 @@ const props = withDefaults(
     disabled: false
   }
 )
+
+provideRibbonButtonDefaults(() => props.buttonDefaults)
 
 const tab = inject(RIBBON_TAB_CONTEXT_KEY)
 if (!tab) {

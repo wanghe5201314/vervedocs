@@ -170,16 +170,6 @@ ul {
   background-color: #c7edcc !important;
 }
 
-/* ==================== 右键菜单图标 ==================== */
-.ce-contextmenu-signature {
-  background-image: url('./assets/images/signature.svg');
-}
-
-.ce-contextmenu-word-tool {
-  background-image: url('./assets/images/word-tool.svg');
-}
-
-
 /* ==================== Google Docs 风格菜单样式 ==================== */
 .gdocs-menu-popper {
   min-width: 220px !important;
@@ -230,10 +220,6 @@ ul {
 
 
 
-.toc-card-list { display: flex; flex-direction: column; gap: 10px; }
-.toc-card { border: 1px solid #dadce0; border-radius: 4px; padding: 10px; cursor: pointer; background: #fff; transition: all 0.2s; }
-.toc-card:hover { border-color: #1a73e8; background: #e8f0fe; }
-.toc-card-preview { font-size: 9px; color: #3c4043; line-height: 1.4; }
 .toc-preview-title { text-align: center; font-weight: 500; margin-bottom: 8px; font-size: 12px; color: #303133; }
 .toc-preview-item { display: flex; align-items: center; white-space: nowrap; overflow: hidden; font-size: 11px; color: #3c4043; }
 .toc-preview-item.level-2 { padding-left: 8px; }
@@ -359,11 +345,7 @@ ul {
 .wm-preset-name { font-size: 12px; color: #606266; text-align: center; }
 
 
-/* 分割线（MenuBar & CompactToolbar） */
-.separator-card { border-radius: 8px; }
-.separator-card .ant-card-head { border-bottom: 1px solid #e0e0e0; }
-.separator-card .ant-card-head-title { font-size: 14px; font-weight: 600; color: #202124; }
-.separator-card .ant-card-body { max-height: 300px; overflow-y: auto; }
+/* 分割线 */
 .separator-list { display: flex; flex-direction: column; gap: 4px; width: 100%; }
 .separator-item { padding: 8px 12px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; width: 100%; box-sizing: border-box; }
 .separator-item:hover { background: #f5f7fa; }
@@ -399,7 +381,7 @@ ul {
 .table-info { margin-top: 8px; font-size: 12px; color: #5f6368; text-align: center; }
 
 
-/* ==================== CompactToolbar 弹出面板样式（全局） ==================== */
+/* ==================== 工具栏弹出面板样式（全局） ==================== */
 
 /* 颜色面板 */
 .color-panel { padding: 8px; }
@@ -413,8 +395,6 @@ ul {
 .list-panel { padding: 8px 10px; }
 .list-panel-title { font-size: 12px; color: #5f6368; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #e8eaed; font-weight: 500; }
 .list-grid { display: grid; gap: 6px; }
-.bullet-grid { grid-template-columns: repeat(5, 1fr); }
-.number-grid { grid-template-columns: repeat(4, 1fr); }
 .list-cell { border: 1px solid #dadce0; border-radius: 4px; width: 67px; background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 6px 4px; transition: background 0.15s, border-color 0.15s; }
 .list-cell:hover { background: #f1f3f4; border-color: #1a73e8; }
 .list-cell-none { height: 52.6px; font-size: 13px; color: #5f6368; }
@@ -425,14 +405,10 @@ ul {
 .list-num { font-size: 11px; line-height: 1; flex-shrink: 0; white-space: nowrap; }
 .list-line { flex: 1; height: 1px; background: #999; min-width: 12px; }
 
-/* 表格选择器标题（CompactToolbar） */
+/* 表格选择器标题 */
 .table-title { font-size: 12px; color: #5f6368; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #e8eaed; font-weight: 500; }
 
-/* Ant Design Popover 覆盖 - 工具栏卡片弹出层 */
-.compact-popover .ant-popover-inner { padding: 0; }
-
-
-/* 分割线变体样式（CompactToolbar / 通用） */
+/* 分割线变体样式 */
 .separator-preview.dotted { background: transparent; }
 .separator-preview.dashed { background: transparent; }
 .separator-preview.double { background: transparent; }

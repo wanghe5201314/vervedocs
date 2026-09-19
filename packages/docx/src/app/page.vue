@@ -468,7 +468,7 @@ const {
 
   handleInsertTableDialogConfirm,
   handleTableBordersConfirm
-} = useDialogs({ executeCommand, documentMeta, emitMetaChange })
+} = useDialogs({ executeCommand })
 
 /** AI 操作处理方法 */
 const {
@@ -652,9 +652,6 @@ const applyDocumentReplace = async (payload: {
   await replaceDocument(
     {
       getEditorInstance,
-      refreshCatalog: async () => {
-        await executeCommand('refreshCatalog')
-      },
       syncRevisionList: revisionAPI.sync
     },
     payload

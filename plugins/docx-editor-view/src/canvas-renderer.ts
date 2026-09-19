@@ -20,6 +20,7 @@ import type {
 import type { IGroupColor } from '@vervedoc/docx-editor-schema'
 import { getChartRenderer } from '@vervedoc/docx-editor-schema'
 import { paintParagraph, type PaintCtx } from './block-painter'
+import { chartTableSignature } from './block-signature'
 
 
 /** CanvasRenderer 渲染器配置选项 */
@@ -198,7 +199,7 @@ export class CanvasRenderer {
    * @param quality PNG 压缩质量（0-1）
    * @returns 缩略图 data URL；页面尺寸为 0 时返回空字符串
    */
-  renderPageThumbnail(page: PageLayout, quality = 0.7): string {
+  renderPageThumbnail(page: PageLayout, quality = 0.7, pageCount = 1): string {
     if (page.rect.width === 0 || page.rect.height === 0) return ''
     const dpr = this.opts.dpr
     const canvas = document.createElement('canvas')
@@ -237,15 +238,43 @@ export class CanvasRenderer {
       }
     }
 
-    this.drawPageNumberForThumbnail(ctx, page, 1)
+    this.drawPageNumberForThumbnail(ctx, page, pageCount)
     this.watermarkWidget?.drawWatermarkForThumbnail(ctx, page)
 
-    return canvas.toDataURL('image/png', quality)
+    const image = canvas.toDataURL('image/png', quality)
+    this.trimCache()
+    return image
   }
 
   /** 标脏（下一帧只重建这些 block 的 bitmap） */
   markDirty(blockIds: number[] | Set<number>): void {
     for (const id of blockIds) this.dirtyBlocks.add(id)
+  }
+
+  /** Retain offscreen document blocks; remove only deleted occurrences. */
+  setLayout(layout: DocumentLayout, ids: Set<number>): void {
+    this.currentLayout = layout
+    for (const [id, cached] of this.blockCache) {
+      if (ids.has(id)) continue
+      if (cached.bitmap instanceof ImageBitmap) cached.bitmap.close()
+      this.blockCache.delete(id)
+    }
+    for (const id of this.dirtyBlocks) {
+      if (!ids.has(id)) this.dirtyBlocks.delete(id)
+    }
+  }
+
+  /** Bound retained bitmap memory with least-recently-used eviction. */
+  private trimCache(): void {
+    let bytes = 0
+    const size = (entry: BlockCache) => Math.ceil(entry.width) * Math.ceil(entry.height) * entry.dpr ** 2 * 4
+    for (const entry of this.blockCache.values()) bytes += size(entry)
+    for (const [id, entry] of this.blockCache) {
+      if (bytes <= 64 * 1024 * 1024) break
+      bytes -= size(entry)
+      if (entry.bitmap instanceof ImageBitmap) entry.bitmap.close()
+      this.blockCache.delete(id)
+    }
   }
 
   /** 全部标脏（用于选项/主题变更） */
@@ -263,6 +292,10 @@ export class CanvasRenderer {
       if (c.bitmap instanceof ImageBitmap) c.bitmap.close()
     }
     this.pageBgEls.clear()
+    this.blockCache.clear()
+    this.dirtyBlocks.clear()
+    for (const image of this.imageCache.values()) image.onload = null
+    this.imageCache.clear()
     this.selectionEls = []
     this.bgLayer.remove()
     this.selectionLayer.remove()
@@ -577,11 +610,15 @@ export class CanvasRenderer {
 
     // 脏区域合成：无重排局部变更时只清 + 重画脏区域，不重画 bg，跳过 GC
     if (dirtyRect) {
+      if (dirtyRect.width <= 0 || dirtyRect.height <= 0) return
 
-      const dx = Math.round(dirtyRect.x + this.opts.pageOffsetX)
-      const dy = Math.round(dirtyRect.y - scrollY)
-      const dw = dirtyRect.width
-      const dh = dirtyRect.height
+      // Expand to physical pixel boundaries; rounding just the origin can leave
+      // partially cleared rows when a fractional-height header intersects a table.
+      const dpr = this.opts.dpr
+      const dx = Math.floor((dirtyRect.x + this.opts.pageOffsetX) * dpr) / dpr
+      const dy = Math.floor((dirtyRect.y - scrollY) * dpr) / dpr
+      const dw = Math.ceil((dirtyRect.x + dirtyRect.width + this.opts.pageOffsetX) * dpr) / dpr - dx
+      const dh = Math.ceil((dirtyRect.y + dirtyRect.height - scrollY) * dpr) / dpr - dy
       const dTop = dirtyRect.y
       const dBottom = dirtyRect.y + dirtyRect.height
 
@@ -592,11 +629,12 @@ export class CanvasRenderer {
       ct.clip()
       for (const page of layout.pages) {
         const pageBottom = page.rect.y + page.rect.height
-        if (pageBottom < dTop || page.rect.y > dBottom) continue
+        if (pageBottom < dTop || page.rect.y > dBottom ||
+            pageBottom < scrollY || page.rect.y > scrollY + viewportHeight) continue
         this.renderPageContent(ct, page, scrollY, pageCount, aliveIds)
       }
       ct.restore()
-      this.dirtyBlocks.clear()
+      this.trimCache()
       return
     }
 
@@ -614,16 +652,7 @@ export class CanvasRenderer {
       this.renderPageContent(ct, page, scrollY, pageCount, aliveIds)
     }
 
-    // GC：淘汰未使用的 bitmap
-    for (const id of Array.from(this.blockCache.keys())) {
-      if (!aliveIds.has(id)) {
-        const c = this.blockCache.get(id)!
-        if (c.bitmap instanceof ImageBitmap) c.bitmap.close()
-        this.blockCache.delete(id)
-      }
-    }
-    // 已应用完 dirty
-    this.dirtyBlocks.clear()
+    this.trimCache()
   }
 
   /** 渲染每页背景 DOM div（带 data-index 供协同光标定位） */
@@ -756,8 +785,11 @@ export class CanvasRenderer {
         height: b.rect.height,
         dpr: this.opts.dpr
       })
+      this.dirtyBlocks.delete(b.id)
     } else {
       bitmap = cache!.bitmap
+      this.blockCache.delete(b.id)
+      this.blockCache.set(b.id, cache!)
     }
     if (bitmap) {
       ctx.drawImage(bitmap, Math.round(bx), Math.round(by), b.rect.width, b.rect.height)
@@ -925,7 +957,7 @@ export class CanvasRenderer {
       img.crossOrigin = 'anonymous'
       img.onload = () => {
         // 图片加载完成 → 使该 block 失效 + 触发全局重绘
-        this.dirtyBlocks.add(b.id)
+        this.invalidateAll()
         this.container.dispatchEvent(new CustomEvent('vervedocs:image-loaded', { detail: { url } }))
       }
       img.src = url
@@ -982,7 +1014,8 @@ export class CanvasRenderer {
       return
     }
 
-    const cacheKey = `chart|${el.id ?? ''}|${JSON.stringify(chartBlock)}`
+    const dependency = this.currentLayout ? chartTableSignature(b, this.currentLayout) : ''
+    const cacheKey = `chart|${el.id ?? ''}|${b.rect.width}x${b.rect.height}|${JSON.stringify(chartBlock)}|${dependency}`
     let img = this.imageCache.get(cacheKey)
     if (!img) {
       const option = this.getChartOption(chartBlock, renderer)
@@ -991,7 +1024,7 @@ export class CanvasRenderer {
       const dataUrl = renderer.renderToDataUrl(option, width, height, 2)
       img = new Image()
       img.onload = () => {
-        this.dirtyBlocks.add(b.id)
+        this.invalidateAll()
         this.container.dispatchEvent(new CustomEvent('vervedocs:chart-loaded', { detail: { id: el.id } }))
       }
       img.src = dataUrl

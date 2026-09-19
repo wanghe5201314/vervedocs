@@ -47,10 +47,9 @@ export class ShortcutHandler {
     if (!adapt) return
     const draw = this.deps.getDraw()
     const command = this.deps.getCommand()
-    const range = this.deps.getRange()
 
     if (this.handleEditKeys(e, adapt, draw)) return
-    if (this.handleCursorKeys(e, adapt, draw, range)) return
+    if (this.handleCursorKeys(e, adapt, draw)) return
     if (this.handleFormatKeys(e, command)) return
     if (this.handleHistoryKeys(e, command)) return
   }
@@ -104,10 +103,9 @@ export class ShortcutHandler {
    * @param e 键盘事件
    * @param adapt 命令适配器
    * @param draw 视图实例
-   * @param _range 选区管理器（保留参数位）
    * @returns 是否已处理该事件
    */
-  private handleCursorKeys(e: KeyboardEvent, adapt: CommandAdapt, draw: Draw, _range: RangeManager): boolean {
+  private handleCursorKeys(e: KeyboardEvent, adapt: CommandAdapt, draw: Draw): boolean {
     const mod = e.ctrlKey || e.metaKey
 
     if (e.key === 'ArrowLeft') {

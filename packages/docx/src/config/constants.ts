@@ -18,39 +18,6 @@ export const UI_FONT_SIZE_BASE = '13px'
  */
 export const UI_EL_SIZE = 'small' as const
 
-/* ============================================================
- * Ribbon Tab 配置
- * ============================================================ */
-
-/**
- * Ribbon 选项卡元数据接口
- */
-export interface RibbonTabMeta {
-  /** 选项卡唯一键名 */
-  key: string
-  /** 选项卡显示文本 */
-  label: string
-  /** 选项卡图标名称 */
-  icon: string
-  /** 是否可见，缺省视为可见 */
-  visible?: boolean
-}
-
-/**
- * Ribbon 选项卡配置列表
- */
-export const RIBBON_TABS: RibbonTabMeta[] = [
-  { key: 'file', label: '文件', icon: 'file-outline' },
-  { key: 'home', label: '开始', icon: 'view-headline' },
-  { key: 'insert', label: '插入', icon: 'plus-thick' },
-  { key: 'layout', label: '页面', icon: 'page-layout-body' },
-  { key: 'reference', label: '引用', icon: 'table-of-contents' },
-  { key: 'review', label: '审阅', icon: 'comment-check-outline' },
-  { key: 'view', label: '视图', icon: 'eye-outline' },
-  { key: 'collaboration', label: '协同', icon: 'account-multiple-outline', visible: false },
-  { key: 'help', label: '帮助', icon: 'help-circle-outline' }
-]
-
 /**
  * 编辑器模式列表，含模式值、显示文本、图标与描述
  */

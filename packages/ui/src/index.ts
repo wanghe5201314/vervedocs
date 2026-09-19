@@ -6,4 +6,4 @@ export {
   VdRibbonTabItem,
   VdRibbonTabTitle
 } from './components/ribbon'
-export type { RibbonTabMode } from './components/ribbon'
+export type { RibbonTabMode, RibbonButtonAppearance } from './components/ribbon'

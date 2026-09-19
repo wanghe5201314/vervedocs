@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { computed, provide, ref, useId } from 'vue'
 import { RIBBON_TAB_CONTEXT_KEY } from './context'
+import { provideRibbonButtonDefaults, type RibbonButtonAppearance } from '../button/context'
 
 const props = defineProps<{
   activeKey?: string
+  /** Shared appearance defaults for buttons in this ribbon. */
+  buttonDefaults?: RibbonButtonAppearance
 }>()
+
+provideRibbonButtonDefaults(() => props.buttonDefaults)
 
 const emit = defineEmits<{
   'update:activeKey': [key: string]

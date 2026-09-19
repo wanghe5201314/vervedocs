@@ -6,12 +6,16 @@
       'non-home-tab': activeTab !== 'home'
     }"
   >
-    <VdRibbonTab v-model:active-key="activeTab">
+    <VdRibbonTab v-model:active-key="activeTab" :button-defaults="{ variant: 'flat' }">
       <VdRibbonTabItem item-key="file" mode="dropdown" title="文件">
         <FileTab :is-importing="isImporting" @command="handleCommand" />
       </VdRibbonTabItem>
 
-      <VdRibbonTabItem item-key="home" title="开始">
+      <VdRibbonTabItem
+        item-key="home"
+        title="开始"
+        :button-defaults="{ size: 'compact', iconSize: 16, iconWeight: 350, iconOpticalSize: 20 }"
+      >
         <HomeTab
           :current-font="currentFont"
           :current-size="currentSize"
@@ -25,6 +29,12 @@
           :current-title-label="currentTitleLabel"
           :has-selection="hasSelection"
           :current-character-scale="currentCharacterScale"
+          :is-painter="editorState.painter"
+          :can-undo="editorState.undo"
+          :can-redo="editorState.redo"
+          :in-table="editorState.inTable"
+          :list-type="editorState.listType"
+          :show-line-break="showLineBreak"
           @command="handleCommand"
           @font="handleFontChange"
           @size="handleSizeChange"
@@ -367,30 +377,27 @@ const handleRowFlex = (v: string) => emit('command', 'rowFlex', v)
   opacity: 0.6;
 }
 
-/* 非 home 选项卡：与 home 选项卡高度一致，图标 28px */
+/* Keep all document ribbon tabs on the same icon, caption and arrow baselines. */
 .office-ribbon.non-home-tab :deep(.ribbon-tab-panel) {
-  min-height: 70px;
-}
-.office-ribbon.non-home-tab :deep(.ribbon-tab-panel .ribbon-group) {
-  min-height: 70px;
-}
-.office-ribbon.non-home-tab :deep(.ribbon-btn-lg .ribbon-btn-icon svg),
-.office-ribbon.non-home-tab :deep(.ribbon-btn-lg .ribbon-btn-icon i) {
-  font-size: 28px;
-}
-.office-ribbon.non-home-tab :deep(.ribbon-btn-lg .ribbon-btn-text) {
-  font-weight: 400;
-}
-</style>
-
-<style>
-/* Tab 面板通用 */
-.ribbon-tab-panel {
   display: flex;
   align-items: stretch;
+  box-sizing: border-box;
   min-height: 70px;
+  padding: 4px 0;
+  font: 12px Arial, 'Microsoft YaHei', sans-serif;
 }
-.ribbon-tab-panel .ribbon-group {
-  min-height: 70px;
+.office-ribbon.non-home-tab :deep(.vd-ribbon-group) {
+  padding: 0 8px;
+}
+.office-ribbon.non-home-tab :deep(.vd-ribbon-group:not(:last-child)::after) {
+  top: 3px;
+  bottom: 3px;
+  height: auto;
+  transform: none;
+  border-color: #c2c2c2;
+}
+.office-ribbon.non-home-tab :deep(.vd-ribbon-group__content) {
+  flex-wrap: nowrap;
+  gap: 2px;
 }
 </style>

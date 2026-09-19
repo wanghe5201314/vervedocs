@@ -50,8 +50,6 @@
   display: grid;
   gap: 4px;
 }
-.bullet-grid { grid-template-columns: repeat(4, 1fr); }
-.number-grid { grid-template-columns: repeat(4, 1fr); }
 .list-cell {
   border: 1px solid #e8e8e8;
   border-radius: 4px;

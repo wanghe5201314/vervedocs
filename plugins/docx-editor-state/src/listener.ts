@@ -118,6 +118,10 @@ export class Listener {
     this.emitter.off(event, handler as (...args: any[]) => void)
   }
 
+  hasListeners(event: keyof ListenerMap): boolean {
+    return this.emitter.listenerCount(event) > 0
+  }
+
   /** 触发事件（core 内部调用） */
   emit<K extends keyof ListenerMap>(event: K, ...args: Parameters<ListenerMap[K]>): void {
     this.emitter.emit(event, ...args)

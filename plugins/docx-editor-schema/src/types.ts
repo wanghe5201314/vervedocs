@@ -28,6 +28,7 @@ export type ElementType =
   | 'block'
   | 'tab'
   | 'watermark'
+  | 'shape'
 
 /** 段落水平对齐方式 */
 export type RowFlex = 'left' | 'center' | 'right' | 'alignment' | 'justify' | 'distribute'
@@ -58,6 +59,8 @@ export interface IParagraphAttrs {
   paragraphFirstLineIndent?: number
   /** 左缩进（px） */
   paragraphIndentLeft?: number
+  /** 右缩进（px） */
+  paragraphIndentRight?: number
   /** 段前间距（px） */
   paragraphSpacingBefore?: number
   /** 段后间距（px） */
@@ -78,6 +81,14 @@ export interface IElementBase extends IParagraphAttrs {
   type: ElementType
   /** 元素值（text 为文本内容，其他类型为占位或子类型标识） */
   value: string
+  /** 元素唯一标识符 */
+  id?: string
+  /** 扩展数据（任意 JSON） */
+  extension?: Record<string, unknown>
+  /** 外部系统 ID */
+  externalId?: string
+  /** 分栏 ID */
+  columnId?: string
 }
 
 /* ========== 文本 run ========== */
@@ -102,6 +113,26 @@ export interface ITextElement extends IElementBase {
   strikeout?: boolean
   /** 是否下划线 */
   underline?: boolean
+  /** 字符缩放百分比 */
+  characterScale?: number
+  /** 段落背景色 */
+  paragraphColor?: string
+  /** 行间距额外值 */
+  rowMargin?: number
+  /** 字符间距（px） */
+  letterSpacing?: number
+  /** 文本装饰样式（solid/double/dashed/dotted/wavy） */
+  textDecoration?: string
+  /** 修订 ID */
+  revisionId?: string
+  /** 修订类型（insert/delete/format） */
+  revisionType?: string
+  /** 修订作者 */
+  revisionAuthor?: string
+  /** 修订日期 */
+  revisionDate?: string
+  /** 格式修订的旧 rPr XML 内容（仅 revisionType=format 时有效） */
+  revisionOldRPr?: string
 }
 
 /* ========== 列表编号定义（来源 numbering.xml） ========== */
@@ -267,6 +298,16 @@ export interface ITableElement extends IElementBase {
 
 /* ========== 图片 ========== */
 
+/** 图片浮动位置 */
+export interface IImgFloatPosition {
+  /** X 坐标（px） */
+  x: number
+  /** Y 坐标（px） */
+  y: number
+  /** 页码（可选） */
+  pageNo?: number
+}
+
 /** 图片元素 */
 export interface IImageElement extends IElementBase {
   /** 元素类型固定为 'image' */
@@ -277,6 +318,10 @@ export interface IImageElement extends IElementBase {
   height: number
   /** 图片显示方式 */
   imgDisplay?: ImgDisplay
+  /** 图片浮动位置 */
+  imgFloatPosition?: IImgFloatPosition
+  /** 禁用图片工具 */
+  imgToolDisabled?: boolean
   /** 旋转角度（度） */
   rotate?: number
 }

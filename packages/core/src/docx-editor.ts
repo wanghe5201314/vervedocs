@@ -309,8 +309,10 @@ export class DocxEditor {
       this.block?.clear()
       this.control?.clear()
       this.worker?.updateElements(this.draw.getDocument().elements)
-      const images = this.draw.getPageThumbnails()
-      this.listener.emit('thumbnailChange', images)
+      if (this.listener.hasListeners('thumbnailChange')) {
+        const images = this.draw.getPageThumbnails()
+        this.listener.emit('thumbnailChange', images)
+      }
     })
   }
 

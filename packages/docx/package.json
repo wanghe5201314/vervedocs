@@ -46,7 +46,6 @@
   "devDependencies": {
     "@eslint/js": "catalog:",
     "@types/node": "catalog:",
-    "@types/prismjs": "^1.26.0",
     "@typescript-eslint/eslint-plugin": "^8.16.0",
     "@typescript-eslint/parser": "^8.16.0",
     "@vitejs/plugin-vue": "catalog:",
@@ -57,7 +56,6 @@
     "eslint": "catalog:",
     "eslint-plugin-unused-imports": "catalog:",
     "less": "^4.6.4",
-    "rollup-plugin-visualizer": "^7.0.1",
     "typescript": "catalog:",
     "unplugin-auto-import": "^21.0.0",
     "unplugin-vue-components": "^32.1.0",
@@ -75,22 +73,13 @@
     "@vervedoc/docx-editor-comment": "workspace:^",
     "@vervedoc/docx-editor-schema": "workspace:^",
     "ant-design-vue": "catalog:",
-    "docx": "^9.5.1",
-
-    "esbuild": "^0.28.1",
     "jsbarcode": "^3.12.3",
-    "jszip": "^3.10.1",
-    "@lucide/vue": "^1.24.0",
-
-    "prismjs": "1.30.0",
-    "qrcode": "^1.5.4",
-    "x-data-spreadsheet": "^1.1.9"
+    "qrcode": "^1.5.4"
   },
   "peerDependencies": {
     "@vervedoc/docx-editor-collaboration": "workspace:^",
     "@vervedoc/design": "workspace:^",
     "@vervedoc/ui": "workspace:^",
-    "prismjs": "1.30.0",
     "vue": "catalog:"
   },
   "overrides": {

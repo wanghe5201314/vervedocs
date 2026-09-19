@@ -50,6 +50,24 @@ let _blockSeq = 0
 /** 取下一个全局唯一的 block id。 */
 function nextBlockId(): number { return ++_blockSeq }
 
+interface ParagraphInput {
+  paragraphKind: ParagraphBlock['paragraphKind']
+  block: IElement | null
+  runs: IElement[]
+  runsParentPath: Path
+  startIndex: number
+  endIndex: number
+  parentPath: Path
+  availableWidth: number
+  runStartIndex?: number
+}
+
+interface ParagraphCache {
+  signature: string
+  input: ParagraphInput
+  layout: ParagraphBlock
+}
+
 /**
  * 文档排版引擎：把 IElement[] 排版成分页 DocumentLayout，
  * 处理段落折行、列表编号、表格跨行/跨页、图片环绕等。
@@ -61,6 +79,9 @@ export class LayoutEngine {
   private opts: LayoutOptions
   /** 跨列表的多级编号计数器（每次 layout() 重置） */
   private counters = new Map<string, number>()
+  private paragraphCache = new Map<string, ParagraphCache>()
+  private nextParagraphCache = new Map<string, ParagraphCache>()
+  private layoutZone = 'main'
 
   /**
    * 创建排版引擎。
@@ -78,6 +99,7 @@ export class LayoutEngine {
    */
   updateOptions(options: LayoutOptions): void {
     this.opts = options
+    this.paragraphCache.clear()
   }
 
   /**
@@ -86,6 +108,8 @@ export class LayoutEngine {
    */
   layout(elements: IElement[], headerElements?: IElement[], footerElements?: IElement[]): DocumentLayout {
     this.counters.clear()
+    this.nextParagraphCache = new Map()
+    this.layoutZone = 'main'
     const { pageWidth, pageHeight, pageMargins, pageGap } = this.opts
     const [mt, mr, mb, ml] = pageMargins
     const contentWidth = pageWidth - ml - mr
@@ -95,8 +119,11 @@ export class LayoutEngine {
     const rawBlocks = this.layoutBlocks(elements, [], contentWidth)
 
     // 页眉/页脚 block 预布局（rect.y 相对各自区域原点）
+    this.layoutZone = 'header'
     const headerBlocks = headerElements?.length ? this.layoutBlocks(headerElements, [], contentWidth) : []
+    this.layoutZone = 'footer'
     const footerBlocks = footerElements?.length ? this.layoutBlocks(footerElements, [], contentWidth) : []
+    this.paragraphCache = this.nextParagraphCache
 
     // 页眉内容在上边距区域内靠下排列（底部贴近正文顶部），避免紧贴页面顶部
     let headerOffsetY = 0
@@ -325,17 +352,25 @@ export class LayoutEngine {
    * @param input 段落排版输入（类型/容器/runs/路径/可用宽度等）
    * @returns 段落块（含 lines/inlines 与 rect）
    */
-  private layoutParagraph(input: {
-    paragraphKind: ParagraphBlock['paragraphKind']
-    block: IElement | null
-    runs: IElement[]
-    runsParentPath: Path
-    startIndex: number
-    endIndex: number
-    parentPath: Path
-    availableWidth: number
-    runStartIndex?: number
-  }): ParagraphBlock {
+  private layoutParagraph(input: ParagraphInput): ParagraphBlock {
+    // Numbered lists depend on preceding counters and must still be evaluated.
+    if (input.paragraphKind === 'list') return this.computeParagraph(input)
+    const key = JSON.stringify([this.layoutZone, input.runsParentPath, input.startIndex, input.runStartIndex])
+    const signature = JSON.stringify(input)
+    const cached = this.paragraphCache.get(key)
+    // Undo/document replacement may have identical text but different source refs.
+    const sameSources = cached?.input.block === input.block &&
+      cached.input.runs.length === input.runs.length &&
+      input.runs.every((run, index) => run === cached.input.runs[index])
+    const layout = cached && sameSources && cached.signature === signature
+      ? cached.layout
+      : this.computeParagraph(input)
+    this.nextParagraphCache.set(key, { signature, input, layout })
+    // Pagination, table placement and surrounding images mutate the outer block.
+    return { ...layout, rect: { ...layout.rect } }
+  }
+
+  private computeParagraph(input: ParagraphInput): ParagraphBlock {
     const {
       paragraphKind, block, runs, runsParentPath,
       startIndex, endIndex, parentPath, availableWidth,

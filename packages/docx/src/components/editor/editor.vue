@@ -59,20 +59,11 @@ let editorInstance: any = null
 /** EventBus 订阅句柄集合，用于卸载时统一取消订阅 */
 const eventBusSubscriptions: Array<{ unsubscribe: () => void }> = []
 
-/**
- * 刷新目录（已由 Worker + listener 自动处理，保留为空函数兼容调用方）
- */
-const refreshCatalog = async () => {
-  // 目录通过 Worker 后台计算 → listener.toc.tocListener 自动推送，无需主动调用
-}
-
 const {
 
   importJsonFile: importJsonFileFn,
 } = useEditorImport({
-  emit: emit as (event: string, ...args: any[]) => void,
   getEditorInstance: () => editorInstance,
-  refreshCatalog,
 })
 
 const {
@@ -383,11 +374,6 @@ const setupEditorListeners = () => {
 }
 
 
-/** 刷新缩略图，供外部调用（空函数，实际由核心 listener 推送） */
-const refreshThumbnails = () => {
-  // no-op：缩略图由核心 listener 自动推送
-}
-
 /**
  * 执行编辑器命令，根据命令名映射到对应编辑器操作
  * @param command - 命令名称
@@ -401,7 +387,6 @@ const executeCommand = (command: string, ...args: any[]) => {
     updateOptions: (patch: any) => applyOptionsPatch(patch),
     setZone: (zone: string) => editorInstance.command.executeSetZone(zone),
     setValue: (value: any, options?: any) => editorInstance.command.executeSetValue(value, options),
-    refreshCatalog: async () => refreshCatalog(),
     replaceRange: (range: any) => editorInstance.command.executeReplaceRange(range),
     insertElementList: (elements: any[]) => editorInstance.command.executeInsertElementList(elements),
     requestInsertChart: () => editorInstance.dispatchCommand('requestInsertChart'),
@@ -552,7 +537,6 @@ const executeCommand = (command: string, ...args: any[]) => {
     setPaperMargin: setPaperMarginFn,
     setPaperBackground: setPaperBackgroundFn,
 
-    refreshThumbnails: () => refreshThumbnails(),
     insertBlankPageBefore: (direction?: string) => insertBlankPageBefore(direction),
 
     columns: columnsFn,
@@ -639,15 +623,6 @@ const getEditorInstance = () => {
   return editorInstance
 }
 
-/**
- * 更新目录，委托 refreshCatalog 实现
- * @returns 目录数据
- */
-const updateCatalog = async () => {
-  if (!editorInstance) return
-  return refreshCatalog()
-}
-
 // 生命周期钩子
 onMounted(() => {
   initEditor()
@@ -711,8 +686,6 @@ defineExpose({
   executeCommand,
   getEditorInstance,
   getSearchAPI: () => searchAPI,
-  updateCatalog,
-  refreshThumbnails,
   insertBlankPageBefore
 })
 </script>

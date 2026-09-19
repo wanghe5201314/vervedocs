@@ -4,10 +4,9 @@
  * 编辑器视图门面。
  *
  * 增量策略：
- *  - 保持 setDocument 每次都 layout()
- *  - 与前一次 layout 按段落"签名"比对：签名相同则复用 block.id（bitmap 缓存复用），
- *    签名不同则保留新分配 id 并 markDirty（渲染时会重建 bitmap）。
- *  - 未匹配的旧块 id 由 renderer.render 内的 GC 淘汰。
+ *  - Reuse unchanged paragraph layout and block bitmaps.
+ *  - Diff paint snapshots against the last rendered frame.
+ *  - Regenerate thumbnails only for changed pages.
  */
 
 import type { IDocxDocumentMeta, IEditorOption, IPosition, Path } from '@vervedoc/docx-editor-schema'
@@ -15,7 +14,7 @@ import { formatElementTree, pairBookmarkMarkers, getByPath } from '@vervedoc/doc
 
 import type { Listener, RangeManager, EventBus } from '@vervedoc/docx-editor-state'
 import { LayoutEngine, type LayoutOptions } from './layout-engine'
-import type { DocumentLayout, BlockNode, ParagraphBlock, InlineBox, LineBox } from './layout-types'
+import type { DocumentLayout, ParagraphBlock, InlineBox, LineBox } from './layout-types'
 import { CanvasRenderer } from './canvas-renderer'
 import { hitTest } from './hit-test'
 import { locateCaret, computeSelectionRects } from './caret-rect'
@@ -29,7 +28,7 @@ import { WatermarkWidget, type WatermarkConfig } from './widgets/watermark-widge
 import { SystemWatermarkWidget, type SystemWatermarkConfig } from './widgets/watermark-system-widget'
 import { SelectionToolbarWidget } from './widgets/selection-toolbar-widget'
 import { CaretWidget } from './widgets/caret-widget'
-import { signBlock } from './block-signature'
+import { computeDirtyRect, prepareRenderState, type RenderState } from './render-state'
 import {
   findInlineByPos,
   findParagraphByPos,
@@ -110,11 +109,10 @@ export class Draw {
   /** 容器尺寸观察器 */
   private ro?: ResizeObserver
 
-  /** 上一帧的签名 -> block id，用于复用位图缓存 */
-  private lastSignatureToId = new Map<string, number>()
-
-  /** 待渲染的脏区域（文档坐标），由 reformatAndRender 计算，scheduleRender 消费后清空 */
-  private pendingDirtyRect: { x: number; y: number; width: number; height: number } | null = null
+  private renderState?: RenderState
+  private paintedState?: RenderState
+  private forceFullRender = true
+  private thumbnailCache = new Map<number, { signature: string; image: string }>()
 
   /** 隐藏 textarea：作为输入焦点与 IME 组合的宿主 */
   private inputEl!: HTMLTextAreaElement
@@ -245,8 +243,13 @@ export class Draw {
       this.ro = new ResizeObserver(() => this.resize())
       this.ro.observe(container)
     }
-    this.canvasHost.addEventListener('vervedocs:image-loaded', () => this.scheduleRender())
-    this.canvasHost.addEventListener('vervedocs:chart-loaded', () => this.scheduleRender())
+    const assetLoaded = () => {
+      this.thumbnailCache.clear()
+      this.forceFullRender = true
+      this.scheduleRender()
+    }
+    this.canvasHost.addEventListener('vervedocs:image-loaded', assetLoaded)
+    this.canvasHost.addEventListener('vervedocs:chart-loaded', assetLoaded)
 
     // Range 变化时触发光标重绘 + 悬浮工具栏 + 工具栏样式同步
     if (deps.listener && this.range) {
@@ -343,28 +346,24 @@ export class Draw {
     })
     this.headerFooterWidget.create()
     this.imageWidget = new ImageWidget({
+      getContainer: () => this.canvasHost,
       getLayout: () => this.layout,
-      getRange: () => this.range ?? null,
       getContainerRect: () => this.canvasHost.getBoundingClientRect(),
       getScrollY: () => this.scrollY,
       getPageOffsetX: () => this.getPageOffsetX(),
       onCommand: (cmd: string, ...args: any[]) => this.onCommand?.(cmd, ...args),
-      onUpdateImageSizeLive: (path: Path, width: number, height: number) => this.updateImageSizeLive(path, width, height),
-      hit: (clientX: number, clientY: number) => this.hit(clientX, clientY),
-      focusInput: () => this.focusInput()
+      onUpdateImageSizeLive: (path: Path, width: number, height: number) => this.updateImageSizeLive(path, width, height)
     })
     this.imageWidget.create()
     this.chartWidget = new ChartWidget({
+      getContainer: () => this.canvasHost,
       getLayout: () => this.layout,
-      getRange: () => this.range ?? null,
       getContainerRect: () => this.canvasHost.getBoundingClientRect(),
       getScrollY: () => this.scrollY,
       getPageOffsetX: () => this.getPageOffsetX(),
       onCommand: (cmd: string, ...args: any[]) => this.onCommand?.(cmd, ...args),
       onUpdateChartSizeLive: (path: Path, width: number, height: number) => this.updateChartSizeLive(path, width, height),
-      getEventBus: () => this.eventBus,
-      hit: (clientX: number, clientY: number) => this.hit(clientX, clientY),
-      focusInput: () => this.focusInput()
+      getEventBus: () => this.eventBus
     })
     this.chartWidget.create()
     this.paragraphWidget = new ParagraphWidget({
@@ -964,15 +963,28 @@ export class Draw {
 
   /**
    * 获取所有页面的缩略图图片（data URL）。
-   * 利用渲染器的 renderPageThumbnail 方法，为每页创建离屏 canvas 绘制内容并输出 PNG data URL。
+   * Reuse cached PNGs; only changed page content or visual options require painting.
    * @returns 缩略图 data URL 数组，每个元素对应一页
    */
   getPageThumbnails(): string[] {
     if (!this.layout) return []
+    this.syncPageNumberToRenderer()
+    this.syncWatermarkToRenderer()
+    const visualSignature = JSON.stringify([
+      this.options, this.layout.pages.length
+    ])
     const images: string[] = []
     for (const page of this.layout.pages) {
-      const dataUrl = this.renderer.renderPageThumbnail(page, 0.7)
-      if (dataUrl) images.push(dataUrl)
+      const signature = `${visualSignature}|${this.renderState?.pageSignatures.get(page.index)}`
+      const cached = this.thumbnailCache.get(page.index)
+      const image = cached?.signature === signature
+        ? cached.image
+        : this.renderer.renderPageThumbnail(page, 0.7, this.layout.pages.length)
+      this.thumbnailCache.set(page.index, { signature, image })
+      if (image) images.push(image)
+    }
+    for (const index of this.thumbnailCache.keys()) {
+      if (index >= this.layout.pages.length) this.thumbnailCache.delete(index)
     }
     return images
   }
@@ -1062,6 +1074,8 @@ export class Draw {
   setActiveGroup(groupId: string | null): void {
     this.renderer.updateVisualOptions({ activeGroupId: groupId })
     this.renderer.invalidateAll()
+    this.thumbnailCache.clear()
+    this.forceFullRender = true
     this.scheduleRender()
   }
 
@@ -1130,6 +1144,7 @@ export class Draw {
     this.selectionToolbarWidget?.destroy()
     this.caretWidget?.destroy()
     this.renderer.destroy()
+    this.thumbnailCache.clear()
 
     if (this.inputEl && this.inputEl.parentElement === this.container) {
       this.container.removeChild(this.inputEl)
@@ -1172,35 +1187,8 @@ export class Draw {
     if (footerElements?.length) formatElementTree(footerElements, { editorOptions: this.options })
     const layout = this.engine.layout(this.document.elements, headerElements, footerElements)
 
-    // 复用旧 block id：对签名一致者继承 id，避免 bitmap 无谓重建
-    const nextSignatureToId = new Map<string, number>()
-    const dirty: number[] = []
-    const walk = (blocks: BlockNode[]) => {
-      for (const b of blocks) {
-        if (b.kind === 'paragraph' || b.kind === 'image' || b.kind === 'pageBreak' || b.kind === 'separator' || b.kind === 'block') {
-          const sig = signBlock(b)
-          const reusedId = this.lastSignatureToId.get(sig)
-          if (reusedId != null) {
-            b.id = reusedId
-          } else {
-            dirty.push(b.id)
-          }
-          nextSignatureToId.set(sig, b.id)
-        } else if (b.kind === 'table') {
-          for (const row of b.rows) {
-            for (const cell of row.cells) walk(cell.content)
-          }
-        }
-      }
-    }
-    for (const page of layout.pages) {
-      walk(page.blocks)
-      if (page.headerBlocks) walk(page.headerBlocks)
-      if (page.footerBlocks) walk(page.footerBlocks)
-    }
-
-    const oldLayout = this.layout
-    this.lastSignatureToId = nextSignatureToId
+    const { state, dirty } = prepareRenderState(layout, this.renderState)
+    this.renderState = state
     this.layout = layout
     this.listener?.emit('pageCountChange', layout.pages.length)
 
@@ -1210,7 +1198,7 @@ export class Draw {
     this.scroller.style.margin = '0 auto'
 
     if (dirty.length > 0) this.renderer.markDirty(dirty)
-    this.pendingDirtyRect = this.computeDirtyRect(oldLayout, layout, dirty)
+    this.renderer.setLayout(layout, new Set([...state.blocks.values()].map(block => block.id)))
     this.updateVisualLayout()
     // 光标兜底：若 range 尚未定位（首次渲染 / 之前是空文档），把光标置到文档首位，
     // 避免"看不到光标 / 无法输入"。findFirstInline 在空文档兜底 run 上也能命中零宽 inline。
@@ -1222,66 +1210,6 @@ export class Draw {
       }
     }
     this.scheduleRender()
-  }
-
-  /**
-   * 计算脏区域：仅在"无重排局部变更"时返回脏矩形（文档坐标），否则返回 null（走全量）。
-   * 判定条件：dirty 数量适中、总高/分页数不变、所有页级 block 位置不变、外接矩形未超视口 70%。
-   */
-  private computeDirtyRect(
-    oldLayout: DocumentLayout | null,
-    newLayout: DocumentLayout,
-    dirtyIds: number[]
-  ): { x: number; y: number; width: number; height: number } | null {
-    if (!oldLayout || dirtyIds.length === 0 || dirtyIds.length > 20) return null
-    if (newLayout.totalHeight !== oldLayout.totalHeight) return null
-    if (newLayout.pages.length !== oldLayout.pages.length) return null
-    const oldRects = this.collectBlockRectsById(oldLayout)
-    const newRects = this.collectBlockRectsById(newLayout)
-    if (oldRects.size !== newRects.size) return null
-    // 任一 block 位置变化 → 重排 → 全量
-    for (const [id, nr] of newRects) {
-      const or = oldRects.get(id)
-      if (!or) return null
-      if (Math.abs(or.x - nr.x) > 0.5 || Math.abs(or.y - nr.y) > 0.5 ||
-          Math.abs(or.width - nr.width) > 0.5 || Math.abs(or.height - nr.height) > 0.5) return null
-    }
-    // 收集 dirty block 外接矩形
-    let bbox: { x: number; y: number; width: number; height: number } | null = null
-    for (const id of dirtyIds) {
-      const r = newRects.get(id)
-      if (!r) return null
-      bbox = bbox
-        ? {
-            x: Math.min(bbox.x, r.x),
-            y: Math.min(bbox.y, r.y),
-            width: Math.max(bbox.x + bbox.width, r.x + r.width) - Math.min(bbox.x, r.x),
-            height: Math.max(bbox.y + bbox.height, r.y + r.height) - Math.min(bbox.y, r.y)
-          }
-        : { x: r.x, y: r.y, width: r.width, height: r.height }
-    }
-    if (!bbox) return null
-    // 外接矩形过大 → 全量
-    if (bbox.width * bbox.height > this.viewportWidth * this.viewportHeight * 0.7) return null
-    return bbox
-  }
-
-  /** 收集所有页级 block 的文档坐标矩形（id -> rect），不递归 table 内 cell */
-  private collectBlockRectsById(layout: DocumentLayout): Map<number, { x: number; y: number; width: number; height: number }> {
-    const m = new Map<number, { x: number; y: number; width: number; height: number }>()
-    const collect = (blocks: BlockNode[], originX: number, originY: number) => {
-      for (const b of blocks) {
-        if (b.kind === 'paragraph' || b.kind === 'image' || b.kind === 'separator' || b.kind === 'pageBreak' || b.kind === 'table' || b.kind === 'block') {
-          m.set(b.id, { x: originX + b.rect.x, y: originY + b.rect.y, width: b.rect.width, height: b.rect.height })
-        }
-      }
-    }
-    for (const page of layout.pages) {
-      collect(page.blocks, page.contentRect.x, page.contentRect.y)
-      if (page.headerBlocks && page.headerRect) collect(page.headerBlocks, page.headerRect.x, page.headerRect.y)
-      if (page.footerBlocks && page.footerRect) collect(page.footerBlocks, page.footerRect.x, page.footerRect.y)
-    }
-    return m
   }
 
   /** 计算页面水平居中偏移：(wrapperWidth - pageWidth)/2 - scrollLeft */
@@ -1296,6 +1224,8 @@ export class Draw {
   private reformatWithInvalidation(): void {
     this.engine.updateOptions(this.toLayoutOptions())
     this.renderer.invalidateAll()
+    this.thumbnailCache.clear()
+    this.forceFullRender = true
     this.reformatAndRender()
   }
 
@@ -1316,6 +1246,8 @@ export class Draw {
   /** 容器 resize 处理：更新视口尺寸、同步 renderer、刷新视觉布局并调度重渲染。 */
   private resize = (): void => {
     const rect = this.container.getBoundingClientRect()
+    if (rect.width === this.viewportWidth && rect.height === this.viewportHeight) return
+    this.forceFullRender = true
     this.viewportWidth = rect.width
     this.viewportHeight = rect.height
     this.renderer.setSize(this.viewportWidth, this.viewportHeight)
@@ -1326,6 +1258,7 @@ export class Draw {
 
   /** 滚动处理：更新 scrollY、刷新视觉布局与各 widget、发射当前页码变化事件。 */
   private onScroll = (): void => {
+    this.forceFullRender = true
     this.scrollY = this.wrapper.scrollTop
     this.updateVisualLayout()
     // 滚动渲染跳过 afterRender（避免每帧生成缩略图等重操作），widget 更新在 RAF 内完成
@@ -1349,7 +1282,7 @@ export class Draw {
    */
   private scheduleRender(skipAfterRender = false): void {
     if (this.rafId != null) {
-      if (skipAfterRender) this._pendingSkipAfterRender = true
+      this._pendingSkipAfterRender = this._pendingSkipAfterRender && skipAfterRender
       return
     }
     this._pendingSkipAfterRender = skipAfterRender
@@ -1358,12 +1291,19 @@ export class Draw {
       if (!this.layout) return
       this.syncPageNumberToRenderer()
       this.syncWatermarkToRenderer()
-      const dirtyRect = this.pendingDirtyRect
-      this.pendingDirtyRect = null
+      const dirtyRect = this.forceFullRender || !this.renderState ? null :
+        computeDirtyRect(this.paintedState, this.renderState, {
+          x: -this.getPageOffsetX(), y: this.scrollY,
+          width: this.viewportWidth, height: this.viewportHeight
+        })
+      this.forceFullRender = false
 
       this.renderer.render(this.layout, this.scrollY, this.viewportHeight, dirtyRect)
+      this.paintedState = this.renderState
       this.renderCaretIfAny()
       this.selectionToolbarWidget?.update()
+      this.tableWidget?.update()
+      this.paragraphWidget?.update()
       this.imageWidget?.update()
       this.chartWidget?.update()
       if (!this._pendingSkipAfterRender) {

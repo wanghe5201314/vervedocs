@@ -1,62 +1,56 @@
 /**
- * ImageWidget —— 图片交互 widget
+ * ChartWidget —— 图表交互 widget
  *
- * 从 Draw 分离的图片 UI 交互逻辑：
- *  - 点击图片选中（高亮边框 + 八方向缩放手柄）
- *  - 拖拽手柄缩放图片
- *  - 悬浮工具栏（删除、重置大小、对齐方式、替换图片）
- *
- * 生命周期：create() → handleMouseDown() / update() → destroy()
+ * 图表以 canvas drawImage 方式渲染（同图片），交互层独立：
+ *  - 点击图表选中（高亮边框 + 八方向缩放手柄）
+ *  - 拖拽手柄缩放图表
+ *  - 悬浮工具栏（编辑图表、删除）
+ *  - 点击或"编辑"按钮 → emit chartClick 事件 → 弹出编辑面板
  */
 
-import type { DocumentLayout, ImageBlock } from '../layout-types'
+import type { DocumentLayout, ChartBlock } from '../layout-types'
+import type { EventBus } from '@vervedoc/docx-editor-state'
 import type { Path } from '@vervedoc/docx-editor-schema'
 import { createSelectionLayer, positionSelectionToolbar, updateSelectionLayer } from './selection-layer'
 
 
-/**
- * ImageWidget 的依赖注入接口
- *
- * 由外部宿主提供，用于获取编辑器布局、容器信息以及触发命令等。
- */
-export interface ImageWidgetDeps {
+/** ChartWidget 的依赖注入接口 */
+export interface ChartWidgetDeps {
   /** 选框裁剪层的挂载容器 */
   getContainer: () => HTMLElement
-  /** 获取当前文档布局，可能为 null */
+  /** 获取当前文档布局 */
   getLayout: () => DocumentLayout | null
   /** 获取编辑器容器在视口中的矩形位置 */
   getContainerRect: () => DOMRect
-  /** 获取当前垂直滚动偏移量（像素） */
+  /** 获取当前垂直滚动偏移量 */
   getScrollY: () => number
-  /** 获取页面水平偏移量（像素） */
+  /** 获取页面水平偏移量 */
   getPageOffsetX: () => number
   /** 触发编辑器命令的回调 */
   onCommand: (cmd: string, ...args: any[]) => void
-  /** 拖拽过程中实时更新图片尺寸的回调（不写入文档，仅刷新显示） */
-  onUpdateImageSizeLive: (path: Path, width: number, height: number) => void
+  /** 拖拽过程中实时更新图表尺寸（不写入文档，仅刷新显示） */
+  onUpdateChartSizeLive: (path: Path, width: number, height: number) => void
+  /** 获取事件总线（用于发射 chartClick 事件） */
+  getEventBus: () => EventBus | undefined
 }
 
-/**
- * 当前选中的图片信息
- *
- * 记录选中图片的路径、块数据以及所在页面的屏幕起点坐标，用于定位选中框和手柄。
- */
-interface ImageSelection {
-  /** 图片在文档中的路径 */
+/** 当前选中的图表信息 */
+interface ChartSelection {
+  /** 图表在文档中的路径 */
   path: Path
-  /** 图片块数据 */
-  block: ImageBlock
-  /** 图片所在页面的屏幕起点横坐标（像素） */
+  /** 图表块数据 */
+  block: ChartBlock
+  /** 图表所在页面的屏幕起点横坐标 */
   pageOriginX: number
-  /** 图片所在页面的屏幕起点纵坐标（像素） */
+  /** 图表所在页面的屏幕起点纵坐标 */
   pageOriginY: number
 }
 
-/** 缩放手柄边长（像素） */
+/** 缩放手柄边长 */
 const HANDLE_SIZE = 8
-/** 缩放手柄中心偏移量（像素），用于将手柄中心对齐到图片边缘 */
+/** 缩放手柄中心偏移量 */
 const HANDLE_OFFSET = HANDLE_SIZE / 2
-/** 八方向缩放手柄的位置定义，x/y 为 0~1 的比例坐标 */
+/** 八方向缩放手柄定义 */
 const HANDLES = [
   { dir: 'nw', x: 0, y: 0 },
   { dir: 'n', x: 0.5, y: 0 },
@@ -69,37 +63,34 @@ const HANDLES = [
 ] as const
 
 /**
- * 图片交互 widget
+ * 图表交互 widget
  *
- * 提供图片选中高亮、八方向缩放手柄、悬浮工具栏（重置大小、旋转、对齐、
- * 环绕方式、替换、保存、删除等）以及拖拽缩放功能。
+ * 提供图表选中高亮、八方向缩放手柄、悬浮工具栏（编辑、删除）以及拖拽缩放功能。
  */
-export class ImageWidget {
+export class ChartWidget {
   private selectionLayer: HTMLDivElement | null = null
-  /** 选中高亮边框 DOM 元素 */
+  /** 选中高亮边框 DOM */
   private selectionBox: HTMLDivElement | null = null
-  /** 八方向缩放手柄 DOM 元素数组 */
+  /** 缩放手柄 DOM 数组 */
   private handleEls: HTMLDivElement[] = []
-  /** 悬浮工具栏 DOM 元素 */
+  /** 悬浮工具栏 DOM */
   private toolbar: HTMLDivElement | null = null
-  /** 当前选中的图片信息，未选中时为 null */
-  private selection: ImageSelection | null = null
-
-  /** 拖拽缩放状态，未拖拽时为 null */
+  /** 当前选中的图表信息 */
+  private selection: ChartSelection | null = null
+  /** 拖拽缩放状态 */
   private dragging: { dir: string; startX: number; startY: number; origW: number; origH: number; lastW: number; lastH: number } | null = null
 
   /**
-   * 构造 ImageWidget 实例
-   *
+   * 创建 ChartWidget 实例
    * @param deps 依赖注入对象
    */
-  constructor(private deps: ImageWidgetDeps) {}
+  constructor(private deps: ChartWidgetDeps) {}
 
   /**
-   * 创建选中框、八方向缩放手柄和悬浮工具栏，统一挂载到编辑区裁剪层
+   * 创建选中框、缩放手柄和工具栏，统一挂载到编辑区裁剪层
    */
   create(): void {
-    this.selectionLayer = createSelectionLayer(this.deps.getContainer(), 'image')
+    this.selectionLayer = createSelectionLayer(this.deps.getContainer(), 'chart')
     this.selectionBox = document.createElement('div')
     this.selectionBox.style.cssText = 'position:absolute;border:1.5px solid #409eff;pointer-events:none;z-index:100;box-sizing:border-box;'
     this.selectionLayer.appendChild(this.selectionBox)
@@ -119,9 +110,6 @@ export class ImageWidget {
 
   /**
    * 根据手柄方向返回对应的鼠标光标样式
-   *
-   * @param dir 手柄方向（nw/n/ne/e/se/s/sw/w）
-   * @returns 对应的 CSS 光标样式
    */
   private cursorFor(dir: string): string {
     const map: Record<string, string> = {
@@ -132,11 +120,7 @@ export class ImageWidget {
   }
 
   /**
-   * 创建图片悬浮工具栏
-   *
-   * 工具栏包含重置大小、旋转、预览、对齐方式、环绕方式、替换、保存、删除等按钮。
-   *
-   * @returns 创建好的工具栏 DOM 元素
+   * 创建图表悬浮工具栏（编辑图表、删除）
    */
   private createToolbar(): HTMLDivElement {
     const bar = document.createElement('div')
@@ -163,21 +147,9 @@ export class ImageWidget {
       return sep
     }
 
-    bar.appendChild(mkBtn('restore', '重置大小', () => this.fire('executeResetImageSize')))
-    bar.appendChild(mkBtn('rotate_right', '旋转 90°', () => this.fire('executeRotateImage')))
-    bar.appendChild(mkBtn('zoom_in', '预览', () => this.showPreview()))
+    bar.appendChild(mkBtn('edit', '编辑图表', () => this.editChart()))
     bar.appendChild(mkSep())
-    bar.appendChild(mkBtn('format_align_left', '左对齐', () => this.fire('executeImageAlign', 'left')))
-    bar.appendChild(mkBtn('format_align_center', '居中对齐', () => this.fire('executeImageAlign', 'center')))
-    bar.appendChild(mkBtn('format_align_right', '右对齐', () => this.fire('executeImageAlign', 'right')))
-    bar.appendChild(mkSep())
-    bar.appendChild(mkBtn('wrap_text', '文字环绕', () => this.fire('executeImageWrap', 'surround')))
-    bar.appendChild(mkBtn('flip_to_front', '浮于文字上方', () => this.fire('executeImageWrap', 'floatTop')))
-    bar.appendChild(mkBtn('flip_to_back', '浮于文字下方', () => this.fire('executeImageWrap', 'floatBottom')))
-    bar.appendChild(mkSep())
-    bar.appendChild(mkBtn('image', '替换图片', () => this.fire('executeReplaceImage')))
-    bar.appendChild(mkBtn('download', '保存图片', () => this.fire('executeSaveImage')))
-    const delBtn = mkBtn('delete', '删除图片', () => this.fire('executeDeleteImage'))
+    const delBtn = mkBtn('delete', '删除图表', () => this.deleteChart())
     const delIcon = delBtn.querySelector('.material-symbols-outlined') as HTMLElement
     delBtn.addEventListener('mouseenter', () => { delIcon.style.color = '#e53935' })
     delBtn.addEventListener('mouseleave', () => { delIcon.style.color = '#333' })
@@ -187,81 +159,51 @@ export class ImageWidget {
   }
 
   /**
-   * 触发针对当前选中图片的编辑器命令
-   *
-   * @param cmd 命令名称
-   * @param args 命令参数
+   * 编辑当前选中的图表：emit chartClick 事件
    */
-  private fire(cmd: string, ...args: any[]): void {
+  private editChart(): void {
     if (!this.selection) return
-    this.deps.onCommand(cmd, this.selection.path, ...args)
+    const el = this.selection.block.block as unknown as {
+      id?: string
+      block?: { chartBlock?: Record<string, unknown> }
+    }
+    const chartBlock = el.block?.chartBlock
+    this.deps.getEventBus()?.emit('chartClick', {
+      chartId: el.id ?? '',
+      chartType: String(chartBlock?.chartType ?? ''),
+      dataSource: chartBlock?.dataSource,
+      config: chartBlock?.config,
+      subtype: String(chartBlock?.subtype ?? '')
+    })
   }
 
   /**
-   * 显示图片预览遮罩层
-   *
-   * 创建全屏黑色遮罩并居中展示当前选中图片的原始大小，支持点击遮罩或按 Esc 关闭。
+   * 删除当前选中的图表
    */
-  private showPreview(): void {
+  private deleteChart(): void {
     if (!this.selection) return
-    const src = String((this.selection.block.block as unknown as { value?: string }).value ?? '')
-    if (!src) return
-    const rotate = Number((this.selection.block.block as unknown as { rotate?: number }).rotate ?? 0) % 360
-
-    const overlay = document.createElement('div')
-    Object.assign(overlay.style, {
-      position: 'fixed', inset: '0', zIndex: '10000',
-      background: 'rgba(0,0,0,.75)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      cursor: 'zoom-out'
-    } as CSSStyleDeclaration)
-
-    const img = document.createElement('img')
-    img.src = src
-    Object.assign(img.style, {
-      maxWidth: '90vw', maxHeight: '90vh',
-      objectFit: 'contain',
-      boxShadow: '0 8px 32px rgba(0,0,0,.5)',
-      borderRadius: '4px',
-      transform: `rotate(${rotate}deg)`
-    } as CSSStyleDeclaration)
-    overlay.appendChild(img)
-
-    const close = () => overlay.remove()
-    overlay.addEventListener('mousedown', (e) => { if (e.target === overlay) close() })
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey) } }
-    document.addEventListener('keydown', onKey)
-    document.body.appendChild(overlay)
+    this.deps.onCommand('executeDeleteBlock', this.selection.path)
+    this.clearSelection()
   }
 
-
   /**
-   * 处理 mousedown，返回 true 表示点击了图片（已拦截），false 表示未处理
-   *
-   * @param e 鼠标事件
-   * @returns 点击命中图片返回 true，否则返回 false
+   * 处理 mousedown，返回 true 表示点击了图表（已拦截）
    */
   handleMouseDown(e: MouseEvent): boolean {
     this.clearSelection()
-    const hit = this.findImageAt(e.clientX, e.clientY)
+    const hit = this.findChartAt(e.clientX, e.clientY)
     if (!hit) return false
 
     e.preventDefault()
     e.stopPropagation()
-    this.selectImage(hit)
+    this.selectChart(hit)
     return true
   }
 
   /**
-   * 根据屏幕坐标查找命中的图片
-   *
-   * 同时支持独立图片块和段落环绕图片。
-   *
-   * @param clientX 客户端横坐标
-   * @param clientY 客户端纵坐标
-   * @returns 命中的图片选中信息，未命中返回 null
+   * 根据屏幕坐标查找命中的图表
    */
-  private findImageAt(clientX: number, clientY: number): ImageSelection | null {
+  private findChartAt(clientX: number, clientY: number): ChartSelection | null {
     const layout = this.deps.getLayout()
     if (!layout) return null
     const rect = this.deps.getContainerRect()
@@ -272,20 +214,12 @@ export class ImageWidget {
       const pageOriginX = rect.left + pageOffsetX + page.contentRect.x
       const pageOriginY = rect.top - scrollY + page.contentRect.y
       for (const b of page.blocks) {
-        if (b.kind === 'image') {
+        if (b.kind === 'chart') {
           const bx = pageOriginX + b.rect.x
           const by = pageOriginY + b.rect.y
           if (clientX >= bx && clientX <= bx + b.rect.width && clientY >= by && clientY <= by + b.rect.height) {
             const path = [...b.parentPath, b.indexInParent] as Path
             return { path, block: b, pageOriginX, pageOriginY }
-          }
-        } else if (b.kind === 'paragraph' && b.surroundImage) {
-          const si = b.surroundImage
-          const bx = pageOriginX + b.rect.x + si.rect.x
-          const by = pageOriginY + b.rect.y
-          if (clientX >= bx && clientX <= bx + si.rect.width && clientY >= by && clientY <= by + si.rect.height) {
-            const path = [...si.parentPath, si.indexInParent] as Path
-            return { path, block: si, pageOriginX: pageOriginX + b.rect.x, pageOriginY: pageOriginY + b.rect.y }
           }
         }
       }
@@ -294,17 +228,15 @@ export class ImageWidget {
   }
 
   /**
-   * 选中指定图片并刷新选中 UI
-   *
-   * @param sel 图片选中信息
+   * 选中指定图表并刷新选中 UI
    */
-  private selectImage(sel: ImageSelection): void {
+  private selectChart(sel: ChartSelection): void {
     this.selection = sel
     this.updateSelectionUI()
   }
 
   /**
-   * 清除当前选中状态，隐藏选中框、手柄和工具栏
+   * 清除当前选中状态
    */
   private clearSelection(): void {
     this.selection = null
@@ -312,25 +244,20 @@ export class ImageWidget {
   }
 
   /**
-   * 刷新选中状态
-   *
-   * 根据当前选中图片路径重新查找布局中的图片块，若已不存在则清除选中。
+   * 刷新选中状态：按当前 path 重新查找图表块
    */
   update(): void {
     if (!this.selection) return
-    const hit = this.findImageByPath(this.selection.path)
+    const hit = this.findChartByPath(this.selection.path)
     if (!hit) { this.clearSelection(); return }
     this.selection = hit
     this.updateSelectionUI()
   }
 
   /**
-   * 根据路径查找图片块
-   *
-   * @param path 图片路径
-   * @returns 命中的图片选中信息，未找到返回 null
+   * 根据路径查找图表块
    */
-  private findImageByPath(path: Path): ImageSelection | null {
+  private findChartByPath(path: Path): ChartSelection | null {
     const layout = this.deps.getLayout()
     if (!layout) return null
     const rect = this.deps.getContainerRect()
@@ -341,16 +268,10 @@ export class ImageWidget {
       const pageOriginX = rect.left + pageOffsetX + page.contentRect.x
       const pageOriginY = rect.top - scrollY + page.contentRect.y
       for (const b of page.blocks) {
-        if (b.kind === 'image') {
+        if (b.kind === 'chart') {
           const bp = [...b.parentPath, b.indexInParent] as Path
           if (bp.length === path.length && bp.every((seg, i) => seg === path[i])) {
             return { path, block: b, pageOriginX, pageOriginY }
-          }
-        } else if (b.kind === 'paragraph' && b.surroundImage) {
-          const si = b.surroundImage
-          const bp = [...si.parentPath, si.indexInParent] as Path
-          if (bp.length === path.length && bp.every((seg, i) => seg === path[i])) {
-            return { path, block: si, pageOriginX: pageOriginX + b.rect.x, pageOriginY: pageOriginY + b.rect.y }
           }
         }
       }
@@ -359,7 +280,7 @@ export class ImageWidget {
   }
 
   /**
-   * 更新选中框、八方向手柄和悬浮工具栏的位置与显示状态
+   * 更新选中框、手柄和工具栏的位置
    */
   private updateSelectionUI(): void {
     if (!this.selection || !this.selectionBox || !this.selectionLayer) return
@@ -383,17 +304,13 @@ export class ImageWidget {
       el.style.top = `${Math.round(y + h * hd.y - HANDLE_OFFSET)}px`
     }
 
-    // 悬浮工具栏：定位在图片上方居中，空间不足时放下方
     if (this.toolbar) {
       positionSelectionToolbar(this.toolbar, bounds, this.selectionLayer)
     }
   }
 
   /**
-   * 处理缩放手柄的 mousedown 事件，进入拖拽缩放状态
-   *
-   * @param e 鼠标事件
-   * @param dir 手柄方向
+   * 处理缩放手柄的 mousedown 事件
    */
   private onHandleMouseDown(e: MouseEvent, dir: string): void {
     if (!this.selection) return
@@ -406,11 +323,7 @@ export class ImageWidget {
   }
 
   /**
-   * 拖拽缩放过程中的 mousemove 处理（箭头函数绑定）
-   *
-   * 根据手柄方向和鼠标偏移量按图片原始宽高比计算新的宽高，并实时刷新显示。
-   *
-   * @param e 鼠标事件
+   * 拖拽缩放过程中的 mousemove 处理
    */
   private onDragMove = (e: MouseEvent): void => {
     if (!this.dragging || !this.selection) return
@@ -428,17 +341,15 @@ export class ImageWidget {
     if (dir === 'e' || dir === 'w') h = w / ratio
     this.dragging.lastW = w
     this.dragging.lastH = h
-    this.deps.onUpdateImageSizeLive(this.selection.path, w, h)
+    this.deps.onUpdateChartSizeLive(this.selection.path, w, h)
   }
 
   /**
-   * 拖拽缩放结束的 mouseup 处理（箭头函数绑定）
-   *
-   * 将最终尺寸写入文档并清理拖拽状态和事件监听。
+   * 拖拽缩放结束的 mouseup 处理
    */
   private onDragEnd = (): void => {
     if (this.dragging && this.selection) {
-      this.deps.onCommand('executeUpdateImageSize', this.selection.path, this.dragging.lastW, this.dragging.lastH)
+      this.deps.onCommand('executeUpdateChartSize', this.selection.path, this.dragging.lastW, this.dragging.lastH)
     }
     this.dragging = null
     window.removeEventListener('mousemove', this.onDragMove)

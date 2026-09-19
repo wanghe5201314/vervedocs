@@ -28,8 +28,6 @@ export interface ReplaceDocumentPayload {
 export interface ReplaceDocumentDeps {
   /** 获取编辑器实例的函数 */
   getEditorInstance: () => any
-  /** 刷新目录的函数 */
-  refreshCatalog?: () => Promise<unknown> | unknown
   /** 同步修订列表的函数 */
   syncRevisionList?: () => void
 }
@@ -66,6 +64,4 @@ export async function replaceDocument(
     inst.getPlugin?.('revision')?.update?.()
     deps.syncRevisionList?.()
   })
-
-  await deps.refreshCatalog?.()
 }

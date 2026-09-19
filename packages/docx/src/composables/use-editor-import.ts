@@ -4,11 +4,6 @@ import { replaceDocument } from '@/composables/use-replace-document'
 import { adaptStyles, adaptNumbering, adaptTheme } from '@/utils/docx-meta-adapter'
 
 /**
- * 事件发射函数类型
- */
-type EmitFn = (event: string, ...args: any[]) => void
-
-/**
  * 编辑器实例接口（导入所需的最小能力）
  */
 interface EditorInstance {
@@ -30,14 +25,10 @@ interface EditorInstance {
  * @returns 包含 JSON 文件导入方法的对象
  */
 export function useEditorImport(options: {
-  /** 事件发射函数 */
-  emit: EmitFn
   /** 获取编辑器实例 */
   getEditorInstance: () => EditorInstance | null
-  /** 刷新目录 */
-  refreshCatalog: () => Promise<void>
 }) {
-  const { getEditorInstance, refreshCatalog } = options
+  const { getEditorInstance } = options
 
   /**
    * 导入 JSON 文件并整文档替换到编辑器
@@ -87,7 +78,7 @@ export function useEditorImport(options: {
       adjustFloatImagePositions(main, editorOptions)
 
       await replaceDocument(
-        { getEditorInstance, refreshCatalog },
+        { getEditorInstance },
         { main, header, footer, comments, styles, numbering, theme }
       )
 

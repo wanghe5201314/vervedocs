@@ -8,8 +8,8 @@ import { AIAction } from '@vervedoc/docx-editor-ai'
  */
 interface EditorInstance {
   command?: {
-    getRangeText?: () => string
-    getValue?: () => { data?: { main?: any[] } }
+    executeExtractSelectionText?: () => string
+    executeGetFullText?: () => string
     executeInsertElementList?: (elementList: any[]) => void
   }
 }
@@ -37,7 +37,7 @@ export function useAIActions(options: {
     /** 获取当前选中的文本内容 */
     const getText = (): string => {
       try {
-        return instance.command!.executeExtractSelectionText() || ''
+        return instance.command?.executeExtractSelectionText?.() || ''
       } catch {
         return ''
       }
@@ -113,23 +113,12 @@ export function useAIActions(options: {
     }
 
     if (action === 'applyResult') {
-      const result = payload?.result
-      if (result && instance) {
-        const elementList = result.split('').map((char: string) => ({ value: char }))
-        instance.command?.executeInsertElementList?.(elementList)
-        aiStateStore.resetOperation()
-      }
+      handleAIApplyResult(payload?.result)
       return
     }
 
     if (action === 'regenerate') {
-      const opState = aiStateStore.state.operation
-      if (opState.action && opState.inputText) {
-        void executeAIRequest({
-          action: opState.action,
-          text: opState.inputText
-        })
-      }
+      handleAIRegenerate()
       return
     }
 

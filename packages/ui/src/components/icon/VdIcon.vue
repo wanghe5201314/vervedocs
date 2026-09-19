@@ -6,6 +6,10 @@ const props = withDefaults(defineProps<{
   /** Icon name for class (font) mode */
   name?: string
   size?: string | number
+  /** Material Symbols variable-font weight (100-700). */
+  weight?: number
+  /** Material Symbols optical size (20-48), independent of rendered size. */
+  opticalSize?: number
   /**
    * Presentation mode. `svg` is reserved for a later SVG pipeline;
    * current implementation uses class/font icons.
@@ -21,11 +25,15 @@ const props = withDefaults(defineProps<{
 })
 
 const iconName = computed(() => resolveMaterialIcon(props.name) ?? props.name)
-const sizeStyle = computed(() => {
-  if (!props.size) return {}
-  const s = typeof props.size === 'number' ? `${props.size}px` : props.size
-  return { fontSize: s }
-})
+const iconStyle = computed(() => ({
+  fontSize: typeof props.size === 'number' ? `${props.size}px` : props.size,
+  fontWeight: props.weight,
+  // Leave unspecified axes at their font defaults.
+  fontVariationSettings: [
+    props.weight !== undefined ? `'wght' ${props.weight}` : '',
+    props.opticalSize !== undefined ? `'opsz' ${props.opticalSize}` : ''
+  ].filter(Boolean).join(', ') || undefined
+}))
 </script>
 
 <template>
@@ -34,7 +42,7 @@ const sizeStyle = computed(() => {
     <i
       class="material-symbols-outlined vd-icon"
       :class="[iconClass, { 'vd-icon--auto': !size }]"
-      :style="sizeStyle"
+      :style="iconStyle"
     >{{ iconName }}</i>
   </slot>
 </template>

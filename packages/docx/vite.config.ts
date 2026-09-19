@@ -8,7 +8,6 @@ import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
 import * as path from 'path'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-// @ts-ignore
 const currentDir = path.dirname(fileURLToPath(import.meta.url))
 const name = 'docx'
 const pkg = JSON.parse(
@@ -47,7 +46,6 @@ export default defineConfig({
     dts({
       include: ['src/**/*.ts'],
       tsconfigPath: path.resolve(currentDir, 'tsconfig.json'),
-      // @ts-ignore
       outDir: 'dist',
       rollupTypes: false
     }),
@@ -78,16 +76,7 @@ export default defineConfig({
     rollupOptions: {
       external: [
         'vue',
-
-        '@mdi/js',
-        'echarts',
-        /^echarts\//,
-        'docx',
-        'jszip',
         'qrcode',
-
-        'prismjs',
-        /^prismjs\//,
         '@vervedoc/docx-editor-collaboration',
         /^@vervedoc\/docx-editor-collaboration\//,
         /^@vervedoc\/docx-editor/,
@@ -101,29 +90,6 @@ export default defineConfig({
         dir: 'dist',
         chunkFileNames: 'chunks/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash][extname]',
-        globals: {
-          vue: 'Vue',
-
-          '@mdi/js': 'mdiJs',
-          echarts: 'echarts',
-          docx: 'docx',
-          jszip: 'JSZip',
-          qrcode: 'QRCode',
-
-          prismjs: 'Prism',
-          '@vervedoc/core': 'VerveDocCore',
-          '@vervedoc/docx-editor-schema': 'DocxEditorSchema',
-          '@vervedoc/docx-editor-state': 'DocxEditorState',
-          '@vervedoc/docx-editor-transform': 'DocxEditorTransform',
-          '@vervedoc/docx-editor-view': 'DocxEditorView',
-          '@vervedoc/docx-editor-history': 'DocxEditorHistory',
-          '@vervedoc/docx-editor-keymap': 'DocxEditorKeymap',
-          '@vervedoc/docx-editor-commands': 'DocxEditorCommands',
-          '@vervedoc/docx-editor-ai': 'DocxEditorAi',
-          '@vervedoc/docx-editor-chart': 'DocxEditorChart',
-          '@vervedoc/docx-editor-collaboration': 'DocxEditorCollaboration',
-          '@vervedoc/docx-editor-comment': 'DocxEditorComment',
-        },
         manualChunks(id) {
           if (id.includes('/src/app/')) return 'editor-view'
           if (id.includes('/src/components/')) return 'components'

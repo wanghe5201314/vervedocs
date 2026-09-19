@@ -1,5 +1,4 @@
 import { ref } from 'vue'
-import type { DocumentMeta } from '@/types/document'
 
 /**
  * 对话框可见状态管理 composable
@@ -9,10 +8,6 @@ import type { DocumentMeta } from '@/types/document'
 export function useDialogs(options: {
   /** 执行编辑器命令 */
   executeCommand: (command: string, ...args: any[]) => void
-  /** 文档元数据 */
-  documentMeta: DocumentMeta
-  /** 触发元数据变更事件 */
-  emitMetaChange: () => void
 }) {
   const { executeCommand } = options
 

@@ -9,10 +9,11 @@
  * 生命周期：create() → update() / showContextMenu() → destroy()
  */
 
-import type { DocumentLayout, TableBlock } from '../layout-types'
+import type { BlockNode, DocumentLayout, TableBlock } from '../layout-types'
 import type { RangeManager } from '@vervedoc/docx-editor-state'
 import type { IPosition } from '@vervedoc/docx-editor-schema'
 import { ContextMenu, type MenuItem } from '../context-menu'
+import { positionHandle } from './handle-position'
 
 /** 边框热区半宽（像素），鼠标距离边框小于该值时视为命中边框可拖拽 */
 const BORDER_HOT = 4
@@ -240,7 +241,7 @@ export class TableWidget {
     if (!this.handle) return
     const layout = this.deps.getLayout()
     const range = this.deps.getRange()
-    if (!layout || !range) return
+    if (!layout || !range) { this.hideHandles(); return }
 
     const pos = range.getFocus()
     const isTable = pos && pos.path.length >= 5 && pos.path[1] === 'trList'
@@ -250,37 +251,41 @@ export class TableWidget {
     }
 
     const tableIndex = pos!.path[0] as number
+    // Match the focused cell so a paginated table uses the correct fragment.
+    const matchesTable = (b: BlockNode) =>
+      b.kind === 'table' && b.indexInParent === tableIndex &&
+      b.rows.some(row => row.cells.some(cell =>
+        cell.cellPath.every((part, index) => part === pos!.path[index])))
     const page = layout.pages.find(p =>
-      p.blocks.some(b => b.kind === 'table' && b.indexInParent === tableIndex)
+      p.blocks.some(matchesTable)
     )
     if (!page) { this.hideHandles(); return }
 
-    const block = page.blocks.find(b => b.kind === 'table' && b.indexInParent === tableIndex)
+    const block = page.blocks.find(matchesTable)
     if (!block || block.kind !== 'table') { this.hideHandles(); return }
 
     const rect = this.deps.getContainerRect()
     const pageOffsetX = this.deps.getPageOffsetX()
     const scrollY = this.deps.getScrollY()
-    const sx = rect.left + pageOffsetX + page.contentRect.x + block.rect.x - 31
-    const sy = rect.top - scrollY + page.contentRect.y + block.rect.y - 25
-    this.handle.style.display = 'flex'
-    this.handle.style.left = `${Math.round(sx)}px`
-    this.handle.style.top = `${Math.round(sy)}px`
+    const tableX = rect.left + pageOffsetX + page.contentRect.x + block.rect.x
+    const tableY = rect.top - scrollY + page.contentRect.y + block.rect.y
+    if (tableX + block.rect.width <= rect.left || tableX >= rect.right ||
+        tableY + block.rect.height <= rect.top || tableY >= rect.bottom) {
+      this.hideHandles()
+      return
+    }
+    positionHandle(this.handle, tableX - 31, tableY - 25, 24, rect)
 
     if (this.addColHandle) {
-      const colX = rect.left + pageOffsetX + page.contentRect.x + block.rect.x + block.rect.width + 4
-      const colY = rect.top - scrollY + page.contentRect.y + block.rect.y + block.rect.height / 2 - 12
-      this.addColHandle.style.display = 'flex'
-      this.addColHandle.style.left = `${Math.round(colX)}px`
-      this.addColHandle.style.top = `${Math.round(colY)}px`
+      const colX = tableX + block.rect.width + 4
+      const colY = tableY + block.rect.height / 2 - 12
+      positionHandle(this.addColHandle, colX, colY, 24, rect)
     }
 
     if (this.addRowHandle) {
-      const rowX = rect.left + pageOffsetX + page.contentRect.x + block.rect.x + block.rect.width / 2 - 12
-      const rowY = rect.top - scrollY + page.contentRect.y + block.rect.y + block.rect.height + 4
-      this.addRowHandle.style.display = 'flex'
-      this.addRowHandle.style.left = `${Math.round(rowX)}px`
-      this.addRowHandle.style.top = `${Math.round(rowY)}px`
+      const rowX = tableX + block.rect.width / 2 - 12
+      const rowY = tableY + block.rect.height + 4
+      positionHandle(this.addRowHandle, rowX, rowY, 24, rect)
     }
   }
 

@@ -5,9 +5,6 @@ import { ConfigProvider } from 'ant-design-vue'
 import '@/styles/index.css'
 import '@vervedoc/design/styles.css'
 
-
-import '@/assets/iconfont/iconfont.js'
-import 'prismjs/themes/prism.css'
 import WordEditorComponent from '@/app/shell.vue'
 import type { CollaborationOptions, DocxEditorUiInitialDocument } from '@/editor/types'
 import type { ExternalEditorApi } from '@/composables/use-external-events'

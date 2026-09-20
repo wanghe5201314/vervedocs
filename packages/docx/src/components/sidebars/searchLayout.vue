@@ -28,14 +28,14 @@
       </div>
 
       <div class="actions">
-        <a-button :disabled="!canReplaceCurrent" @click="replaceCurrent" size="small">
+        <VdButton :disabled="!canReplaceCurrent" @click="replaceCurrent" size="small">
           <VdIcon name="find-replace" />
           替换
-        </a-button>
-        <a-button :disabled="!canReplaceAll" @click="replaceAll" size="small">
+        </VdButton>
+        <VdButton :disabled="!canReplaceAll" @click="replaceAll" size="small">
           <VdIcon name="check-all" />
           全部替换
-        </a-button>
+        </VdButton>
       </div>
 
       <div v-if="matchCount" class="match-list-wrap">
@@ -61,7 +61,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { CloseOutlined, DownOutlined, SearchOutlined, UpOutlined } from '@ant-design/icons-vue'
-import { VdIcon } from '@vervedoc/ui'
+import { VdIcon, VdButton } from '@vervedoc/ui'
 import type { IEditorSearchApi, ISearchMatch } from '@/composables/use-editor-search'
 
 const props = defineProps<{

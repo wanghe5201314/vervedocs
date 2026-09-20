@@ -86,14 +86,14 @@
                   {{ lang.label }}
                 </a-select-option>
               </a-select>
-              <a-button
+              <VdButton
                 size="small"
                 type="primary"
                 :disabled="!hasSelection || aiState.operation.loading"
                 @click="handleTranslate"
               >
                 翻译
-              </a-button>
+              </VdButton>
             </div>
           </section>
 
@@ -108,14 +108,14 @@
             />
             <div class="custom-footer">
               <span class="input-count">{{ customPrompt.trim().length }}/120</span>
-              <a-button
+              <VdButton
                 size="small"
                 type="primary"
                 :disabled="!hasSelection || !customPrompt.trim() || aiState.operation.loading"
                 @click="handleCustomAction"
               >
                 执行指令
-              </a-button>
+              </VdButton>
             </div>
           </section>
 
@@ -234,7 +234,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { CloseOutlined, RobotOutlined } from '@ant-design/icons-vue'
-import { VdIcon } from '@vervedoc/ui'
+import { VdIcon, VdButton } from '@vervedoc/ui'
 import { AIAction, TranslateLanguage } from '@vervedoc/docx-editor-ai'
 import { aiStateStore } from '@/stores/ai-state'
 import { editorStateStore } from '@/stores/editor-state'

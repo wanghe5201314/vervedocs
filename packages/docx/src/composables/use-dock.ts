@@ -13,7 +13,7 @@ type DockKey = 'search' | 'toc' | 'section' | 'ai' | 'revision' | 'bookmark' | '
  */
 export function useDock() {
   /** 当前激活的停靠面板标识 */
-  const activeDock = ref<DockKey>('search')
+  const activeDock = ref<DockKey>('toc')
   /** 侧边栏面板宽度（像素） */
   const sidebarPanelSize = ref(295)
 

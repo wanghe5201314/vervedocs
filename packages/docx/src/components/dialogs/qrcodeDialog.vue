@@ -1,5 +1,5 @@
 <template>
-  <a-modal v-model:open="visible" title="二维码生成" width="630px" :maskClosable="false" class="app-dialog">
+  <VdDialog v-model:open="visible" title="二维码生成" width="630px" :maskClosable="false" class="app-dialog">
     <a-form :model="qrcodeForm" :label-col="{ style: { width: '80px' } }">
       <a-form-item label="输入">
         <a-textarea
@@ -14,11 +14,11 @@
     <div class="qrcode-preview">
       <div class="advanced-btn-wrapper">
         <a-dropdown :trigger="['click']">
-          <a-button type="link">
-            高级设置 <ArrowDownOutlined />
-          </a-button>
+          <VdButton type="link">
+            高级设置 <VdIcon name="expand-more" />
+          </VdButton>
           <template #overlay>
-            <a-card style="min-width: 300px">
+            <VdCard style="min-width: 300px">
               <a-form :label-col="{ style: { width: '80px' } }" size="small">
                 <a-form-item label="背景颜色">
                   <input type="color" :value="qrcodeStyle.lightColor" @change.stop="(e: Event) => qrcodeStyle.lightColor = (e.target as HTMLInputElement).value" @click.stop style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
@@ -27,7 +27,7 @@
                   <input type="color" :value="qrcodeStyle.darkColor" @change.stop="(e: Event) => qrcodeStyle.darkColor = (e.target as HTMLInputElement).value" @click.stop style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
                 </a-form-item>
               </a-form>
-            </a-card>
+            </VdCard>
           </template>
         </a-dropdown>
       </div>
@@ -41,21 +41,15 @@
       </div>
     </div>
     <template #footer>
-      <a-button type="primary" :disabled="!canConfirm" @click="confirmQrcode">
-        <CheckOutlined />
-        确定
-      </a-button>
-      <a-button @click="visible = false">
-        <CloseOutlined />
-        取消
-      </a-button>
+      <VdButton type="primary" icon="check" :disabled="!canConfirm" @click="confirmQrcode">确定</VdButton>
+      <VdButton icon="close" @click="visible = false">取消</VdButton>
     </template>
-  </a-modal>
+  </VdDialog>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { CheckOutlined, CloseOutlined, ArrowDownOutlined } from '@ant-design/icons-vue'
+import { VdCard, VdDialog, VdButton, VdIcon } from '@vervedoc/ui'
 import QRCode from 'qrcode'
 import { debounce } from '@/utils'
 

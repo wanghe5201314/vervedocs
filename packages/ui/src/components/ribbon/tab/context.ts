@@ -6,6 +6,7 @@ export interface RibbonTabContext {
   activeKey: Ref<string | undefined>
   setActiveKey: (key: string) => void
   navSelector: Ref<string>
+  previewTab: (key: string) => void
 }
 
 export interface RibbonTabItemContext {

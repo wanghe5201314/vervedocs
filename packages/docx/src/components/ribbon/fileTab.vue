@@ -50,11 +50,11 @@ defineProps<{
   isImporting?: boolean
 }>()
 
-const handleMenuClick = ({ key }: { key: string }) => {
+const handleMenuClick = ({ key }: { key: string | number }) => {
   if (key === 'export-docx') {
     emit('command', 'export', 'docx')
   } else {
-    emit('command', key)
+    emit('command', String(key))
   }
 }
 </script>

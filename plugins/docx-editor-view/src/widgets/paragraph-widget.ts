@@ -8,7 +8,7 @@
 import type { DocumentLayout, ParagraphBlock, BlockNode } from '../layout-types'
 import type { RangeManager } from '@vervedoc/docx-editor-state'
 import type { IPosition } from '@vervedoc/docx-editor-schema'
-import { TITLE_LEVEL, ROW_FLEX } from '@vervedoc/docx-editor-schema'
+import { TITLE_LEVEL, ROW_FLEX, comparePosition } from '@vervedoc/docx-editor-schema'
 import { ContextMenu, type MenuItem } from '../context-menu'
 import { ParagraphLayoutWidget } from './layout/paragraph-layout-widget'
 import { FontLayoutWidget } from './layout/font-layout-widget'
@@ -312,7 +312,11 @@ export class ParagraphWidget {
     const block = this.findParagraphBlock(layout, pos)
     if (!block) return false
 
-    range.setCaret(pos)
+    const ordered = range.getOrdered()
+    if (!ordered || range.isCollapsed() ||
+        comparePosition(pos, ordered.start) < 0 || comparePosition(pos, ordered.end) > 0) {
+      range.setCaret(pos)
+    }
     this.deps.focusInput()
 
     const icons = ContextMenu.getIcons()

@@ -1,5 +1,5 @@
 <template>
-  <a-modal v-model:open="visible" title="条形码生成" width="630px" :maskClosable="false" class="app-dialog">
+  <VdDialog v-model:open="visible" title="条形码生成" width="630px" :maskClosable="false" class="app-dialog">
     <a-form :model="barcodeForm" :label-col="{ style: { width: '80px' } }">
       <a-form-item label="编码">
         <div style="display: flex; align-items: center; justify-content: space-between;width: 100%">
@@ -22,12 +22,12 @@
           </div>
 
           <a-dropdown :trigger="['click']" placement="bottomRight">
-            <a-button type="link">
+            <VdButton type="link">
               高级设置
-              <ArrowDownOutlined />
-            </a-button>
+              <VdIcon name="expand-more" />
+            </VdButton>
             <template #overlay>
-              <a-card style="min-width: 260px">
+              <VdCard style="min-width: 260px">
                 <a-form :label-col="{ style: { width: '80px' } }" size="small">
                   <a-form-item label="条形码颜色">
                     <input type="color" :value="barcodeStyle.lineColor" @change.stop="(e: Event) => barcodeStyle.lineColor = (e.target as HTMLInputElement).value" @click.stop style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
@@ -49,7 +49,7 @@
                     <a-slider v-model:value="barcodeStyle.fontSize" :min="10" :max="24" :step="1"/>
                   </a-form-item>
                 </a-form>
-              </a-card>
+              </VdCard>
             </template>
           </a-dropdown>
         </div>
@@ -73,21 +73,15 @@
       </div>
     </div>
     <template #footer>
-      <a-button type="primary" :disabled="!canConfirm" @click="confirmBarcode">
-        <CheckOutlined />
-        确定
-      </a-button>
-      <a-button @click="visible = false">
-        <CloseOutlined />
-        取消
-      </a-button>
+      <VdButton type="primary" icon="check" :disabled="!canConfirm" @click="confirmBarcode">确定</VdButton>
+      <VdButton icon="close" @click="visible = false">取消</VdButton>
     </template>
-  </a-modal>
+  </VdDialog>
 </template>
 
 <script setup lang="ts">
 import {computed, nextTick, ref, watch} from 'vue'
-import {ArrowDownOutlined, CheckOutlined, CloseOutlined} from '@ant-design/icons-vue'
+import { VdCard, VdDialog, VdButton, VdIcon } from '@vervedoc/ui'
 import JsBarcode from 'jsbarcode'
 
 /** 组件 props 定义 */

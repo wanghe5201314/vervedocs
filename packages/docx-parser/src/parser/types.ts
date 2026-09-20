@@ -1,4 +1,5 @@
-import type { IElement } from '@vervedoc/docx-editor-schema'
+import type { IElement, DocxCommentMeta } from '@vervedoc/docx-editor-schema'
+export type { DocxCommentMeta } from '@vervedoc/docx-editor-schema'
 
 // ---- 解析结果 & 选项（对外 API） ----
 
@@ -221,14 +222,4 @@ export interface RunStyle {
 export interface ResolvedStyle {
   paragraph: ParagraphStyle
   run: RunStyle
-}
-
-// ---- 批注元数据 ----
-
-export interface DocxCommentMeta {
-  id: string
-  author: string
-  date: string
-  initials?: string
-  content: string
 }

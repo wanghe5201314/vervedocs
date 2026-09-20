@@ -1,29 +1,10 @@
-﻿import type { IComment, IGroupColor } from '@vervedoc/docx-editor-schema'
-import { nanoid } from 'nanoid'
+import type { IComment, IGroupColor, IDocxDocumentMeta, DocxCommentMeta } from '@vervedoc/docx-editor-schema'
+import { cloneTree, walkTree } from '@vervedoc/docx-editor-schema'
 import dayjs from 'dayjs'
 import type { CommentHost } from './host'
+import { drawAnnotationConnector, getAvatarColor } from './annotation-visual'
 
-const USER_COLORS = [
-  '#409EFF', '#67C23A', '#E6A23C', '#F56C6C',
-  '#909399', '#00BCD4', '#9C27B0', '#3F51B5',
-  '#FF9800', '#4CAF50', '#009688', '#795548',
-  '#FF5722', '#C2185B', '#FFC107', '#607D8B'
-]
 const PREFIX = 'ce'
-
-function getAvatarColor(name: string): string {
-  let hash = 0
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  return USER_COLORS[Math.abs(hash) % USER_COLORS.length]
-}
-
-function formatCommentDate(dateStr: string): string {
-  if (!dateStr) return ''
-  const d = dayjs(dateStr)
-  return d.isValid() ? d.format('YYYY-MM-DD HH:mm') : dateStr
-}
 
 function formatCommentDisplayDate(dateStr: string): string {
   if (!dateStr) return ''
@@ -67,12 +48,7 @@ function extractCommentBody(content: string, rangeText: string): { sourceText: s
   }
 }
 
-export interface DocxCommentMeta {
-  id: string | number
-  content: string
-  author?: string
-  date?: string
-}
+export type { DocxCommentMeta } from '@vervedoc/docx-editor-schema'
 
 export interface CommentCallbacks {
   onDelete?: (id: string) => void
@@ -90,14 +66,16 @@ export class CommentComponent {
   private _command: CommentHost | null = null
   /** 批注数据列表 */
   private _comments: IComment[] = []
+  private _drafts = new Map<string, string>()
   /** 生命周期回调（保存/删除/回复/解决/取消） */
   private _callbacks: CommentCallbacks = {}
   /** 批注气泡 overlay 容器（挂载在 Draw scroller 上） */
   private _overlayContainer: HTMLDivElement | null = null
   /** 批注卡片 DOM 映射（commentId → 卡片元素） */
   private _cardDoms: Map<string, HTMLDivElement> = new Map()
-  /** 锚点竖线 DOM 元素列表 */
+  /** Hover-only connector segments, in overlay coordinates. */
   private _anchorLineEls: HTMLDivElement[] = []
+  private _hoveredCommentId: string | null = null
   /** 悬浮提示气泡 DOM */
   private _hoverTooltip: HTMLDivElement | null = null
   /** 悬浮提示显示定时器 */
@@ -162,31 +140,85 @@ export class CommentComponent {
 
   /** 整体替换批注列表并同步高亮颜色 */
   public setAll(comments: IComment[]): void {
-    this._comments = comments
+    this._comments = cloneTree(comments)
+    this._drafts.clear()
+    this._clearCards()
+    this._commitComments()
     this._syncGroupColors()
   }
 
   /** 新建批注：在高亮选区上创建编辑态气泡，返回新批注或 null（无选区时） */
   public add(userName: string = '当前用户'): IComment | null {
     if (!this._command) return null
-    const groupId = this._command.executeSetGroup?.()
-    if (!groupId) {
-      console.warn('[CommentComponent] add 失败：setGroup 返回 null，请检查选区')
-      return null
-    }
-    const newComment: IComment = {
-      id: groupId,
-      groupId,
-      content: '',
-      userName,
-      createdDate: formatCommentDate(new Date().toISOString()),
-      rangeText: '',
-      isEditing: true
-    }
-    this._comments.push(newComment)
+    let newComment: IComment | null = null
+    const id = this._nextCommentId()
+    const commentGroupId = `comment_${id}`
+    const groupId = this._command.executeSetGroup((doc, temporaryGroupId) => {
+      // Store the same anchor IDs used by both DOCX parsers and the Java writer.
+      walkTree(doc.elements, node => {
+        if (node.groupIds?.includes(temporaryGroupId)) {
+          node.groupIds = node.groupIds.map(group => group === temporaryGroupId ? commentGroupId : group)
+        }
+      })
+      newComment = {
+        id, groupId: commentGroupId, content: '', userName,
+        createdDate: new Date().toISOString(),
+        rangeText: '', isEditing: true
+      }
+      this._comments.push(newComment)
+      this._writeComments(doc)
+    })
+    if (!groupId || !newComment) return null
     this._syncGroupColors()
     this._eventBus?.emit('commentCreate', newComment)
     return newComment
+  }
+
+  private _writeComments(doc: IDocxDocumentMeta): void {
+    doc.comments = this.serialize()
+  }
+
+  private _nextCommentId(): string {
+    const ids = new Set<string>()
+    const collect = (comments: IComment[]) => {
+      for (const comment of comments) {
+        ids.add(comment.id)
+        if (comment.replies) collect(comment.replies)
+      }
+    }
+    collect(this._comments)
+    const doc = this._command?.getDocument()
+    for (const elements of [
+      doc?.elements, doc?.header, doc?.footer,
+      ...Object.values(doc?.contentZones ?? {}),
+      ...Object.values(doc?.headerFooterParts ?? {})
+    ]) {
+      if (!elements) continue
+      walkTree(elements, node => {
+        for (const group of node.groupIds ?? []) {
+          if (group.startsWith('comment_')) ids.add(group.slice('comment_'.length))
+        }
+      })
+    }
+    let id = 0
+    while (ids.has(String(id))) id++
+    return String(id)
+  }
+
+  private _commitComments(removeGroup?: string): void {
+    this._command?.commitTransaction(doc => {
+      this._writeComments(doc)
+      if (removeGroup) {
+        for (const elements of [doc.elements, doc.header, doc.footer, ...Object.values(doc.contentZones ?? {}), ...Object.values(doc.headerFooterParts ?? {})]) {
+          if (!elements) continue
+          walkTree(elements, node => {
+            const el = node as any
+            if (el.groupId === removeGroup) delete el.groupId
+            if (el.groupIds) el.groupIds = el.groupIds.filter((id: string) => id !== removeGroup)
+          })
+        }
+      }
+    })
   }
 
   /** 删除指定 ID 的批注，清除文档高亮并触发 onDelete 回调 */
@@ -195,7 +227,7 @@ export class CommentComponent {
     if (idx !== -1) {
       const comment = this._comments[idx]
       this._comments.splice(idx, 1)
-      this._command?.executeDeleteGroup?.(comment.groupId)
+      this._commitComments(comment.groupId)
       this._callbacks.onDelete?.(id)
       this._syncGroupColors()
       this._eventBus?.emit('commentDelete', id)
@@ -215,7 +247,7 @@ export class CommentComponent {
     const comment = this._comments[idx]
     if (!comment.content) {
       this._comments.splice(idx, 1)
-      this._command?.executeDeleteGroup?.(comment.groupId)
+      this._commitComments(comment.groupId)
     } else {
       comment.isEditing = false
     }
@@ -228,14 +260,15 @@ export class CommentComponent {
     if (!comment) return
     if (!comment.replies) comment.replies = []
     comment.replies.push({
-      id: `reply-${nanoid()}`,
+      id: this._nextCommentId(),
       groupId: comment.groupId,
       content,
       userName,
       avatarColor: getAvatarColor(userName),
-      createdDate: formatCommentDate(new Date().toISOString()),
+      createdDate: new Date().toISOString(),
       rangeText: ''
     })
+    this._commitComments()
   }
 
   /** 标记批注为已解决/未解决 */
@@ -243,72 +276,52 @@ export class CommentComponent {
     const comment = this._comments.find(c => c.id === id)
     if (comment) {
       comment.status = resolved ? 2 : 1
+      this._commitComments()
       this._syncGroupColors()
     }
   }
 
-  /** 序列化批注为可保存结构（含 groupId，用于文档保存） */
-  public serialize(): Array<Record<string, unknown>> {
-    return this._comments.map(c => ({
+  /** 文档始终保存统一协议；界面派生字段不进入 JSON。 */
+  public serialize(): DocxCommentMeta[] {
+    const serialize = (c: IComment): DocxCommentMeta => ({
       id: c.id,
-      groupId: c.groupId,
       content: c.content,
-      userName: c.userName,
-      avatarColor: c.avatarColor,
-      createdDate: c.createdDate,
-      rangeText: c.rangeText || '',
-      status: c.status,
-      replies: c.replies?.map((r: IComment) => ({
-        id: r.id,
-        groupId: r.groupId,
-        content: r.content,
-        userName: r.userName,
-        avatarColor: r.avatarColor,
-        createdDate: r.createdDate,
-        rangeText: r.rangeText || ''
-      }))
-    }))
+      author: c.userName,
+      date: c.createdDate,
+      ...(c.initials !== undefined ? { initials: c.initials } : {}),
+      ...(c.status !== undefined ? { status: c.status } : {}),
+      ...(c.replies !== undefined ? { replies: c.replies.map(serialize) } : {})
+    })
+    return this._comments.map(serialize)
   }
 
-  /** 从序列化结构恢复批注列表（含 groupId，用于文档加载） */
-  public restore(saved: any[]): void {
-    const restored: IComment[] = []
-    for (const item of saved) {
-      if (!item || typeof item !== 'object') continue
-      const id = String(item.id || '').trim()
-      const groupId = String(item.groupId || id).trim()
-      if (!id) continue
-      restored.push({
-        id,
-        groupId,
-        content: String(item.content || ''),
-        userName: String(item.userName || '未知用户'),
-        avatarColor: item.avatarColor || getAvatarColor(String(item.userName || '')),
-        createdDate: String(item.createdDate || ''),
-        rangeText: String(item.rangeText || ''),
-        status: item.status
-      })
-    }
-    this._comments = restored
-    this._syncGroupColors()
+  /** JSON 加载和 DOCX 导入使用相同的协议。 */
+  public restore(saved: DocxCommentMeta[], syncOnly = false): void {
+    this.buildFromMetas(saved, syncOnly)
   }
 
   /** 从 docx 解析出的批注元数据构建批注列表 */
-  public buildFromMetas(metas: DocxCommentMeta[]): void {
-    const newComments: IComment[] = []
-    for (const meta of metas) {
-      const groupId = 'comment_' + meta.id
-      newComments.push({
-        id: groupId,
+  public buildFromMetas(metas: DocxCommentMeta[], syncOnly = false): void {
+    const build = (meta: DocxCommentMeta, groupId = `comment_${meta.id}`): IComment => {
+      if (!/^\d+$/.test(meta.id)) throw new TypeError('批注 id 必须为数字字符串')
+      return {
+        id: meta.id,
         groupId,
         content: meta.content,
-        userName: meta.author || '未知用户',
+        userName: meta.author ?? '',
         avatarColor: getAvatarColor(meta.author || ''),
-        createdDate: formatCommentDate(meta.date || ''),
-        rangeText: ''
-      })
+        createdDate: meta.date ?? '',
+        initials: meta.initials,
+        rangeText: '',
+        status: meta.status,
+        replies: meta.replies?.map(reply => build(reply, groupId))
+      }
     }
+    const newComments = metas.map(meta => build(meta))
+    this._clearCards()
     this._comments = newComments
+    this._drafts.clear()
+    if (!syncOnly) this._commitComments()
     this._syncGroupColors()
   }
 
@@ -390,14 +403,16 @@ export class CommentComponent {
     const positionList = this._command.getPositionList?.()
 
     for (const comment of this._comments) {
+      delete comment.position
+      delete comment.anchor
       const ctx = this._command?.getGroupContext?.(comment.groupId)
       if (!ctx) continue
 
       // 鏂版灦鏋勶細getGroupContext 鐩存帴杩斿洖 _anchor 鍧愭爣锛屼笉渚濊禆 positionList
-      if ((ctx as any)._anchor) {
-        const anchor = (ctx as any)._anchor as { startX: number; startY: number; endX: number; endY: number; lineHeight: number; glyphHeight: number; startGlyphTop: number; endGlyphTop: number }
+      if (ctx._anchor) {
+        const anchor = ctx._anchor
         comment.position = { top: anchor.startY, left: balloonLeft, lineWidth: 0, originalTop: anchor.startY }
-        comment.anchor = { startX: anchor.startX, startY: anchor.startY, endX: anchor.endX, endY: anchor.endY, lineHeight: anchor.lineHeight, glyphHeight: anchor.glyphHeight, startGlyphTop: anchor.startGlyphTop, endGlyphTop: anchor.endGlyphTop }
+        comment.anchor = { ...anchor }
         continue
       }
 
@@ -432,7 +447,7 @@ export class CommentComponent {
     this._resolveVerticalOverlaps(sorted)
   }
 
-  /** 刷新批注气泡 DOM 渲染（计算锚点位置 + 创建/更新卡片 + 绘制竖线） */
+  /** 刷新气泡和当前悬浮批注的连接线。 */
   public render(): void {
     if (!this._command) return
     const options = this._command.getOptions?.()
@@ -453,6 +468,11 @@ export class CommentComponent {
     }
     this._expandContainerWidth(visibleComments)
     this._renderCards(visibleComments)
+    if (this._hoveredCommentId !== null) {
+      const hovered = visibleComments.find(comment => comment.id === this._hoveredCommentId)
+      if (hovered) this._drawAnchorLines(hovered)
+      else this._hideAnchorLines()
+    }
   }
 
   private _createOverlayContainer(): void {
@@ -539,8 +559,11 @@ export class CommentComponent {
   private _createCardDom(comment: IComment): HTMLDivElement {
     const bubble = document.createElement('div')
     bubble.classList.add(`${PREFIX}-comment-balloon`)
-    bubble.style.cssText = 'position:absolute;pointer-events:auto;transition:all 0.2s ease;'
-    bubble.addEventListener('mouseenter', () => this._showAnchorLines(comment))
+    bubble.style.cssText = 'position:absolute;pointer-events:auto;'
+    bubble.addEventListener('mouseenter', () => {
+      const current = this._comments.find(item => item.id === comment.id)
+      if (current) this._showAnchorLines(current)
+    })
     bubble.addEventListener('mouseleave', () => this._hideAnchorLines())
 
     const card = document.createElement('div')
@@ -639,9 +662,6 @@ export class CommentComponent {
 
     card.append(header, bodyContainer)
     bubble.append(card)
-    const arrow = document.createElement('div')
-    arrow.style.cssText = 'position:absolute;left:-7px;top:20px;width:14px;height:14px;background:#f7f7f7;border-left:1px solid #d9d9d9;border-bottom:1px solid #d9d9d9;transform:rotate(45deg);border-bottom-left-radius:2px;box-sizing:border-box;'
-    bubble.append(arrow)
     return bubble
   }
 
@@ -654,11 +674,11 @@ export class CommentComponent {
 
       const textarea = document.createElement('textarea')
       textarea.classList.add(`${PREFIX}-comment-textarea`)
-      textarea.placeholder = '璇疯緭鍏ユ壒娉ㄥ唴瀹?..'
+      textarea.placeholder = '请输入批注内容...'
       textarea.rows = 3
-      textarea.value = comment.content
+      textarea.value = this._drafts.get(comment.id) ?? comment.content
       textarea.style.cssText = 'width:93%;min-height:80px;padding:8px 10px;border:1px solid #dcdfe6;border-radius:6px;font-size:13px;font-family:inherit;line-height:1.6;resize:vertical;outline:none;transition:border-color 0.2s ease;'
-      textarea.addEventListener('input', () => { comment.content = textarea.value })
+      textarea.addEventListener('input', () => { this._drafts.set(comment.id, textarea.value) })
       textarea.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.key === 'Enter') this._handleSave(comment)
       })
@@ -825,9 +845,10 @@ export class CommentComponent {
   private _applyCardStyle(card: HTMLDivElement, comment: IComment): void {
     const annotationColor = this._annotationColor
     const accentColor = comment.status === 2 ? '#67c23a' : annotationColor
-    let css = `min-width:270px;max-width:270px;border-radius:6px;padding:8px 10px;transition:all 0.2s ease;background:#f7f7f7;border:1px solid #d9d9d9;box-shadow:0 3px 10px rgba(0,0,0,0.08);box-sizing:border-box;`
+    let css = `min-width:270px;max-width:270px;border-radius:0;padding:8px 10px;background:#f7f7f7;border:1px solid #d9d9d9;box-shadow:none;box-sizing:border-box;`
     if (comment.status === 2) css += 'opacity:0.78;'
     if (comment.isEditing) css += `border-color:${accentColor};box-shadow:0 6px 18px rgba(64,158,255,0.16);background:#fafcff;`
+    if (comment.id === this._hoveredCommentId) css += `border-color:${comment.avatarColor || getAvatarColor(comment.userName)};box-shadow:none;opacity:1;`
     card.style.cssText = css
   }
 
@@ -875,17 +896,22 @@ export class CommentComponent {
   }
 
   private _handleSave(comment: IComment): void {
-    if (!comment.content.trim()) {
+    const content = this._drafts.get(comment.id) ?? comment.content
+    if (!content.trim()) {
       this._handleCancel(comment)
       return
     }
+    comment.content = content
+    this._drafts.delete(comment.id)
     comment.isEditing = false
+    this._commitComments()
     this._callbacks.onSave?.(comment)
     this._callbacks.onRequestSave?.()
     this._refreshCard(comment.id)
   }
 
   private _handleCancel(comment: IComment): void {
+    this._drafts.delete(comment.id)
     if (!comment.content) {
       this.cancel(comment.id)
       this._callbacks.onCancel?.(comment.id)
@@ -898,27 +924,39 @@ export class CommentComponent {
   }
 
   private _showAnchorLines(comment: IComment): void {
-    this._hideAnchorLines()
-    this._command?.setActiveGroup?.(comment.groupId)
+    if (this._hoveredCommentId === comment.id) return
     if (!comment.anchor || !this._overlayContainer) return
-    const { startX, endX } = comment.anchor
-    const lineHeight = comment.anchor.lineHeight || 20
-    const glyphHeight = comment.anchor.glyphHeight || lineHeight
-    const startGlyphTop = comment.anchor.startGlyphTop ?? comment.anchor.startY
-    const endGlyphTop = comment.anchor.endGlyphTop ?? (comment.anchor.endY - glyphHeight)
-    const color = this._annotationColor
-    for (const [x, y] of [[startX, startGlyphTop], [endX, endGlyphTop]]) {
-      const line = document.createElement('div')
-      line.style.cssText = `position:absolute;left:${x - 1}px;top:${y}px;width:2px;height:${glyphHeight}px;background:${color};pointer-events:none;z-index:11;opacity:0.7;`
-      this._overlayContainer.append(line)
-      this._anchorLineEls.push(line)
-    }
+    this._hideAnchorLines(false)
+    this._hoveredCommentId = comment.id
+    this._hideHoverTooltip()
+    this._command?.setActiveGroup?.(comment.groupId)
+    const card = this._cardDoms.get(comment.id)?.querySelector<HTMLDivElement>(`.${PREFIX}-comment-card`)
+    if (card) this._applyCardStyle(card, comment)
+    this._drawAnchorLines(comment)
   }
 
-  private _hideAnchorLines(): void {
+  private _drawAnchorLines(comment: IComment): void {
+    for (const line of this._anchorLineEls) line.remove()
+    this._anchorLineEls = []
+    if (!comment.anchor || !this._overlayContainer) return
+    const card = this._cardDoms.get(comment.id)?.querySelector<HTMLDivElement>(`.${PREFIX}-comment-card`)
+    if (!card) return
+    this._anchorLineEls = drawAnnotationConnector(
+      this._overlayContainer, card, comment.anchor,
+      comment.avatarColor || getAvatarColor(comment.userName), `${PREFIX}-comment-connector`
+    )
+  }
+
+  private _hideAnchorLines(updateActiveGroup = true): void {
     for (const el of this._anchorLineEls) el.remove()
     this._anchorLineEls = []
-    this._command?.setActiveGroup?.(null)
+    const id = this._hoveredCommentId
+    this._hoveredCommentId = null
+    if (id === null) return
+    const comment = this._comments.find(item => item.id === id)
+    const card = this._cardDoms.get(id)?.querySelector<HTMLDivElement>(`.${PREFIX}-comment-card`)
+    if (card && comment) this._applyCardStyle(card, comment)
+    if (updateActiveGroup) this._command?.setActiveGroup?.(null)
   }
 
   private _setupTextHover(): void {
@@ -932,6 +970,7 @@ export class CommentComponent {
       document.head.append(style)
     }
     container.addEventListener('mousemove', (e: MouseEvent) => {
+      if (this._hoveredCommentId !== null) return
       const rect = container.getBoundingClientRect()
       const x = e.clientX - rect.left + container.scrollLeft
       const y = e.clientY - rect.top + container.scrollTop

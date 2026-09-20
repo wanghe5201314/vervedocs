@@ -1,5 +1,5 @@
 <template>
-  <a-modal v-model:open="visible" title="插入LaTeX公式" width="800px" :maskClosable="false" class="app-dialog">
+  <VdDialog v-model:open="visible" title="插入LaTeX公式" width="800px" :maskClosable="false" class="app-dialog">
     <div class="input-preview-row">
       <div class="input-section">
         <div class="section-label">LaTeX 公式</div>
@@ -105,22 +105,17 @@
       </a-tabs>
     </div>
     <template #footer>
-      <a-button type="primary" @click="confirmLatex" :disabled="!latexForm.content.trim()">
-        <CheckOutlined />
-        确定
-      </a-button>
-      <a-button @click="visible = false">
-        <CloseOutlined />
-        取消
-      </a-button>
+      <VdButton type="primary" icon="check" @click="confirmLatex" :disabled="!latexForm.content.trim()">确定</VdButton>
+      <VdButton icon="close" @click="visible = false">取消</VdButton>
     </template>
-  </a-modal>
+  </VdDialog>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
+import { VdDialog, VdButton } from '@vervedoc/ui'
 import { LaTexParticle } from '@vervedoc/core'
-import { CheckOutlined, CloseOutlined } from '@ant-design/icons-vue'
+
 
 /** 公式示例结构 */
 interface FormulaExample {

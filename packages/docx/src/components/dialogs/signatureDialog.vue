@@ -1,15 +1,9 @@
 <template>
-  <a-modal v-model:open="visible" title="插入签名" width="580px" :maskClosable="false" class="app-dialog" @afterOpenChange="(open: boolean) => { if (open) initSignatureCanvas() }">
+  <VdDialog v-model:open="visible" title="插入签名" width="580px" :maskClosable="false" class="app-dialog" @afterOpenChange="(open: boolean) => { if (open) initSignatureCanvas() }">
     <div class="signature-content">
       <div class="signature-operation">
-        <a-button type="link" @click="signatureUndo" :disabled="signatureUndoStack.length <= 1">
-          <UndoOutlined />
-          <span>撤销</span>
-        </a-button>
-        <a-button type="link" @click="signatureClear">
-          <DeleteOutlined />
-          <span>清空</span>
-        </a-button>
+        <VdButton type="link" icon="undo" @click="signatureUndo" :disabled="signatureUndoStack.length <= 1">撤销</VdButton>
+        <VdButton type="link" icon="delete-outline" @click="signatureClear">清空</VdButton>
       </div>
       <div class="signature-canvas-wrapper">
         <canvas
@@ -25,21 +19,16 @@
       <span style="color: red;font-size: 12px">说明：签名仅用于本系统，不具备法律效力.</span>
     </div>
     <template #footer>
-      <a-button type="primary" @click="confirmSignature">
-        <CheckOutlined />
-        确定
-      </a-button>
-      <a-button @click="visible = false">
-        <CloseOutlined />
-        取消
-      </a-button>
+      <VdButton type="primary" icon="check" @click="confirmSignature">确定</VdButton>
+      <VdButton icon="close" @click="visible = false">取消</VdButton>
     </template>
-  </a-modal>
+  </VdDialog>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, nextTick } from 'vue'
-import { UndoOutlined, DeleteOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons-vue'
+import { VdDialog, VdButton } from '@vervedoc/ui'
+
 
 /** 组件 props 定义 */
 const props = defineProps<{
@@ -207,11 +196,6 @@ const confirmSignature = () => {
   gap: 16px;
 }
 
-.signature-operation :deep(.ant-btn) {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
 
 .signature-canvas-wrapper {
   border: 1px solid #dcdfe6;

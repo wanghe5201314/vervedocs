@@ -1,5 +1,5 @@
 <template>
-  <a-modal v-model:open="visible" title="插入超链接" width="550px" :maskClosable="false" class="app-dialog">
+  <VdDialog v-model:open="visible" title="插入超链接" width="550px" :maskClosable="false" class="app-dialog">
     <a-form :model="hyperlinkForm" :label-col="{ style: { width: '80px' } }">
       <a-form-item label="超链接文字">
         <a-input v-model:value="hyperlinkForm.text" placeholder="请输入链接显示文字" />
@@ -19,21 +19,16 @@
       </a-form-item>
     </a-form>
     <template #footer>
-      <a-button type="primary" @click="confirmHyperlink">
-        <CheckOutlined />
-        确定
-      </a-button>
-      <a-button @click="visible = false">
-        <CloseOutlined />
-        取消
-      </a-button>
+      <VdButton type="primary" icon="check" @click="confirmHyperlink">确定</VdButton>
+      <VdButton icon="close" @click="visible = false">取消</VdButton>
     </template>
-  </a-modal>
+  </VdDialog>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { CheckOutlined, CloseOutlined } from '@ant-design/icons-vue'
+import { VdDialog, VdButton } from '@vervedoc/ui'
+
 
 /** 组件 props 定义 */
 const props = defineProps<{

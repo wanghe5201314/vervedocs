@@ -15,6 +15,7 @@ export type ElementType =
   | 'table'
   | 'image'
   | 'pageBreak'
+  | 'columnBreak'
   // 扩展占位（后续实现，命名保持一致）
   | 'hyperlink'
   | 'separator'
@@ -43,9 +44,40 @@ export type BorderStyleType = 'solid' | 'dashed' | 'dotted' | 'double' | 'none'
 /** 列表类型名：ol=有序列表、ul=无序列表 */
 export type ListTypeName = 'ol' | 'ul'
 /** 分页符取值：manual=手动插入、auto=自动分页 */
-export type PageBreakValue = 'manual' | 'auto'
+export type PageBreakValue = 'manual' | 'auto' | 'continuous' | 'nextPage' | 'evenPage' | 'oddPage'
+
+export interface IDocxSection {
+  pageWidth?: number
+  pageHeight?: number
+  margins?: [number, number, number, number]
+  headerDistance?: number
+  footerDistance?: number
+  gutter?: number
+  paperDirection?: 'vertical' | 'horizontal'
+  breakType?: string
+  titlePage?: boolean
+  headers?: Record<string, string>
+  footers?: Record<string, string>
+}
+
+export interface IImageGeometry {
+  namespace: string
+  name: string
+  attributes: Record<string, string>
+  text?: string
+  children: IImageGeometry[]
+}
+
+export interface IImageLayout {
+  anchorParagraphId?: string
+  anchored?: boolean
+  anchorAttributes?: Record<string, string>
+  positioning?: IImageGeometry[]
+  crop?: IImageGeometry
+  transform?: IImageGeometry
+}
 /** 图片显示方式：inline=行内、block=块级、floatTop/floatBottom=浮动、surround=环绕 */
-export type ImgDisplay = 'inline' | 'block' | 'floatTop' | 'floatBottom' | 'surround'
+export type ImgDisplay = 'inline' | 'block' | 'float-top' | 'float-bottom' | 'surround'
 
 /* ========== 段落级属性（可继承给同段 runs） ========== */
 
@@ -77,10 +109,12 @@ export interface IParagraphAttrs {
 
 /** 元素基类：所有元素类型都共享 type 与 value 字段，并继承段落级属性 */
 export interface IElementBase extends IParagraphAttrs {
+  sourceParagraphId?: string
   /** 元素类型 */
   type: ElementType
   /** 元素值（text 为文本内容，其他类型为占位或子类型标识） */
   value: string
+  characterStyleId?: string
   /** 元素唯一标识符 */
   id?: string
   /** 扩展数据（任意 JSON） */
@@ -217,6 +251,9 @@ export interface IBorderSide {
   color: string
   /** 边框线型 */
   style: BorderStyleType
+  officeType?: string
+  source?: 'cell' | 'table'
+  sizeEighthPoints?: number
 }
 
 /** 单元格四边边框样式 */
@@ -316,6 +353,7 @@ export interface IImageElement extends IElementBase {
   width: number
   /** 图片高度（px） */
   height: number
+  imageLayout?: IImageLayout
   /** 图片显示方式 */
   imgDisplay?: ImgDisplay
   /** 图片浮动位置 */
@@ -405,14 +443,17 @@ export interface IDocxTheme {
 
 /** 批注元数据（来自 comments.xml 解析或 JSON 导入） */
 export interface IDocxCommentMeta {
-  /** 批注 ID */
+  /** OOXML 数字 ID；正文通过 comment_<id> 关联 */
   id: string
   /** 作者 */
   author?: string
   /** 创建时间 */
   date?: string
+  initials?: string
   /** 批注内容 */
   content: string
+  status?: number
+  replies?: IDocxCommentMeta[]
 }
 
 /** 批注组颜色信息 */
@@ -437,6 +478,7 @@ export interface IComment {
   avatarColor?: string
   /** 创建时间 */
   createdDate: string
+  initials?: string
   /** 批注选区文本 */
   rangeText: string
   /** 批注状态 */
@@ -450,7 +492,7 @@ export interface IComment {
   /** 批注定位信息 */
   position?: { top: number; left?: number; lineWidth?: number; originalTop?: number }
   /** 批注锚点信息（选区起止坐标） */
-  anchor?: { startX: number; startY: number; endX: number; endY: number; lineHeight?: number; glyphHeight?: number; startGlyphTop?: number; endGlyphTop?: number }
+  anchor?: { startX: number; startY: number; endX: number; endY: number; lineHeight?: number; endLineHeight?: number; glyphHeight?: number; startGlyphTop?: number; endGlyphTop?: number }
 }
 
 /** 顶层文档元数据，对应整个 docx 文档的解析结果 */
@@ -459,8 +501,18 @@ export interface IDocxDocumentMeta {
   success: boolean
   /** 文档元素列表（正文） */
   elements: IElement[]
-  /** 节区内容（页眉/页脚/脚注/尾注） */
-  sections?: {
+  sections?: IDocxSection[]
+  headerFooterParts?: Record<string, IElement[]>
+  evenAndOddHeaders?: boolean
+  header?: IElement[]
+  footer?: IElement[]
+  pageWidth?: number
+  pageHeight?: number
+  margins?: [number, number, number, number]
+  paperDirection?: 'vertical' | 'horizontal'
+  lastSectionType?: string
+  /** 编辑器内容区；旧 sections 对象必须由宿主显式迁移到此字段。 */
+  contentZones?: {
     /** 页眉元素列表 */
     header?: IElement[]
     /** 页脚元素列表 */
@@ -543,6 +595,8 @@ export interface IBookmark {
 
 /** 编辑器选项 */
 export interface IEditorOption {
+  /** Screen-only eye-care background; does not change the document paper color. */
+  eyeCare?: boolean
   /** 默认字体 */
   defaultFont?: string
   /** 默认字号（pt） */
@@ -575,7 +629,7 @@ export interface IEditorOption {
 export type DocxImportCallback = (
   data: ArrayBuffer | File,
   options?: { [key: string]: unknown }
-) => Promise<{ success: boolean; elements?: IElement[]; error?: string }>
+) => Promise<Partial<IDocxDocumentMeta> & { success: boolean; error?: string }>
 
 /** docx 导出回调类型：将文档元数据序列化为 ArrayBuffer */
 export type DocxExportCallback = (

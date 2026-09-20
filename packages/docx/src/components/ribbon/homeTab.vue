@@ -127,8 +127,10 @@
                   @mousedown.prevent
                   @click="applyList(kind, item.style)"
                 >
-                  <span v-for="(sample, index) in item.samples" :key="index" class="list-preview-row">
-                    <span class="list-symbol">{{ sample }}</span><span class="list-line" />
+                  <span class="list-preview" aria-hidden="true">
+                    <span v-for="(sample, index) in item.samples" :key="index" class="list-preview-row">
+                      <span class="list-symbol">{{ sample }}</span><span class="list-line" />
+                    </span>
                   </span>
                 </button>
               </div>
@@ -274,7 +276,7 @@ const props = defineProps<{
   fontColor: string
   highlightColor: string
   rowFlex?: string
-  currentTitleLabel: string
+  currentTitle: string | null
   hasSelection?: boolean
   currentCharacterScale?: number
   isPainter?: boolean
@@ -327,15 +329,18 @@ interface GalleryStyle {
   id: string
   label: string
   preview: string
-  level: string
+  level: string | null
 }
 
-const styles: GalleryStyle[] = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth']
-  .map((level, index) => ({
-    id: level, label: `标题${index + 1}`, level, preview: `home-style-heading-${index + 1}`
-  }))
+const styles: GalleryStyle[] = [
+  { id: 'normal', label: '正文', level: null, preview: 'home-style-normal' },
+  ...['first', 'second', 'third', 'fourth', 'fifth', 'sixth']
+    .map((level, index) => ({
+      id: level, label: `标题${index + 1}`, level, preview: `home-style-heading-${index + 1}`
+    }))
+]
 const selectedStyle = computed(() =>
-  styles.find(style => style.label === props.currentTitleLabel)?.id ?? null
+  styles.find(style => style.level === props.currentTitle)?.id ?? null
 )
 
 function preserveToolbarFocus(event: MouseEvent) {
@@ -475,8 +480,10 @@ watch(selectedStyle, () => {
 .home-style-gallery .home-style { border: 1px solid #dedede; }
 .home-list-panel { width: 280px; }
 .home-list-panel .list-grid { grid-template-columns: repeat(4, 1fr); }
+.home-list-panel .list-cell { box-sizing: border-box; width: 100%; min-width: 0; height: 48px; }
+.home-list-panel .list-preview { display: flex; flex-direction: column; gap: 3px; width: 100%; }
 .home-list-panel .list-preview-row { height: 10px; }
-.home-list-panel .list-symbol { min-width: 16px; }
+.home-list-panel .list-symbol { min-width: 16px; white-space: nowrap; }
 .scale-check { display: inline-block; width: 18px; color: #555; }
 .home-shortcut { float: right; margin-left: 28px; color: #888; font-size: 12px; }
 </style>

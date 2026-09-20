@@ -49,6 +49,8 @@
   },
   "dependencies": {
     "@vervedoc/core": "workspace:^",
+    "@vervedoc/design": "workspace:^",
+    "@vervedoc/ui": "workspace:^",
     "vue": "catalog:"
   },
   "peerDependencies": {

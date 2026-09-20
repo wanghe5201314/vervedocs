@@ -13,6 +13,7 @@ export interface AnchorInfo {
   endX: number
   endY: number
   lineHeight: number
+  endLineHeight?: number
   glyphHeight: number
   startGlyphTop: number
   endGlyphTop: number
@@ -57,16 +58,18 @@ export function collectGroupAnchors(
         for (const gid of inl.groupIds) {
           const existing = result.get(gid)
           if (!existing) {
-            result.set(gid, { startX: absX, startY: absY, endX: absEndX, endY: absEndY, lineHeight: line.height, glyphHeight, startGlyphTop: absGlyphTop, endGlyphTop: absGlyphTop })
+            result.set(gid, { startX: absX, startY: absY, endX: absEndX, endY: absEndY, lineHeight: line.height, endLineHeight: line.height, glyphHeight, startGlyphTop: absGlyphTop, endGlyphTop: absGlyphTop })
           } else {
             if (absY < existing.startY || (absY === existing.startY && absX < existing.startX)) {
               existing.startX = absX
               existing.startY = absY
+              existing.lineHeight = line.height
               existing.startGlyphTop = absGlyphTop
             }
             if (absEndY > existing.endY || (absEndY === existing.endY && absEndX > existing.endX)) {
               existing.endX = absEndX
               existing.endY = absEndY
+              existing.endLineHeight = line.height
               existing.endGlyphTop = absGlyphTop
             }
           }
@@ -121,6 +124,7 @@ export function collectRevisionAnchors(
             endX: absEndX,
             endY: absEndY,
             lineHeight: line.height,
+            endLineHeight: line.height,
             glyphHeight,
             startGlyphTop: absGlyphTop,
             endGlyphTop: absGlyphTop
@@ -129,11 +133,13 @@ export function collectRevisionAnchors(
           if (absY < existing.startY || (absY === existing.startY && absX < existing.startX)) {
             existing.startX = absX
             existing.startY = absY
+            existing.lineHeight = line.height
             existing.startGlyphTop = absGlyphTop
           }
           if (absEndY > existing.endY || (absEndY === existing.endY && absEndX > existing.endX)) {
             existing.endX = absEndX
             existing.endY = absEndY
+            existing.endLineHeight = line.height
             existing.endGlyphTop = absGlyphTop
           }
         }

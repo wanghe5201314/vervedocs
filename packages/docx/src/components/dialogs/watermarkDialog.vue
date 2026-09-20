@@ -1,5 +1,5 @@
 <template>
-  <a-modal v-model:open="visible" title="水印设置" width="700px" :maskClosable="false" class="app-dialog">
+  <VdDialog v-model:open="visible" title="水印设置" width="700px" :maskClosable="false" class="app-dialog">
     <div class="watermark-body">
       <div class="wm-left">
         <a-form :model="watermarkForm" :label-col="{ style: { width: '80px' } }">
@@ -27,7 +27,7 @@
             </a-select>
           </a-form-item>
           <a-form-item label="颜 色(C)">
-            <input type="color" :value="watermarkForm.color" size="small" @change="(e: Event) => watermarkForm.color = (e.target as HTMLInputElement).value" style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
+            <input type="color" :value="watermarkForm.color" @change="(e: Event) => watermarkForm.color = (e.target as HTMLInputElement).value" style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
           </a-form-item>
           <a-form-item label="透明度(O)">
             <a-slider v-model:value="watermarkForm.opacity" size="small" :min="0" :max="1" :step="0.1" />
@@ -59,21 +59,16 @@
       </div>
     </div>
     <template #footer>
-      <a-button type="primary" @click="confirmWatermark">
-        <CheckOutlined />
-        确定
-      </a-button>
-      <a-button @click="visible = false">
-        <CloseOutlined />
-        取消
-      </a-button>
+      <VdButton type="primary" icon="check" @click="confirmWatermark">确定</VdButton>
+      <VdButton icon="close" @click="visible = false">取消</VdButton>
     </template>
-  </a-modal>
+  </VdDialog>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { CheckOutlined, CloseOutlined } from '@ant-design/icons-vue'
+import { VdDialog, VdButton } from '@vervedoc/ui'
+
 import { EDITOR_FONT_OPTIONS, WATERMARK_SIZE_OPTIONS } from '@vervedoc/core'
 
 const fontList = EDITOR_FONT_OPTIONS

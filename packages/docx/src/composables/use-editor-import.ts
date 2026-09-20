@@ -1,7 +1,6 @@
 import { nextTick } from 'vue'
 import { adjustFloatImagePositions } from '@vervedoc/core'
 import { replaceDocument } from '@/composables/use-replace-document'
-import { adaptStyles, adaptNumbering, adaptTheme } from '@/utils/docx-meta-adapter'
 
 /**
  * 编辑器实例接口（导入所需的最小能力）
@@ -64,9 +63,6 @@ export function useEditorImport(options: {
       const comments = Array.isArray(json?.comments) ? json.comments : []
       const header = Array.isArray(json?.header) ? json.header : []
       const footer = Array.isArray(json?.footer) ? json.footer : []
-      const styles = adaptStyles(json?.styles)
-      const numbering = adaptNumbering(json?.numbering)
-      const theme = adaptTheme(json?.theme)
 
       onProgress?.(60, '正在渲染内容...')
       const inst = getEditorInstance()
@@ -77,9 +73,10 @@ export function useEditorImport(options: {
       const editorOptions = inst.command.getOptions?.()
       adjustFloatImagePositions(main, editorOptions)
 
+      // Java 已解析元素的有效样式；保留原始文档元数据，导出仍需其继承链和单位。
       await replaceDocument(
         { getEditorInstance },
-        { main, header, footer, comments, styles, numbering, theme }
+        { ...(Array.isArray(json) ? {} : json), main, header, footer, comments }
       )
 
       onProgress?.(100, '加载完成!')

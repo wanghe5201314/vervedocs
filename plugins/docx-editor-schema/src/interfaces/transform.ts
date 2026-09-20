@@ -13,6 +13,7 @@ export interface HistorySnapshot {
   doc: IDocxDocumentMeta
   /** 快照时的选区范围，无选区时为 null */
   range: IRange | null
+  zone?: 'main' | 'header' | 'footer'
 }
 
 /** 历史管理器抽象接口，维护编辑历史的快照栈 */

@@ -14,6 +14,7 @@ import type { RangeManager } from '@vervedoc/docx-editor-state'
 import type { IPosition } from '@vervedoc/docx-editor-schema'
 import { ContextMenu, type MenuItem } from '../context-menu'
 import { positionHandle } from './handle-position'
+import { TablePropertiesWidget } from './layout/table-properties-widget'
 
 /** 边框热区半宽（像素），鼠标距离边框小于该值时视为命中边框可拖拽 */
 const BORDER_HOT = 4
@@ -86,7 +87,14 @@ export class TableWidget {
    *
    * @param deps 依赖注入对象
    */
-  constructor(private deps: TableWidgetDeps) {}
+  private panel: TablePropertiesWidget
+
+  constructor(private deps: TableWidgetDeps) {
+    this.panel = new TablePropertiesWidget({
+      onCommand: (cmd, ...args) => this.deps.onCommand(cmd, ...args),
+      focusInput: () => this.deps.focusInput()
+    })
+  }
 
   /* -------------------- 创建 -------------------- */
 
@@ -320,7 +328,16 @@ export class TableWidget {
     const isTable = pos.path.length >= 5 && pos.path[1] === 'trList'
     if (!isTable) return false
 
-    range.setCaret(pos)
+    const selected = range.getRange()
+    const inSameTable = selected && [selected.anchor, selected.focus].every(p =>
+      p.path[0] === pos.path[0] && p.path[1] === 'trList'
+    )
+    const insideSelection = inSameTable &&
+      Number(pos.path[2]) >= Math.min(Number(selected.anchor.path[2]), Number(selected.focus.path[2])) &&
+      Number(pos.path[2]) <= Math.max(Number(selected.anchor.path[2]), Number(selected.focus.path[2])) &&
+      Number(pos.path[4]) >= Math.min(Number(selected.anchor.path[4]), Number(selected.focus.path[4])) &&
+      Number(pos.path[4]) <= Math.max(Number(selected.anchor.path[4]), Number(selected.focus.path[4]))
+    if (!insideSelection) range.setCaret(pos)
     this.deps.focusInput()
 
     const icons = ContextMenu.getIcons()
@@ -382,7 +399,7 @@ export class TableWidget {
       { label: '重复表头行', icon: icons.repeatHeader, onClick: () => fire('executeToggleRepeatHeader') },
       { label: '---' },
       { label: '超链接', icon: icons.link, shortcut: 'Ctrl+K', onClick: () => fire('executeHyperlink') },
-      { label: '表格属性', icon: icons.tableProp, onClick: () => fire('executeTableProperty') },
+      { label: '表格属性', icon: icons.tableProp, onClick: () => this.panel.show(pos) },
     ]
 
     this.contextMenu.show(clientX, clientY, items)
@@ -486,7 +503,7 @@ export class TableWidget {
    *
    * @param e 鼠标事件
    */
-  handleMouseMove(e: MouseEvent): void {
+  handleMouseMove(e: MouseEvent): boolean {
     if (this.dragState) {
       e.preventDefault()
       const delta = this.dragState.type === 'col' ? e.clientX - this.dragState.startClient : e.clientY - this.dragState.startClient
@@ -496,17 +513,19 @@ export class TableWidget {
       } else {
         this.deps.onCommand('executeSetTableRowHeight', this.dragState.tableIndex, this.dragState.index, newSize)
       }
-      return
+      return true
     }
 
     const border = this.detectBorder(e.clientX, e.clientY)
     if (border) {
       this.deps.setCursor(border.type === 'col' ? 'col-resize' : 'row-resize')
       this.cursorChanged = true
+      return true
     } else if (this.cursorChanged) {
       this.deps.setCursor('default')
       this.cursorChanged = false
     }
+    return false
   }
 
   /**
@@ -527,6 +546,7 @@ export class TableWidget {
    * 销毁 widget，隐藏手柄和菜单并移除所有手柄 DOM
    */
   destroy(): void {
+    this.panel.hide()
     this.hideHandles()
     this.hideContextMenu()
     if (this.handle) { this.handle.remove(); this.handle = null }

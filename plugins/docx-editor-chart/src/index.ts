@@ -2,7 +2,7 @@
  * DocxEditor 图表插件
  * 基于 Chart.js 实现图表渲染功能
  *
- * install 时将 Chart.js 渲染器注册到 schema 的模块级 registry（ChartBlock 直接取，零桥接）。
+ * install 时通过宿主将 Chart.js 渲染器注入当前编辑器实例。
  * 注册 requestInsertChart 命令，触发时自渲染纯 DOM 对话框，确认后调 host.executeInsertChart。
  */
 import type {
@@ -12,7 +12,7 @@ import type {
   IChartConfig,
   EditorPlugin
 } from '@vervedoc/docx-editor-schema'
-import { registerChartRenderer } from '@vervedoc/docx-editor-schema'
+import type { PluginHost } from '@vervedoc/docx-editor-schema'
 import { renderChartToDataUrl } from './chart-renderer'
 import { extractTableData, generateChartOption } from './chart-data-extractor'
 import { ChartDialog } from './chart-dialog'
@@ -65,6 +65,7 @@ export function createChartPlugin(
   options?: { chart?: any }
 ): ChartPlugin {
   let renderer: ChartJsRenderer | null = null
+  let host: PluginHost | null = null
   const dialog = new ChartDialog()
   let unsubscribeChartClick: (() => void) | null = null
   return {
@@ -72,7 +73,8 @@ export function createChartPlugin(
     install: (h) => {
       dialog.setHost(h)
       renderer = new ChartJsRenderer(options?.chart)
-      registerChartRenderer(renderer)
+      host = h
+      h.setChartRenderer(renderer)
       unsubscribeChartClick = h.getEventBus().on('chartClick', (data: any) => {
         dialog.show({
           chartId: data.chartId,
@@ -88,7 +90,8 @@ export function createChartPlugin(
     },
     destroy: () => {
       unsubscribeChartClick?.()
-      registerChartRenderer(null)
+      host?.setChartRenderer(null)
+      host = null
       dialog.hide()
       renderer = null
     },

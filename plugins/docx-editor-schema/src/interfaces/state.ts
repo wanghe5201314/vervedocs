@@ -8,6 +8,8 @@ import type { IRange, IPosition, IDocxDocumentMeta } from '../types'
 
 /** 选区样式快照 —— 光标所在位置的文本/段落样式状态 */
 export interface IRangeStyle {
+  /** 是否存在非折叠选区 */
+  hasSelection: boolean
   /** 元素类型 */
   type: string | null
   /** 加粗 */
@@ -70,6 +72,7 @@ export interface IEditorAbility {
 
 /** 编辑器事件映射表，键为事件名（camelCase），值为对应回调签名 */
 export interface ListenerMap {
+  'layoutDiagnosticsChange': (diagnostics: import('../layout-types').LayoutDiagnostic[]) => void
   /** 选区变更（光标移动/选区改变） */
   'rangeChange': (range: IRange | null) => void
   /** 光标位置变更 */
@@ -108,9 +111,13 @@ export interface ListenerMap {
   'requestInsertHyperlink': () => void
   /** 请求插入公式（右键菜单触发） */
   'requestInsertFormula': () => void
+  /** 请求打开当前表格属性 */
+  'requestTableProperties': () => void
 
   /** 缩略图变更（页面缩略图数据更新） */
   'thumbnailChange': (images: string[]) => void
+  /** Screen background changed without a document render. */
+  'thumbnailAppearanceChange': () => void
 }
 
 /**

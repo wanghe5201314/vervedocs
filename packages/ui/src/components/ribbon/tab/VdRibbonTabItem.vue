@@ -50,6 +50,10 @@ const onTabClick = () => {
   activate()
 }
 
+const onTabHover = () => {
+  if (!props.disabled && props.mode === 'panel') tab.previewTab(props.itemKey)
+}
+
 const onDropdownOpenChange = (open: boolean) => {
   if (props.disabled) {
     dropdownOpen.value = false
@@ -104,7 +108,11 @@ provide(RIBBON_TAB_ITEM_CONTEXT_KEY, {
       role="tab"
       :aria-selected="isActive"
       :aria-disabled="disabled || undefined"
+      tabindex="0"
+      @mouseenter="onTabHover"
       @click="onTabClick"
+      @keydown.enter.prevent="onTabClick"
+      @keydown.space.prevent="onTabClick"
     >
       <slot name="title">
         <span class="vd-ribbon-tab__tab-label">{{ title }}</span>

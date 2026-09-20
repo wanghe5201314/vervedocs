@@ -1,10 +1,10 @@
 <template>
-  <a-modal v-model:open="visible" title="版本历史" width="640px" :maskClosable="false" class="app-dialog">
+  <VdDialog v-model:open="visible" title="版本历史" width="640px" :maskClosable="false" class="app-dialog">
     <div class="version-wrap">
       <div class="version-header">
-        <a-button type="primary" size="small" @click="handleCreateVersion" :loading="creating">
+        <VdButton type="primary" size="small" @click="handleCreateVersion" :loading="creating">
           创建版本快照
-        </a-button>
+        </VdButton>
       </div>
 
       <div v-if="loading" class="version-loading">
@@ -49,17 +49,18 @@
             </div>
           </div>
           <div class="version-actions">
-            <a-button size="small" type="link" @click="handlePreview(version)">预览</a-button>
-            <a-button size="small" type="link" @click="handleRestore(version)">恢复</a-button>
+            <VdButton size="small" type="link" @click="handlePreview(version)">预览</VdButton>
+            <VdButton size="small" type="link" @click="handleRestore(version)">恢复</VdButton>
           </div>
         </div>
       </div>
     </div>
-  </a-modal>
+  </VdDialog>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { VdDialog, VdButton } from '@vervedoc/ui'
 import { LoadingOutlined } from '@ant-design/icons-vue'
 import { message, Modal } from 'ant-design-vue'
 import type { IVersion } from '@/types/comment'

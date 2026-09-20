@@ -19,6 +19,7 @@ export interface ShortcutDeps {
   getDraw: () => Draw
   /** 获取 Command 命令实例 */
   getCommand: () => Command
+  dispatchCommand: (command: string, ...args: any[]) => any
   /** 获取 RangeManager 选区管理器 */
   getRange: () => RangeManager
   /** 获取 CommandAdapt 适配器（可能未初始化） */
@@ -64,24 +65,10 @@ export class ShortcutHandler {
   private handleEditKeys(e: KeyboardEvent, adapt: CommandAdapt, draw: Draw): boolean {
     const mod = e.ctrlKey || e.metaKey
 
-    if (mod && e.key === 'c') {
+    const clipboardCommand = { c: 'executeCopy', x: 'executeCut', v: 'executePaste' }[e.key.toLowerCase()]
+    if (mod && !e.altKey && !e.shiftKey && clipboardCommand) {
       e.preventDefault()
-      const text = adapt.extractSelectionText()
-      if (text && navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {})
-      return true
-    }
-    if (mod && e.key === 'x') {
-      e.preventDefault()
-      const text = adapt.extractSelectionText()
-      if (text && navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {})
-      adapt.deleteSelection()
-      return true
-    }
-    if (mod && e.key === 'v') {
-      e.preventDefault()
-      if (navigator.clipboard) {
-        navigator.clipboard.readText().then(t => { if (t) adapt.insertText(t) }).catch(() => {})
-      }
+      this.deps.dispatchCommand(clipboardCommand)
       return true
     }
     if (mod && e.key === 'a') {

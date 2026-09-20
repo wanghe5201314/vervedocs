@@ -4,8 +4,10 @@
 
 export * from './types'
 export * from './constants'
+export * from './author-color'
 export * from './walk'
 export * from './format'
+export * from './export'
 export * from './paragraph'
 export * from './layout-types'
 export * from './interfaces'

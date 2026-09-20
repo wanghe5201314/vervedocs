@@ -9,7 +9,6 @@
       @command="handleCommand"
     />
     <Menu
-      v-show="toolbarVisible"
       :app-name-with-version="appNameWithVersion"
       :document-meta="documentMeta"
       :document-stats="documentStats"
@@ -110,7 +109,12 @@
     />
     <TableBordersDialog
       v-model="tableBordersDialogVisible"
-      @confirm="handleTableBordersConfirm"
+      :editor="{ executeCommand }"
+    />
+    <TableBordersDialog
+      v-model="tablePropertiesDialogVisible"
+      title="表格属性"
+      :editor="{ executeCommand }"
     />
 
     <LaTeXDialog v-model="latexDialogVisible" @confirm="handleLatexConfirm" />
@@ -170,6 +174,7 @@ import { inject, provide, onBeforeUnmount, ref, nextTick, watch, type Ref } from
 import { message } from 'ant-design-vue'
 import type { InitialDocument } from '@/types/document'
 import type { DocxImportCallback, DocxExportCallback } from '@vervedoc/core'
+import { toDocxExportDocument } from '@vervedoc/docx-editor-schema'
 import type { IEditorSearchApi } from '@/composables/use-editor-search'
 import {
   emitExternalEvent,
@@ -432,6 +437,8 @@ const {
   handleResizeStart
 } = useDock()
 
+const tablePropertiesDialogVisible = ref(false)
+
 /** 对话框可见状态及确认处理方法 */
 const {
   shortcutsDialogVisible,
@@ -466,8 +473,7 @@ const {
   handleDateConfirm,
   handleTocConfirm,
 
-  handleInsertTableDialogConfirm,
-  handleTableBordersConfirm
+  handleInsertTableDialogConfirm
 } = useDialogs({ executeCommand })
 
 /** AI 操作处理方法 */
@@ -505,6 +511,11 @@ const { tocNavAPI } = useEditorTocNav({
   activeDock
 })
 
+/** 目录可见状态变化时同步底部勾选框 */
+watch(() => tocNavAPI.visible.value, (visible) => {
+  footerRef.value?.setTocVisible?.(visible)
+})
+
 /**
  * 处理左侧停靠栏选择，目录或章节时打开目录面板，其余走基础处理
  * @param key - 停靠栏键值
@@ -523,23 +534,22 @@ const handleDockSelect = (key: 'search' | 'toc' | 'section' | 'ai' | 'revision' 
 /** 对外暴露的书签 API，代理编辑器书签命令 */
 const externalBookmarkAPI: ExternalBookmarkApi = {
   getState(): BookmarkState {
-    return (
-      getEditorInstance()?.command?.bookmark?.getState?.() ?? {
-        list: [],
-        suggestedName: '书签',
-        selectionPreview: '',
-        hasSelectionRange: false
-      }
-    )
+    bookmarkAPI.refresh()
+    return {
+      list: bookmarkAPI.bookmarkList.value,
+      suggestedName: bookmarkAPI.suggestedBookmarkName.value,
+      selectionPreview: bookmarkAPI.bookmarkSelectionPreview.value,
+      hasSelectionRange: bookmarkAPI.hasBookmarkSelectionRange.value
+    }
   },
   add(name) {
-    getEditorInstance()?.command?.bookmark?.add?.(name)
+    bookmarkAPI.add(name)
   },
   remove(name) {
-    getEditorInstance()?.command?.bookmark?.remove?.(name)
+    bookmarkAPI.remove(name)
   },
   locate(name) {
-    getEditorInstance()?.command?.bookmark?.locate?.(name)
+    bookmarkAPI.locate(name)
   }
 }
 
@@ -868,7 +878,10 @@ const { handleEditorCommand: baseHandleEditorCommand, handleEditorSaved } = useE
  * @param args - 命令参数
  */
 const handleEditorCommand = (command: string, ...args: any[]) => {
-
+  if (command === 'tablePropertiesDialog') {
+    tablePropertiesDialogVisible.value = true
+    return
+  }
   baseHandleEditorCommand(command, ...args)
 
 }
@@ -943,10 +956,8 @@ const handleImportDoc = () => {
       }
       suppressSaveOnce = true
       await applyDocumentReplace({
-        main: result.elements,
-        header: [],
-        footer: [],
-        comments: result.comments || []
+        ...result,
+        main: result.elements
       })
       const importedName = deriveDocumentNameFromPath(file.name)
       if (importedName) {
@@ -970,8 +981,9 @@ const handleExportDoc = () => {
   }
   const instance = getEditorInstance()
   const value = instance?.command?.getValue?.()
-  const json = value?.data ?? value
-  exportCallback(json)
+  if (!value) return
+  Promise.resolve()
+    .then(() => exportCallback(toDocxExportDocument(value)))
     .then(result => {
       if (!result.success || !result.data) {
         message.error(`导出失败: ${result.error || '未知错误'}`)
@@ -1108,11 +1120,7 @@ const handleCommand = (command: string, ...args: any[]) => {
     case 'unprotect':
       return handleUnprotectDoc()
     case 'eyeCareChange': {
-      const instance = getEditorInstance()
-      instance?.command?.executeUpdateOptions?.({
-        background: { color: args[0] ? '#C7EDCC' : '#FFFFFF' }
-      })
-
+      executeCommand('updateOptions', { eyeCare: !!args[0] })
       return
     }
     case 'accessPermission':

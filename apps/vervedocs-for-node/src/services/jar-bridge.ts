@@ -22,6 +22,15 @@ import type {
 
 const log = createLogger('jar-bridge')
 
+function decodeJavaOutput(output: Buffer): string {
+  if (process.platform !== 'win32') return output.toString('utf8')
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(output)
+  } catch {
+    return new TextDecoder('gbk').decode(output)
+  }
+}
+
 /**
  * jar 调用失败错误。
  *
@@ -124,8 +133,8 @@ function runJar(args: string[]): Promise<JarRunResult> {
     })
 
     child.on('close', (code) => {
-      const stdout = Buffer.concat(stdoutChunks).toString('utf8')
-      const stderr = Buffer.concat(stderrChunks).toString('utf8')
+      const stdout = decodeJavaOutput(Buffer.concat(stdoutChunks))
+      const stderr = decodeJavaOutput(Buffer.concat(stderrChunks))
       const durationMs = Date.now() - begin
       const exitCode = code ?? -1
       const success = code === 0

@@ -98,13 +98,13 @@ const props = defineProps<{
 const emit = defineEmits(['command'])
 
 /** 目录是否可见 */
-const tocVisible = ref(false)
+const tocVisible = ref(true)
 /** 是否为连页模式 */
 const isContinuityMode = ref(false)
 
 
 /** 选中的纸张方向 */
-const selectedPaperDirection = ref(PaperDirection.VERTICAL)
+const selectedPaperDirection = ref<typeof PaperDirection[keyof typeof PaperDirection]>(PaperDirection.VERTICAL)
 /** 选中纸张方向的中文名称 */
 const selectedPaperDirectionName = computed(() => {
   return selectedPaperDirection.value === PaperDirection.VERTICAL ? '纵向' : '横向'

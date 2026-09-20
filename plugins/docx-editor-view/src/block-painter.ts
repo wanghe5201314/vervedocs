@@ -6,6 +6,7 @@
 
 import type { ParagraphBlock, InlineBox } from './layout-types'
 import type { IGroupColor } from '@vervedoc/docx-editor-schema'
+import { getAuthorColor } from '@vervedoc/docx-editor-schema'
 
 /** 单条文本绘制命令（分桶合并绘制以减少 ctx.font 切换开销） */
 export interface DrawCommand {
@@ -21,6 +22,7 @@ export interface DrawCommand {
 export interface PaintOptions {
   groupColors?: Record<string, IGroupColor>
   activeGroupId?: string | null
+  activeRevision?: { id: string; color: string } | null
 }
 
 /** 绘制上下文类型（HTMLCanvasElement 或 OffscreenCanvas） */
@@ -47,7 +49,7 @@ export function groupHighlightColor(color: string, active = false): string {
     const r = parseInt(m[1].slice(0, 2), 16)
     const g = parseInt(m[1].slice(2, 4), 16)
     const b = parseInt(m[1].slice(4, 6), 16)
-    return `rgba(${r},${g},${b},${active ? 0.3 : 0.18})`
+    return `rgba(${r},${g},${b},${active ? 0.14 : 0.18})`
   }
   return color
 }
@@ -79,10 +81,15 @@ export function paintParagraph(ctx: PaintCtx, b: ParagraphBlock, opts: PaintOpti
   const bgRects: { x: number; y: number; w: number; h: number; color: string }[] = []
   const strokes: { x1: number; y1: number; x2: number; y2: number; color: string; width: number }[] = []
   const groupColors = opts.groupColors
+  const activeColor = opts.activeGroupId ? groupColors?.[opts.activeGroupId]?.color : undefined
   for (const line of b.lines) {
     for (const inl of line.inlines) {
       const hasGroupHighlight = !!(groupColors && inl.groupIds?.some(gid => groupColors[gid]))
-      if (hasGroupHighlight) {
+      if (opts.activeRevision && inl.run && 'revisionId' in inl.run && inl.run.revisionId === opts.activeRevision.id) {
+        bgRects.push({ x: inl.x, y: inl.y, w: inl.width, h: line.height, color: groupHighlightColor(opts.activeRevision.color, true) })
+      } else if (activeColor && opts.activeGroupId && inl.groupIds?.includes(opts.activeGroupId)) {
+        bgRects.push({ x: inl.x, y: inl.y, w: inl.width, h: line.height, color: groupHighlightColor(activeColor, true) })
+      } else if (hasGroupHighlight) {
         for (const gid of inl.groupIds!) {
           const gc = groupColors![gid]
           if (gc) {
@@ -92,25 +99,35 @@ export function paintParagraph(ctx: PaintCtx, b: ParagraphBlock, opts: PaintOpti
       } else if (inl.bgColor) {
         bgRects.push({ x: inl.x, y: inl.y, w: inl.width, h: line.height, color: inl.bgColor })
       }
+      const run = inl.run
+      const revisionType = run && 'revisionId' in run && run.revisionId && 'revisionType' in run
+        ? run.revisionType : undefined
+      const inserted = revisionType === 'insert'
+      const deleted = revisionType === 'delete'
+      const revisionColor = inserted || deleted
+        ? getAuthorColor(run && 'revisionAuthor' in run ? String(run.revisionAuthor ?? '') : '')
+        : undefined
+      const textColor = revisionColor ?? inl.color
       const font = fontOf(inl)
-      const key = `${font}||${inl.color}`
+      const key = `${font}||${textColor}`
       addBucket(buckets, key, {
-        font, color: inl.color,
+        font, color: textColor,
         x: inl.x, y: inl.baseline,
         text: inl.text,
         letterSpacing: inl.letterSpacing
       })
-      if (inl.underline) {
+      // Review marks are visual overlays, never persisted as ordinary formatting.
+      if (inserted || inl.underline) {
         strokes.push({
           x1: inl.x, y1: inl.baseline + 2, x2: inl.x + inl.width, y2: inl.baseline + 2,
-          color: inl.color, width: 1
+          color: inserted ? revisionColor! : textColor, width: 1
         })
       }
-      if (inl.strikeout) {
+      if (deleted || inl.strikeout) {
         const my = inl.baseline - inl.size * 0.3
         strokes.push({
           x1: inl.x, y1: my, x2: inl.x + inl.width, y2: my,
-          color: inl.color, width: 1
+          color: deleted ? revisionColor! : textColor, width: 1
         })
       }
     }

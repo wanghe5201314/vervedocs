@@ -5,7 +5,7 @@
       <a-dropdown :trigger="['click']">
         <VdRibbonButton icon="layout-paper-direction" text="纸张方向" title="纸张方向" size="large" has-arrow />
         <template #overlay>
-          <a-card size="small" :bordered="false" class="ribbon-overlay-card" :bodyStyle="{ padding: '0' }">
+          <VdCard size="small" :bordered="false" class="ribbon-overlay-card" :bodyStyle="{ padding: '0' }">
             <div class="direction-panel">
               <div class="direction-item" @click="emit('command', 'paperDirection', PaperDirection.VERTICAL)">
                 <div class="direction-icon vertical-icon"></div>
@@ -16,13 +16,13 @@
                 <span>横向</span>
               </div>
             </div>
-          </a-card>
+          </VdCard>
         </template>
       </a-dropdown>
       <a-dropdown :trigger="['click']">
         <VdRibbonButton icon="layout-paper-size" text="纸张大小" title="纸张大小" size="large" has-arrow />
         <template #overlay>
-          <a-card size="small" :bordered="false" class="ribbon-overlay-card" :bodyStyle="{ padding: '0' }">
+          <VdCard size="small" :bordered="false" class="ribbon-overlay-card" :bodyStyle="{ padding: '0' }">
             <div class="size-panel">
               <div class="size-item" :class="{ 'size-active': currentPaperSizeName === size.name }" v-for="size in paperSizes" :key="size.name" @click="emit('command', 'paperSize', size.width, size.height)">
                 <div class="size-icon"></div>
@@ -32,13 +32,13 @@
                 </div>
               </div>
             </div>
-          </a-card>
+          </VdCard>
         </template>
       </a-dropdown>
       <a-dropdown :trigger="['click']" overlayClassName="gdocs-menu-popper gdocs-margin-popper">
         <VdRibbonButton icon="aspect_ratio" text="页边距" title="页边距" size="large" has-arrow />
         <template #overlay>
-          <a-card size="small" :bordered="false" class="ribbon-overlay-card" :bodyStyle="{ padding: '0' }">
+          <VdCard size="small" :bordered="false" class="ribbon-overlay-card" :bodyStyle="{ padding: '0' }">
             <div class="margin-presets">
               <div class="preset-item" v-for="preset in MARGIN_PRESETS" :key="preset.name" @click="emit('command', 'setPaperMargin', preset.margins)">
                 <div class="page-icon"><div class="page-content" :style="preset.style"></div></div>
@@ -49,13 +49,13 @@
                 </div>
               </div>
             </div>
-          </a-card>
+          </VdCard>
         </template>
       </a-dropdown>
       <a-dropdown :trigger="['click']">
         <VdRibbonButton icon="layout-page-color" text="页面颜色" title="页面颜色" size="large" has-arrow />
         <template #overlay>
-          <a-card size="small" :bordered="false" class="ribbon-overlay-card" :bodyStyle="{ padding: '0' }">
+          <VdCard size="small" :bordered="false" class="ribbon-overlay-card" :bodyStyle="{ padding: '0' }">
             <div class="bg-menu">
               <div class="bg-item" @click="emit('command', 'setPaperBackground', '#FFFFFF')">
                 <span class="bg-check"><VdIcon v-if="selectedBgColor === '#FFFFFF'" name="check" /></span>
@@ -67,7 +67,7 @@
                 <button v-for="c in BG_COLOR_PALETTE" :key="c" class="bg-color" :class="{ selected: selectedBgColor === c }" :style="{ backgroundColor: c }" @click="emit('command', 'setPaperBackground', c)"></button>
               </div>
             </div>
-          </a-card>
+          </VdCard>
         </template>
       </a-dropdown>
     </VdRibbonGroup>
@@ -85,7 +85,7 @@
       <a-dropdown :trigger="['click']">
         <VdRibbonButton icon="watermark" text="水印" title="水印" size="large" has-arrow />
         <template #overlay>
-          <a-card size="small" class="watermark-card">
+          <VdCard size="small" class="watermark-card">
             <div class="dropdown-card-title">水印</div>
             <div class="wm-section">
               <div class="wm-section-title">自定义水印</div>
@@ -110,7 +110,7 @@
                 <span class="mi"><VdIcon name="delete-outline" /><span>删除水印</span></span>
               </button>
             </div>
-          </a-card>
+          </VdCard>
         </template>
       </a-dropdown>
     </VdRibbonGroup>
@@ -118,7 +118,7 @@
 </template>
 
 <script setup lang="ts">
-import { VdRibbonButton, VdRibbonGroup, VdIcon } from '@vervedoc/ui'
+import { VdRibbonButton, VdRibbonGroup, VdIcon, VdCard } from '@vervedoc/ui'
 
 import { PaperDirection, PAPER_SIZE_LIST, MARGIN_PRESETS } from '@vervedoc/core'
 import { BG_COLOR_PALETTE, WATERMARK_PRESETS } from '@/config/constants'

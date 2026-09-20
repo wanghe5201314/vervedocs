@@ -29,10 +29,10 @@
       <template v-else-if="aiState.operation.error">
         <a-alert :message="aiState.operation.error" type="error" :closable="false" show-icon />
         <div class="action-bar">
-          <a-button size="small" @click="handleRegenerate">
+          <VdButton size="small" @click="handleRegenerate">
             <ReloadOutlined />
             重新生成
-          </a-button>
+          </VdButton>
         </div>
       </template>
 
@@ -40,18 +40,18 @@
       <template v-else-if="aiState.operation.result">
         <div class="result-content">{{ aiState.operation.result }}</div>
         <div class="action-bar">
-          <a-button size="small" type="primary" @click="handleApply">
+          <VdButton size="small" type="primary" @click="handleApply">
             <CheckOutlined />
             应用
-          </a-button>
-          <a-button size="small" @click="handleCopy">
+          </VdButton>
+          <VdButton size="small" @click="handleCopy">
             <CopyOutlined />
             复制
-          </a-button>
-          <a-button size="small" @click="handleRegenerate">
+          </VdButton>
+          <VdButton size="small" @click="handleRegenerate">
             <ReloadOutlined />
             重新生成
-          </a-button>
+          </VdButton>
         </div>
       </template>
 
@@ -65,6 +65,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { VdButton } from '@vervedoc/ui'
 import { CloseOutlined, ThunderboltOutlined, LoadingOutlined, CheckOutlined, CopyOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { AIAction } from '@vervedoc/docx-editor-ai'

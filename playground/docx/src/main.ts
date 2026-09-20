@@ -6,16 +6,11 @@ import {
   type DocxImportCallback
 } from '@vervedoc/docx'
 import {
-  createDocxImportCallback,
-  createDocxExportCallback
-} from '@vervedoc/docx-parser'
-import {
   buildCollaborationFromLocation,
   buildInitialDocumentFromLocation
 } from './resolve-from-location'
 
 
-import GUI from 'lil-gui'
 
 /**
  * 本地部署的 vervedocs-for-node 服务地址（固定）。
@@ -24,8 +19,6 @@ import GUI from 'lil-gui'
  */
 const DOCX_SERVER_BASE = 'http://localhost:1320'
 
-const localImport = createDocxImportCallback()
-const localExport = createDocxExportCallback()
 
 const serverImport: DocxImportCallback = async data => {
   const form = new FormData()
@@ -60,16 +53,16 @@ function toDocxParseResult(data: unknown): {
     const obj = data as Record<string, unknown>
     if (Array.isArray(obj.elements)) {
       return {
+        ...obj,
         success: true,
-        elements: obj.elements,
-        ...(Array.isArray(obj.comments) ? { comments: obj.comments } : {})
+        elements: obj.elements
       }
     }
     if (Array.isArray(obj.main)) {
       return {
+        ...obj,
         success: true,
-        elements: obj.main,
-        ...(Array.isArray(obj.comments) ? { comments: obj.comments } : {})
+        elements: obj.main
       }
     }
   }
@@ -92,37 +85,18 @@ const serverExport: DocxExportCallback = async data => {
 let autoSaveTimer: ReturnType<typeof setTimeout> | null = null
 
 window.onload = () => {
-  const gui = new GUI()
-  const options = {
-    // 是否本地导出
-    isLocalExport: true,
-    // 是否本地导入
-    isLocalImport: true
-  }
-  gui.add(options, 'isLocalExport').name('本地导出')
-  gui.add(options, 'isLocalImport').name('本地导入')
 
   setDocumentApi(createDefaultDocumentApi())
 
   const initialDocument = buildInitialDocumentFromLocation()
 
-  /**
-   * 导入/导出策略由宿主显式注入，GUI 可运行时切换：
-   * - 本地 JS：@vervedoc/docx-parser
-   * - 服务端：本地部署的 vervedocs-for-node（DOCX_SERVER_BASE）
-   */
+  /** 导入和导出统一使用服务端 Java 解析与写回。 */
   new WordEditor({
     container: '#app',
     initialDocument,
     collaboration: buildCollaborationFromLocation(),
-    importCallback: (data, opts) =>
-      options.isLocalImport
-        ? localImport(data, opts)
-        : serverImport(data, opts),
-    exportCallback: (data, opts) =>
-      options.isLocalExport
-        ? localExport(data, opts)
-        : serverExport(data, opts),
+    importCallback: serverImport,
+    exportCallback: serverExport,
     onReady: () => {
       console.info('[playground] WordEditor ready')
     },

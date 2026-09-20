@@ -84,15 +84,15 @@
         </button>
         <button
           class="view-check-btn"
-          :class="{ active: showLineBreak }"
+          :class="{ active: showRuler }"
           type="button"
-          title="换行符"
-          @click="handleCommand('toggleLineBreak')"
+          title="标尺"
+          @click="handleCommand('toggleRuler')"
         >
           <span class="view-check-box">
-            <VdIcon v-if="showLineBreak" name="check" />
+            <VdIcon v-if="showRuler" name="check" />
           </span>
-          <span class="view-check-label">换行符</span>
+          <span class="view-check-label">标尺</span>
         </button>
         <button
           class="view-check-btn"
@@ -132,7 +132,7 @@ const props = defineProps<{
   showToolbar?: boolean
   showBottomNav?: boolean
 
-  showLineBreak?: boolean
+  showRuler?: boolean
   eyeCareEnabled?: boolean
 }>()
 

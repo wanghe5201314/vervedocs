@@ -6,13 +6,14 @@
  */
 
 import type {
-  IDocxDocumentMeta, IElement, Path, ITextElement,
+  IDocxDocumentMeta, IElement, IImageElement, Path, ITextElement,
   ITitleElement, ITableElement, IListElement, ListTypeName, IPosition, IRange, ITd, VerticalAlign,
   IAutoTocItem, IAutoTocResult, DocumentLayout, IBookmark, IEditorOption, BlockNode,
-  HistorySnapshot, IHistoryManager, IParagraphStyle, IListNumbering, IDocxTheme
+  HistorySnapshot, IHistoryManager, TableBorderPreset
 } from '@vervedoc/docx-editor-schema'
 import {
-  getByPath, getParentContainer, cloneTree, walkTree, isSamePath, splitParagraphs
+  getByPath, getParentContainer, cloneTree, walkTree, isSamePath, splitParagraphs, comparePath, formatElementTree,
+  DEFAULT_EDITOR_OPTION, applyImageLayout, updateImageLayout, TableBorder, BULLET_STYLES, NUMBER_STYLES, toDocxExportDocument
 } from '@vervedoc/docx-editor-schema'
 import type { RangeManager, IRangeStyle, IEditorAbility, Listener } from '@vervedoc/docx-editor-state'
 
@@ -79,6 +80,24 @@ export class CommandAdapt {
   private _searchHits: { path: Path; start: number; end: number }[] = []
   /** 当前搜索命中索引（高亮位置） */
   private _searchIdx = 0
+  private _searchDocument: IDocxDocumentMeta | null = null
+  private _searchZone: Zone = 'main'
+  private _searchContent = ''
+
+  private validateSearch(): void {
+    if (this._searchDocument !== this.draw.getDocument() ||
+      this._searchZone !== this.draw.getZone() ||
+      this._searchContent !== JSON.stringify(this.draw.getActiveDocument().elements)) {
+      this._searchHits = []
+      this._searchIdx = 0
+    }
+  }
+
+  private captureSearch(): void {
+    this._searchDocument = this.draw.getDocument()
+    this._searchZone = this.draw.getZone()
+    this._searchContent = JSON.stringify(this.draw.getActiveDocument().elements)
+  }
   /** 历史管理器实例，未设置时为 null */
   private _historyManager: IHistoryManager | null = null
 
@@ -117,8 +136,38 @@ export class CommandAdapt {
     if (!this._historyManager) return
     this._historyManager.pushInitial({
       doc: cloneTree(this.draw.getDocument()),
-      range: this.range.getRange()
+      range: this.range.getRange(),
+      zone: this.draw.getZone()
     })
+  }
+
+  replaceDocument(document: IDocxDocumentMeta, resetHistory = false): void {
+    const doc = cloneTree(document)
+    const options = { editorOptions: this.draw.getOptions() as IEditorOption, styles: doc.styles, numbering: doc.numbering }
+    formatElementTree(doc.elements, options)
+    for (const elements of [doc.header, doc.footer, ...Object.values(doc.contentZones ?? {}), ...Object.values(doc.headerFooterParts ?? {})]) {
+      if (Array.isArray(elements)) formatElementTree(elements, options)
+    }
+    this.draw.setZone('main')
+    this.range.clear()
+    this.draw.setDocument(doc)
+    if (resetHistory) this.pushInitialHistory()
+    else this._historyManager?.push({ doc: cloneTree(doc), range: null, zone: this.draw.getZone() })
+    this.listener?.emit('documentSet', doc)
+    this.listener?.emit('contentChange')
+    this.listener?.emit('formatChange', this.getRangeStyle())
+    this.listener?.emit('abilityChange', this.getAbility())
+  }
+
+  commitPluginTransaction(action: (doc: IDocxDocumentMeta) => boolean | void): void {
+    const doc = cloneTree(this.draw.getDocument())
+    if (action(doc) === false) return
+    this.range.clear()
+    this.draw.setDocument(doc)
+    this._historyManager?.push({ doc: cloneTree(doc), range: null, zone: this.draw.getZone() })
+    this.listener?.emit('contentChange')
+    this.listener?.emit('formatChange', this.getRangeStyle())
+    this.listener?.emit('abilityChange', this.getAbility())
   }
 
   /** 提交变更并推送历史快照，同时通知调用方状态变更 */
@@ -126,7 +175,7 @@ export class CommandAdapt {
     this.draw.applyActiveDocument(doc)
     if (this._historyManager) {
       this._historyManager.push(
-        { doc: cloneTree(this.draw.getDocument()), range: this.range.getRange() },
+        { doc: cloneTree(this.draw.getDocument()), range: this.range.getRange(), zone: this.draw.getZone() },
         coalesceKey
       )
     }
@@ -173,6 +222,7 @@ export class CommandAdapt {
    * @param text 待插入的文本内容
    */
   insertText(text: string): void {
+    if (typeof text !== 'string' || !text) return
     if (this.deleteSelection()) {
       // 选区已删除，光标在原选区 start，继续插入 text
     }
@@ -193,7 +243,7 @@ export class CommandAdapt {
   }
 
   /** 删除当前选区内容（若已 collapsed 则不操作）。光标收缩到选区 start。返回是否实际删除。 */
-  deleteSelection(): boolean {
+  deleteSelection(commit = true): boolean {
     if (this.range.isCollapsed()) return false
     const ordered = this.range.getOrdered()
     if (!ordered) return false
@@ -220,8 +270,7 @@ export class CommandAdapt {
         const t = node as ITextElement
         t.value = t.value.slice(0, start.offset) + t.value.slice(end.offset)
         this.range.setCaret({ path: start.path.slice() as Path, offset: start.offset })
-        // 不可迁移：方法返回 boolean，且有多个 _commit 分支
-        this._commit(doc, 'text')
+        if (commit) this._commit(doc, 'text')
         return true
       }
       return false
@@ -237,6 +286,15 @@ export class CommandAdapt {
     const after = endNode.value.slice(end.offset)
     startNode.value = before + after
 
+    if (start.path.length === 1 && end.path.length === 1) {
+      const first = Number(start.path[0]), last = Number(end.path[0])
+      this.removeSectionBoundaries(doc, first + 1, last)
+      doc.elements.splice(first + 1, last - first)
+      this.range.setCaret({ path: [first], offset: start.offset })
+      if (commit) this._commit(doc, 'text')
+      return true
+    }
+
     const toDelete = runs.slice(startRunIdx + 1, endRunIdx + 1)
     const groups = new Map<IElement[], number[]>()
     for (const r of toDelete) {
@@ -250,8 +308,7 @@ export class CommandAdapt {
     }
 
     this.range.setCaret({ path: start.path.slice() as Path, offset: start.offset })
-    // 不可迁移：方法返回 boolean，且有多个 _commit 分支
-    this._commit(doc, 'text')
+    if (commit) this._commit(doc, 'text')
     return true
   }
 
@@ -324,7 +381,7 @@ export class CommandAdapt {
 
   /**
    * 向后删除一个字符（Backspace 行为）。若有选区则删除选区；否则删除光标前一个字符，
-   * 光标位于 run 起点时尝试与前一个 text run 合并。
+   * 列表起点先取消编号，其他 run 起点尝试与前一个 text run 合并。
    */
   deleteBackward(): void {
     if (this.deleteSelection()) return
@@ -333,6 +390,24 @@ export class CommandAdapt {
     const doc = this.draw.getActiveDocument()
     const node = getByPath(doc.elements, pos.path)
     if (!node) return
+    if (pos.offset === 0) {
+      const listPath = this.getListPath(doc.elements, pos.path)
+      if (listPath) {
+        const list = getByPath(doc.elements, listPath) as IListElement
+        const childIndex = Number(pos.path[listPath.length + 1])
+        const atStart = isSamePath(pos.path, listPath) || (
+          pos.path.length === listPath.length + 2 &&
+          pos.path[listPath.length] === 'valueList' &&
+          list.valueList.slice(0, childIndex).every(child =>
+            child.extension?.bookmarkMarker || (child.type === 'text' && child.value === '')
+          )
+        )
+        if (atStart) {
+          this.setList(null, null)
+          return
+        }
+      }
+    }
     if (node.type === 'text') {
       const t = node as ITextElement
       if (pos.offset > 0) {
@@ -346,6 +421,13 @@ export class CommandAdapt {
         const idx = pos.path[pos.path.length - 1] as number
         if (parent && idx > 0) {
           const prev = parent[idx - 1]
+          if (parent === doc.elements && prev && this.isSectionBoundary(prev)) {
+            this.removeSectionBoundaries(doc, idx - 1, idx - 1)
+            parent.splice(idx - 1, 1)
+            this.range.setCaret({ path: [idx - 1], offset: 0 })
+            this._commit(doc)
+            return
+          }
           if (prev && prev.type === 'text') {
             const p = prev as ITextElement
             const newOffset = p.value.length > 0 ? p.value.length - 1 : 0
@@ -375,7 +457,13 @@ export class CommandAdapt {
       const node = getByPath(doc.elements, pos.path)
       if (!node || node.type !== 'text') return false
       const t = node as ITextElement
-      if (pos.offset >= t.value.length) return false
+      if (pos.offset >= t.value.length) {
+        const next = Number(pos.path[0]) + 1
+        if (pos.path.length !== 1 || !doc.elements[next] || !this.isSectionBoundary(doc.elements[next])) return false
+        this.removeSectionBoundaries(doc, next, next)
+        doc.elements.splice(next, 1)
+        return
+      }
       t.value = t.value.slice(0, pos.offset) + t.value.slice(pos.offset + 1)
       return
     }, 'text')
@@ -820,39 +908,116 @@ export class CommandAdapt {
   /* -------------------- 标题 / 列表 -------------------- */
 
   /**
-   * 设置或取消当前段落的标题级别。level 为 null 时取消标题，否则将当前段落包装为对应级别的标题元素。
+   * 设置选区涉及段落的标题级别，null 表示正文。保留 runs、段落边界和选区。
    * @param level 标题级别，null 表示取消标题
    */
   setTitle(level: ITitleElement['level'] | null): void {
-    const pos = this.range.getFocus()
-    if (!pos) return
+    const selection = this.range.getRange()
+    const ordered = this.range.getOrdered()
+    if (!selection || !ordered) return
     const doc = this.draw.getActiveDocument()
-    const parent = getParentContainer(doc.elements, pos.path)
-    if (!parent) return
-    const idx = pos.path[pos.path.length - 1] as number
-    const cur = parent[idx]
-    if (!cur) return
-    if (level === null) {
-      if (cur.type === 'title') {
-        const t = cur as ITitleElement
-        const firstChild = (t.valueList ?? [])[0]
-        parent[idx] = firstChild ?? { type: 'text', value: '' } as IElement
-        // 不可迁移：多个 _commit 在不同分支
-        this._commit(doc)
-      }
-      return
+    const targets = new Map<IElement, { parent: IElement[]; start: number; end: number; path: Path }>()
+    const collect = (path: Path) => {
+      const titlePath = this.getTitlePath(doc.elements, path)
+      const targetPath = titlePath ?? path
+      const parent = getParentContainer(doc.elements, targetPath)
+      if (!parent) return
+      const index = targetPath[targetPath.length - 1] as number
+      const group = splitParagraphs(parent).find(g => index >= g.start && index < g.end)
+      if (!group || (group.kind !== 'normal' && group.kind !== 'title')) return
+      targets.set(parent[group.start], {
+        parent, start: group.start, end: group.end,
+        path: [...targetPath.slice(0, -1), group.start]
+      })
     }
-    if (cur.type === 'title') {
-      (cur as ITitleElement).level = level
-    } else if (cur.type === 'text') {
-      const wrap: ITitleElement = {
-        type: 'title', value: '', level,
-        valueList: [cloneTree(cur)]
-      }
-      parent[idx] = wrap
+    if (this.range.isCollapsed()) {
+      collect(selection.focus.path)
+    } else {
+      walkTree(doc.elements, (node, ctx) => {
+        if (node.type !== 'text' && node.type !== 'title') return
+        if (node.type === 'title' && (node as ITitleElement).valueList.length
+          && !isSamePath(ctx.path, ordered.start.path) && !isSamePath(ctx.path, ordered.end.path)) return
+        const fromStart = comparePath(ctx.path, ordered.start.path)
+        const fromEnd = comparePath(ctx.path, ordered.end.path)
+        if (fromStart >= 0 && (fromEnd < 0 || (fromEnd === 0 && ordered.end.offset > 0))) {
+          collect(ctx.path)
+        }
+      })
     }
-    // 不可迁移：多个 _commit 在不同分支
+    const anchorNode = getByPath(doc.elements, selection.anchor.path)
+    const focusNode = getByPath(doc.elements, selection.focus.path)
+    const replacements = new Map<IElement, IElement>()
+    const isTerminator = (node?: IElement) =>
+      node?.type === 'text' && /^[\u200B\uFEFF]+$/.test(node.value)
+    let changed = false
+    // Reverse document order keeps pending sibling indices valid after splicing.
+    for (const [node, target] of [...targets].sort((a, b) => comparePath(b[1].path, a[1].path))) {
+      const { parent, start, end } = target
+      if (node.type === 'title') {
+        const title = node as ITitleElement
+        if (title.level === level) continue
+        if (level !== null) {
+          title.level = level
+        } else {
+          const runs = title.valueList.length ? [...title.valueList] : [{ type: 'text', value: '' } as IElement]
+          replacements.set(title, runs[0])
+          const paragraphKeys = [
+            'rowFlex', 'paragraphFirstLineIndent', 'paragraphIndentLeft', 'paragraphIndentRight',
+            'paragraphSpacingBefore', 'paragraphSpacingAfter', 'lineHeight', 'lineHeightRule'
+          ] as const
+          for (const run of runs) {
+            for (const key of paragraphKeys) {
+              if (title[key] !== undefined) Object.assign(run, { [key]: title[key] })
+            }
+            delete run.paragraphStyleId
+          }
+          // A title is a block boundary; unwrapping must not merge adjacent paragraphs.
+          if (!isTerminator(runs[runs.length - 1])) runs.push({ type: 'text', value: '\u200B' })
+          const previous = splitParagraphs(parent).find(g => g.end === start)
+          if (previous?.kind === 'normal' && !isTerminator(parent[start - 1])) {
+            runs.unshift({ type: 'text', value: '\u200B' })
+          }
+          parent.splice(start, 1, ...runs)
+        }
+      } else {
+        if (level === null) continue
+        parent.splice(start, end - start, {
+          type: 'title', value: '', level, valueList: parent.slice(start, end)
+        })
+      }
+      changed = true
+    }
+    if (!changed) return
+    const restored = { anchor: selection.anchor, focus: selection.focus }
+    walkTree(doc.elements, (node, ctx) => {
+      if (node === (anchorNode && (replacements.get(anchorNode) ?? anchorNode))) {
+        restored.anchor = { path: ctx.path, offset: selection.anchor.offset }
+      }
+      if (node === (focusNode && (replacements.get(focusNode) ?? focusNode))) {
+        restored.focus = { path: ctx.path, offset: selection.focus.offset }
+      }
+    })
+    this.range.setRange(restored)
     this._commit(doc)
+  }
+
+  /** Resolve the heading container even when the caret is on one of its text runs. */
+  private getTitlePath(elements: IElement[], path: Path): Path | null {
+    for (let length = path.length; length > 0; length--) {
+      if (typeof path[length - 1] !== 'number') continue
+      const candidate = path.slice(0, length) as Path
+      if (getByPath(elements, candidate)?.type === 'title') return candidate
+    }
+    return null
+  }
+
+  private getListPath(elements: IElement[], path: Path): Path | null {
+    for (let length = path.length; length > 0; length--) {
+      if (typeof path[length - 1] !== 'number') continue
+      const candidate = path.slice(0, length) as Path
+      if (getByPath(elements, candidate)?.type === 'list') return candidate
+    }
+    return null
   }
 
   /**
@@ -860,30 +1025,63 @@ export class CommandAdapt {
    * @param type 列表类型名
    * @param style 列表样式
    */
-  setList(type: ListTypeName, style: string): void {
+  setList(type: ListTypeName | null, style: string | null): void {
     this.execute(doc => {
       const pos = this.range.getFocus()
       if (!pos) return false
-      const parent = getParentContainer(doc.elements, pos.path)
+      const path = this.getListPath(doc.elements, pos.path) ?? pos.path
+      const parent = getParentContainer(doc.elements, path)
       if (!parent) return false
-      const idx = pos.path[pos.path.length - 1] as number
+      const idx = path[path.length - 1] as number
       const cur = parent[idx]
       if (!cur) return false
+      if (cur.type === 'list' && (!type || !style || (cur.listType === type && cur.listStyle === style))) {
+        const valueList = (cur as IListElement).valueList
+        const children = valueList.length ? [...valueList] : [{ type: 'text', value: '' } as IElement]
+        const groups = splitParagraphs(parent)
+        const isTerminator = (element?: IElement) =>
+          element?.type === 'text' && /^[\u200B\uFEFF]+$/.test(element.value) && !element.extension?.bookmarkMarker
+        let leadingSeparator = 0
+        // Removing the list container must retain its paragraph boundaries.
+        if (groups.some(group => group.kind === 'normal' && group.end === idx) && !isTerminator(parent[idx - 1])) {
+          children.unshift({ type: 'text', value: '\u200B' })
+          leadingSeparator = 1
+        }
+        if (groups.some(group => group.kind === 'normal' && group.start === idx + 1) && !isTerminator(children[children.length - 1])) {
+          children.push({ type: 'text', value: '\u200B' })
+        }
+        parent.splice(idx, 1, ...children)
+        const childIndex = pos.path[path.length] === 'valueList' ? Number(pos.path[path.length + 1]) : 0
+        this.range.setCaret({ path: [...path.slice(0, -1), idx + leadingSeparator + childIndex, ...pos.path.slice(path.length + 2)] as Path, offset: pos.offset })
+        return
+      }
+      if (!type || !style) return false
+      let list: IListElement
       if (cur.type === 'list') {
-        const l = cur as IListElement
-        if (l.listType === type && l.listStyle === style) {
-          const firstChild = (l.valueList ?? [])[0]
-          parent[idx] = firstChild ?? { type: 'text', value: '' } as IElement
-        } else {
-          l.listType = type
-          l.listStyle = style
-        }
+        list = cur as IListElement
+        list.listType = type
+        list.listStyle = style
       } else if (cur.type === 'text') {
-        const wrap: IListElement = {
-          type: 'list', value: '', listType: type, listStyle: style, listLevel: 0,
-          valueList: [cloneTree(cur)]
+        list = { type: 'list', value: '', listType: type, listStyle: style, listLevel: 0, valueList: [cloneTree(cur)] }
+        parent[idx] = list
+        this.range.setCaret({ path: [...path, 'valueList', 0], offset: pos.offset })
+      } else return false
+      const bullet = type === 'ul' ? BULLET_STYLES.find(item => item.style === style) : undefined
+      const number = type === 'ol' ? NUMBER_STYLES.find(item => item.style === style) : undefined
+      const previous = list.listNumbering
+      delete list.listNumbering
+      if (bullet || number) {
+        list.listNumbering = {
+          numId: previous?.numId ?? list.listId ?? style,
+          abstractNumId: previous?.abstractNumId ?? style,
+          level: list.listLevel,
+          numFmt: number?.numFmt ?? 'bullet',
+          lvlText: number ? number.lvlText.replace('%1', `%${list.listLevel + 1}`) : bullet!.icon,
+          start: previous?.start ?? 1,
+          indentLeft: previous?.indentLeft ?? list.listIndent ?? 0,
+          indentHanging: previous?.indentHanging ?? list.listHanging ?? 0,
+          lvlJc: previous?.lvlJc ?? 'left'
         }
-        parent[idx] = wrap
       }
       return
     })
@@ -898,11 +1096,9 @@ export class CommandAdapt {
    * @param availableWidth 可用宽度，省略时取内容区宽度
    */
   insertTable(rows: number, cols: number, availableWidth?: number): void {
+    if (!Number.isInteger(rows) || !Number.isInteger(cols) || rows < 1 || cols < 1) return
+    this.deleteSelection(false)
     this.execute(doc => {
-      const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
-      const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
-      if (!parent) return false
-      const idx = (pos.path[pos.path.length - 1] as number) + 1
       const contentWidth = availableWidth ?? this.getContentWidth()
       const colWidth = contentWidth / cols
       const table: ITableElement = {
@@ -927,7 +1123,9 @@ export class CommandAdapt {
           }))
         }))
       }
-      parent.splice(idx, 0, table)
+      const path = this.insertBlockAtCaret(doc, table)
+      if (!path) return false
+      this.range.setCaret({ path: [...path, 'trList', 0, 'tdList', 0, 'value', 0], offset: 0 })
       return
     })
   }
@@ -1153,6 +1351,12 @@ export class CommandAdapt {
     })
   }
 
+  getCellProperties() {
+    const ctx = this.getTableContext()
+    const cell = ctx?.table.trList[ctx.trIndex]?.tdList[ctx.tdIndex]
+    return cell ? { verticalAlign: cell.verticalAlign ?? 'top', backgroundColor: cell.backgroundColor ?? '' } : null
+  }
+
   /** 设置当前单元格垂直对齐 */
   setCellVerticalAlign(align: VerticalAlign): void {
     this.execute(_doc => {
@@ -1240,18 +1444,132 @@ export class CommandAdapt {
    * @param width 宽度，当 src 为字符串时生效，默认 200
    * @param height 高度，当 src 为字符串时生效，默认 150
    */
-  insertImage(src: string | { value: string; width: number; height: number }, width?: number, height?: number): void {
+  insertImage(src: string | { value: string; width?: number; height?: number }, width?: number, height?: number): void {
+    this.deleteSelection(false)
     this.execute(doc => {
-      const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
       const imgSrc = typeof src === 'string' ? src : src.value
-      const imgW = typeof src === 'string' ? (width ?? 200) : src.width
-      const imgH = typeof src === 'string' ? (height ?? 150) : src.height
-      const img: IElement = { type: 'image', value: imgSrc, width: imgW, height: imgH } as unknown as IElement
-      const topLevelIndex = (pos.path[0] as number) ?? doc.elements.length
-      const idx = Math.min(topLevelIndex + 1, doc.elements.length)
-      doc.elements.splice(idx, 0, img)
+      const w = (typeof src === 'string' ? width : src.width) ?? 200
+      const h = (typeof src === 'string' ? height : src.height) ?? 150
+      const imgW = Number.isFinite(w) && w > 0 ? w : 200
+      const imgH = Number.isFinite(h) && h > 0 ? h : 150
+      const bounds = this.getImageInsertionBounds(doc)
+      const ratio = Math.min(1, bounds.width / imgW, bounds.height / imgH)
+      const img: IElement = { type: 'image', value: imgSrc, width: imgW * ratio, height: imgH * ratio } as unknown as IElement
+      const path = this.insertBlockAtCaret(doc, img)
+      if (!path) return false
+      const parent = getParentContainer(doc.elements, path)!
+      const idx = (path[path.length - 1] as number) + 1
+      if (parent[idx]?.type !== 'text') parent.splice(idx, 0, { type: 'text', value: '' } as IElement)
+      this.range.setCaret({ path: [...path.slice(0, -1), idx], offset: 0 })
       return
     })
+  }
+
+  /** 使用文档坐标限制新图片；单元格高度可增长，但不应超过一页内容区。 */
+  private getImageInsertionBounds(doc: IDocxDocumentMeta): { width: number; height: number } {
+    const opts = this.draw.getOptions()
+    const [mt, mr, mb, ml] = (opts.pageMargins as [number, number, number, number] | undefined)
+      ?? DEFAULT_EDITOR_OPTION.pageMargins
+    const zone = this.draw.getZone()
+    let width = Number(opts.pageWidth ?? DEFAULT_EDITOR_OPTION.pageWidth) - ml - mr
+    let height = zone === 'header' ? mt : zone === 'footer' ? mb
+      : Number(opts.pageHeight ?? DEFAULT_EDITOR_OPTION.pageHeight) - mt - mb
+    const path = this.range.getFocus()?.path ?? []
+    const cells = new Map<string, number>()
+    const collect = (blocks: BlockNode[]) => {
+      for (const block of blocks) {
+        if (block.kind !== 'table') continue
+        for (const row of block.rows) {
+          for (const cell of row.cells) {
+            cells.set(JSON.stringify(cell.cellPath), cell.rect.width)
+            collect(cell.content)
+          }
+        }
+      }
+    }
+    for (const page of this.draw.getLayout()?.pages ?? []) {
+      collect(zone === 'header' ? page.headerBlocks ?? [] : zone === 'footer' ? page.footerBlocks ?? [] : page.blocks)
+    }
+    for (let i = 0; i < path.length; i++) {
+      if (path[i] !== 'trList' || path[i + 2] !== 'tdList' || path[i + 4] !== 'value') continue
+      const table = getByPath(doc.elements, path.slice(0, i) as Path) as ITableElement
+      const ri = path[i + 1] as number
+      const ci = path[i + 3] as number
+      const td = table.trList[ri].tdList[ci]
+      let cellWidth = cells.get(JSON.stringify(path.slice(0, i + 4)))
+      if (cellWidth === undefined) {
+        // 尚未排版时使用与 layoutTable 一致的列宽、合并格占位规则。
+        let cols = table.colgroup.map(c => c.width || 0)
+        if (!cols.length || cols.every(v => v <= 0)) {
+          cols = (table.trList[0]?.tdList ?? []).flatMap(cell =>
+            Array.from({ length: cell.colspan || 1 }, () => (cell.width || 0) / (cell.colspan || 1)))
+        }
+        const total = cols.reduce((sum, v) => sum + v, 0)
+        if (total > width * 1.02) cols = cols.map(v => v * width / total)
+        else if (total <= 0) {
+          const count = Math.max(1, cols.length || (table.trList[0]?.tdList.length ?? 1))
+          cols = Array.from({ length: count }, () => width / count)
+        }
+        const occupied: boolean[][] = table.trList.map(() => [])
+        for (let r = 0; r <= ri; r++) {
+          let col = 0
+          for (let c = 0; c < table.trList[r].tdList.length; c++) {
+            while (col < cols.length && occupied[r][col]) col++
+            const cell = table.trList[r].tdList[c]
+            const span = Math.max(1, cell.colspan || 1)
+            if (r === ri && c === ci) cellWidth = cols.slice(col, col + span).reduce((sum, v) => sum + v, 0)
+            for (let rr = r + 1; rr < Math.min(r + Math.max(1, cell.rowspan || 1), table.trList.length); rr++) {
+              for (let cc = col; cc < Math.min(col + span, cols.length); cc++) occupied[rr][cc] = true
+            }
+            col += span
+          }
+        }
+      }
+      const [pt, pr, pb, pl] = td.padding
+      width = Math.min(width, Math.max(10, (cellWidth ?? width) - pl - pr))
+      height -= pt + pb
+    }
+    return { width: Math.max(1, width), height: Math.max(1, height) }
+  }
+
+  /** 在文本偏移处分段，并将块节点放入正文或单元格的块容器。 */
+  private insertBlockAtCaret(doc: IDocxDocumentMeta, block: IElement): Path | null {
+    const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
+    let path = pos.path.slice() as Path
+    let parent = getParentContainer(doc.elements, path)
+    if (!parent) return null
+    let idx = Math.min(path[path.length - 1] as number, parent.length)
+    const node = parent[idx]
+    if (node?.type === 'text') {
+      const offset = Math.max(0, Math.min(pos.offset, node.value.length))
+      if (offset > 0) {
+        if (offset < node.value.length) {
+          parent.splice(idx + 1, 0, { ...node, value: node.value.slice(offset) } as IElement)
+          node.value = node.value.slice(0, offset)
+        }
+        idx++
+      }
+    } else if (node) {
+      idx++
+    }
+    // valueList 是标题、列表和超链接的行内容器，不可直接容纳独立块。
+    while (path[path.length - 2] === 'valueList') {
+      const containerPath = path.slice(0, -2) as Path
+      const container = getByPath(doc.elements, containerPath)!
+      const outer = getParentContainer(doc.elements, containerPath)!
+      const containerIndex = containerPath[containerPath.length - 1] as number
+      const tail = parent.splice(idx)
+      const replacements: IElement[] = []
+      if (parent.length) replacements.push(container)
+      const insertionIndex = containerIndex + replacements.length
+      if (tail.length) replacements.push({ ...container, valueList: tail } as IElement)
+      outer.splice(containerIndex, 1, ...replacements)
+      parent = outer
+      path = containerPath
+      idx = insertionIndex
+    }
+    parent.splice(idx, 0, block)
+    return [...path.slice(0, -1), idx] as Path
   }
 
   /** 插入电子签名图片，固定 100×100 */
@@ -1287,6 +1605,7 @@ export class CommandAdapt {
       if (!el || el.type !== 'image') return false
       ;(el as unknown as { width: number; height: number }).width = Math.max(1, Math.round(width))
       ;(el as unknown as { width: number; height: number }).height = Math.max(1, Math.round(height))
+      updateImageLayout(el as IImageElement, { width: (el as IImageElement).width, height: (el as IImageElement).height })
       return
     })
   }
@@ -1319,6 +1638,7 @@ export class CommandAdapt {
     img.onload = () => {
       el.width = img.naturalWidth
       el.height = img.naturalHeight
+      updateImageLayout(el as IImageElement, { width: el.width, height: el.height })
       // 不可迁移：_commit 在异步 onload 回调内
       this._commit(doc)
     }
@@ -1362,6 +1682,7 @@ export class CommandAdapt {
           el.value = value
           el.width = img.naturalWidth
           el.height = img.naturalHeight
+          updateImageLayout(el as IImageElement, { width: el.width, height: el.height })
           // 不可迁移：_commit 在异步嵌套回调内
           this._commit(doc)
         }
@@ -1380,8 +1701,10 @@ export class CommandAdapt {
     this.execute(doc => {
       const el = getByPath(doc.elements, path) as unknown as { type: string; rotate?: number; width: number; height: number } | null
       if (!el || el.type !== 'image') return false
+      applyImageLayout(el as IImageElement)
       const cur = el.rotate ?? 0
       el.rotate = (cur + 90) % 360
+      updateImageLayout(el as IImageElement, { rotate: el.rotate })
       return
     })
   }
@@ -1390,16 +1713,30 @@ export class CommandAdapt {
    * 保存指定图片到本地（触发浏览器下载）。
    * @param path 图片路径
    */
-  saveImage(path: Path): void {
+  async saveImage(path: Path): Promise<void> {
     const doc = this.draw.getActiveDocument()
     const el = getByPath(doc.elements, path) as unknown as { type: string; value: string } | null
-    if (!el || el.type !== 'image' || !el.value) return
-    const a = document.createElement('a')
-    a.href = el.value
-    a.download = `image-${Date.now()}.png`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
+    if (!el || el.type !== 'image' || typeof el.value !== 'string') return
+    try {
+      const url = new URL(el.value, document.baseURI)
+      if (!['https:', 'http:', 'data:', 'blob:'].includes(url.protocol)) return
+      const imageType = /^image\/(png|jpeg|gif|webp|avif|bmp|x-icon|vnd\.microsoft\.icon)$/i
+      if (url.protocol === 'data:' && !imageType.test(url.pathname.split(/[;,]/, 1)[0])) return
+      const response = await fetch(url.href)
+      if (!response.ok) return
+      const blob = await response.blob()
+      if (!imageType.test(blob.type)) return
+      const href = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = href
+      a.download = `image-${Date.now()}`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(href), 1000)
+    } catch {
+      // 网络、CORS 或已释放的 blob URL 无法下载。
+    }
   }
 
   /**
@@ -1407,12 +1744,12 @@ export class CommandAdapt {
    * @param path 图片路径
    * @param mode 环绕模式：'block' | 'surround' | 'floatTop' | 'floatBottom'
    */
-  imageWrap(path: Path, mode: 'block' | 'surround' | 'floatTop' | 'floatBottom'): void {
+  imageWrap(path: Path, mode: 'block' | 'surround' | 'float-top' | 'float-bottom'): void {
     this.execute(doc => {
       const el = getByPath(doc.elements, path) as unknown as { type: string; imgDisplay?: string; rowFlex?: string } | null
       if (!el || el.type !== 'image') return false
       el.imgDisplay = mode
-      if (mode === 'surround' || mode === 'floatTop' || mode === 'floatBottom') el.rowFlex = 'center'
+      updateImageLayout(el as IImageElement, { wrap: mode })
       return
     })
   }
@@ -1498,7 +1835,33 @@ export class CommandAdapt {
 
   /** 插入连续分节符 */
   sectionBreakContinuous(): void {
-    this.insertSeparator({ dashArray: [0, 0] })
+    if (this.draw.getZone() !== 'main') return
+    this.execute(doc => {
+      const pos = this.range.getFocus()
+      if (!pos || pos.path.length !== 1) return false
+      const index = Number(pos.path[0])
+      const element = doc.elements[index]
+      if (!element) return false
+      if (!doc.sections) {
+        const options = this.draw.getOptions()
+        doc.sections = [{ pageWidth: doc.pageWidth ?? Number(options.pageWidth), pageHeight: doc.pageHeight ?? Number(options.pageHeight),
+          margins: [...(doc.margins ?? options.pageMargins as [number, number, number, number])],
+          headerDistance: 0, footerDistance: 0, titlePage: false, breakType: 'nextPage' }]
+      }
+      const breaks = new Set(['continuous', 'nextPage', 'evenPage', 'oddPage'])
+      const sectionIndex = doc.elements.slice(0, index).filter(el => el.type === 'pageBreak' && breaks.has(el.value)).length
+      const next = cloneTree(doc.sections[sectionIndex])
+      next.breakType = 'continuous'
+      doc.sections.splice(sectionIndex + 1, 0, next)
+      const tail: IElement[] = []
+      if (element.type === 'text') {
+        tail.push({ ...element, value: element.value.slice(pos.offset) })
+        element.value = element.value.slice(0, pos.offset)
+      }
+      doc.elements.splice(index + 1, 0, { type: 'pageBreak', value: 'continuous' }, ...tail)
+      this.range.setCaret({ path: [index + 2], offset: 0 })
+      return
+    })
   }
 
   /* -------------------- 内容读写 / 目录 -------------------- */
@@ -1507,50 +1870,28 @@ export class CommandAdapt {
    * 获取当前活动文档的全部元素。
    * @returns 文档元素数组
    */
-  getValue(): IElement[] {
-    return this.draw.getActiveDocument().elements
+  getValue(): IDocxDocumentMeta {
+    return cloneTree(this.draw.getDocument())
   }
 
   /**
    * 完整替换文档内容，并重置编辑区域到 main。
    * @param payload 文档内容，包含 main 及可选的 header/footer/comments
    */
-  setValue(payload: {
-    main: IElement[]
-    header?: IElement[]
-    footer?: IElement[]
-    comments?: unknown[]
-    styles?: Record<string, IParagraphStyle>
-    numbering?: Record<string, IListNumbering>
-    theme?: IDocxTheme
-  }): void {
-    // 重置 zone 到 main 并完整替换文档，清除旧数据
-    this.draw.setZone('main')
-    const prev = this.draw.getDocument()
-    this.draw.setDocument({
-      ...prev,
-      success: true,
-      elements: payload.main,
-      sections: {
-        header: payload.header ?? [],
-        footer: payload.footer ?? []
-      },
-      styles: payload.styles ?? prev.styles,
-      numbering: payload.numbering ?? prev.numbering,
-      theme: payload.theme ?? prev.theme,
-      comments: (payload.comments ?? []) as any
-    })
-    // 通知文档已替换，由 core 订阅后通知插件同步批注数据（反转原 setCommentHandler 耦合）
-    this.listener?.emit('documentSet', this.draw.getDocument())
-    if (this._historyManager) {
-      this._historyManager.push(
-        { doc: cloneTree(this.draw.getDocument()), range: this.range.getRange() },
-        undefined
-      )
+  setValue(payload: Omit<Partial<IDocxDocumentMeta>, 'comments'> & { main?: IElement[]; comments?: unknown[] }): void {
+    const { main, ...document } = payload
+    const elements = main ?? document.elements
+    if (!Array.isArray(elements)) throw new TypeError('文档 elements/main 必须为数组')
+    if (document.sections !== undefined && !Array.isArray(document.sections)) {
+      throw new TypeError('旧 sections 内容区必须显式迁移到 contentZones')
     }
-    this.listener?.emit('contentChange')
-    this.listener?.emit('formatChange', this.getRangeStyle())
-    this.listener?.emit('abilityChange', this.getAbility())
+    this.replaceDocument({
+      ...document,
+      success: true,
+      elements,
+      comments: payload.comments as IDocxDocumentMeta['comments']
+    })
+
   }
 
   /**
@@ -1882,6 +2223,7 @@ export class CommandAdapt {
         from = i + keyword.length
       }
     })
+    this.captureSearch()
     if (this._searchHits.length > 0) this._selectHit(0)
     return { count: this._searchHits.length }
   }
@@ -1893,7 +2235,9 @@ export class CommandAdapt {
    * @returns 是否还存在后续命中
    */
   replace(text: string, opts?: { index?: number }): boolean {
-    if (opts?.index != null && opts.index >= 0 && opts.index < this._searchHits.length) {
+    this.validateSearch()
+    if (opts?.index != null) {
+      if (!Number.isInteger(opts.index) || opts.index < 0 || opts.index >= this._searchHits.length) return false
       this._searchIdx = opts.index
     }
     if (this._searchIdx >= this._searchHits.length) return false
@@ -1908,9 +2252,10 @@ export class CommandAdapt {
         const h = this._searchHits[i]
         if (isSamePath(h.path, hit.path)) { h.start += delta; h.end += delta }
       }
-      // 不可迁移：方法返回 boolean
+      this.captureSearch()
       this._commit(doc)
     }
+    this.captureSearch()
     this._searchIdx++
     if (this._searchIdx < this._searchHits.length) {
       this._selectHit(this._searchIdx)
@@ -1924,7 +2269,7 @@ export class CommandAdapt {
    * @param idx 搜索结果索引
    */
   locateSearchResult(idx: number): void {
-
+    this.validateSearch()
     if (idx < 0 || idx >= this._searchHits.length) return
     this._searchIdx = idx
     this._selectHit(idx)
@@ -1935,6 +2280,7 @@ export class CommandAdapt {
    * @returns 匹配项数组，index 为命中序号，before/match/after 为上下文与匹配文本
    */
   getSearchMatches(): { index: number; before: string; match: string; after: string }[] {
+    this.validateSearch()
     const doc = this.draw.getActiveDocument()
     const PAD = 50
     const result: { index: number; before: string; match: string; after: string }[] = []
@@ -2048,7 +2394,7 @@ export class CommandAdapt {
     const bookmarks = doc.bookmarks ?? []
     if (bookmarks.some(b => b.name === payload.name)) return
     const collapsed = isSamePath(range.anchor.path, range.focus.path) && range.anchor.offset === range.focus.offset
-    bookmarks.push({ name: payload.name, range, collapsed })
+    bookmarks.push({ name: payload.name, range: cloneTree(range), collapsed })
     doc.bookmarks = bookmarks
     // 不可迁移：doc 来自 this.draw.getDocument() 而非 getActiveDocument()
     this._commit(doc)
@@ -2156,12 +2502,18 @@ export class CommandAdapt {
     if (!this._historyManager) return
     const current: HistorySnapshot = {
       doc: cloneTree(this.draw.getDocument()),
-      range: this.range.getRange()
+      range: this.range.getRange(),
+      zone: this.draw.getZone()
     }
     const prev = this._historyManager.undo(current)
     if (prev) {
-      this.draw.setDocument(prev.doc)
-      if (prev.range) this.range.setRange(prev.range)
+      this.range.clear()
+      this.draw.setZone(prev.zone ?? 'main')
+      this.draw.setDocument(cloneTree(prev.doc))
+      if (prev.range) this.range.setRange(cloneTree(prev.range))
+      else this.range.clear()
+      this.listener?.emit('documentSet', this.draw.getDocument())
+      this.listener?.emit('contentChange')
     }
     // 撤销后通知：选区样式变更 + 能力变更（canUndo/canRedo 可能变化）
     this.listener?.emit('formatChange', this.getRangeStyle())
@@ -2173,12 +2525,18 @@ export class CommandAdapt {
     if (!this._historyManager) return
     const current: HistorySnapshot = {
       doc: cloneTree(this.draw.getDocument()),
-      range: this.range.getRange()
+      range: this.range.getRange(),
+      zone: this.draw.getZone()
     }
     const next = this._historyManager.redo(current)
     if (next) {
-      this.draw.setDocument(next.doc)
-      if (next.range) this.range.setRange(next.range)
+      this.range.clear()
+      this.draw.setZone(next.zone ?? 'main')
+      this.draw.setDocument(cloneTree(next.doc))
+      if (next.range) this.range.setRange(cloneTree(next.range))
+      else this.range.clear()
+      this.listener?.emit('documentSet', this.draw.getDocument())
+      this.listener?.emit('contentChange')
     }
     // 重做后通知：选区样式变更 + 能力变更
     this.listener?.emit('formatChange', this.getRangeStyle())
@@ -2292,11 +2650,15 @@ export class CommandAdapt {
    */
   insertElementList(elements: IElement[]): void {
     if (!elements || elements.length === 0) return
+    if (elements.some(element => this.isSectionBoundary(element))) {
+      throw new TypeError('粘贴分节符必须通过 pasteFragment 同时传入 sections')
+    }
     this.deleteSelection()
     const doc = this.draw.getActiveDocument()
     const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
-    for (const el of elements) {
-      const cloned = cloneTree([el])[0]
+    const inserted = cloneTree(elements)
+    this.remapParagraphIdentities(inserted, doc.elements)
+    for (const cloned of inserted) {
       if (cloned.type === 'text') {
         const textEl = cloned as ITextElement
         const node = getByPath(doc.elements, pos.path)
@@ -2328,6 +2690,109 @@ export class CommandAdapt {
     this.range.setCaret({ path: pos.path.slice() as Path, offset: pos.offset })
     // 不可迁移：前置 deleteSelection() 可能已 commit
     this._commit(doc, 'text')
+  }
+
+  private remapParagraphIdentities(elements: IElement[], existing: IElement[]): void {
+    const used = new Set<string>()
+    const ids = new Map<string, string>()
+    walkTree(existing, node => { if (node.sourceParagraphId) used.add(node.sourceParagraphId) })
+    walkTree(elements, node => {
+      const id = node.sourceParagraphId
+      if (!id || ids.has(id)) return
+      let next = `${id}-copy`, suffix = 1
+      while (used.has(next)) next = `${id}-copy${suffix++}`
+      used.add(next)
+      ids.set(id, next)
+    })
+    walkTree(elements, node => {
+      if (node.sourceParagraphId) node.sourceParagraphId = ids.get(node.sourceParagraphId)!
+      const geometry = (node as IImageElement).imageLayout
+      if (geometry?.anchorParagraphId) {
+        // A drawing copied without its paragraph must not bind to the original.
+        geometry.anchorParagraphId = ids.get(geometry.anchorParagraphId) ?? `${geometry.anchorParagraphId}-detached`
+      }
+    })
+  }
+
+  private isSectionBoundary(element: IElement): boolean {
+    return element.type === 'pageBreak' && ['continuous', 'nextPage', 'evenPage', 'oddPage'].includes(element.value)
+  }
+
+  private removeSectionBoundaries(doc: IDocxDocumentMeta, start: number, end: number): void {
+    if (!doc.sections || this.draw.getZone() !== 'main') return
+    const index = doc.elements.slice(0, start).filter(element => this.isSectionBoundary(element)).length
+    const count = doc.elements.slice(start, end + 1).filter(element => this.isSectionBoundary(element)).length
+    // Removing a section break joins into the following section's formatting.
+    if (count) {
+      const survivor = doc.sections[index + count]
+      for (const key of ['headers', 'footers'] as const) {
+        const inherited = Object.assign({}, ...doc.sections.slice(0, index + count + 1).map(section => section[key]))
+        survivor[key] = inherited
+      }
+      doc.sections.splice(index, count)
+    }
+  }
+
+  copyFragment(): Partial<IDocxDocumentMeta> | null {
+    const ordered = this.range.getOrdered()
+    if (!ordered || this.range.isCollapsed() || ordered.start.path.length !== 1 || ordered.end.path.length !== 1) return null
+    const doc = this.draw.getActiveDocument()
+    const first = Number(ordered.start.path[0]), last = Number(ordered.end.path[0])
+    const elements = cloneTree(doc.elements.slice(first, last + 1))
+    if (elements[0]?.type !== 'text' || elements[elements.length - 1]?.type !== 'text') return null
+    if (first === last) elements[0].value = elements[0].value.slice(ordered.start.offset, ordered.end.offset)
+    else {
+      elements[0].value = elements[0].value.slice(ordered.start.offset)
+      elements[elements.length - 1].value = elements[elements.length - 1].value.slice(0, ordered.end.offset)
+    }
+    const index = doc.elements.slice(0, first).filter(element => this.isSectionBoundary(element)).length
+    const count = elements.filter(element => this.isSectionBoundary(element)).length
+    const sections = count ? cloneTree(doc.sections?.slice(index, index + count + 1)) : undefined
+    if (sections?.length) for (const key of ['headers', 'footers'] as const) {
+      sections[0][key] = Object.assign({}, ...doc.sections!.slice(0, index + 1).map(section => section[key]))
+    }
+    return { elements, sections, headerFooterParts: count ? cloneTree(doc.headerFooterParts) : undefined }
+  }
+
+  pasteFragment(fragment: Partial<IDocxDocumentMeta>): void {
+    if (!fragment.elements?.length || this.draw.getZone() !== 'main') return
+    const boundaries = fragment.elements.filter(element => this.isSectionBoundary(element)).length
+    if (boundaries && fragment.sections?.length !== boundaries + 1) throw new TypeError('剪贴板 sections 与分节符数量不一致')
+    const focus = this.range.getFocus()
+    if (focus && focus.path.length !== 1) return
+    this.deleteSelection(false)
+    const doc = this.draw.getActiveDocument()
+    const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
+    const index = Number(pos.path[0])
+    const node = doc.elements[index]
+    const elements = cloneTree(fragment.elements)
+    this.remapParagraphIdentities(elements, doc.elements)
+    const sectionIndex = doc.elements.slice(0, index).filter(element => this.isSectionBoundary(element)).length
+    if (boundaries) {
+      if (!doc.sections?.[sectionIndex]) throw new TypeError('目标文档缺少 sections')
+      const sections = cloneTree(fragment.sections!)
+      const parts = cloneTree(fragment.headerFooterParts ?? {})
+      doc.headerFooterParts ??= {}
+      for (const [id, content] of Object.entries(parts)) {
+        let target = id
+        let suffix = 1
+        while (doc.headerFooterParts[target] && JSON.stringify(doc.headerFooterParts[target]) !== JSON.stringify(content)) {
+          target = id.replace(/\.xml$/, '') + `-paste${suffix++}.xml`
+        }
+        doc.headerFooterParts[target] = content
+        for (const section of sections) for (const refs of [section.headers, section.footers]) {
+          if (refs) for (const key of Object.keys(refs) as (keyof typeof refs)[]) if (refs[key] === id) refs[key] = target
+        }
+      }
+      doc.sections.splice(sectionIndex, 0, ...sections.slice(0, boundaries))
+    }
+    const prefix = node?.type === 'text' ? [{ ...node, value: node.value.slice(0, pos.offset) }] : []
+    const suffix = node?.type === 'text' ? [{ ...node, value: node.value.slice(pos.offset) }] : []
+    doc.elements.splice(index, node?.type === 'text' ? 1 : 0, ...prefix, ...elements, ...suffix)
+    const caretIndex = index + prefix.length + elements.length - (suffix.length ? 0 : 1)
+    const caretNode = doc.elements[caretIndex]
+    this.range.setCaret({ path: [caretIndex], offset: suffix.length ? 0 : caretNode.type === 'text' ? caretNode.value.length : 0 })
+    this._commit(doc)
   }
 
   /* -------------------- 剪贴板 -------------------- */
@@ -2396,6 +2861,33 @@ export class CommandAdapt {
     })
   }
 
+  /** Normalize ruler positions to the layout engine's first-line/hanging model. */
+  setRulerIndent(first: number, left: number, right: number): void {
+    if (![first, left, right].every(Number.isFinite)) return
+    first = Math.max(0, first)
+    left = Math.max(0, left)
+    right = Math.max(0, right)
+    this.execute(doc => {
+      const pos = this.range.getFocus()
+      if (!pos) return false
+      const parent = getParentContainer(doc.elements, pos.path)
+      if (!parent) return false
+      const cursorIdx = pos.path[pos.path.length - 1] as number
+      const group = splitParagraphs(parent).find(g => cursorIdx >= g.start && cursorIdx < g.end)
+      if (!group) return false
+      const targets = group.block ? [group.block, ...group.runs] : group.runs
+      for (const target of targets) {
+        Object.assign(target, {
+          paragraphIndentLeft: left,
+          paragraphIndentRight: right,
+          paragraphFirstLineIndent: first - left,
+          indentHanging: undefined
+        })
+      }
+      return
+    })
+  }
+
   /* -------------------- 段落首行缩进 -------------------- */
 
   /**
@@ -2415,6 +2907,7 @@ export class CommandAdapt {
         const targets = g.block ? [g.block, ...g.runs] : g.runs
         for (const r of targets) {
           (r as unknown as Record<string, unknown>).paragraphFirstLineIndent = indentPx
+          delete (r as unknown as Record<string, unknown>).indentHanging
         }
         return
       }
@@ -2438,7 +2931,8 @@ export class CommandAdapt {
       if (cursorIdx < g.start || cursorIdx >= g.end) continue
       const target = g.block ?? g.runs[0]
       if (!target) return 0
-      return Number((target as unknown as Record<string, unknown>).paragraphFirstLineIndent ?? 0)
+      const attrs = target as unknown as Record<string, unknown>
+      return attrs.indentHanging != null ? -Number(attrs.indentHanging) : Number(attrs.paragraphFirstLineIndent ?? 0)
     }
     return 0
   }
@@ -2569,6 +3063,7 @@ export class CommandAdapt {
 
     /** 默认样式快照 */
     const defaultStyle: IRangeStyle = {
+      hasSelection: !this.range.isCollapsed(),
       type: null, bold: false, italic: false, underline: false, strikeout: false,
       doubleStrikeout: false, hidden: false, superscript: false, subscript: false,
       color: '', highlight: '', font: '', size: 0, level: null,
@@ -2602,7 +3097,10 @@ export class CommandAdapt {
       break
     }
 
+    const titlePath = this.getTitlePath(doc.elements, pos.path)
+    const title = titlePath ? getByPath(doc.elements, titlePath) as ITitleElement : null
     return {
+      hasSelection: !this.range.isCollapsed(),
       type: (el.type as string) ?? null,
       bold: !!el.bold,
       italic: !!el.italic,
@@ -2616,7 +3114,7 @@ export class CommandAdapt {
       highlight: (el.highlight as string) ?? '',
       font: (el.font as string) ?? '',
       size: Math.round(((el.size as number) ?? 0) * (72 / 96) * 2) / 2,
-      level: el.type === 'title' ? (el.level as string) ?? null : null,
+      level: title?.level ?? null,
       rowFlex: (paraEl.rowFlex as string) ?? 'left',
       lineHeight: (paraEl.lineHeight as number) ?? 1.5,
       lineHeightRule: (paraEl.lineHeightRule as string) ?? 'auto',
@@ -2750,7 +3248,7 @@ export class CommandAdapt {
   async exportDocx(payload: any): Promise<void> {
     const cb = this.draw.getOptions().exportCallback as ((data: any, opts?: any) => Promise<any>) | undefined
     if (cb) {
-      await cb(this.draw.getDocument(), payload)
+      await cb(toDocxExportDocument(this.draw.getDocument()), payload)
     }
   }
 
@@ -2774,45 +3272,28 @@ export class CommandAdapt {
   }
 
   /** 将当前选区内的元素标记为同一群组，返回 groupId 或 null。 */
-  setGroup(): string | null {
+  setGroup(update?: (doc: IDocxDocumentMeta, groupId: string) => void): string | null {
     const doc = this.draw.getActiveDocument()
     const ordered = this.range.getOrdered()
-    if (!ordered) return null
+    if (!ordered || this.range.isCollapsed()) return null
+    const adjusted = this.splitBoundaryRuns(doc, ordered.start, ordered.end)
+    const startRun = getByPath(doc.elements, adjusted.start.path)
+    const endRun = getByPath(doc.elements, adjusted.end.path)
+    const runs = this.collectRunsInRange(doc.elements, adjusted.start, adjusted.end).filter(run =>
+      run.value.length > 0 &&
+      (run !== startRun || adjusted.start.offset < run.value.length) &&
+      (run !== endRun || adjusted.end.offset > 0)
+    )
+    if (!runs.length) return null
+
     const groupId = `g_${Date.now()}`
-    const startPath = ordered.start.path
-    const endPath = ordered.end.path
-
-    // 顶层段落选区：对段落元素打 groupId
-    if (startPath.length === 1 && endPath.length === 1) {
-      const start = startPath[0] as number
-      const end = endPath[0] as number
-      for (let i = start; i <= end; i++) {
-        const el = doc.elements[i]
-        if (el) (el as unknown as Record<string, unknown>).groupId = groupId
-      }
-      // 不可迁移：方法返回 string|null，且在循环中 commit 后 return
-      this._commit(doc)
-      return groupId
+    for (const run of runs) {
+      run.groupIds = [...(run.groupIds ?? []), groupId]
     }
-
-    // inline 级选区/光标：对所在段落的 run 追加 groupIds
-    const pos = ordered.start
-    const parent = getParentContainer(doc.elements, pos.path)
-    if (!parent) return null
-    const cursorIdx = pos.path[pos.path.length - 1] as number
-    const groups = splitParagraphs(parent)
-    for (const g of groups) {
-      if (cursorIdx < g.start || cursorIdx >= g.end) continue
-      for (const r of g.runs) {
-        const any = r as unknown as Record<string, unknown>
-        const ids = (any.groupIds as string[] | undefined) ?? []
-        if (!ids.includes(groupId)) any.groupIds = [...ids, groupId]
-      }
-      // 不可迁移：方法返回 string|null，且在循环中 commit 后 return
-      this._commit(doc)
-      return groupId
-    }
-    return null
+    this.range.setRange({ anchor: adjusted.start, focus: adjusted.end })
+    update?.(this.draw.getDocument(), groupId)
+    this._commit(doc)
+    return groupId
   }
 
   /**
@@ -2832,6 +3313,90 @@ export class CommandAdapt {
 
   /* -------------------- 表格边框 -------------------- */
 
+  private tableBorderSides(table: ITableElement) {
+    const sides: { cell: ITd; side: 'top' | 'right' | 'bottom' | 'left'; external: boolean; index: number }[] = []
+    const occupied: number[] = []
+    table.trList.forEach((row, r) => {
+      let col = 0
+      row.tdList.forEach(cell => {
+        if (cell.merged) return
+        while ((occupied[col] ?? 0) > r) col++
+        const span = Math.max(1, cell.colspan || 1)
+        const rowSpan = Math.max(1, cell.rowspan || 1)
+        const external = [r === 0, col + span >= table.colgroup.length, r + rowSpan >= table.trList.length, col === 0]
+        ;(['top', 'right', 'bottom', 'left'] as const).forEach((side, index) => {
+          sides.push({ cell, side, external: external[index], index })
+        })
+        for (let c = col; c < col + span; c++) occupied[c] = r + rowSpan
+        col += span
+      })
+    })
+    return sides
+  }
+
+  private matchesBorderPreset(type: TableBorderPreset, side: 'top' | 'right' | 'bottom' | 'left', external: boolean): boolean {
+    if (type === 'all') return true
+    if (type === 'outside') return external
+    if (type === 'inside') return !external
+    if (type === 'inside-horizontal') return !external && (side === 'top' || side === 'bottom')
+    if (type === 'inside-vertical') return !external && (side === 'left' || side === 'right')
+    return external && type === side
+  }
+
+  getTableBorders(): { type?: TableBorderPreset; color?: string; width?: number; externalWidth?: number } | null {
+    const pos = this.range.getFocus()
+    const table = pos && this._findEnclosingTable(this.draw.getActiveDocument().elements, pos.path)
+    if (!table) return null
+    const sides = this.tableBorderSides(table)
+    const visible = (s: typeof sides[number]) => s.cell.borderTypes?.[s.index] !== 0 &&
+      !!s.cell.borderStyle?.[s.side] && s.cell.borderStyle[s.side].style !== 'none' && s.cell.borderStyle[s.side].width > 0
+    const uniform = <T>(values: T[]): T | undefined => values.length && values.every(v => v === values[0]) ? values[0] : undefined
+    const shown = sides.filter(visible)
+    return {
+      type: shown.length === 0 ? 'none' : shown.length === sides.length ? 'all'
+        : Object.values(TableBorder).find(type => sides.every(s => visible(s) === this.matchesBorderPreset(type, s.side, s.external))),
+      color: uniform(shown.map(s => s.cell.borderStyle[s.side].color.replace(/^#([\da-f])([\da-f])([\da-f])$/i, '#$1$1$2$2$3$3'))),
+      width: uniform(shown.filter(s => !s.external).map(s => s.cell.borderStyle[s.side].width)),
+      externalWidth: uniform(shown.filter(s => s.external).map(s => s.cell.borderStyle[s.side].width))
+    }
+  }
+
+  setTableBorders(patch: { type?: TableBorderPreset; color?: string; width?: number; externalWidth?: number }): void {
+    if (patch.type !== undefined && !Object.values(TableBorder).includes(patch.type)) return
+    if (!Object.values(patch).some(v => v !== undefined)) return
+    this.execute(doc => {
+      const pos = this.range.getFocus()
+      const table = pos && this._findEnclosingTable(doc.elements, pos.path)
+      if (!table) return false
+      for (const { cell, side, external, index } of this.tableBorderSides(table)) {
+        const previous = cell.borderStyle?.[side]
+        const border = { ...(previous ?? { width: 1, color: '#000000', style: 'solid' as const }) }
+        if (patch.type !== undefined) {
+          const show = this.matchesBorderPreset(patch.type, side, external)
+          border.style = show ? (border.style === 'none' ? 'solid' : border.style) : 'none'
+          if (show && border.width === 0) border.width = 1
+          if (cell.borderTypes) cell.borderTypes[index] = show ? 1 : 0
+          border.officeType = !show ? 'nil' : previous?.style !== 'none' && previous?.officeType && !['nil', 'none'].includes(previous.officeType)
+            ? previous.officeType : border.style === 'solid' ? 'single' : border.style
+          border.sizeEighthPoints = Math.round(border.width * 6)
+        }
+        if (patch.color !== undefined) border.color = patch.color
+        const width = external ? patch.externalWidth : patch.width
+        if (width !== undefined && Number.isFinite(width) && width >= 0) {
+          border.width = width
+          border.sizeEighthPoints = Math.round(width * 6)
+          if (width === 0) {
+            border.style = 'none'
+            border.officeType = 'nil'
+          }
+        }
+        border.source = 'cell'
+        cell.borderStyle = { ...cell.borderStyle, [side]: border }
+      }
+      return
+    })
+  }
+
   /**
    * 设置当前光标所在表格的边框类型（none/outside/all 等）。
    * @param type 边框类型字符串
@@ -2843,16 +3408,8 @@ export class CommandAdapt {
       : t === 'outside' || t === 'external' || t === 'box' ? 'outside'
       : t === 'all' || t === 'full' || t === '' ? 'all'
       : t
-    this.execute(doc => {
-      const pos = this.range.getFocus()
-      if (!pos) return false
-      const table = this._findEnclosingTable(doc.elements, pos.path)
-      if (!table) return false
-      const t2 = table as unknown as { border?: Record<string, unknown> }
-      if (!t2.border) t2.border = {}
-      t2.border.style = resolved
-      return
-    })
+    const preset = Object.values(TableBorder).find(value => value === resolved)
+    if (preset) this.setTableBorders({ type: preset })
   }
 
   /**
@@ -2860,16 +3417,7 @@ export class CommandAdapt {
    * @param color 颜色值
    */
   setTableBorderColor(color: string): void {
-    this.execute(doc => {
-      const pos = this.range.getFocus()
-      if (!pos) return false
-      const table = this._findEnclosingTable(doc.elements, pos.path)
-      if (!table) return false
-      const t = table as unknown as { border?: Record<string, unknown> }
-      if (!t.border) t.border = {}
-      t.border.color = color
-      return
-    })
+    this.setTableBorders({ color })
   }
 
   /**
@@ -2877,16 +3425,7 @@ export class CommandAdapt {
    * @param width 宽度数值
    */
   setTableBorderWidth(width: number): void {
-    this.execute(doc => {
-      const pos = this.range.getFocus()
-      if (!pos) return false
-      const table = this._findEnclosingTable(doc.elements, pos.path)
-      if (!table) return false
-      const t = table as unknown as { border?: Record<string, unknown> }
-      if (!t.border) t.border = {}
-      t.border.width = width
-      return
-    })
+    this.setTableBorders({ width, externalWidth: width })
   }
 
   /**
@@ -2894,16 +3433,7 @@ export class CommandAdapt {
    * @param width 宽度数值
    */
   setTableBorderExternalWidth(width: number): void {
-    this.execute(doc => {
-      const pos = this.range.getFocus()
-      if (!pos) return false
-      const table = this._findEnclosingTable(doc.elements, pos.path)
-      if (!table) return false
-      const t = table as unknown as { border?: Record<string, unknown> }
-      if (!t.border) t.border = {}
-      t.border.externalWidth = width
-      return
-    })
+    this.setTableBorders({ externalWidth: width })
   }
 
   /**

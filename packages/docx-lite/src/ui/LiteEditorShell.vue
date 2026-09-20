@@ -864,4 +864,5 @@ defineExpose<LiteEditorShellExposed>({
 })
 </script>
 
+<style src="@vervedoc/design/icons.css"></style>
 <style src="../object/word-editor.css"></style>

@@ -24,7 +24,7 @@
       <a-popover placement="bottom" :overlayStyle="{ width: '260px' }" trigger="click" v-model:open="tablePopoverVisible">
         <VdRibbonButton icon="table" text="表格" title="插入表格" size="large" has-arrow />
         <template #content>
-          <a-card size="small" class="ribbon-popover-card" :bordered="false" :bodyStyle="{ padding: '8px' }">
+          <VdCard size="small" class="ribbon-popover-card" :bordered="false" :bodyStyle="{ padding: '8px' }">
             <div class="table-selector">
               <div class="table-title">插入表格</div>
               <div class="table-grid" @mouseleave="hoverCell = { r: -1, c: -1 }">
@@ -35,7 +35,7 @@
               <div class="table-info">{{ hoverCell.r >= 0 ? `${hoverCell.r + 1} × ${hoverCell.c + 1}` : '选择大小' }}</div>
               <button class="table-more-btn" @click="handleOpenInsertTableDialog">更多选项...</button>
             </div>
-          </a-card>
+          </VdCard>
         </template>
       </a-popover>
     </VdRibbonGroup>
@@ -79,13 +79,13 @@
       <a-popover placement="bottom" :overlayStyle="{ width: '220px' }" trigger="click" v-model:open="separatorPopoverVisible">
         <VdRibbonButton icon="separator-horizontal-line" text="分割线" title="分割线" size="large" has-arrow />
         <template #content>
-          <a-card size="small" class="ribbon-popover-card" :bordered="false" :bodyStyle="{ padding: '8px' }">
+          <VdCard size="small" class="ribbon-popover-card" :bordered="false" :bodyStyle="{ padding: '8px' }">
             <div class="separator-list">
               <div class="separator-item" v-for="sep in SEPARATOR_STYLES" :key="sep.name" @click="handleInsertSeparator(sep)">
                 <div class="separator-preview" :style="getSeparatorStyle(sep)"></div>
               </div>
             </div>
-          </a-card>
+          </VdCard>
         </template>
       </a-popover>
     </VdRibbonGroup>
@@ -102,7 +102,7 @@
 </template>
 
 <script setup lang="ts">
-import { VdRibbonButton, VdRibbonGroup, VdIcon } from '@vervedoc/ui'
+import { VdRibbonButton, VdRibbonGroup, VdIcon, VdCard } from '@vervedoc/ui'
 import { ref } from 'vue'
 
 import { SEPARATOR_STYLES } from '@vervedoc/core'

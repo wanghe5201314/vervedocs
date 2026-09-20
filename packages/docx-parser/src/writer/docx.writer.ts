@@ -1,5 +1,5 @@
-import type { IEditorData, IElement } from '@vervedoc/docx-editor-schema'
-import type { IDocxExportOptions, IDocxExportResult } from '../contract'
+import type { IDocxDocumentMeta, IElement } from '@vervedoc/docx-editor-schema'
+import type { IDocxExportOptions, IDocxExportResult, IEditorData } from '../contract'
 
 function base64ToArrayBuffer(base64: string): ArrayBuffer {
   const binaryString = atob(base64.replace(/^data:[^;]+;base64,/, ''))
@@ -10,8 +10,9 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
   return bytes.buffer
 }
 
-function normalizeMainElements(data: IEditorData | IElement[]): IElement[] {
+function normalizeMainElements(data: IDocxDocumentMeta | IEditorData | IElement[]): IElement[] {
   if (Array.isArray(data)) return data
+  if ('elements' in data) return data.elements
   if (data && typeof data === 'object' && Array.isArray((data as IEditorData).main)) {
     return (data as IEditorData).main || []
   }
@@ -22,22 +23,29 @@ function normalizeMainElements(data: IEditorData | IElement[]): IElement[] {
  * 将编辑器 JSON（IElement[] / IEditorData）写成本地 .docx ArrayBuffer
  */
 export async function writeDocx(
-  data: IEditorData | IElement[],
+  data: IDocxDocumentMeta | IEditorData | IElement[],
   options?: IDocxExportOptions
 ): Promise<IDocxExportResult> {
   try {
-    const { Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, BorderStyle, BookmarkStart, BookmarkEnd } =
+    const { Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, BorderStyle, BookmarkStart, BookmarkEnd, Header, Footer } =
       await import('docx')
 
-    const children: any[] = []
-    const mainData = normalizeMainElements(data)
     const defaultSize = options?.defaultSize ?? 10.5
     const defaultFont = options?.defaultFont || 'SimSun'
-    let currentParagraph: any[] = []
     let bookmarkLinkId = 1
     const bookmarkLinkIdMap = new Map<string, number>()
-
-    for (const element of mainData) {
+    function convertElements(elements: IElement[]): any[] {
+    const children: any[] = []
+    let currentParagraph: any[] = []
+    for (const element of elements) {
+      if ('valueList' in element && Array.isArray(element.valueList)) {
+        if (currentParagraph.length) {
+          children.push(new Paragraph({ children: currentParagraph }))
+          currentParagraph = []
+        }
+        children.push(...convertElements(element.valueList))
+        continue
+      }
       const marker =
         (element as any)?.extension && typeof (element as any).extension === 'object'
           ? (element as any).extension.bookmarkMarker
@@ -71,8 +79,8 @@ export async function writeDocx(
         }
         try {
           const imageData = base64ToArrayBuffer(String(element.value))
-          const width = element.width || 200
-          const height = element.height || 200
+          const width = Number(element.width) || 200
+          const height = Number(element.height) || 200
           children.push(
             new Paragraph({
               children: [
@@ -200,8 +208,8 @@ export async function writeDocx(
       } else if (element.value) {
         const textRunOptions: any = {
           text: element.value,
-          bold: element.bold,
-          italics: element.italic,
+          bold: (element as any).bold,
+          italics: (element as any).italic,
           size: ((element as any).size || defaultSize) * 2,
           font: String((element as any).font || defaultFont).split(',')[0] || defaultFont,
           color: typeof (element as any).color === 'string' ? (element as any).color.replace('#', '') : undefined,
@@ -228,7 +236,14 @@ export async function writeDocx(
       children.push(new Paragraph({ children: currentParagraph }))
     }
 
-    const doc = new Document({ sections: [{ children }] })
+    return children
+    }
+    const sections = Array.isArray(data) ? undefined : 'elements' in data ? data.sections : data
+    const doc = new Document({ sections: [{
+      children: convertElements(normalizeMainElements(data)),
+      headers: sections?.header?.length ? { default: new Header({ children: convertElements(sections.header) }) } : undefined,
+      footers: sections?.footer?.length ? { default: new Footer({ children: convertElements(sections.footer) }) } : undefined
+    }] })
     const blob = await Packer.toBlob(doc)
     const arrayBuffer = await blob.arrayBuffer()
     return { success: true, data: arrayBuffer }

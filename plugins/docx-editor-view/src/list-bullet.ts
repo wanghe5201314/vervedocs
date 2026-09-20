@@ -139,6 +139,11 @@ export function formatCounter(num: number, numFmt: string): string {
   switch (numFmt) {
     case 'decimal':                    return String(num)
     case 'decimalZero':                return toDecimalZero(num)
+    case 'decimalEnclosedCircle':
+      if (num >= 1 && num <= 20) return String.fromCodePoint(0x2460 + num - 1)
+      if (num >= 21 && num <= 35) return String.fromCodePoint(0x3251 + num - 21)
+      if (num >= 36 && num <= 50) return String.fromCodePoint(0x32B1 + num - 36)
+      return String(num)
     case 'lowerLetter':                return toLetter(num, false)
     case 'upperLetter':                return toLetter(num, true)
     case 'lowerRoman':                 return toRoman(num, false)

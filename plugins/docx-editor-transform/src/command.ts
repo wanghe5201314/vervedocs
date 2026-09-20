@@ -3,7 +3,7 @@
  */
 
 import type { CommandAdapt } from './command-adapt'
-import type { IElement, Path, IAutoTocResult, IBookmark, IEditorOption, IRange, IParagraphStyle, IListNumbering, IDocxTheme } from '@vervedoc/docx-editor-schema'
+import type { IElement, Path, IAutoTocResult, IBookmark, IEditorOption, IRange, IDocxDocumentMeta } from '@vervedoc/docx-editor-schema'
 import type { IRangeStyle, IEditorAbility } from '@vervedoc/docx-editor-state'
 
 /**
@@ -220,7 +220,7 @@ export class Command {
    * @param w 宽度，可选
    * @param h 高度，可选
    */
-  executeInsertImage(src: string | { value: string; width: number; height: number }, w?: number, h?: number): void { this.adapt.insertImage(src, w, h) }
+  executeInsertImage(src: string | { value: string; width?: number; height?: number }, w?: number, h?: number): void { this.adapt.insertImage(src, w, h) }
   /**
    * 插入签名图片。
    * @param dataUrl 签名图片的 data URL
@@ -273,13 +273,13 @@ export class Command {
    * 保存图片。
    * @param path 图片路径
    */
-  executeSaveImage(path: Path): void { this.adapt.saveImage(path) }
+  executeSaveImage(path: Path): Promise<void> { return this.adapt.saveImage(path) }
   /**
    * 设置图片环绕方式。
    * @param path 图片路径
    * @param mode 环绕模式：'block' | 'surround' | 'floatTop' | 'floatBottom'
    */
-  executeImageWrap(path: Path, mode: 'block' | 'surround' | 'floatTop' | 'floatBottom'): void { this.adapt.imageWrap(path, mode) }
+  executeImageWrap(path: Path, mode: 'block' | 'surround' | 'float-top' | 'float-bottom'): void { this.adapt.imageWrap(path, mode) }
   /**
    * 插入分页符。
    */
@@ -440,12 +440,12 @@ export class Command {
    * 获取文档全部元素值。
    * @returns 文档元素数组
    */
-  getValue(): IElement[] { return this.adapt.getValue() }
+  getValue(): IDocxDocumentMeta { return this.adapt.getValue() }
   /**
    * 设置文档内容。
    * @param payload 文档内容，包含 main 及可选的 header/footer/comments
    */
-  executeSetValue(payload: { main: IElement[]; header?: IElement[]; footer?: IElement[]; comments?: unknown[]; styles?: Record<string, IParagraphStyle>; numbering?: Record<string, IListNumbering>; theme?: IDocxTheme }): void { this.adapt.setValue(payload) }
+  executeSetValue(payload: Parameters<CommandAdapt['setValue']>[0]): void { this.adapt.setValue(payload) }
   /**
    * 获取字数统计。
    * @returns 字数数值
@@ -597,6 +597,10 @@ export class Command {
    * @param indentPx 缩进像素值
    */
   executeSetFirstLineIndent(indentPx: number): void { this.adapt.setParagraphFirstLineIndent(indentPx) }
+  /** Apply ruler handle positions as one paragraph-format transaction. */
+  executeSetRulerIndent(first: number, left: number, right: number): void {
+    this.adapt.setRulerIndent(first, left, right)
+  }
   /**
    * 获取首行缩进值。
    * @returns 首行缩进像素值
@@ -682,7 +686,7 @@ export class Command {
   /**
    * 设置群组，返回 groupId 或 null。
    */
-  executeSetGroup(): string | null { return this.adapt.setGroup() }
+  executeSetGroup(update?: Parameters<CommandAdapt['setGroup']>[0]): string | null { return this.adapt.setGroup(update) }
   /**
    * 定位到指定群组。
    * @param id 群组 ID
@@ -693,6 +697,9 @@ export class Command {
    * @param type 边框类型字符串
    */
   executeSetTableBorderType(type: string): void { this.adapt.setTableBorderType(type) }
+  getCellProperties() { return this.adapt.getCellProperties() }
+  getTableBorders() { return this.adapt.getTableBorders() }
+  executeSetTableBorders(patch: Parameters<CommandAdapt['setTableBorders']>[0]): void { this.adapt.setTableBorders(patch) }
   /**
    * 设置表格边框颜色。
    * @param color 颜色值

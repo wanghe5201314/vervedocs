@@ -1,4 +1,10 @@
-import type { IEditorData, IElement } from '@vervedoc/docx-editor-schema'
+import type { IElement } from '@vervedoc/docx-editor-schema'
+
+export interface IEditorData {
+  main: IElement[]
+  header?: IElement[]
+  footer?: IElement[]
+}
 import type { IDocxParseOptions, IDocxParseResult, DocxCommentMeta } from './parser/types'
 
 /** 与 @vervedoc/core DocxImportCallback 同构 */
@@ -19,9 +25,6 @@ export interface IDocxExportOptions {
 }
 
 /** 与 @vervedoc/core DocxExportCallback 同构 */
-export type DocxExportCallback = (
-  data: IEditorData | IElement[],
-  options?: IDocxExportOptions
-) => Promise<IDocxExportResult>
+export type { DocxExportCallback } from '@vervedoc/docx-editor-schema'
 
-export type { IDocxParseOptions, IDocxParseResult, DocxCommentMeta, IEditorData, IElement }
+export type { IDocxParseOptions, IDocxParseResult, DocxCommentMeta, IElement }

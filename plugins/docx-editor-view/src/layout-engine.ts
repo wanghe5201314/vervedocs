@@ -12,11 +12,13 @@
 
 import type {
   IElement,
+  IImageElement,
+  IDocxDocumentMeta,
   IListElement,
   ITableElement,
   Path
 } from '@vervedoc/docx-editor-schema'
-import { splitParagraphs, FONT_FAMILY_CSS } from '@vervedoc/docx-editor-schema'
+import { splitParagraphs, FONT_FAMILY_CSS, resolveHeaderFooterPart } from '@vervedoc/docx-editor-schema'
 import type {
   DocumentLayout, PageLayout, BlockNode, ParagraphBlock,
   ImageBlock, PageBreakBlock, SeparatorBlock, TableBlock, TableRowLayout, TableCellLayout,
@@ -60,6 +62,7 @@ interface ParagraphInput {
   parentPath: Path
   availableWidth: number
   runStartIndex?: number
+  exclusions?: { rect: Rect; side: string; topBottom: boolean }[]
 }
 
 interface ParagraphCache {
@@ -82,6 +85,8 @@ export class LayoutEngine {
   private paragraphCache = new Map<string, ParagraphCache>()
   private nextParagraphCache = new Map<string, ParagraphCache>()
   private layoutZone = 'main'
+  private diagnostics: NonNullable<DocumentLayout['diagnostics']> = []
+  private paragraphInputs = new WeakMap<ParagraphBlock, ParagraphInput>()
 
   /**
    * 创建排版引擎。
@@ -106,17 +111,85 @@ export class LayoutEngine {
    * 顶层入口：把 elements 排版成分页 layout。
    * headerElements / footerElements 为页眉/页脚内容，每页都会渲染一份。
    */
-  layout(elements: IElement[], headerElements?: IElement[], footerElements?: IElement[]): DocumentLayout {
+  layout(elements: IElement[], headerElements?: IElement[], footerElements?: IElement[], document?: IDocxDocumentMeta): DocumentLayout {
     this.counters.clear()
+    this.diagnostics = []
     this.nextParagraphCache = new Map()
     this.layoutZone = 'main'
-    const { pageWidth, pageHeight, pageMargins, pageGap } = this.opts
-    const [mt, mr, mb, ml] = pageMargins
-    const contentWidth = pageWidth - ml - mr
-    const contentHeight = pageHeight - mt - mb
-
-    // 生成顶层 block 列表（rect.y 相对父容器，需要重排以分页）
-    const rawBlocks = this.layoutBlocks(elements, [], contentWidth)
+    const { pageGap } = this.opts
+    let sectionIndex = 0
+    let sectionFirstPage = 0
+    let pageWidth = this.opts.pageWidth
+    let pageHeight = this.opts.pageHeight
+    let [mt, mr, mb, ml] = this.opts.pageMargins
+    let contentWidth = pageWidth - ml - mr
+    let contentHeight = pageHeight - mt - mb
+    const setSection = (index: number) => {
+      const section = document?.sections?.[index]
+      if (section) {
+        if (section.pageWidth === undefined || section.pageHeight === undefined || !section.margins) {
+          throw new TypeError(`Java sections[${index}] 缺少页面尺寸或页边距`)
+        }
+        pageWidth = section.pageWidth
+        pageHeight = section.pageHeight
+        ;[mt, mr, mb, ml] = section.margins
+      } else if (document && !document.sections) {
+        pageWidth = document.pageWidth ?? this.opts.pageWidth
+        pageHeight = document.pageHeight ?? this.opts.pageHeight
+        ;[mt, mr, mb, ml] = document.margins ?? this.opts.pageMargins
+      }
+      contentWidth = pageWidth - ml - mr
+      contentHeight = pageHeight - mt - mb
+    }
+    setSection(0)
+    const sectionBreaks = new Set(['continuous', 'nextPage', 'evenPage', 'oddPage'])
+    const sectionWidths = document?.sections?.map((section, index) => {
+      if (section.pageWidth === undefined || section.pageHeight === undefined || !section.margins) throw new TypeError(`Java sections[${index}] 缺少页面尺寸或页边距`)
+      return section.pageWidth - section.margins[1] - section.margins[3]
+    })
+    const columnGroups = new Map<string, { widths: number[]; gap: number }>()
+    let columnSection = 0
+    for (const element of elements) {
+      const data = element as IElement & { columnId?: string; columnCount?: number; columnWidths?: number[]; columnGap?: number }
+      if (data.columnId && data.columnCount) {
+        const gap = data.columnGap ?? 0
+        const width = sectionWidths?.[columnSection] ?? contentWidth
+        columnGroups.set(data.columnId, { gap, widths: data.columnWidths ?? Array(data.columnCount).fill((width - gap * (data.columnCount - 1)) / data.columnCount) })
+      }
+      if (element.type === 'pageBreak' && sectionBreaks.has(element.value)) columnSection++
+    }
+    const rawBlocks = this.layoutBlocks(elements, [], contentWidth, sectionWidths)
+    for (let index = 0; index < rawBlocks.length; index++) {
+      const block = rawBlocks[index]
+      if (block.kind !== 'paragraph') continue
+      const input = this.paragraphInputs.get(block)!
+      const columnId = input.runs.find(run => (run as Record<string, unknown>).columnId)?.columnId as string | undefined
+      const columns = columnId ? columnGroups.get(columnId) : undefined
+      if (columns) rawBlocks[index] = this.layoutParagraph({ ...input, availableWidth: columns.widths[0] })
+    }
+    const anchorParagraphs = new Map<string, ParagraphBlock>()
+    for (const block of rawBlocks) {
+      if (block.kind !== 'paragraph') continue
+      for (const run of this.paragraphInputs.get(block)?.runs ?? []) {
+        if (run.sourceParagraphId && !anchorParagraphs.has(run.sourceParagraphId)) anchorParagraphs.set(run.sourceParagraphId, block)
+      }
+    }
+    // Schedule floating drawings with their Java-identified paragraph, never an adjacent run.
+    const attachedImages = new Map<ParagraphBlock, ImageBlock[]>()
+    for (let index = rawBlocks.length - 1; index >= 0; index--) {
+      const block = rawBlocks[index]
+      if (block.kind !== 'image') continue
+      const id = (block.block as IImageElement).imageLayout?.anchorParagraphId
+      const anchor = id ? anchorParagraphs.get(id) : undefined
+      if (!anchor) continue
+      attachedImages.set(anchor, [block, ...(attachedImages.get(anchor) ?? [])])
+      rawBlocks.splice(index, 1)
+    }
+    for (let index = rawBlocks.length - 1; index >= 0; index--) {
+      const block = rawBlocks[index]
+      if (block.kind === 'paragraph') rawBlocks.splice(index + 1, 0, ...(attachedImages.get(block) ?? []))
+    }
+    const placedAnchors = new Map<string, { paragraph: ParagraphBlock; column: Rect }>()
 
     // 页眉/页脚 block 预布局（rect.y 相对各自区域原点）
     this.layoutZone = 'header'
@@ -140,6 +213,17 @@ export class LayoutEngine {
     let pageIndex = 0
     let cursorY = 0
     let currentBlocks: BlockNode[] = []
+    let activeColumns: { widths: number[]; gap: number } | undefined
+    let activeColumnId: string | undefined
+    let columnIndex = 0
+    let columnTop = 0
+    let columnBottom = 0
+    const columnX = () => activeColumns ? activeColumns.widths.slice(0, columnIndex).reduce((sum, width) => sum + width + activeColumns!.gap, 0) : 0
+    const advanceColumn = () => {
+      columnBottom = Math.max(columnBottom, cursorY)
+      if (activeColumns && columnIndex + 1 < activeColumns.widths.length) { columnIndex++; cursorY = columnTop }
+      else { pushPage(); columnIndex = 0; columnTop = 0; columnBottom = 0 }
+    }
 
     // 页面承载上限判定的浮点容差：
     // 行高经多次浮点累加（cursorY += rowHeight）后，可能出现微小正偏离
@@ -149,7 +233,17 @@ export class LayoutEngine {
     const PAGE_FIT_EPSILON = 0.5
 
     const pushPage = () => {
-      const pageOriginY = pageGap + pageIndex * (pageHeight + pageGap)
+      const previous = pages[pages.length - 1]
+      const pageOriginY = previous ? previous.rect.y + previous.rect.height + pageGap : pageGap
+      const section = document?.sections?.[sectionIndex]
+      const headerPartId = document?.sections ? resolveHeaderFooterPart(document, 'header', sectionIndex, pageIndex, pageIndex === sectionFirstPage) : undefined
+      const footerPartId = document?.sections ? resolveHeaderFooterPart(document, 'footer', sectionIndex, pageIndex, pageIndex === sectionFirstPage) : undefined
+      this.layoutZone = `header:${headerPartId ?? ''}`
+      const pageHeaders = document?.sections ? this.layoutBlocks(headerPartId ? document.headerFooterParts?.[headerPartId] ?? [] : [], [], contentWidth) : headerBlocks
+      this.layoutZone = `footer:${footerPartId ?? ''}`
+      const pageFooters = document?.sections ? this.layoutBlocks(footerPartId ? document.headerFooterParts?.[footerPartId] ?? [] : [], [], contentWidth) : footerBlocks
+      this.layoutZone = 'main'
+      const footerHeight = pageFooters.reduce((height, block) => Math.max(height, block.rect.y + block.rect.height), 0)
       const pageRect: Rect = { x: 0, y: pageOriginY, width: pageWidth, height: pageHeight }
       const contentRect: Rect = {
         x: ml,
@@ -160,35 +254,78 @@ export class LayoutEngine {
       const headerRect: Rect = { x: ml, y: pageOriginY, width: contentWidth, height: mt }
       const footerRect: Rect = { x: ml, y: pageOriginY + mt + contentHeight, width: contentWidth, height: mb }
       pages.push({
-        index: pageIndex, rect: pageRect, contentRect, blocks: currentBlocks,
+        index: pageIndex, sectionIndex, headerPartId, footerPartId, rect: pageRect, contentRect, blocks: currentBlocks,
         headerRect,
-        headerBlocks: headerBlocks.length
-          ? headerBlocks.map(b => ({ ...b, rect: { ...b.rect, y: b.rect.y + headerOffsetY } }))
+        headerBlocks: pageHeaders.length
+          ? pageHeaders.map(b => ({ ...b, rect: { ...b.rect, y: b.rect.y + (section?.headerDistance ?? headerOffsetY) } }))
           : undefined,
         footerRect,
-        footerBlocks: footerBlocks.length
-          ? footerBlocks.map(b => ({ ...b, rect: { ...b.rect, y: b.rect.y + footerOffsetY } }))
+        footerBlocks: pageFooters.length
+          ? pageFooters.map(b => ({ ...b, rect: { ...b.rect, y: b.rect.y + (section?.footerDistance !== undefined ? mb - section.footerDistance - footerHeight : footerOffsetY) } }))
           : undefined
       })
       pageIndex++
       currentBlocks = []
       cursorY = 0
+      columnIndex = 0
+      columnTop = 0
+      columnBottom = 0
     }
 
     for (let i = 0; i < rawBlocks.length; i++) {
-      const b = rawBlocks[i]
+      let b = rawBlocks[i]
+      const source = b.kind === 'paragraph' ? this.paragraphInputs.get(b)?.runs.find(run => run.value !== '\u200B') : b.block
+      const sourceColumnId = (source as { columnId?: string } | undefined)?.columnId
+      if (sourceColumnId !== activeColumnId) {
+        cursorY = Math.max(cursorY, columnBottom)
+        activeColumnId = sourceColumnId
+        activeColumns = sourceColumnId ? columnGroups.get(sourceColumnId) : undefined
+        columnIndex = 0; columnTop = cursorY; columnBottom = cursorY
+      }
+      if (b.kind === 'paragraph' && activeColumns) {
+        const input = this.paragraphInputs.get(b)!
+        b = this.layoutParagraph({ ...input, availableWidth: activeColumns.widths[columnIndex] })
+      }
+      if (b.kind === 'paragraph' && b.paragraphKind !== 'list') {
+        const exclusions: NonNullable<ParagraphInput['exclusions']> = []
+        for (const placed of currentBlocks) {
+          if (placed.kind !== 'image') continue
+          const geometry = (placed.block as IImageElement).imageLayout
+          if (!geometry?.anchored) continue
+          const wrap = geometry.positioning?.find(node => node.name === 'wrapSquare' || node.name === 'wrapTopAndBottom')
+          if (!wrap) continue
+          const attrs = geometry.anchorAttributes
+          const distance = (name: string) => {
+            if (attrs?.[name] === undefined) throw new TypeError(`Java anchored image 缺少 ${name}`)
+            return Number(attrs[name]) / 9525
+          }
+          exclusions.push({ rect: { x: placed.rect.x - columnX() - distance('distL'), y: placed.rect.y - cursorY - distance('distT'),
+            width: placed.rect.width + distance('distL') + distance('distR'), height: placed.rect.height + distance('distT') + distance('distB') },
+            side: wrap.name === 'wrapTopAndBottom' ? '' : wrap.attributes.wrapText, topBottom: wrap.name === 'wrapTopAndBottom' })
+        }
+        const input = this.paragraphInputs.get(b)
+        if (input && exclusions.length) b = this.computeParagraph({ ...input, exclusions })
+      }
       if (b.kind === 'pageBreak') {
-        // 分节符/手动分页：结束时当前页并开启全新页。
-        // 若当前页虽为空但前面已产出页面（相邻分节符/前块恰满页），也需补一个
-        // 新页，否则附表标题会落到前一节的同一页上（分页符"失效"）。
-        if (currentBlocks.length > 0 || pages.length > 0) pushPage()
+        if (b.block.type === 'columnBreak') { advanceColumn(); continue }
+        const breakType = String(b.block.value)
+        if (breakType !== 'continuous') pushPage()
+        if (sectionBreaks.has(breakType) && document?.sections) {
+          sectionIndex++
+          if (!document.sections[sectionIndex]) throw new TypeError('Java sections 与正文分节符数量不一致')
+          setSection(sectionIndex)
+          sectionFirstPage = pageIndex
+        }
+        if (breakType === 'evenPage' && (pageIndex + 1) % 2 !== 0) pushPage()
+        if (breakType === 'oddPage' && (pageIndex + 1) % 2 !== 1) pushPage()
+        if (breakType === 'evenPage' || breakType === 'oddPage') sectionFirstPage = pageIndex
         continue
       }
-      const bh = b.rect.height
+      let bh = b.rect.height
       const overflow = cursorY + bh - contentHeight
       // 仅当内容真实超出页面承载上限（超出浮点容差）才分页；
       // 恰好填满（|cum - contentHeight| <= epsilon）时留在本页。
-      if (overflow > PAGE_FIT_EPSILON) {
+      if (overflow > PAGE_FIT_EPSILON && !(b.kind === 'image' && (b.block as IImageElement).imageLayout?.anchored)) {
         // 表格特判：先在当前页放能容纳的行，放不下的行推到下一页，
         // 后续每页重新用整页高度计算能放几行。
         // 跨行（rowspan）格被切割时自动裁剪（见 buildFragment），因此任意行边界都可切割。
@@ -221,23 +358,96 @@ export class LayoutEngine {
           }
           // 表无法拆分（如单行高于整页）：回退为整表处理。
         }
-        if (currentBlocks.length > 0) pushPage()
+        if (currentBlocks.length > 0) {
+          advanceColumn()
+          if (b.kind === 'paragraph' && activeColumns) b = this.layoutParagraph({ ...this.paragraphInputs.get(rawBlocks[i] as ParagraphBlock)!, availableWidth: activeColumns.widths[columnIndex] })
+          if (b.kind === 'paragraph' && !activeColumns && b !== rawBlocks[i]) {
+            b = rawBlocks[i]
+            bh = b.rect.height
+          }
+        }
       }
       b.rect.y = cursorY
+      if (activeColumns) b.rect.x += columnX()
+      bh = b.rect.height
+      if (b.kind === 'paragraph') {
+        for (const [id, anchor] of anchorParagraphs) {
+          if (anchor === rawBlocks[i]) placedAnchors.set(id, { paragraph: b, column: { x: columnX(), y: columnTop, width: activeColumns?.widths[columnIndex] ?? contentWidth, height: contentHeight - columnTop } })
+        }
+      }
+      const floating = b.kind === 'image' && (b.block as IImageElement).imageLayout?.anchored
+      const image = b.kind === 'image' ? b : b.kind === 'paragraph' ? b.surroundImage : undefined
+      if (image && (image.block as IImageElement).imageLayout?.anchored) {
+        const geometry = (image.block as IImageElement).imageLayout!
+        const horizontal = geometry.positioning?.find(node => node.name === 'positionH')
+        const vertical = geometry.positioning?.find(node => node.name === 'positionV')
+        const resolve = (node: typeof horizontal, axis: 'x' | 'y'): number => {
+          if (!node) throw new TypeError('Java anchored image 缺少定位节点')
+          const ref = node.attributes.relativeFrom
+          const isX = axis === 'x'
+          let origin: number, length: number
+          if (ref === 'page') { origin = isX ? -ml : -mt; length = isX ? pageWidth : pageHeight }
+          else if (ref === 'margin') { origin = 0; length = isX ? contentWidth : contentHeight }
+          else if ((isX && ref === 'column') || (!isX && ref === 'paragraph')) {
+            const anchor = geometry.anchorParagraphId ? placedAnchors.get(geometry.anchorParagraphId) : undefined
+            if (!anchor) throw new TypeError('Java anchored image 缺少已排版的 anchorParagraphId')
+            origin = isX ? anchor.column.x : anchor.paragraph.rect.y + (anchor.paragraph.lines[0]?.y ?? 0)
+            length = isX ? anchor.column.width : anchor.paragraph.lines.reduce((height, line) => Math.max(height, line.y + line.height - (anchor.paragraph.lines[0]?.y ?? 0)), 0)
+          }
+          else if (ref === 'paragraph' || ref === 'line' || ref === 'character' || ref === 'column') {
+            throw new TypeError(`尚未支持 OOXML 图片 ${ref} 参考系：需要真实锚点上下文与布局边界`)
+          }
+          else if (ref === 'leftMargin' || ref === 'topMargin') { origin = isX ? -ml : -mt; length = isX ? ml : mt }
+          else if (ref === 'rightMargin' || ref === 'bottomMargin') { origin = isX ? contentWidth : contentHeight; length = isX ? mr : mb }
+          else if (ref === 'insideMargin' || ref === 'outsideMargin') {
+            const leading = (ref === 'insideMargin') === ((pageIndex + 1) % 2 === 1)
+            origin = leading ? (isX ? -ml : -mt) : (isX ? contentWidth : contentHeight)
+            length = leading ? (isX ? ml : mt) : (isX ? mr : mb)
+          } else throw new TypeError(`不支持的 OOXML 图片定位参考系: ${ref}`)
+          const offset = node.children.find(child => child.name === 'posOffset')
+          if (offset) return origin + Number(offset.text) / 9525
+          const align = node.children.find(child => child.name === 'align')?.text
+          const size = isX ? image.rect.width : image.rect.height
+          if (align === 'center') return origin + (length - size) / 2
+          if (align === 'right' || align === 'bottom') return origin + length - size
+          if (align === 'inside' || align === 'outside') return origin + (((align === 'inside') === ((pageIndex + 1) % 2 === 1)) ? 0 : length - size)
+          if (align === 'left' || align === 'top') return origin
+          throw new TypeError('Java anchored image 缺少 align/posOffset')
+        }
+        image.rect.x = resolve(horizontal, 'x')
+        image.rect.y = resolve(vertical, 'y') - (b.kind === 'paragraph' ? b.rect.y : 0)
+        const wrap = geometry.positioning?.find(node => node.name.startsWith('wrap'))
+        if (wrap && wrap.name !== 'wrapNone' && b.kind === 'image') {
+          const distance = (name: string) => Number(geometry.anchorAttributes?.[name] ?? 0) / 9525
+          const top = image.rect.y - distance('distT'), bottom = image.rect.y + image.rect.height + distance('distB')
+          const left = image.rect.x - distance('distL'), right = image.rect.x + image.rect.width + distance('distR')
+          const intersects = currentBlocks.some(block => block.kind === 'paragraph' && block.lines.some(line =>
+            block.rect.y + line.y < bottom && block.rect.y + line.y + line.height > top &&
+            (wrap.name === 'wrapTopAndBottom' || (block.rect.x + line.x < right && block.rect.x + line.x + line.width > left))))
+          if (intersects) {
+            this.diagnostics.push({ code: 'unsupported-floating-image', severity: 'warning', feature: 'anchor-reflow',
+              message: '尚未支持浮动图片对已排版段落的回流；此浮动图片暂不显示，原始数据保留用于导出。',
+              zone: 'main', path: [...image.parentPath, image.indexInParent], action: 'image-omitted' })
+            continue
+          }
+        }
+      }
       currentBlocks.push(b)
-      cursorY += bh
+      if (!floating) cursorY += bh
     }
     if (currentBlocks.length > 0) pushPage()
     else if (pages.length === 0) pushPage()
 
-    const totalHeight = pageGap + pages.length * (pageHeight + pageGap)
-    return { pages, totalHeight, pageWidth }
+    const lastPage = pages[pages.length - 1]
+    const totalHeight = lastPage.rect.y + lastPage.rect.height + pageGap
+    return { pages, totalHeight, pageWidth: Math.max(...pages.map(page => page.rect.width)), diagnostics: this.diagnostics }
   }
 
   /**
    * 将 elements 数组转换为 BlockNode 列表（y 起始为 0，返回后由上层重新分配 y）。
    */
-  private layoutBlocks(elements: IElement[], parentPath: Path, availableWidth: number): BlockNode[] {
+  private layoutBlocks(elements: IElement[], parentPath: Path, availableWidth: number, sectionWidths?: number[]): BlockNode[] {
+    let section = 0
     const paragraphs = splitParagraphs(elements)
 
     const blocks: BlockNode[] = []
@@ -247,11 +457,57 @@ export class LayoutEngine {
         blocks.push(this.layoutTable(g.block as ITableElement, parentPath, g.start, availableWidth))
       } else if (g.kind === 'image') {
         const imgEl = g.block as IElement
+        const geometry = (imgEl as IImageElement).imageLayout
+        if (geometry?.anchored) {
+          const issues: { feature: string; reason: string }[] = []
+          const issue = (feature: string, reason: string) => issues.push({ feature, reason })
+          if (this.layoutZone !== 'main' || parentPath.length) issue('anchor-context', '页眉页脚或表格内浮动图片定位与绕排')
+          for (const axis of ['positionH', 'positionV']) {
+            const node = geometry.positioning?.find(node => node.name === axis)
+            const reference = node?.attributes.relativeFrom
+            const hasAnchor = geometry.anchorParagraphId && paragraphs.some(paragraph => paragraph.runs.some(run => run.sourceParagraphId === geometry.anchorParagraphId))
+            const supported = axis === 'positionH'
+              ? ['page', 'margin', 'leftMargin', 'rightMargin', 'insideMargin', 'outsideMargin', ...(hasAnchor ? ['column'] : [])]
+              : ['page', 'margin', 'topMargin', 'bottomMargin', 'insideMargin', 'outsideMargin', ...(hasAnchor ? ['paragraph'] : [])]
+            if (!reference || !supported.includes(reference)) issue(`${axis}.${reference ?? 'missing'}`, `${axis} 的 ${reference ?? '缺失'} 参考系（需要真实锚点上下文）`)
+            const offset = node?.children.find(child => child.name === 'posOffset')
+            const align = node?.children.find(child => child.name === 'align')?.text
+            if (offset ? !Number.isFinite(Number(offset.text)) : !['center', 'right', 'bottom', 'inside', 'outside', 'left', 'top'].includes(align ?? '')) {
+              issue(`${axis}.position`, `${axis} 缺少有效 align/posOffset`)
+            }
+          }
+          const wrap = geometry.positioning?.find(node => node.name.startsWith('wrap'))
+          if (!wrap || !['wrapNone', 'wrapSquare', 'wrapTopAndBottom'].includes(wrap.name)) {
+            issue(wrap?.name ?? 'wrap.missing', `${wrap?.name ?? '缺失绕排节点'} 多边形轮廓绕排`)
+          }
+          if (wrap?.name === 'wrapSquare' && !['left', 'right', 'largest'].includes(wrap.attributes.wrapText)) {
+            issue(`wrapSquare.${wrap.attributes.wrapText}`, `${wrap.attributes.wrapText ?? '缺失 wrapText'} 同行排文`)
+          }
+          if (wrap?.name !== 'wrapNone') {
+            const bound = geometry.anchorParagraphId && paragraphs.some(paragraph => paragraph.runs.some(run => run.sourceParagraphId === geometry.anchorParagraphId))
+            if (!bound && blocks.some(block => block.kind === 'paragraph')) issue('anchor-reflow', '后置浮动锚点触发前文回流')
+            if (paragraphs.some(paragraph => paragraph.kind === 'list')) issue('list-wrap', '浮动图片与列表绕排')
+            for (const name of ['distT', 'distB', 'distL', 'distR']) {
+              if (geometry.anchorAttributes?.[name] === undefined || !Number.isFinite(Number(geometry.anchorAttributes[name]))) issue(name, `缺少有效 ${name} 绕排距离`)
+            }
+          }
+          if (issues.length) {
+            const path: Path = [...parentPath, g.start]
+            for (const { feature, reason } of issues) {
+              if (!this.diagnostics.some(item => item.zone === this.layoutZone && item.feature === feature && JSON.stringify(item.path) === JSON.stringify(path))) {
+                this.diagnostics.push({ code: 'unsupported-floating-image', severity: 'warning', feature,
+                  message: `尚未支持 OOXML ${reason}；此浮动图片暂不显示，原始数据保留用于导出，周围内容布局可能与 Office 不一致。`,
+                  zone: this.layoutZone, path, action: 'image-omitted' })
+              }
+            }
+            continue
+          }
+        }
         const imgDisplay = String((imgEl as unknown as Record<string, unknown>).imgDisplay ?? 'block')
-        if (imgDisplay === 'surround' || imgDisplay === 'floatTop' || imgDisplay === 'floatBottom') {
+        if (imgDisplay === 'surround' || imgDisplay === 'float-top' || imgDisplay === 'float-bottom') {
           const imgBlock = this.layoutImage(imgEl, parentPath, g.start, availableWidth)
           const next = paragraphs[gi + 1]
-          if (next && (next.kind === 'normal' || next.kind === 'title' || next.kind === 'list')) {
+          if (!(imgEl as IImageElement).imageLayout?.anchored && next && (next.kind === 'normal' || next.kind === 'title' || next.kind === 'list')) {
             const kind: ParagraphBlock['paragraphKind'] = next.kind === 'normal' ? 'normal' : next.kind
             const runsParentPath: Path = (kind === 'normal')
               ? parentPath
@@ -288,6 +544,11 @@ export class LayoutEngine {
           indexInParent: g.start,
           rect: { x: 0, y: 0, width: availableWidth, height: 0 }
         } as PageBreakBlock)
+        if (sectionWidths && ['continuous', 'nextPage', 'evenPage', 'oddPage'].includes(String(g.block?.value))) {
+          section++
+          if (sectionWidths[section] === undefined) throw new TypeError('Java sections 与正文分节符数量不一致')
+          availableWidth = sectionWidths[section]
+        }
       } else if (g.kind === 'separator') {
         // 分割线：独立块，高度含上下间距（各 6px）+ 线宽 1px
         const sepHeight = 13
@@ -354,7 +615,11 @@ export class LayoutEngine {
    */
   private layoutParagraph(input: ParagraphInput): ParagraphBlock {
     // Numbered lists depend on preceding counters and must still be evaluated.
-    if (input.paragraphKind === 'list') return this.computeParagraph(input)
+    if (input.paragraphKind === 'list') {
+      const result = this.computeParagraph(input)
+      this.paragraphInputs.set(result, input)
+      return result
+    }
     const key = JSON.stringify([this.layoutZone, input.runsParentPath, input.startIndex, input.runStartIndex])
     const signature = JSON.stringify(input)
     const cached = this.paragraphCache.get(key)
@@ -367,7 +632,9 @@ export class LayoutEngine {
       : this.computeParagraph(input)
     this.nextParagraphCache.set(key, { signature, input, layout })
     // Pagination, table placement and surrounding images mutate the outer block.
-    return { ...layout, rect: { ...layout.rect } }
+    const result = { ...layout, rect: { ...layout.rect } }
+    this.paragraphInputs.set(result, input)
+    return result
   }
 
   private computeParagraph(input: ParagraphInput): ParagraphBlock {
@@ -499,18 +766,31 @@ export class LayoutEngine {
     let currentMaxSize = this.opts.defaultSize
     let isFirstLine = true
 
-    // 悬挂缩进：首行使用 indentLeft，非首行 = indentLeft + hangIndent
-    // 首行缩进（firstIndent）与悬挂缩进互斥（Word 语义）：hangIndent 有值时 firstIndent 视为 0
-    const useHanging = indentHanging > 0
-    const currentLineMaxWidth = (): number => {
-      let w = usableWidth
-      if (isFirstLine) {
-        if (firstIndent > 0 && !useHanging) w -= firstIndent
-      } else if (useHanging) {
-        w -= indentHanging
+    // 首行偏移相对于文本前缩进，负值表示悬挂。
+    const firstLineOffset = attr('indentHanging') != null ? -indentHanging : firstIndent
+    let flowY = spacingBefore
+    const lineRegion = (): { x: number; width: number } => {
+      let left = indentLeft + bulletWidthForLine + (isFirstLine ? firstLineOffset : 0)
+      let right = availableWidth - indentRight
+      for (const exclusion of input.exclusions ?? []) {
+        const r = exclusion.rect
+        if (flowY >= r.y + r.height || flowY + computeLineHeight(currentMaxSize) <= r.y) continue
+        if (exclusion.topBottom || (r.x <= left && r.x + r.width >= right)) {
+          flowY = r.y + r.height
+          return lineRegion()
+        }
+        const leftWidth = Math.max(0, r.x - left), rightWidth = Math.max(0, right - r.x - r.width)
+        const useLeft = exclusion.side === 'left' || (exclusion.side !== 'right' && leftWidth >= rightWidth)
+        if (useLeft) right = Math.min(right, r.x)
+        else left = Math.max(left, r.x + r.width)
+        if (right - left < currentMaxSize) {
+          flowY = r.y + r.height
+          return lineRegion()
+        }
       }
-      return Math.max(20, w)
+      return { x: left, width: Math.max(1, right - left) }
     }
+    const currentLineMaxWidth = (): number => lineRegion().width
 
     // Word 行距 4 种模式：
     //   'auto'    → lineHeight 是倍数（1.0 单倍；1.5 一倍半；2.0 双倍；数值任意）
@@ -535,15 +815,14 @@ export class LayoutEngine {
     const finalizeLine = (isLastLine: boolean) => {
       const size = currentMaxSize
       const lh = computeLineHeight(size)
-      let lineXBase = indentLeft + (useWordHanging ? 0 : bulletWidth)
-      if (isFirstLine && firstIndent > 0 && !useHanging) lineXBase += firstIndent
-      else if (!isFirstLine && useHanging) lineXBase += indentHanging
+      const region = lineRegion()
+      const lineXBase = region.x
       // 把 inline.x 从"相对 line 起点"平移到"相对块起点"
       for (const inl of currentInlines) inl.x += lineXBase
       const line: LineBox = {
         x: lineXBase,
-        y: 0,
-        width: currentLineMaxWidth(),
+        y: flowY,
+        width: region.width,
         height: lh,
         baseline: lh * 0.82,
         inlines: currentInlines,
@@ -551,6 +830,7 @@ export class LayoutEngine {
         isLastLine
       }
       lines.push(line)
+      flowY += lh
       currentInlines = []
       currentLineWidth = 0
       currentMaxSize = this.opts.defaultSize
@@ -725,13 +1005,14 @@ export class LayoutEngine {
     // 跟踪块内内容实际右边缘（含 rowFlex 平移后的最大 x），用于兜底 bitmap 宽度
     let contentRight = 0
     for (const line of lines) {
+      yy = Math.max(yy, line.y)
       line.y = yy
       line.baseline = 0.8 * line.height
       for (const inl of line.inlines) {
         inl.y = yy
         inl.baseline = yy + line.baseline
       }
-      applyRowFlex(line, usableWidth)
+      applyRowFlex(line, input.exclusions?.length ? line.width : usableWidth)
       for (const inl of line.inlines) {
         const r = inl.x + inl.width
         if (r > contentRight) contentRight = r
@@ -776,12 +1057,11 @@ export class LayoutEngine {
    */
   private layoutImage(el: IElement, parentPath: Path, index: number, availableWidth: number): ImageBlock {
     const anyEl = el as unknown as Record<string, unknown>
-    const w = Math.max(1, Number(anyEl.width ?? 200))
-    const h = Math.max(1, Number(anyEl.height ?? 150))
-    const rotate = Number(anyEl.rotate ?? 0) % 360
-    // 旋转 90/270 时，占位宽高互换
-    const occupiedW = (rotate === 90 || rotate === 270) ? h : w
-    const occupiedH = (rotate === 90 || rotate === 270) ? w : h
+    const w = Number(anyEl.width)
+    const h = Number(anyEl.height)
+    const rotate = Number(anyEl.rotate ?? 0) * Math.PI / 180
+    const occupiedW = Math.abs(w * Math.cos(rotate)) + Math.abs(h * Math.sin(rotate))
+    const occupiedH = Math.abs(w * Math.sin(rotate)) + Math.abs(h * Math.cos(rotate))
     // 水平对齐：rowFlex 决定 x 位置
     const rowFlex = String(anyEl.rowFlex ?? 'left')
     let x = 0
@@ -1155,13 +1435,9 @@ export class LayoutEngine {
 
   /** 片段边界封口：该侧无边框时从本格其他边复制样式补齐（仅改片段副本，不动原数据）。 */
   private ensureFragmentEdge(c: TableCellLayout, side: 'top' | 'bottom'): void {
-    const bs = c.cell.borderStyle as unknown as Record<string, { width: number; color: string; style: string } | undefined>
-    const cur = bs[side]
-    if (cur && cur.style !== 'none' && cur.width > 0) return
-    const src = bs[side === 'top' ? 'bottom' : 'top'] ?? bs.left ?? bs.right ??
-      { width: 1, color: '#000000', style: 'solid' }
-    const newBs = { ...bs, [side]: src }
-    c.cell = { ...c.cell, borderStyle: newBs as unknown as typeof c.cell.borderStyle }
+    // 分页片段不能补造源文档未提供或显式关闭的边框。
+    void c
+    void side
   }
 
   /** 按裁剪后的格高重算垂直偏移（规则同 layoutTable）。 */

@@ -30,10 +30,10 @@ export interface CommentPlugin extends EditorPlugin {
   setAll(comments: IComment[]): void
   /** 从 docx 解析出的批注元数据构建批注列表 */
   buildFromMetas(metas: DocxCommentMeta[]): void
-  /** 从序列化结构恢复批注列表（含 groupId，用于文档加载） */
-  restore(saved: any[]): void
-  /** 序列化批注为可保存结构（含 groupId），用于文档保存 */
-  serialize(): Array<Record<string, unknown>>
+  /** 从统一批注协议恢复列表 */
+  restore(saved: DocxCommentMeta[]): void
+  /** 获取与 Java 一致的文档批注数据 */
+  serialize(): DocxCommentMeta[]
   /** 刷新批注气泡 DOM 渲染 */
   render(): void
   /** 设置批注生命周期回调（保存/删除/回复/解决/取消） */
@@ -81,17 +81,7 @@ export function createCommentPlugin(): CommentPlugin {
     hooks: {
       afterRender: () => comment.render(),
       onSetDocument: (doc) => {
-        const comments = (doc as { comments?: unknown[] }).comments
-        if (Array.isArray(comments) && comments.length > 0) {
-          const isSerialized = !!comments[0] && typeof comments[0] === 'object' && 'groupId' in (comments[0] as object)
-          if (isSerialized) {
-            comment.restore(comments)
-          } else {
-            comment.buildFromMetas(comments as DocxCommentMeta[])
-          }
-        } else {
-          comment.buildFromMetas([])
-        }
+        comment.buildFromMetas(doc.comments ?? [], true)
       }
     },
     destroy: () => comment.destroy(),

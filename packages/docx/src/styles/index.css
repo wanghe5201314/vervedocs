@@ -153,23 +153,6 @@ ul {
 }
 
 
-/* ==================== 护眼模式 ==================== */
-
-.eye-care-mode,
-.eye-care-mode .ce-container,
-.eye-care-mode .editor-main {
-  background-color: #c7edcc !important;
-}
-
-.eye-care-mode .ce-page {
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-}
-
-.eye-care-mode .editor-main,
-.eye-care-mode .ce-page-container {
-  background-color: #c7edcc !important;
-}
-
 /* ==================== Google Docs 风格菜单样式 ==================== */
 .gdocs-menu-popper {
   min-width: 220px !important;

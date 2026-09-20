@@ -17,8 +17,8 @@ import type {
   BlockNode, DocumentLayout, PageLayout,
   ParagraphBlock, ImageBlock, TableBlock, SeparatorBlock, ChartBlock
 } from './layout-types'
-import type { IGroupColor } from '@vervedoc/docx-editor-schema'
-import { getChartRenderer } from '@vervedoc/docx-editor-schema'
+import type { IGroupColor, IImageElement } from '@vervedoc/docx-editor-schema'
+import type { IChartRenderer } from '@vervedoc/docx-editor-schema'
 import { paintParagraph, type PaintCtx } from './block-painter'
 import { chartTableSignature } from './block-signature'
 
@@ -93,6 +93,15 @@ export class CanvasRenderer {
   private cssHeight = 0
   /** 渲染器选项 */
   private opts: RendererOptions
+  private chartRenderer: IChartRenderer | null = null
+
+  setChartRenderer(renderer: IChartRenderer | null): void {
+    this.chartRenderer = renderer
+    for (const key of this.imageCache.keys()) {
+      if (key.startsWith('chart|')) this.imageCache.delete(key)
+    }
+    this.invalidateAll()
+  }
 
   /** 图片元素缓存（url -> HTMLImageElement） */
   private imageCache = new Map<string, HTMLImageElement>()
@@ -100,6 +109,10 @@ export class CanvasRenderer {
   private blockCache = new Map<number, BlockCache>()
   /** 待重建位图的 block id 集合 */
   private dirtyBlocks = new Set<number>()
+  /** Built during layout, so hover does not scan the document. */
+  private groupBlockIds = new Map<string, Set<number>>()
+  private revisionBlockIds = new Map<string, Set<number>>()
+  private activeRevision: { id: string; color: string } | null = null
 
   /** 当前帧的文档布局（供 drawChartInto 查找表格数据源） */
   private currentLayout: DocumentLayout | null = null
@@ -192,6 +205,12 @@ export class CanvasRenderer {
     Object.assign(this.opts, patch)
   }
 
+  /** Change only the screen background, preserving layout and all canvas caches. */
+  setEyeCare(enabled: boolean): void {
+    if (enabled) this.bgLayer.style.setProperty('--vd-eye-care-bg', '#C7EDCC')
+    else this.bgLayer.style.removeProperty('--vd-eye-care-bg')
+  }
+
   /**
    * 渲染单页缩略图到离屏 canvas 并返回 data URL。
    * 创建临时 canvas（页面尺寸 × dpr），绘制白底背景 + 页面内容，输出 PNG data URL。
@@ -199,7 +218,7 @@ export class CanvasRenderer {
    * @param quality PNG 压缩质量（0-1）
    * @returns 缩略图 data URL；页面尺寸为 0 时返回空字符串
    */
-  renderPageThumbnail(page: PageLayout, quality = 0.7, pageCount = 1): string {
+  renderPageThumbnail(page: PageLayout, quality = 0.7, pageCount = 1, onForeground?: (image: string) => void): string {
     if (page.rect.width === 0 || page.rect.height === 0) return ''
     const dpr = this.opts.dpr
     const canvas = document.createElement('canvas')
@@ -207,10 +226,6 @@ export class CanvasRenderer {
     canvas.height = Math.round(page.rect.height * dpr)
     const ctx = canvas.getContext('2d')!
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-
-    // 页面背景
-    ctx.fillStyle = this.opts.pageBg
-    ctx.fillRect(0, 0, page.rect.width, page.rect.height)
 
     // 内容区原点（相对于页面左上角）
     const contentOriginX = page.contentRect.x - page.rect.x
@@ -241,6 +256,11 @@ export class CanvasRenderer {
     this.drawPageNumberForThumbnail(ctx, page, pageCount)
     this.watermarkWidget?.drawWatermarkForThumbnail(ctx, page)
 
+    // Keep a transparent content snapshot for background-only Worker composition.
+    onForeground?.(canvas.toDataURL('image/png', quality))
+    ctx.globalCompositeOperation = 'destination-over'
+    ctx.fillStyle = this.opts.pageBg
+    ctx.fillRect(0, 0, page.rect.width, page.rect.height)
     const image = canvas.toDataURL('image/png', quality)
     this.trimCache()
     return image
@@ -254,6 +274,38 @@ export class CanvasRenderer {
   /** Retain offscreen document blocks; remove only deleted occurrences. */
   setLayout(layout: DocumentLayout, ids: Set<number>): void {
     this.currentLayout = layout
+    this.groupBlockIds.clear()
+    this.revisionBlockIds.clear()
+    const collect = (blocks: BlockNode[]) => {
+      for (const block of blocks) {
+        if (block.kind === 'table') {
+          for (const row of block.rows) {
+            for (const cell of row.cells) collect(cell.content)
+          }
+        } else if (block.kind === 'paragraph') {
+          for (const line of block.lines) {
+            for (const inline of line.inlines) {
+              const revisionId = inline.run && 'revisionId' in inline.run ? inline.run.revisionId : undefined
+              if (typeof revisionId === 'string' && revisionId) {
+                let blockIds = this.revisionBlockIds.get(revisionId)
+                if (!blockIds) this.revisionBlockIds.set(revisionId, blockIds = new Set())
+                blockIds.add(block.id)
+              }
+              for (const groupId of inline.groupIds ?? []) {
+                let blockIds = this.groupBlockIds.get(groupId)
+                if (!blockIds) this.groupBlockIds.set(groupId, blockIds = new Set())
+                blockIds.add(block.id)
+              }
+            }
+          }
+        }
+      }
+    }
+    for (const page of layout.pages) {
+      collect(page.blocks)
+      collect(page.headerBlocks ?? [])
+      collect(page.footerBlocks ?? [])
+    }
     for (const [id, cached] of this.blockCache) {
       if (ids.has(id)) continue
       if (cached.bitmap instanceof ImageBitmap) cached.bitmap.close()
@@ -262,6 +314,32 @@ export class CanvasRenderer {
     for (const id of this.dirtyBlocks) {
       if (!ids.has(id)) this.dirtyBlocks.delete(id)
     }
+  }
+
+  /** Only the old and new groups need new text bitmaps. */
+  setActiveGroup(groupId: string | null): boolean {
+    const previous = this.opts.activeGroupId ?? null
+    if (previous === groupId) return false
+    this.opts.activeGroupId = groupId
+    for (const id of [previous, groupId]) {
+      if (id === null) continue
+      const blocks = this.groupBlockIds.get(id)
+      if (blocks) this.markDirty(blocks)
+    }
+    return true
+  }
+
+  /** Invalidate only the old and new revision's paragraph bitmaps. */
+  setActiveRevision(id: string | null, color = '#e60000'): boolean {
+    const previous = this.activeRevision
+    if ((previous?.id ?? null) === id && (!id || previous?.color === color)) return false
+    this.activeRevision = id === null ? null : { id, color }
+    for (const revisionId of [previous?.id, id]) {
+      if (!revisionId) continue
+      const blocks = this.revisionBlockIds.get(revisionId)
+      if (blocks) this.markDirty(blocks)
+    }
+    return true
   }
 
   /** Bound retained bitmap memory with least-recently-used eviction. */
@@ -292,6 +370,8 @@ export class CanvasRenderer {
       if (c.bitmap instanceof ImageBitmap) c.bitmap.close()
     }
     this.pageBgEls.clear()
+    this.groupBlockIds.clear()
+    this.revisionBlockIds.clear()
     this.blockCache.clear()
     this.dirtyBlocks.clear()
     for (const image of this.imageCache.values()) image.onload = null
@@ -670,12 +750,12 @@ export class CanvasRenderer {
         el.className = 'vd-page-bg'
         el.dataset.index = String(page.index)
         el.style.position = 'absolute'
-        el.style.background = this.opts.pageBg
         el.style.boxShadow = `0 4px 12px ${this.opts.pageShadow}`
         el.style.pointerEvents = 'none'
         this.bgLayer.appendChild(el)
         this.pageBgEls.set(page.index, el)
       }
+      el.style.background = `var(--vd-eye-care-bg, ${this.opts.pageBg})`
       el.style.left = `${Math.round(page.rect.x + this.opts.pageOffsetX)}px`
       el.style.top = `${Math.round(page.rect.y - scrollY)}px`
       el.style.width = `${page.rect.width}px`
@@ -713,7 +793,9 @@ export class CanvasRenderer {
   private renderPageContent(ct: CanvasRenderingContext2D, page: PageLayout, scrollY: number, pageCount: number, aliveIds: Set<number>): void {
     const contentOriginX = page.contentRect.x + this.opts.pageOffsetX
     const contentOriginY = page.contentRect.y - scrollY
-    for (const b of page.blocks) {
+    const layer = (block: BlockNode): number => block.kind === 'image'
+      ? ((block.block as IImageElement).imgDisplay === 'float-bottom' ? -1 : (block.block as IImageElement).imageLayout?.anchored ? 1 : 0) : 0
+    for (const b of [...page.blocks].sort((a, b) => layer(a) - layer(b))) {
       this.renderBlockOnMain(ct, b, contentOriginX, contentOriginY, aliveIds)
     }
     if (page.headerBlocks && page.headerRect) {
@@ -910,7 +992,7 @@ export class CanvasRenderer {
         const sx = si.rect.x
         const sy = 0
         const mode = String((si.block as unknown as { imgDisplay?: string }).imgDisplay ?? 'surround')
-        if (mode === 'floatBottom') {
+        if (mode === 'float-bottom') {
           this.drawImageInto(ctx, si, sx, sy)
           this.drawParagraphInto(ctx, b)
         } else {
@@ -937,7 +1019,7 @@ export class CanvasRenderer {
    * @param b 段落块
    */
   private drawParagraphInto(ctx: PaintCtx, b: ParagraphBlock): void {
-    paintParagraph(ctx, b, { groupColors: this.opts.groupColors, activeGroupId: this.opts.activeGroupId })
+    paintParagraph(ctx, b, { groupColors: this.opts.groupColors, activeGroupId: this.opts.activeGroupId, activeRevision: this.activeRevision })
   }
 
 
@@ -963,23 +1045,32 @@ export class CanvasRenderer {
       img.src = url
       this.imageCache.set(url, img)
     }
-    const rotate = Number((b.block as unknown as { rotate?: number }).rotate ?? 0) % 360
+    const image = b.block as IImageElement
+    const transform = image.imageLayout?.transform?.attributes
+    const rotate = Number(transform?.rot ?? (image.rotate ?? 0) * 60000) / 60000
     if (img.complete && img.naturalWidth > 0) {
+      const crop = image.imageLayout?.crop?.attributes
+      const l = Number(crop?.l ?? 0) / 100000
+      const t = Number(crop?.t ?? 0) / 100000
+      const r = Number(crop?.r ?? 0) / 100000
+      const bottom = Number(crop?.b ?? 0) / 100000
+      const dw = image.width
+      const dh = image.height
+      ctx.save()
       try {
-        if (rotate === 0) {
-          ctx.drawImage(img, x, y, b.rect.width, b.rect.height)
-        } else {
-          const cx = x + b.rect.width / 2
-          const cy = y + b.rect.height / 2
-          ctx.save()
-          ctx.translate(cx, cy)
-          ctx.rotate((rotate * Math.PI) / 180)
-          const dw = (rotate === 90 || rotate === 270) ? b.rect.height : b.rect.width
-          const dh = (rotate === 90 || rotate === 270) ? b.rect.width : b.rect.height
-          ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh)
-          ctx.restore()
-        }
-      } catch { /* ignore CORS */ }
+        ctx.translate(x + b.rect.width / 2, y + b.rect.height / 2)
+        ctx.rotate((rotate * Math.PI) / 180)
+        ctx.scale(transform?.flipH === '1' || transform?.flipH === 'true' ? -1 : 1,
+          transform?.flipV === '1' || transform?.flipV === 'true' ? -1 : 1)
+        ctx.beginPath()
+        ctx.rect(-dw / 2, -dh / 2, dw, dh)
+        ctx.clip()
+        const scaledWidth = dw / (1 - l - r)
+        const scaledHeight = dh / (1 - t - bottom)
+        ctx.drawImage(img, -dw / 2 - l * scaledWidth, -dh / 2 - t * scaledHeight, scaledWidth, scaledHeight)
+      } finally {
+        ctx.restore()
+      }
     } else {
       ctx.strokeStyle = '#cccccc'
       ctx.strokeRect(x + 0.5, y + 0.5, b.rect.width - 1, b.rect.height - 1)
@@ -1000,7 +1091,7 @@ export class CanvasRenderer {
     const chartBlock = el.block?.chartBlock
     if (!chartBlock) return
 
-    const renderer = getChartRenderer()
+    const renderer = this.chartRenderer
     if (!renderer) {
       ctx.strokeStyle = '#cccccc'
       ctx.strokeRect(x + 0.5, y + 0.5, b.rect.width - 1, b.rect.height - 1)
@@ -1047,7 +1138,7 @@ export class CanvasRenderer {
    * 根据图表数据源生成图表配置选项。
    * manual 数据直接使用；table 数据从布局中查找对应表格元素提取。
    */
-  private getChartOption(chartBlock: Record<string, unknown>, renderer: ReturnType<typeof getChartRenderer>): any {
+  private getChartOption(chartBlock: Record<string, unknown>, renderer: IChartRenderer): any {
     const { dataSource, chartType, config, subtype } = chartBlock as {
       dataSource: { type: string; manualData?: any; tableId?: string; range?: any }
       chartType: string
@@ -1124,7 +1215,9 @@ export class CanvasRenderer {
     // 3) 统一绘制边框（每条网格边只画一次，避免共享边被重复描绘制造成"边框加深/重影"）
     // 用"边端点 + 方向"做去重：相邻两个 cell 的共享边、跨行格下探边都会折叠为一条。
     // 像素对齐沿用 strokeSide（奇数宽 +0.5）。
-    const drawnEdges = new Set<string>()
+    type BorderSide = { width: number; color: string; style: string; officeType?: string; source?: string; sizeEighthPoints?: number }
+    type Edge = { x1: number; y1: number; x2: number; y2: number; side: BorderSide }
+    const edges: Edge[] = []
     const edgeKey = (x1: number, y1: number, x2: number, y2: number): string => {
       // 归一化端点（保证横边/竖边方向唯一），保留 0.5px 精度避免浮点抖动
       const a1 = Math.round(x1 * 2) / 2, b1 = Math.round(y1 * 2) / 2
@@ -1136,14 +1229,11 @@ export class CanvasRenderer {
     }
     const drawOnce = (
       x1: number, y1: number, x2: number, y2: number,
-      side?: { width: number; color: string; style: string }
+      side?: BorderSide
     ) => {
       // 该侧无边框定义 → 不画且不占用去重 key（否则会挡住邻格共享边的绘制）
       if (!side || side.style === 'none' || side.width <= 0) return
-      const key = edgeKey(x1, y1, x2, y2)
-      if (!key || drawnEdges.has(key)) return   // 已画过（共享边）→ 跳过
-      drawnEdges.add(key)
-      strokeSide(ctx, x1, y1, x2, y2, side)
+      if (edgeKey(x1, y1, x2, y2)) edges.push({ x1, y1, x2, y2, side })
     }
     // 每个 cell 四条边都尝试绘制（数据中共享边可能只由某一侧的格子定义，
     // 例如附表5：水平分隔线只定义在上格的 bottom，下格无 top），
@@ -1154,7 +1244,7 @@ export class CanvasRenderer {
         const cy = by + cell.rect.y
         const cw = cell.rect.width
         const ch = cell.rect.height
-        const bs = cell.cell.borderStyle
+        const bs = cell.cell.borderStyle ?? {}
         // borderTypes: [top,right,bottom,left]，值为 0 表示隐藏该侧（三线表等场景）
         const bt = (cell.cell as unknown as { borderTypes?: number[] }).borderTypes
         const showTop    = !bt || bt[0] !== 0
@@ -1195,6 +1285,44 @@ export class CanvasRenderer {
           }
           ctx.restore()
         }
+      }
+    }
+    const groups = new Map<string, Edge[]>()
+    for (const edge of edges) {
+      const vertical = edge.x1 === edge.x2
+      const key = `${vertical ? 'V' : 'H'}:${Math.round((vertical ? edge.x1 : edge.y1) * 2) / 2}`
+      const group = groups.get(key) ?? []
+      group.push(edge)
+      groups.set(key, group)
+    }
+    const rank: Record<string, number> = { solid: 1, single: 1, thick: 2, double: 3, dotted: 4, dashed: 5, dotDash: 6, dotDotDash: 7, triple: 8, thinThickSmallGap: 9, thickThinSmallGap: 10, thinThickThinSmallGap: 11, thinThickMediumGap: 12, thickThinMediumGap: 13, thinThickThinMediumGap: 14, thinThickLargeGap: 15, thickThinLargeGap: 16, thinThickThinLargeGap: 17, wave: 18, doubleWave: 19, dashSmallGap: 20, dashDotStroked: 21, threeDEmboss: 22, threeDEngrave: 23, outset: 24, inset: 25 }
+    const borderRank = (side: BorderSide) => rank[side.officeType ?? side.style] ?? 1
+    const borderWeight = (side: BorderSide) => (side.sizeEighthPoints ?? side.width * 6) * borderRank(side)
+    const brightness = (color: string): number => {
+      const rgb = Number.parseInt(color.replace('#', ''), 16)
+      return (rgb >> 16 & 255) + 2 * (rgb >> 8 & 255) + (rgb & 255)
+    }
+    const secondaryBrightness = (color: string): number => {
+      const rgb = Number.parseInt(color.slice(1), 16)
+      return (rgb >> 16 & 255) + 2 * (rgb >> 8 & 255)
+    }
+    for (const group of groups.values()) {
+      const vertical = group[0].x1 === group[0].x2
+      const start = (edge: Edge) => vertical ? Math.min(edge.y1, edge.y2) : Math.min(edge.x1, edge.x2)
+      const end = (edge: Edge) => vertical ? Math.max(edge.y1, edge.y2) : Math.max(edge.x1, edge.x2)
+      const points = [...new Set(group.flatMap(edge => [start(edge), end(edge)]))].sort((a, b) => a - b)
+      for (let index = 1; index < points.length; index++) {
+        const a = points[index - 1], b = points[index]
+        const candidates = group.filter(edge => start(edge) <= a && end(edge) >= b)
+        candidates.sort((a, b) => Number(b.side.source === 'cell') - Number(a.side.source === 'cell')
+          || borderWeight(b.side) - borderWeight(a.side)
+          || borderRank(b.side) - borderRank(a.side) || brightness(a.side.color) - brightness(b.side.color)
+          || secondaryBrightness(a.side.color) - secondaryBrightness(b.side.color)
+          || (Number.parseInt(a.side.color.slice(1), 16) >> 8 & 255) - (Number.parseInt(b.side.color.slice(1), 16) >> 8 & 255))
+        const winner = candidates[0]
+        if (!winner) continue
+        if (vertical) strokeSide(ctx, winner.x1, a, winner.x1, b, winner.side)
+        else strokeSide(ctx, a, winner.y1, b, winner.y1, winner.side)
       }
     }
   }

@@ -14,6 +14,7 @@ import { Search, BlockParticle, DateParticle, LaTexParticle, ControlComponent } 
 import { HistoryComponent } from '@vervedoc/docx-editor-history'
 import { ShortcutHandler } from './shortcut'
 import { WorkerManager } from './workers/worker-manager'
+import { ThumbnailManager } from './workers/thumbnail-manager'
 
 /**
  * DocxEditor 文档编辑器主类
@@ -32,6 +33,19 @@ export class DocxEditor {
   public draw: Draw
   /** 命令入口（executeXxx 系列方法） */
   public command: Command
+  private adapt: CommandAdapt
+  private destroyed = false
+  private clipboardEpoch = 0
+
+  private clipboardGuard(): () => boolean {
+    const doc = this.draw.getDocument()
+    const epoch = this.clipboardEpoch
+    const zone = this.draw.getZone()
+    const range = JSON.stringify(this.range.getRange())
+    return () => !this.destroyed && epoch === this.clipboardEpoch &&
+      doc === this.draw.getDocument() && zone === this.draw.getZone() &&
+      range === JSON.stringify(this.range.getRange())
+  }
   /** 已注册插件表（按 name 索引） */
   private plugins = new Map<string, EditorPlugin>()
   /** 插件命令注册表（命令名 → 处理函数），责任链中插件命令 handler 查此表分发 */
@@ -55,6 +69,8 @@ export class DocxEditor {
 
   /** Worker 管理器（后台计算目录/搜索等） */
   public worker: WorkerManager
+  private thumbnailWorker: ThumbnailManager
+  private thumbnailSources: string[] = []
 
 
   /**
@@ -87,14 +103,26 @@ export class DocxEditor {
       styles: doc.styles,
       numbering: doc.numbering
     })
-    if (doc.sections?.header) formatElementTree(doc.sections.header, { editorOptions, styles: doc.styles, numbering: doc.numbering })
-    if (doc.sections?.footer) formatElementTree(doc.sections.footer, { editorOptions, styles: doc.styles, numbering: doc.numbering })
-    if (doc.sections?.footnotes) formatElementTree(doc.sections.footnotes, { editorOptions, styles: doc.styles, numbering: doc.numbering })
-    if (doc.sections?.endnotes) formatElementTree(doc.sections.endnotes, { editorOptions, styles: doc.styles, numbering: doc.numbering })
+    if (doc.sections !== undefined && !Array.isArray(doc.sections)) {
+      throw new TypeError('旧 sections 内容区必须显式迁移到 contentZones')
+    }
+    for (const elements of [doc.header, doc.footer, ...Object.values(doc.contentZones ?? {}), ...Object.values(doc.headerFooterParts ?? {})]) {
+      if (elements) formatElementTree(elements, { editorOptions, styles: doc.styles, numbering: doc.numbering })
+    }
 
     this.listener = new Listener()
+    this.thumbnailWorker = new ThumbnailManager(images => {
+      if (!this.destroyed) this.listener.emit('thumbnailChange', images)
+    })
+    this.listener.on('thumbnailAppearanceChange', () => this.refreshThumbnailAppearance())
+    for (const event of ['contentChange', 'documentSet'] as const) {
+      this.listener.on(event, () => this.thumbnailWorker.invalidate())
+    }
     this.eventBus = new EventBus()
     this.range = new RangeManager(this.listener)
+    for (const event of ['contentChange', 'documentSet', 'rangeChange', 'zoneChange'] as const) {
+      this.listener.on(event, () => { this.clipboardEpoch++ })
+    }
 
 
     // 渲染后联动通过 after-render 事件订阅，Draw 只 emit 事件不直接耦合各组件
@@ -106,6 +134,7 @@ export class DocxEditor {
     const shortcut = new ShortcutHandler({
       getDraw: () => this.draw,
       getCommand: () => this.command,
+      dispatchCommand: (command, ...args) => this.dispatchCommand(command, ...args),
       getRange: () => this.range,
       getAdapt: () => adapt
     })
@@ -135,28 +164,10 @@ export class DocxEditor {
         setDocument: (d: IDocxDocumentMeta) => this.draw.setDocument(d),
         getLayout: () => this.draw.getLayout(),
         getScroller: () => this.draw.getScroller(),
-        getActiveDocument: () => {
-          const doc = this.draw.getDocument()
-          const zone = this.draw.getZone()
-          if (zone === 'header' && doc.sections?.header) {
-            return { ...doc, elements: doc.sections.header }
-          }
-          if (zone === 'footer' && doc.sections?.footer) {
-            return { ...doc, elements: doc.sections.footer }
-          }
-          return doc
-        },
+        getActiveDocument: () => this.draw.getActiveDocument(),
         applyActiveDocument: (d: IDocxDocumentMeta) => {
-          const zone = this.draw.getZone()
-          if (zone === 'header' || zone === 'footer') {
-            const doc = this.draw.getDocument()
-            if (!doc.sections) doc.sections = {}
-            if (zone === 'header') doc.sections.header = d.elements
-            else doc.sections.footer = d.elements
-            this.draw.setDocument(doc)
-          } else {
-            this.draw.setDocument(d)
-          }
+          if (this.draw.getZone() === 'main') this.draw.setDocument(d)
+          else this.draw.applyActiveDocument(d)
         },
         setScale: (s: number) => this.draw.setScale(s),
         setPageSize: (w: number, h: number) => this.draw.setPageSize(w, h),
@@ -174,6 +185,7 @@ export class DocxEditor {
       this.range,
       this.listener
     )
+    this.adapt = adapt
     this.command = new Command(adapt)
 
     // 构建命令分发责任链：事件重定向 → 插件命令 → 剪贴板 → 核心命令兜底
@@ -182,6 +194,7 @@ export class DocxEditor {
         if (cmd === 'requestInsertImage') { this.listener.emit('requestInsertImage'); return }
         if (cmd === 'requestInsertHyperlink') { this.listener.emit('requestInsertHyperlink'); return }
         if (cmd === 'requestInsertFormula') { this.listener.emit('requestInsertFormula'); return }
+        if (cmd === 'executeTableProperty') { this.listener.emit('requestTableProperties'); return }
         return next()
       })
       .use((cmd, args, next) => {
@@ -189,22 +202,47 @@ export class DocxEditor {
         if (typeof pluginCmd === 'function') return pluginCmd(...args)
         return next()
       })
-      .use((cmd, _args, next) => {
-        if (cmd === 'executeCopy') {
+      .use((cmd, args, next) => {
+        if (cmd === 'executeCopy' || cmd === 'executeCut') {
           const text = this.command.executeCopy()
-          if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {})
-          return
+          if (!navigator.clipboard) return
+          const isCurrent = this.clipboardGuard()
+          const fragment = adapt.copyFragment()
+          const mime = 'web application/x-vervedocs+json'
+          const write = fragment && typeof ClipboardItem !== 'undefined' && ClipboardItem.supports?.(mime)
+            ? navigator.clipboard.write([new ClipboardItem({
+              'text/plain': new Blob([text], { type: 'text/plain' }),
+              [mime]: new Blob([JSON.stringify(fragment)], { type: 'application/x-vervedocs+json' })
+            })])
+            : navigator.clipboard.writeText(text)
+          return write.then(() => {
+            if (cmd === 'executeCut' && isCurrent()) this.command.executeCut()
+            return text
+          }).catch(() => {})
         }
-        if (cmd === 'executeCut') {
-          const text = this.command.executeCut()
-          if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {})
-          return
-        }
-        if (cmd === 'executePaste') {
-          if (navigator.clipboard) {
-            navigator.clipboard.readText().then(text => this.command.executePaste(text)).catch(() => {})
-          }
-          return
+        if (['executePaste', 'executePastePlain', 'executePasteNoFormat'].includes(cmd)) {
+          if (args.length > 0) return next()
+          if (!navigator.clipboard) return
+          const isCurrent = this.clipboardGuard()
+          return (async () => {
+            const mime = 'web application/x-vervedocs+json'
+            if (cmd === 'executePaste' && navigator.clipboard.read) {
+              const items = await navigator.clipboard.read()
+              for (const item of items) if (item.types.includes(mime)) {
+                const fragment = JSON.parse(await (await item.getType(mime)).text())
+                if (isCurrent()) adapt.pasteFragment(fragment)
+                return
+              }
+              for (const item of items) if (item.types.includes('text/plain')) {
+                const text = await (await item.getType('text/plain')).text()
+                if (isCurrent()) this.command.executePaste(text)
+                return
+              }
+            } else {
+              const text = await navigator.clipboard.readText()
+              if (isCurrent()) this.command.executePasteNoFormat(text)
+            }
+          })().catch(() => {})
         }
         return next()
       })
@@ -248,6 +286,8 @@ export class DocxEditor {
       getPageGap: () => Number((editorOptions as any).pageGap ?? 24),
       getOptions: () => editorOptions,
       getElementList: () => drawRef.getDocument().elements,
+      getDocument: () => drawRef.getDocument(),
+      commitTransaction: (action) => this.adapt.commitPluginTransaction(action),
       getGroupContext: (groupId: string) => {
         const anchorMap = drawRef.getGroupAnchorMap()
         const anchor = anchorMap.get(groupId)
@@ -260,17 +300,17 @@ export class DocxEditor {
           _anchor: anchor
         }
       },
-      executeSetGroup: () => this.command?.executeSetGroup() ?? null,
+      executeSetGroup: (update) => this.adapt.setGroup(update),
       executeDeleteGroup: (groupId: string) => { this.command?.executeDeleteGroup(groupId) },
       executeLocationGroup: (groupId: string) => { this.command?.executeLocationGroup(groupId) },
       executeUpdateOptions: (opts: any) => {
         Object.assign(editorOptions, opts)
         drawRef.setDocument(drawRef.getDocument())
       },
-      spliceElementList: (list: any[], idx: number, deleteCount: number) => { list.splice(idx, deleteCount) },
-      renderDraw: () => { drawRef.setDocument(drawRef.getDocument()) },
       setActiveGroup: (groupId: string | null) => { drawRef.setActiveGroup(groupId) },
+      setActiveRevision: (revisionId, color) => { drawRef.setActiveRevision(revisionId, color) },
       getEventBus: () => this.eventBus,
+      setChartRenderer: (renderer) => drawRef.setChartRenderer(renderer),
       executeInsertChart: (payload: any) => { this.command?.executeInsertChart(payload) },
       executeUpdateChart: (id: string, patch: Record<string, unknown>) => { this.command?.executeUpdateChart(id, patch) }
     }
@@ -287,6 +327,9 @@ export class DocxEditor {
     // Worker 计算出目录后，通过 listener 推送给 UI
     this.worker.onTocResult((result) => {
       this.listener.emit('tocChange', result.toc)
+    })
+    this.listener.on('contentChange', () => {
+      this.worker.updateElements(this.draw.getDocument().elements)
     })
     this.worker.updateElements(doc.elements)
 
@@ -308,12 +351,25 @@ export class DocxEditor {
       this.renderEmbedBlocks()
       this.block?.clear()
       this.control?.clear()
-      this.worker?.updateElements(this.draw.getDocument().elements)
       if (this.listener.hasListeners('thumbnailChange')) {
         const images = this.draw.getPageThumbnails()
-        this.listener.emit('thumbnailChange', images)
+        const sources = this.draw.getThumbnailForegrounds()
+        if (sources.length !== this.thumbnailSources.length || sources.some((value, i) => value !== this.thumbnailSources[i])) {
+          // Publish new content immediately; background composition follows asynchronously.
+          this.listener.emit('thumbnailChange', images)
+          this.thumbnailSources = sources
+        }
+        this.refreshThumbnailAppearance(sources)
       }
     })
+  }
+
+  private refreshThumbnailAppearance(sources?: string[]): void {
+    if (this.destroyed || !this.draw || !this.listener.hasListeners('thumbnailChange')) return
+    const options = this.draw.getOptions()
+    const background = options.background as { color?: string } | undefined
+    this.thumbnailWorker.update(sources ?? this.draw.getThumbnailForegrounds(),
+      options.eyeCare ? '#C7EDCC' : background?.color || '#ffffff')
   }
 
   /**
@@ -350,15 +406,7 @@ export class DocxEditor {
     if (!doc || !Array.isArray(doc.elements)) {
       throw new TypeError('[DocxEditor.setDocument] 需要 IDocxDocumentMeta')
     }
-    // 重置 zone 到 main，避免在 header/footer 区域时数据写入错误位置
-    this.draw.setZone('main')
-    this.draw.setDocument(doc)
-    // 通知插件同步数据（批注/修订等）
-    for (const plugin of this.plugins.values()) {
-      plugin.hooks?.onSetDocument?.(doc)
-    }
-    // 通知 Worker 文档数据更新
-    this.worker.updateElements(doc.elements)
+    this.adapt.replaceDocument(doc, true)
   }
 
   // ============================================================
@@ -412,6 +460,7 @@ export class DocxEditor {
    * 销毁编辑器实例，释放所有资源（DOM/事件监听/定时器/组件/插件）
    */
   destroy(): void {
+    this.destroyed = true
     for (const plugin of this.plugins.values()) {
       plugin.destroy?.()
     }
@@ -420,6 +469,7 @@ export class DocxEditor {
     this.control?.destroy()
     this.history?.destroy()
     this.draw.destroy()
+    this.thumbnailWorker.destroy()
     this.worker.destroy()
     this.listener = new Listener()
     this.eventBus.clear()

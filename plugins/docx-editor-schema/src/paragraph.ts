@@ -53,6 +53,11 @@ export function splitParagraphs(elements: IElement[]): IParagraphGroup[] {
   let i = 0
   while (i < elements.length) {
     const node = elements[i]
+    if (node.type === 'columnBreak') {
+      out.push({ kind: 'pageBreak', block: node, start: i, end: i + 1, runs: [] })
+      i++
+      continue
+    }
     if (BLOCK_LEVEL_TYPES.has(node.type)) {
       const kind = node.type as IParagraphGroup['kind']
       const valueList = (node as unknown as { valueList?: IElement[] }).valueList ?? []
@@ -70,7 +75,7 @@ export function splitParagraphs(elements: IElement[]): IParagraphGroup[] {
     }
     // 普通段落：收集非块级节点，遇到段落终止符即切段
     const start = i
-    while (i < elements.length && !BLOCK_LEVEL_TYPES.has(elements[i].type)) {
+    while (i < elements.length && !BLOCK_LEVEL_TYPES.has(elements[i].type) && elements[i].type !== 'columnBreak') {
       if (isParagraphTerminator(elements[i])) {
         i++ // 消费终止符
         break

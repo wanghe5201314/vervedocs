@@ -1,21 +1,16 @@
 import { nextTick } from 'vue'
-import type { IParagraphStyle, IListNumbering, IDocxTheme } from '@vervedoc/docx-editor-schema'
+import type { IDocxDocumentMeta, IParagraphStyle, IListNumbering, IDocxTheme } from '@vervedoc/docx-editor-schema'
 
 /** 整文档替换载荷接口 */
-export interface ReplaceDocumentPayload {
+export interface ReplaceDocumentPayload extends Omit<Partial<IDocxDocumentMeta>, 'comments'> {
   /** 正文元素（必填） */
   main: any[]
   /** 页眉；缺省一律清空为 [] */
   header?: any[]
   /** 页脚；缺省一律清空为 [] */
   footer?: any[]
-  /**
-   * 批注：
-   * - DocxCommentMeta[]（含 author）→ buildFromMetas
-   * - 序列化批注（含 groupId）→ restore
-   * - 缺省 / 空数组 → 清空批注
-   */
-  comments?: unknown[]
+  /** 与 Java 共用的批注协议；缺省或空数组清空批注。 */
+  comments?: IDocxDocumentMeta['comments']
   /** 段落样式表 */
   styles?: Record<string, IParagraphStyle>
   /** 列表编号定义表 */
@@ -49,13 +44,7 @@ export async function replaceDocument(
   }
 
   inst.command.executeSetValue({
-    main: Array.isArray(payload.main) ? payload.main : [],
-    header: payload.header ?? [],
-    footer: payload.footer ?? [],
-    comments: payload.comments,
-    styles: payload.styles,
-    numbering: payload.numbering,
-    theme: payload.theme
+    ...payload
   })
 
   await nextTick()

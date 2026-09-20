@@ -1,6 +1,6 @@
 <template>
-  <a-modal v-model:open="visible" title="目录" width="520px" :maskClosable="false" class="app-dialog" :destroyOnClose="true">
-    <a-card :bordered="true" class="dialog-card">
+  <VdDialog v-model:open="visible" title="目录" width="520px" :maskClosable="false" class="app-dialog" :destroyOnClose="true">
+    <VdCard :bordered="true" class="dialog-card">
       <template #title>目录选项</template>
       <div class="dialog-grid-2">
         <div class="dialog-field">
@@ -21,16 +21,17 @@
         <a-checkbox v-model:checked="form.useDotLeader">点引导符</a-checkbox>
       </div>
       <div class="dialog-tip">自定义目录会根据当前文档标题生成静态目录文本。</div>
-    </a-card>
+    </VdCard>
     <template #footer>
-      <a-button type="primary" @click="handleConfirm">插入</a-button>
-      <a-button @click="visible = false">取消</a-button>
+      <VdButton type="primary" @click="handleConfirm">插入</VdButton>
+      <VdButton @click="visible = false">取消</VdButton>
     </template>
-  </a-modal>
+  </VdDialog>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { VdCard, VdDialog, VdButton } from '@vervedoc/ui'
 
 /** 目录对话框输出数据结构 */
 export interface TocDialogPayload {

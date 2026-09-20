@@ -13,27 +13,12 @@
 
     <div class="catalog-content">
       <div v-if="activeTab === 'toc'" class="tab-pane">
-        <a-empty v-if="treeData.length === 0" description="暂无目录数据" />
-        <a-tree
-          v-else
-          :tree-data="treeData"
-          :field-names="{ children: 'children', title: 'label', key: 'id' }"
-          :default-expand-all="true"
-          :expandedKeys="expandedKeys"
-          :selectedKeys="selectedKeys"
-          class="catalog-tree"
+        <VdTree
+          :nodes="treeNodes"
+          :selected-key="selectedKey"
+          empty-text="暂无目录数据"
           @select="handleNodeSelect"
-        >
-          <template #title="{ dataRef }">
-            <div
-              class="tree-node-content"
-              :class="{ active: selectedKeys.includes(dataRef.id) }"
-              :title="dataRef.label"
-            >
-              <span :class="`tree-node-level-${dataRef.level}`">{{ dataRef.label }}</span>
-            </div>
-          </template>
-        </a-tree>
+        />
       </div>
       <div v-else class="tab-pane">
         <div class="section-container">
@@ -59,17 +44,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { MenuFoldOutlined, FolderOutlined, CloseOutlined, CaretDownOutlined, MoreOutlined } from '@ant-design/icons-vue'
+import { VdTree, buildTreeFromFlat, type VdTreeNode } from '@vervedoc/ui'
 import { TITLE_LEVEL } from '@vervedoc/core'
 import type { TitleLevel, IAutoTocItem } from '@vervedoc/core'
 import type { IEditorTocNavApi } from '@/composables/use-editor-toc-nav'
-
-interface TreeNode {
-  key: string
-  id: string
-  label: string
-  level: number
-  children?: TreeNode[]
-}
 
 const props = defineProps<{
   tocNavAPI: IEditorTocNavApi
@@ -79,6 +57,7 @@ const props = defineProps<{
 const activeTab = computed(() => props.tocNavAPI.activeTab.value)
 /** 页面缩略图列表 */
 const pageThumbnails = computed(() => props.tocNavAPI.thumbnails.value)
+
 /** 标题级别到数字层级的映射 */
 const levelMap: Record<TitleLevel, number> = {
   [TITLE_LEVEL.FIRST]: 1,
@@ -88,6 +67,7 @@ const levelMap: Record<TitleLevel, number> = {
   [TITLE_LEVEL.FIFTH]: 5,
   [TITLE_LEVEL.SIXTH]: 6
 }
+
 /**
  * 规范化标题层级为 1-6 的数字
  * @param level - 原始层级，可为数字或字符串
@@ -102,63 +82,33 @@ const normalizeLevel = (level?: TitleLevel | number) => {
   }
   return 1
 }
+
 /**
- * 将扁平目录项列表基于 level 构建为树形结构，编号作为标签前缀
- * @param tocItems - 目录项数组（扁平列表）
- * @returns 树形节点数组
+ * 将扁平目录项转换为 buildTreeFromFlat 输入格式
+ * @param item - 目录项
+ * @returns 扁平节点
  */
-const buildTree = (tocItems: IAutoTocItem[]): TreeNode[] => {
-  if (!Array.isArray(tocItems) || tocItems.length === 0) return []
-  const roots: TreeNode[] = []
-  const stack: TreeNode[] = []
-  for (const item of tocItems) {
-    if (!item?.id || !item?.name?.trim()) continue
-    const level = normalizeLevel(item.level)
-    const trimmedName = item.name.trim()
-    const trimmedNumber = item.number?.trim()
-    const label = trimmedNumber ? `${trimmedNumber} ${trimmedName}` : trimmedName
-    const node: TreeNode = { key: item.id, id: item.id, label, level, children: [] }
-    while (stack.length > 0 && stack[stack.length - 1].level >= level) {
-      stack.pop()
-    }
-    if (stack.length === 0) {
-      roots.push(node)
-    } else {
-      stack[stack.length - 1].children!.push(node)
-    }
-    stack.push(node)
-  }
-  return roots
-}
-/** 树形数据，由目录列表构建而来 */
-const treeData = computed(() => buildTree(props.tocNavAPI.tocList.value))
-/**
- * 递归收集所有树节点的 ID
- * @param nodes - 树节点数组
- * @returns 所有节点 ID 的一维数组
- */
-const collectNodeIds = (nodes: TreeNode[]): string[] => {
-  return nodes.flatMap(node => [
-    node.id,
-    ...(node.children?.length ? collectNodeIds(node.children) : [])
-  ])
-}
-/** 展开键集合，默认展开全部节点 */
-const expandedKeys = computed(() => collectNodeIds(treeData.value))
-/** 选中键集合，由当前选中目录 ID 派生 */
-const selectedKeys = computed(() =>
-  props.tocNavAPI.selectedId.value ? [props.tocNavAPI.selectedId.value] : []
+const toFlatNode = (item: IAutoTocItem) => ({
+  id: item.id,
+  name: item.name,
+  level: normalizeLevel(item.level),
+  number: item.number
+})
+
+/** 树形节点数据，由扁平目录列表构建而来 */
+const treeNodes = computed<VdTreeNode[]>(() =>
+  buildTreeFromFlat(props.tocNavAPI.tocList.value.map(toFlatNode))
 )
+
+/** 当前选中节点 key，由目录选中 ID 派生 */
+const selectedKey = computed(() => props.tocNavAPI.selectedId.value || undefined)
 
 /**
  * 处理树节点选择，定位到对应目录
- * @param keys - 选中的节点键数组
+ * @param key - 选中的节点 key
  */
-const handleNodeSelect = (keys: any[]) => {
-
-  if (keys.length > 0) {
-    props.tocNavAPI.locate(String(keys[0]))
-  }
+const handleNodeSelect = (key: string) => {
+  props.tocNavAPI.locate(key)
 }
 
 /**
@@ -180,8 +130,6 @@ const toggleVisibility = () => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  width: 100%;
-  padding: 0 8px 8px;
   background-color: #f1f1f1;
   border-right: 1px solid #f1f1f1;
 }
@@ -230,97 +178,8 @@ const toggleVisibility = () => {
   padding: 6px 2px 2px;
 }
 
-
-.catalog-tree {
-  background: #f1f1f1 !important;
-  font-size: 12px;
-}
-.catalog-tree :deep(.ant-tree-treenode) {
-  background: #f1f1f1 !important;
-  min-height: 24px;
-  padding: 0;
-}
-.catalog-tree :deep(.ant-tree-indent-unit) {
-  width: 12px;
-}
-.catalog-tree :deep(.ant-tree-switcher) {
-  width: 0 !important;
-  min-width: 0 !important;
-  line-height: 24px;
-  overflow: hidden;
-}
-.catalog-tree :deep(.ant-tree-node-content-wrapper) {
-  height: 24px;
-  line-height: 24px;
-  padding: 0 4px 0 2px !important;
-  border-radius: 4px;
-  background: #f1f1f1 !important;
-}
-.catalog-tree :deep(.ant-tree-node-content-wrapper:hover) {
-  background: #f0f2f5 !important;
-}
-.catalog-tree :deep(.ant-tree-node-content-wrapper.ant-tree-node-selected) {
-  background: #e6f7ff !important;
-}
-
-.catalog-tree :deep(.ant-tree-title) {
-  width: 100%;
-  display: inline-block;
-}
-
-.tree-node-content {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  overflow: hidden;
-  border-radius: 4px;
-  padding: 0 4px 0 2px;
-  transition: background-color 0.15s ease;
-}
-
-.tree-node-content.active {
-  background: #dceeff;
-}
-
-.tree-node-content span {
-  display: inline-block;
-  min-width: 0;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tree-node-level-1 {
-  font-weight: 500;
-  font-size: 12px;
-  color: #303133;
-}
-
-.tree-node-level-2 {
-  font-weight: 500;
-  font-size: 12px;
-}
-
-.tree-node-level-3 {
-  font-weight: 500;
-  font-size: 12px;
-}
-
-.tree-node-level-4 {
-  font-weight: 500;
-  font-size: 12px;
-}
-
-.tree-node-level-5 {
-  font-weight: 500;
-  font-size: 12px;
-}
-
-.tree-node-level-6 {
-  font-weight: 500;
-  font-size: 12px;
+.tab-pane {
+  height: 100%;
 }
 
 .section-container {
@@ -392,16 +251,5 @@ const toggleVisibility = () => {
   margin-top: 8px;
   font-size: 12px;
   color: #595959;
-}
-</style>
-
-<style>
-.catalog-tree,
-.catalog-tree .ant-tree-list,
-.catalog-tree .ant-tree-list-holder,
-.catalog-tree .ant-tree-list-holder-inner,
-.catalog-tree .ant-tree-treenode,
-.catalog-tree .ant-tree-node-content-wrapper {
-  background: #f1f1f1 !important;
 }
 </style>

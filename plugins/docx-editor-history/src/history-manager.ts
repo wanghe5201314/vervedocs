@@ -96,6 +96,7 @@ export class HistoryManager {
     try {
       this._redoStack.push(current)
       this._undoStack.pop()
+      this._lastCoalesceKey = undefined
       return this._undoStack[this._undoStack.length - 1] ?? null
     } finally {
       this._isExecuting = false
@@ -103,17 +104,17 @@ export class HistoryManager {
   }
 
   /**
-   * 重做：返回要恢复的快照，current 被压入 undo 栈
-   * @param current 当前快照
+   * 重做：将恢复的快照压入 undo 栈并返回
+   * @param _current 当前快照（保留接口兼容）
    * @returns 要恢复的快照，无法重做时返回 null
    */
-  redo(current: HistorySnapshot): HistorySnapshot | null {
+  redo(_current: HistorySnapshot): HistorySnapshot | null {
     if (this._isExecuting) return null
     if (this._redoStack.length === 0) return null
     this._isExecuting = true
     try {
       const next = this._redoStack.pop()!
-      this._undoStack.push(current)
+      this._undoStack.push(next)
       this._lastPushTime = Date.now()
       this._lastCoalesceKey = undefined
       return next

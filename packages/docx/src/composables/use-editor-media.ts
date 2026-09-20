@@ -4,8 +4,6 @@
 interface EditorCommand {
   /** 插入图片 */
   executeInsertImage: (payload: any) => void
-  /** 插入图片（对象参数） */
-  executeImage: (payload: any) => void
 }
 
 /**
@@ -47,7 +45,7 @@ export function useEditorMedia(options: {
         }
         img.src = args
       } else {
-        instance.command.executeImage(args)
+        instance.command.executeInsertImage(args)
       }
     } else {
       const input = document.createElement('input')

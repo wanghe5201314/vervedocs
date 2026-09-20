@@ -4,6 +4,7 @@
 interface EditorInstance {
   /** 编辑器命令对象 */
   command: any
+  dispatchCommand(command: string, ...args: any[]): any
 }
 
 /**
@@ -30,23 +31,23 @@ export function useEditorFormat(options: {
   /** 剪切选中的内容 */
   function cut() {
     const i = getEditorInstance()
-    i?.command.executeCut?.()
+    return i?.dispatchCommand('executeCut')
   }
   /** 复制选中的内容 */
   function copy() {
     const i = getEditorInstance()
-    i?.command.executeCopy?.()
+    return i?.dispatchCommand('executeCopy')
   }
   /** 粘贴剪贴板内容 */
   function paste() {
     const i = getEditorInstance()
-    i?.command.executePaste?.()
+    return i?.dispatchCommand('executePaste')
   }
   /** 无格式粘贴剪贴板内容 */
   function pasteNoFormat() {
     const i = getEditorInstance()
     if (!i) return
-    i.command.executePasteNoFormat()
+    return i.dispatchCommand('executePasteNoFormat')
   }
   /** 全选文档内容 */
   function selectAll() {

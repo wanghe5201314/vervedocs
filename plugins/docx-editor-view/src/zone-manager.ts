@@ -20,6 +20,7 @@ export interface ZoneManagerDeps {
   setZoneState: (zone: Zone) => void
   /** 获取当前文档元数据 */
   getDocument: () => IDocxDocumentMeta
+  getPage: () => import('@vervedoc/docx-editor-schema').PageLayout | undefined
   /** 获取当前选区管理器，可能为 null */
   getRange: () => RangeManager | null
   /** 聚焦隐藏输入框 */
@@ -100,7 +101,7 @@ export class ZoneManager {
       if (el.type === 'title' || el.type === 'list') {
         const sub = el.valueList ?? el.elements ?? []
         const pos = this.findFirstTextPositionInElements(sub)
-        if (pos) return { path: [i, ...pos.path], offset: pos.offset }
+        if (pos) return { path: [i, 'valueList', ...pos.path], offset: pos.offset }
       }
       if (el.type === 'table') {
         const trList = el.trList ?? []
@@ -120,11 +121,14 @@ export class ZoneManager {
   getActiveDocument(): IDocxDocumentMeta {
     const doc = this.deps.getDocument()
     const zone = this.deps.getZone()
-    if (zone === 'header' && doc.sections?.header) {
-      return { ...doc, elements: doc.sections.header }
-    }
-    if (zone === 'footer' && doc.sections?.footer) {
-      return { ...doc, elements: doc.sections.footer }
+    if (zone === 'header' || zone === 'footer') {
+      if (doc.sections) {
+        const page = this.deps.getPage()
+        const partId = zone === 'header' ? page?.headerPartId : page?.footerPartId
+        if (!partId || !doc.headerFooterParts?.[partId]) throw new TypeError('当前页没有 Java 页眉页脚 part 引用，不能隐式创建')
+        return { ...doc, elements: doc.headerFooterParts[partId] }
+      }
+      return { ...doc, elements: doc[zone] ?? doc.contentZones?.[zone] ?? (doc[zone] = []) }
     }
     return doc
   }
@@ -133,12 +137,17 @@ export class ZoneManager {
   applyActiveDocument(doc: IDocxDocumentMeta): void {
     const current = this.deps.getDocument()
     const zone = this.deps.getZone()
-    if (zone === 'header') {
-      current.sections = current.sections || {}
-      current.sections.header = doc.elements
-    } else if (zone === 'footer') {
-      current.sections = current.sections || {}
-      current.sections.footer = doc.elements
+    if (zone === 'header' || zone === 'footer') {
+      if (current.sections) {
+        const page = this.deps.getPage()
+        const partId = zone === 'header' ? page?.headerPartId : page?.footerPartId
+        if (!partId || !current.headerFooterParts?.[partId]) throw new TypeError('当前页没有 Java 页眉页脚 part 引用，不能隐式创建')
+        current.headerFooterParts[partId] = doc.elements
+      } else if (current[zone] !== undefined || !current.contentZones?.[zone]) {
+        current[zone] = doc.elements
+      } else {
+        current.contentZones[zone] = doc.elements
+      }
     } else {
       current.elements = doc.elements
     }

@@ -1,5 +1,5 @@
 <template>
-  <a-modal v-model:open="visible" title="书签" width="520px" :maskClosable="false" :footer="null" class="app-dialog">
+  <VdDialog v-model:open="visible" title="书签" width="520px" :maskClosable="false" class="app-dialog">
     <div class="bookmark-body">
       <div class="bookmark-left">
         <a-form :model="form">
@@ -39,17 +39,18 @@
       </div>
 
       <div class="bookmark-actions">
-        <a-button type="primary" size="small" :disabled="!canAdd" @click="handleAdd">添加</a-button>
-        <a-button :disabled="!selectedName" size="small" @click="handleDelete">删除</a-button>
-        <a-button :disabled="!selectedName" size="small" @click="handleGoto">转到</a-button>
-        <a-button size="small" @click="visible = false">关闭</a-button>
+        <VdButton type="primary" size="small" :disabled="!canAdd" @click="handleAdd">添加</VdButton>
+        <VdButton :disabled="!selectedName" size="small" @click="handleDelete">删除</VdButton>
+        <VdButton :disabled="!selectedName" size="small" @click="handleGoto">转到</VdButton>
+        <VdButton size="small" @click="visible = false">关闭</VdButton>
       </div>
     </div>
-  </a-modal>
+  </VdDialog>
 </template>
 
 <script setup lang="ts">
 import {computed, ref, watch} from 'vue'
+import { VdDialog, VdButton } from '@vervedoc/ui'
 import type { IBookmarkApi } from '@/composables/use-bookmarks'
 
 /** 组件 props 定义 */

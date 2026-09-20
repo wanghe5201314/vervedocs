@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <VdDialog
     v-model:open="visible"
     class="app-dialog"
     title="段落与符号"
@@ -10,7 +10,7 @@
   >
     <a-tabs v-model:activeKey="activeTab" type="card">
       <a-tab-pane tab="段落" key="paragraph">
-        <a-card :bordered="true" class="dialog-card">
+        <VdCard :bordered="true" class="dialog-card">
           <template #title>
             <span>缩进</span>
           </template>
@@ -22,16 +22,16 @@
             <div class="dialog-field">
               <div class="dialog-label">快捷</div>
               <div class="dialog-row">
-                <a-button :size="UI_EL_SIZE" @click="indentChars = 0">无</a-button>
-                <a-button :size="UI_EL_SIZE" @click="indentChars = 2">2 字符</a-button>
-                <a-button :size="UI_EL_SIZE" @click="indentChars = 4">4 字符</a-button>
+                <VdButton :size="UI_EL_SIZE" @click="indentChars = 0">无</VdButton>
+                <VdButton :size="UI_EL_SIZE" @click="indentChars = 2">2 字符</VdButton>
+                <VdButton :size="UI_EL_SIZE" @click="indentChars = 4">4 字符</VdButton>
               </div>
             </div>
           </div>
           <div class="dialog-tip">当前缩进为插入全角空格实现（与工具栏一致）。</div>
-        </a-card>
+        </VdCard>
 
-        <a-card :bordered="true" class="dialog-card" style="margin-top: 12px">
+        <VdCard :bordered="true" class="dialog-card" style="margin-top: 12px">
           <template #title>段落</template>
           <div class="dialog-grid-2">
             <div class="dialog-field">
@@ -45,9 +45,9 @@
               <a-input-number v-model:value="rowMarginValue" :size="UI_EL_SIZE" :min="0" :max="10" :step="0.5" style="width: 100%" />
             </div>
           </div>
-        </a-card>
+        </VdCard>
 
-        <a-card :bordered="true" class="dialog-card" style="margin-top: 12px">
+        <VdCard :bordered="true" class="dialog-card" style="margin-top: 12px">
           <template #title>文字样式</template>
           <div class="dialog-row">
             <a-checkbox :checked="boldActive" :size="UI_EL_SIZE" @change="toggleBold">加粗</a-checkbox>
@@ -55,11 +55,11 @@
             <a-checkbox :checked="underlineActive" :size="UI_EL_SIZE" @change="toggleUnderline">下划线</a-checkbox>
             <a-checkbox :checked="strikeoutActive" :size="UI_EL_SIZE" @change="toggleStrikeout">删除线</a-checkbox>
           </div>
-        </a-card>
+        </VdCard>
       </a-tab-pane>
 
       <a-tab-pane tab="项目符号与编号" key="symbol">
-        <a-card :bordered="true" class="dialog-card">
+        <VdCard :bordered="true" class="dialog-card">
           <template #title>项目符号与编号</template>
           <div class="dialog-grid-2">
             <div class="dialog-field">
@@ -76,22 +76,23 @@
             </div>
           </div>
           <div class="dialog-row" style="margin-top: 10px">
-              <a-button :size="UI_EL_SIZE" @click="handleClearList">清除列表</a-button>
+              <VdButton :size="UI_EL_SIZE" @click="handleClearList">清除列表</VdButton>
               <div class="dialog-tip">项目符号与编号互斥，选择其一将覆盖另一种。</div>
           </div>
-        </a-card>
+        </VdCard>
       </a-tab-pane>
     </a-tabs>
 
     <template #footer>
-      <a-button :size="UI_EL_SIZE" @click="visible = false">取消</a-button>
-      <a-button :size="UI_EL_SIZE" type="primary" @click="handleApply">确定</a-button>
+      <VdButton @click="visible = false">取消</VdButton>
+      <VdButton type="primary" @click="handleApply">确定</VdButton>
     </template>
-  </a-modal>
+  </VdDialog>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { VdCard, VdDialog, VdButton } from '@vervedoc/ui'
 import { editorStateStore } from '@/stores/editor-state'
 import { UI_EL_SIZE } from '@/config/constants'
 

@@ -7,6 +7,9 @@
 
 import type {
   IElement,
+  IImageElement,
+  IImageGeometry,
+  IDocxDocumentMeta,
   IEditorOption,
   IListNumbering,
   IParagraphStyle,
@@ -20,6 +23,17 @@ import type {
   PathSegment
 } from './types'
 import { DEFAULT_EDITOR_OPTION } from './constants'
+
+/** 按节引用选择页眉页脚；未定义的引用按 OOXML 继承前节同类引用。 */
+export function resolveHeaderFooterPart(doc: IDocxDocumentMeta, zone: 'header' | 'footer', sectionIndex: number, pageIndex: number, firstPage: boolean): string | undefined {
+  const section = doc.sections?.[sectionIndex]
+  const kind = firstPage && section?.titlePage ? 'first' : doc.evenAndOddHeaders && (pageIndex + 1) % 2 === 0 ? 'even' : 'default'
+  for (let index = sectionIndex; index >= 0; index--) {
+    const refs = zone === 'header' ? doc.sections?.[index]?.headers : doc.sections?.[index]?.footers
+    if (refs?.[kind] !== undefined) return refs[kind]
+  }
+  return undefined
+}
 
 /** 格式化树上下文：携带编辑器选项、样式表、编号定义等归一化所需依赖 */
 export interface FormatTreeContext {
@@ -95,31 +109,9 @@ export function adjustFloatImagePositions(
   elements: IElement[],
   editorOptions: IEditorOption
 ): void {
-  if (!Array.isArray(elements) || elements.length === 0) return
-  const anyOpts = editorOptions as unknown as Record<string, unknown>
-  const margins = (anyOpts.margins as number[] | undefined) || [96, 120, 96, 120]
-  const paperDirection = anyOpts.paperDirection
-  const marginTop = paperDirection === 'horizontal' ? margins[1] : margins[0]
-  const marginLeft = paperDirection === 'horizontal' ? margins[0] : margins[3]
-  const defaultSize = (anyOpts.defaultSize as number | undefined) || 14
-  for (let li = 0; li < elements.length; li++) {
-    const el = elements[li] as unknown as Record<string, unknown>
-    const imgDisplay = el.imgDisplay as string | undefined
-    if (imgDisplay && imgDisplay !== 'inline' && imgDisplay !== 'block' && el.imgFloatPosition) {
-      let fontSize = defaultSize
-      for (let ni = li + 1; ni < Math.min(li + 10, elements.length); ni++) {
-        const next = elements[ni] as unknown as Record<string, unknown>
-        if (next.size && next.value && (next.value as string).trim()) {
-          fontSize = next.size as number
-          break
-        }
-      }
-      const ascent = fontSize * 0.8
-      const pos = el.imgFloatPosition as { x: number; y: number }
-      pos.x += marginLeft
-      pos.y += marginTop + ascent
-    }
-  }
+  // 坐标由 Java imageLayout 提供；保留旧 API，但禁止二次估算偏移。
+  void elements
+  void editorOptions
 }
 
 /**
@@ -264,14 +256,6 @@ function normalizeTd(td: ITd, ctx: FormatTreeContext): void {
   if (!Array.isArray(td.padding) || td.padding.length !== 4) {
     td.padding = [2, 2, 2, 2]
   }
-  if (!td.borderStyle) {
-    td.borderStyle = {
-      top:    { width: 1, color: '#000000', style: 'solid' },
-      right:  { width: 1, color: '#000000', style: 'solid' },
-      bottom: { width: 1, color: '#000000', style: 'solid' },
-      left:   { width: 1, color: '#000000', style: 'solid' }
-    }
-  }
   if (!Array.isArray(td.value)) td.value = []
   ctx._pathStack?.push('value')
   formatElementTree(td.value, ctx)
@@ -284,11 +268,57 @@ function normalizeTd(td: ITd, ctx: FormatTreeContext): void {
  * @param ctx 格式化上下文
  */
 function normalizeImage(node: IElement, ctx: FormatTreeContext): void {
-  const anyNode = node as unknown as Record<string, unknown>
-  if (typeof anyNode.width !== 'number' || (anyNode.width as number) <= 0) anyNode.width = 200
-  if (typeof anyNode.height !== 'number' || (anyNode.height as number) <= 0) anyNode.height = 150
-  if (typeof anyNode.rotate !== 'number') anyNode.rotate = 0
+  applyImageLayout(node as IImageElement)
   applyParagraphStyleId(node, ctx)
+}
+
+/** OOXML 的长度单位为 EMU，旋转单位为 1/60000 度。 */
+export function applyImageLayout(image: IImageElement): void {
+  const layout = image.imageLayout
+  if (!layout) return
+  const ext = layout.transform?.children.find(child => child.name === 'ext')
+  if (ext?.attributes.cx !== undefined) image.width = Number(ext.attributes.cx) / 9525
+  if (ext?.attributes.cy !== undefined) image.height = Number(ext.attributes.cy) / 9525
+  image.rotate = Number(layout.transform?.attributes.rot ?? 0) / 60000
+  if (layout.anchored === false) image.imgDisplay = 'inline'
+  else if (layout.anchored === true) {
+    const wrap = layout.positioning?.find(node => node.name.startsWith('wrap'))
+    image.imgDisplay = wrap?.name === 'wrapNone'
+      ? (layout.anchorAttributes?.behindDoc === '1' || layout.anchorAttributes?.behindDoc === 'true' ? 'float-bottom' : 'float-top')
+      : 'surround'
+  }
+}
+
+/** 用户调整图片时同时更新 Java 写回使用的几何结构。 */
+export function updateImageLayout(image: IImageElement, changes: {
+  width?: number; height?: number; rotate?: number; wrap?: IImageElement['imgDisplay']
+}): void {
+  const layout = image.imageLayout
+  if (!layout) return
+  const geometry = (name: string, namespace: string): IImageGeometry => ({ name, namespace, attributes: {}, children: [] })
+  const drawing = 'http://schemas.openxmlformats.org/drawingml/2006/main'
+  if (changes.width !== undefined || changes.height !== undefined || changes.rotate !== undefined) {
+    const transform = layout.transform ??= geometry('xfrm', drawing)
+    if (changes.rotate !== undefined) transform.attributes.rot = String(Math.round(changes.rotate * 60000))
+    if (changes.width !== undefined || changes.height !== undefined) {
+      let ext = transform.children.find(child => child.name === 'ext')
+      if (!ext) { ext = geometry('ext', drawing); transform.children.push(ext) }
+      if (changes.width !== undefined) ext.attributes.cx = String(Math.round(changes.width * 9525))
+      if (changes.height !== undefined) ext.attributes.cy = String(Math.round(changes.height * 9525))
+    }
+  }
+  if (changes.wrap !== undefined) {
+    layout.anchored = changes.wrap !== 'inline' && changes.wrap !== 'block'
+    layout.anchorAttributes ??= {}
+    layout.anchorAttributes.behindDoc = changes.wrap === 'float-bottom' ? '1' : '0'
+    layout.positioning = (layout.positioning ?? []).filter(node => !node.name.startsWith('wrap'))
+    if (layout.anchored) {
+      const wrap = geometry(changes.wrap === 'surround' ? 'wrapSquare' : 'wrapNone', 'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing')
+      if (changes.wrap === 'surround') wrap.attributes.wrapText = 'bothSides'
+      layout.positioning.push(wrap)
+    }
+  }
+  applyImageLayout(image)
 }
 
 /**
@@ -298,7 +328,7 @@ function normalizeImage(node: IElement, ctx: FormatTreeContext): void {
  */
 function normalizePageBreak(node: IElement, ctx: FormatTreeContext): void {
   const anyNode = node as unknown as Record<string, unknown>
-  if (anyNode.value !== 'manual' && anyNode.value !== 'auto') anyNode.value = 'manual'
+  if (anyNode.value == null) throw new TypeError('pageBreak.value 缺失，必须由解析来源提供')
   applyParagraphStyleId(node, ctx)
 }
 
@@ -314,9 +344,15 @@ function applyParagraphStyleId(node: IElement, ctx: FormatTreeContext): void {
   const style = ctx.styles[styleId]
   if (!style) return
   const anyNode = node as unknown as Record<string, unknown>
+  const indentationBaseline = anyNode.paragraphIndentationBaseline as Record<string, number | null> | undefined
   // 只在字段未显式设置时应用
   for (const key of Object.keys(style)) {
     if (key === 'id' || key === 'name' || key === 'basedOn') continue
+    const axis = key === 'paragraphIndentLeft' ? 'left'
+      : key === 'paragraphIndentRight' ? 'right'
+      : key === 'paragraphFirstLineIndent' ? 'firstLine' : undefined
+    // 后端基线已解析过样式继承；null 也是结果，不能再从原始样式回填。
+    if (axis && indentationBaseline && Object.prototype.hasOwnProperty.call(indentationBaseline, axis)) continue
     if (anyNode[key] == null) anyNode[key] = (style as unknown as Record<string, unknown>)[key]
   }
 }

@@ -6,7 +6,7 @@
       <a-popover placement="bottom" :overlayStyle="{ width: '280px' }" trigger="click">
         <VdRibbonButton icon="counter" text="字数统计" title="字数统计" size="large" />
         <template #content>
-          <a-card size="small" class="ribbon-popover-card" :bordered="false" :bodyStyle="{ padding: '4px' }">
+          <VdCard size="small" class="ribbon-popover-card" :bordered="false" :bodyStyle="{ padding: '4px' }">
             <div class="wordcount-panel">
               <div class="wc-header">字数统计</div>
               <div class="wc-grid">
@@ -18,7 +18,7 @@
               </div>
               <div class="wc-tip">选中文本后查看可显示选中内容的统计</div>
             </div>
-          </a-card>
+          </VdCard>
         </template>
       </a-popover>
     </VdRibbonGroup>
@@ -74,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import { VdRibbonButton, VdRibbonGroup } from '@vervedoc/ui'
+import { VdRibbonButton, VdRibbonGroup, VdCard } from '@vervedoc/ui'
 import { computed } from 'vue'
 
 

@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <VdDialog
     v-model:open="visible"
     title="AI 设置"
     width="480px"
@@ -38,15 +38,16 @@
     </a-form>
     <template #footer>
       <div class="dialog-footer">
-        <a-button @click="handleClose">取消</a-button>
-        <a-button type="primary" @click="handleSave">保存</a-button>
+        <VdButton @click="handleClose">取消</VdButton>
+        <VdButton type="primary" @click="handleSave">保存</VdButton>
       </div>
     </template>
-  </a-modal>
+  </VdDialog>
 </template>
 
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
+import { VdDialog, VdButton } from '@vervedoc/ui'
 import { message } from 'ant-design-vue'
 import { updateAIServiceConfig } from '@/composables/use-ai'
 

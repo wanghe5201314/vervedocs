@@ -1,4 +1,5 @@
 import { ref, nextTick, type Ref } from 'vue'
+import type { IRange } from '@vervedoc/docx-editor-schema'
 
 /**
  * 书签项
@@ -81,7 +82,8 @@ export function useBookmarks(options: {
   getEditorInstance: () => {
     command?: {
       getBookmarks: () => unknown
-      getRangeContext?: () => any
+      getRange?: () => IRange | null
+      executeExtractSelectionText?: () => string
       executeAddBookmark: (payload: { name: string }) => void
       executeDeleteBookmark: (payload: { name: string }) => void
       executeGotoBookmark: (payload: { name: string }) => void
@@ -112,11 +114,14 @@ export function useBookmarks(options: {
       hasBookmarkSelectionRange.value = false
       return
     }
-    const rangeContext = instance?.command?.getRangeContext?.()
-    const selectionText = String(rangeContext?.selectionText || '')
+    const range = instance?.command?.getRange?.()
+    const selectionText = String(instance?.command?.executeExtractSelectionText?.() || '')
       .replace(/\u200B/g, '')
       .trim()
-    const isRangeSelection = !!selectionText && !rangeContext?.isCollapsed
+    const isRangeSelection = !!range && (
+      range.anchor.offset !== range.focus.offset ||
+      JSON.stringify(range.anchor.path) !== JSON.stringify(range.focus.path)
+    )
     const existingNames = new Set(
       bookmarks
         .map((b: any) => (typeof b?.name === 'string' ? b.name : ''))

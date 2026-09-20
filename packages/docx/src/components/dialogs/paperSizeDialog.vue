@@ -1,5 +1,5 @@
 <template>
-  <a-modal v-model:open="visible" title="自定义大小" width="480px" :maskClosable="false" class="app-dialog">
+  <VdDialog v-model:open="visible" title="自定义大小" width="480px" :maskClosable="false" class="app-dialog">
     <div class="paper-size-body">
       <div class="ps-form-item">
         <a-select v-model:value="selectedPaperPreset" style="width: 100%;" @change="handlePaperPresetChange">
@@ -41,21 +41,16 @@
       </div>
     </div>
     <template #footer>
-      <a-button type="primary" @click="confirmCustomPaperSize">
-        <CheckOutlined />
-        确定
-      </a-button>
-      <a-button @click="visible = false">
-        <CloseOutlined />
-        取消
-      </a-button>
+      <VdButton type="primary" icon="check" @click="confirmCustomPaperSize">确定</VdButton>
+      <VdButton icon="close" @click="visible = false">取消</VdButton>
     </template>
-  </a-modal>
+  </VdDialog>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { CheckOutlined, CloseOutlined } from '@ant-design/icons-vue'
+import { VdDialog, VdButton } from '@vervedoc/ui'
+
 import { PAPER_SIZE_LIST } from '@vervedoc/core'
 
 /** 纸张尺寸数据（像素） */

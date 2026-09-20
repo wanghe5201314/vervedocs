@@ -1,5 +1,26 @@
-﻿import dayjs from 'dayjs'
+import dayjs from 'dayjs'
+import type { IDocxDocumentMeta } from '@vervedoc/docx-editor-schema'
+
+function revisionNodes(doc: IDocxDocumentMeta): Array<{ el: any; parent: any[]; index: number }> {
+  const nodes: Array<{ el: any; parent: any[]; index: number }> = []
+  const visit = (elements: any[]) => {
+    elements.forEach((el, index) => {
+      nodes.push({ el, parent: elements, index })
+      if (Array.isArray(el.valueList)) visit(el.valueList)
+      if (Array.isArray(el.trList)) {
+        for (const row of el.trList) for (const cell of row.tdList) visit(cell.value)
+      }
+    })
+  }
+  visit(doc.elements)
+  for (const elements of [doc.header, doc.footer, ...Object.values(doc.contentZones ?? {}), ...Object.values(doc.headerFooterParts ?? {})]) {
+    if (elements) visit(elements)
+  }
+  return nodes
+}
 import type { CommentHost } from './host'
+import type { GroupAnchor } from './host'
+import { drawAnnotationConnector, getAvatarColor } from './annotation-visual'
 
 const PREFIX = 'ce'
 
@@ -11,14 +32,7 @@ interface RevisionBalloonData {
   content: string
   top: number
   left: number
-  anchorStartX: number
-  anchorStartY: number
-  anchorEndX: number
-  anchorEndY: number
-  pageRight: number
-  glyphHeight: number
-  startGlyphTop: number
-  endGlyphTop: number
+  anchor: GroupAnchor
 }
 
 export interface RevisionCallbacks {
@@ -39,11 +53,8 @@ export class RevisionComponent {
   private _callbacks: RevisionCallbacks = {}
   /** 锚点竖线 DOM 元素列表 */
   private _anchorLineEls: HTMLDivElement[] = []
-
-  /** 修订高亮颜色（取编辑器选项 revisionColor，默认 #e60000） */
-  private get _revisionColor(): string {
-    return this._command?.getOptions?.()?.revisionColor || '#e60000'
-  }
+  private _balloons = new Map<string, RevisionBalloonData>()
+  private _hoveredRevisionId: string | null = null
 
   /** 注入宿主契约并创建 overlay 容器（由 createRevisionPlugin 的 install 调用） */
   public install(command: CommentHost): this {
@@ -94,13 +105,17 @@ export class RevisionComponent {
   private _createBalloonDom(balloon: RevisionBalloonData): HTMLDivElement {
     const div = document.createElement('div')
     div.classList.add(`${PREFIX}-revision-balloon`)
+    div.dataset.revisionId = balloon.revisionId
     div.style.cssText =
       'position:absolute;pointer-events:auto;min-width:270px;max-width:270px;box-sizing:border-box;' +
-      'padding:8px 10px;background:#f7f7f7;border:1px solid #d9d9d9;border-radius:6px;' +
-      'font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,0.10);'
+      'padding:8px 10px;background:#f7f7f7;border:1px solid #d9d9d9;border-radius:0;' +
+      'font-size:12px;box-shadow:none;'
     div.style.top = `${balloon.top}px`
     div.style.left = `${balloon.left}px`
-    div.addEventListener('mouseenter', () => this._showAnchorLines(balloon))
+    div.addEventListener('mouseenter', () => {
+      const current = this._balloons.get(balloon.revisionId)
+      if (current) this._showAnchorLines(current)
+    })
     div.addEventListener('mouseleave', () => this._hideAnchorLines())
 
     const header = document.createElement('div')
@@ -112,6 +127,7 @@ export class RevisionComponent {
     const marker = document.createElement('div')
     marker.className = 'revision-marker'
     marker.style.cssText = 'width:14px;height:14px;border-radius:2px;background:#d9d9d9;flex-shrink:0;margin-top:2px;'
+    marker.style.background = getAvatarColor(balloon.author)
 
     const metaText = document.createElement('div')
     metaText.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0;flex:1;'
@@ -171,9 +187,6 @@ export class RevisionComponent {
 
     body.append(typeLabel, contentSpan)
     div.append(header, body)
-    const arrow = document.createElement('div')
-    arrow.style.cssText = 'position:absolute;left:-7px;top:20px;width:14px;height:14px;background:#f7f7f7;border-left:1px solid #d9d9d9;border-bottom:1px solid #d9d9d9;transform:rotate(45deg);border-bottom-left-radius:2px;box-sizing:border-box;'
-    div.append(arrow)
     return div
   }
 
@@ -244,8 +257,7 @@ export class RevisionComponent {
     id: string; type: 'insert' | 'delete' | 'format'; author: string; date: string; content: string; firstIndex: number; lastIndex: number
   }> {
     if (!this._command) return []
-    const elementList = this._command.getElementList?.()
-    if (!elementList) return []
+    const elementList = revisionNodes(this._command.getDocument()).map(node => node.el)
     const revisionMap = new Map<string, { id: string; type: 'insert' | 'delete' | 'format'; author: string; date: string; content: string; firstIndex: number; lastIndex: number }>()
     for (let i = 0; i < elementList.length; i++) {
       const el = elementList[i]
@@ -307,15 +319,9 @@ export class RevisionComponent {
     const pageWidth = this._command.getDrawWidth?.() || 794
     const balloonLeft = pageWidth + 16
     const balloons: RevisionBalloonData[] = []
-    const elementList = this._command.getElementList?.()
-
     for (const rev of revisions) {
       const anchor = this._command.getRevisionAnchor?.(rev.id)
       if (!anchor) continue
-      const startSize = elementList?.[rev.firstIndex]?.size || 0
-      const glyphHeight = anchor.glyphHeight || startSize * 1.15 || anchor.lineHeight || 20
-      const startGlyphTop = anchor.startGlyphTop ?? anchor.startY
-      const endGlyphTop = anchor.endGlyphTop ?? anchor.startY
 
       balloons.push({
         revisionId: rev.id,
@@ -325,14 +331,7 @@ export class RevisionComponent {
         content: rev.content,
         top: anchor.startY,
         left: balloonLeft,
-        anchorStartX: anchor.startX,
-        anchorStartY: anchor.startY,
-        anchorEndX: anchor.endX,
-        anchorEndY: anchor.endY,
-        pageRight: pageWidth,
-        glyphHeight,
-        startGlyphTop,
-        endGlyphTop
+        anchor
       })
     }
 
@@ -347,6 +346,13 @@ export class RevisionComponent {
 
     this._expandContainerWidth(balloons)
     this._renderBalloons(balloons)
+    if (this._hoveredRevisionId !== null) {
+      const hovered = this._balloons.get(this._hoveredRevisionId)
+      if (hovered) {
+        this._command.setActiveRevision?.(hovered.revisionId, getAvatarColor(hovered.author))
+        this._drawAnchorLines(hovered)
+      } else this._hideAnchorLines()
+    }
   }
 
   private _expandContainerWidth(balloons: RevisionBalloonData[]): void {
@@ -383,6 +389,7 @@ export class RevisionComponent {
 
   private _renderBalloons(balloons: RevisionBalloonData[]) {
     if (!this._overlayContainer) return
+    this._balloons = new Map(balloons.map(balloon => [balloon.revisionId, balloon]))
 
     const existingIds = new Set(balloons.map(b => b.revisionId))
     for (const [id, dom] of this._balloonDoms) {
@@ -418,28 +425,43 @@ export class RevisionComponent {
           contentSpan.textContent = balloon.content
         }
       }
+      const color = getAvatarColor(balloon.author)
+      const marker = balloonDom.querySelector<HTMLElement>('.revision-marker')
+      if (marker) marker.style.background = color
+      balloonDom.style.borderColor = balloon.revisionId === this._hoveredRevisionId ? color : '#d9d9d9'
     }
   }
 
   private _showAnchorLines(balloon: RevisionBalloonData): void {
-    this._hideAnchorLines()
-    if (!this._overlayContainer) return
-    const color = this._revisionColor
-    const lineHeight = balloon.anchorEndY - balloon.anchorStartY || 20
-    const glyphHeight = balloon.glyphHeight || lineHeight
-    const startGlyphTop = balloon.startGlyphTop ?? balloon.anchorStartY
-    const endGlyphTop = balloon.endGlyphTop ?? balloon.anchorStartY
-    for (const [x, y] of [[balloon.anchorStartX, startGlyphTop], [balloon.anchorEndX, endGlyphTop]]) {
-      const line = document.createElement('div')
-      line.style.cssText = `position:absolute;left:${x - 1}px;top:${y}px;width:2px;height:${glyphHeight}px;background:${color};pointer-events:none;z-index:11;opacity:0.7;`
-      this._overlayContainer.append(line)
-      this._anchorLineEls.push(line)
-    }
+    if (this._hoveredRevisionId === balloon.revisionId) return
+    this._hideAnchorLines(false)
+    this._hoveredRevisionId = balloon.revisionId
+    const color = getAvatarColor(balloon.author)
+    const card = this._balloonDoms.get(balloon.revisionId)
+    if (card) card.style.borderColor = color
+    this._command?.setActiveRevision?.(balloon.revisionId, color)
+    this._drawAnchorLines(balloon)
   }
 
-  private _hideAnchorLines(): void {
+  private _drawAnchorLines(balloon: RevisionBalloonData): void {
+    for (const line of this._anchorLineEls) line.remove()
+    this._anchorLineEls = []
+    if (!this._overlayContainer) return
+    const card = this._balloonDoms.get(balloon.revisionId)
+    if (!card) return
+    this._anchorLineEls = drawAnnotationConnector(
+      this._overlayContainer, card, balloon.anchor, getAvatarColor(balloon.author), `${PREFIX}-revision-connector`
+    )
+  }
+
+  private _hideAnchorLines(updateActiveRevision = true): void {
     for (const el of this._anchorLineEls) el.remove()
     this._anchorLineEls = []
+    if (this._hoveredRevisionId === null) return
+    const card = this._balloonDoms.get(this._hoveredRevisionId)
+    if (card) card.style.borderColor = '#d9d9d9'
+    this._hoveredRevisionId = null
+    if (updateActiveRevision) this._command?.setActiveRevision?.(null)
   }
 
   private _clear() {
@@ -448,120 +470,58 @@ export class RevisionComponent {
       dom.remove()
     }
     this._balloonDoms.clear()
+    this._balloons.clear()
   }
 
-  /** 接受指定修订：插入型保留、删除型移除、格式型还原 */
-  public accept(revisionId: string) {
+  private resolveRevision(accept: boolean, revisionId?: string): void {
     if (!this._command) return
     this._hideAnchorLines()
-    const elementList = this._command.getElementList?.()
-    if (!elementList) return
-    const indicesToRemove: number[] = []
-    for (let i = elementList.length - 1; i >= 0; i--) {
-      const el = elementList[i]
-      if (el.revisionId === revisionId) {
-        if (el.revisionType === 'delete') {
-          indicesToRemove.push(i)
+    this._command.commitTransaction(doc => {
+      let changed = false
+      for (const { el, parent, index } of revisionNodes(doc).reverse()) {
+        if (!el.revisionId || !el.revisionType || (revisionId !== undefined && el.revisionId !== revisionId)) continue
+        changed = true
+        if (el.revisionType === (accept ? 'delete' : 'insert')) {
+          parent.splice(index, 1)
         } else {
+          if (!accept && el.revisionType === 'format' && el.revisionOldProps) {
+            Object.assign(el, el.revisionOldProps)
+          }
           delete el.revisionId
           delete el.revisionType
           delete el.revisionAuthor
           delete el.revisionDate
+          delete el.revisionOldProps
         }
       }
-    }
-    for (const idx of indicesToRemove) {
-      this._command.spliceElementList?.(elementList, idx, 1, undefined, { isIgnoreDeletedRule: true })
-    }
-    const dom = this._balloonDoms.get(revisionId)
-    if (dom) {
-      dom.remove()
+      return changed
+    })
+    if (revisionId !== undefined) {
+      this._balloonDoms.get(revisionId)?.remove()
       this._balloonDoms.delete(revisionId)
-    }
-    this._command.renderDraw?.({ isSubmitHistory: true })
+    } else this._clear()
+  }
+
+  /** 接受指定修订 */
+  public accept(revisionId: string) {
+    this.resolveRevision(true, revisionId)
     this._callbacks.onAccept?.(revisionId)
   }
 
-  /** 拒绝指定修订：插入型移除、删除型保留、格式型还原 */
+  /** 拒绝指定修订 */
   public reject(revisionId: string) {
-    if (!this._command) return
-    this._hideAnchorLines()
-    const elementList = this._command.getElementList?.()
-    if (!elementList) return
-    const indicesToRemove: number[] = []
-    for (let i = elementList.length - 1; i >= 0; i--) {
-      const el = elementList[i]
-      if (el.revisionId === revisionId) {
-        if (el.revisionType === 'insert') {
-          indicesToRemove.push(i)
-        } else {
-          delete el.revisionId
-          delete el.revisionType
-          delete el.revisionAuthor
-          delete el.revisionDate
-        }
-      }
-    }
-    for (const idx of indicesToRemove) {
-      this._command.spliceElementList?.(elementList, idx, 1, undefined, { isIgnoreDeletedRule: true })
-    }
-    const dom = this._balloonDoms.get(revisionId)
-    if (dom) {
-      dom.remove()
-      this._balloonDoms.delete(revisionId)
-    }
-    this._command.renderDraw?.({ isSubmitHistory: true })
+    this.resolveRevision(false, revisionId)
     this._callbacks.onReject?.(revisionId)
   }
 
   /** 接受文档中的所有修订 */
   public acceptAll() {
-    if (!this._command) return
-    const elementList = this._command.getElementList?.()
-    if (!elementList) return
-    const indicesToRemove: number[] = []
-    for (let i = elementList.length - 1; i >= 0; i--) {
-      const el = elementList[i]
-      if (!el.revisionId || !el.revisionType) continue
-      if (el.revisionType === 'delete') {
-        indicesToRemove.push(i)
-      } else {
-        delete el.revisionId
-        delete el.revisionType
-        delete el.revisionAuthor
-        delete el.revisionDate
-      }
-    }
-    for (const idx of indicesToRemove) {
-      this._command.spliceElementList?.(elementList, idx, 1, undefined, { isIgnoreDeletedRule: true })
-    }
-    this._clear()
-    this._command.renderDraw?.({ isSubmitHistory: true })
+    this.resolveRevision(true)
   }
 
   /** 拒绝文档中的所有修订 */
   public rejectAll() {
-    if (!this._command) return
-    const elementList = this._command.getElementList?.()
-    if (!elementList) return
-    const indicesToRemove: number[] = []
-    for (let i = elementList.length - 1; i >= 0; i--) {
-      const el = elementList[i]
-      if (!el.revisionId || !el.revisionType) continue
-      if (el.revisionType === 'insert') {
-        indicesToRemove.push(i)
-      } else {
-        delete el.revisionId
-        delete el.revisionType
-        delete el.revisionAuthor
-        delete el.revisionDate
-      }
-    }
-    for (const idx of indicesToRemove) {
-      this._command.spliceElementList?.(elementList, idx, 1, undefined, { isIgnoreDeletedRule: true })
-    }
-    this._clear()
-    this._command.renderDraw?.({ isSubmitHistory: true })
+    this.resolveRevision(false)
   }
 
   /** 销毁实例：清除 DOM、解引用宿主 */

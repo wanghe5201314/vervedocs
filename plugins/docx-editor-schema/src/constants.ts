@@ -244,8 +244,17 @@ export const PaperDirection = {
 export const TableBorder = {
   NONE: 'none',
   OUTSIDE: 'outside',
-  ALL: 'all'
+  ALL: 'all',
+  INSIDE: 'inside',
+  INSIDE_HORIZONTAL: 'inside-horizontal',
+  INSIDE_VERTICAL: 'inside-vertical',
+  TOP: 'top',
+  BOTTOM: 'bottom',
+  LEFT: 'left',
+  RIGHT: 'right'
 } as const
+
+export type TableBorderPreset = typeof TableBorder[keyof typeof TableBorder]
 
 /* ========== 单位换算（96 DPI） ========== */
 
@@ -332,25 +341,25 @@ export const DEFAULT_PAPER_SIZE: PaperSize = PAPER_SIZE_LIST[4]
 /** 项目符号样式 */
 export const BULLET_STYLES = [
   { style: 'disc', icon: '●', label: '实心圆点' },
+  { style: 'circle', icon: '○', label: '空心圆点' },
   { style: 'square', icon: '■', label: '实心方块' },
+  { style: 'hollow-square', icon: '□', label: '空心方块' },
   { style: 'diamond', icon: '◆', label: '实心菱形' },
   { style: 'hollow-diamond', icon: '◇', label: '空心菱形' },
   { style: 'arrow', icon: '▶', label: '箭头' },
-  { style: 'check', icon: '✓', label: '对勾' },
-  { style: 'circle', icon: '○', label: '空心圆点' },
-  { style: 'hollow-square', icon: '□', label: '空心方块' }
+  { style: 'check', icon: '✓', label: '对勾' }
 ]
 
 /** 编号样式 */
 export const NUMBER_STYLES = [
-  { style: 'chinese', samples: ['一、', '二、', '三、'], label: '中文数字' },
-  { style: 'chinese-bracket', samples: ['（一）', '（二）', '（三）'], label: '中文括号' },
-  { style: 'decimal', samples: ['1.', '2.', '3.'], label: '阿拉伯数字' },
-  { style: 'decimal-paren', samples: ['(1)', '(2)', '(3)'], label: '数字括号' },
-  { style: 'decimal-circle', samples: ['①', '②', '③'], label: '圈码' },
-  { style: 'decimal-bracket', samples: ['1)', '2)', '3)'], label: '数字右括号' },
-  { style: 'upper-alpha', samples: ['A', 'B', 'C'], label: '大写字母' },
-  { style: 'lower-alpha-dot', samples: ['a.', 'b.', 'c.'], label: '小写字母' }
+  { style: 'decimal', numFmt: 'decimal', lvlText: '%1.', samples: ['1.', '2.', '3.'], label: '阿拉伯数字' },
+  { style: 'decimal-bracket', numFmt: 'decimal', lvlText: '%1)', samples: ['1)', '2)', '3)'], label: '数字右括号' },
+  { style: 'decimal-paren', numFmt: 'decimal', lvlText: '(%1)', samples: ['(1)', '(2)', '(3)'], label: '数字括号' },
+  { style: 'upper-alpha', numFmt: 'upperLetter', lvlText: '%1.', samples: ['A.', 'B.', 'C.'], label: '大写字母' },
+  { style: 'lower-alpha-dot', numFmt: 'lowerLetter', lvlText: '%1.', samples: ['a.', 'b.', 'c.'], label: '小写字母' },
+  { style: 'chinese', numFmt: 'chineseCounting', lvlText: '%1、', samples: ['一、', '二、', '三、'], label: '中文数字' },
+  { style: 'chinese-bracket', numFmt: 'chineseCounting', lvlText: '（%1）', samples: ['（一）', '（二）', '（三）'], label: '中文括号' },
+  { style: 'decimal-circle', numFmt: 'decimalEnclosedCircle', lvlText: '%1', samples: ['①', '②', '③'], label: '圈码' }
 ]
 
 /* ========== 行距 / 页边距 / 缩放 ========== */

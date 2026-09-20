@@ -1,5 +1,5 @@
 <template>
-  <a-modal v-model:open="visible" title="键盘快捷键" width="600px" :maskClosable="false" class="shortcuts-dialog">
+  <VdDialog v-model:open="visible" title="键盘快捷键" width="600px" :maskClosable="false" class="shortcuts-dialog">
     <div class="shortcuts-content">
       <div class="shortcut-group">
         <h3>文件操作</h3>
@@ -94,13 +94,14 @@
       </div>
     </div>
     <template #footer>
-      <a-button type="primary" @click="visible = false">关闭</a-button>
+      <VdButton type="primary" @click="visible = false">关闭</VdButton>
     </template>
-  </a-modal>
+  </VdDialog>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { VdDialog, VdButton } from '@vervedoc/ui'
 
 /** 组件 props 定义 */
 const props = defineProps<{

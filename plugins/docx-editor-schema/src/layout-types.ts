@@ -243,6 +243,9 @@ export type BlockNode = ParagraphBlock | ImageBlock | PageBreakBlock | Separator
 export interface PageLayout {
   /** 页码索引（从 0 开始） */
   index: number
+  sectionIndex?: number
+  headerPartId?: string
+  footerPartId?: string
   /** 页在文档坐标系（可滚动坐标）中的 rect */
   rect: Rect
   /** 页内容区（去 margin）在文档坐标系中的 rect */
@@ -259,8 +262,19 @@ export interface PageLayout {
   footerBlocks?: BlockNode[]
 }
 
+export interface LayoutDiagnostic {
+  code: 'unsupported-floating-image'
+  severity: 'warning'
+  feature: string
+  message: string
+  zone: string
+  path: Path
+  action: 'image-omitted'
+}
+
 /** 文档整体布局结果 */
 export interface DocumentLayout {
+  diagnostics?: LayoutDiagnostic[]
   /** 各页布局 */
   pages: PageLayout[]
   /** 文档总高度 */

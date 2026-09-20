@@ -6,7 +6,11 @@
       'non-home-tab': activeTab !== 'home'
     }"
   >
-    <VdRibbonTab v-model:active-key="activeTab" :button-defaults="{ variant: 'flat' }">
+    <VdRibbonTab
+      v-model:active-key="activeTab"
+      :pinned="toolbarVisible !== false"
+      :button-defaults="{ variant: 'flat' }"
+    >
       <VdRibbonTabItem item-key="file" mode="dropdown" title="文件">
         <FileTab :is-importing="isImporting" @command="handleCommand" />
       </VdRibbonTabItem>
@@ -26,7 +30,7 @@
           :font-color="fontColor"
           :highlight-color="highlightColor"
           :row-flex="rowFlex"
-          :current-title-label="currentTitleLabel"
+          :current-title="currentTitle"
           :has-selection="hasSelection"
           :current-character-scale="currentCharacterScale"
           :is-painter="editorState.painter"
@@ -85,7 +89,7 @@
           :toc-visible="tocVisible"
           :show-toolbar="toolbarVisible"
           :show-bottom-nav="bottomNavVisible"
-          :show-line-break="showLineBreak"
+          :show-ruler="showRuler"
           :eye-care-enabled="isEyeCareEnabled"
           @command="handleCommand"
         />
@@ -111,10 +115,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { VdRibbonTab, VdRibbonTabItem } from '@vervedoc/ui'
 import { editorStateStore } from '@/stores/editor-state'
-import { TITLE_LEVEL_MAP, ptToPx } from '@vervedoc/core'
+import { ptToPx } from '@vervedoc/core'
 import FileTab from '@/components/ribbon/fileTab.vue'
 import HomeTab from '@/components/ribbon/homeTab.vue'
 import InsertTab from '@/components/ribbon/insertTab.vue'
@@ -153,8 +157,6 @@ const activeTab = ref<string>('home')
 const currentFont = ref('SimSun, serif')
 /** 当前字号（磅） */
 const currentSize = ref(10.5)
-/** 当前标题级别 */
-const currentTitle = ref<string | null>(null)
 /** 字体颜色 */
 const fontColor = ref('#000000')
 /** 高亮颜色 */
@@ -170,6 +172,8 @@ const isImporting = ref(false)
 
 /** 是否显示换行符 */
 const showLineBreak = ref(false)
+/** 是否显示标尺 */
+const showRuler = ref(true)
 /** 是否启用修订跟踪 */
 const isTrackChanges = ref(false)
 /** 当前编辑器模式 */
@@ -181,6 +185,8 @@ const isEyeCareEnabled = ref(false)
 
 /** 编辑器状态对象 */
 const editorState = editorStateStore.state
+/** 样式回显以编辑器实际状态为准，包含初始值及撤销、重做。 */
+const currentTitle = computed(() => editorState.level)
 /** 是否加粗 */
 const isBold = computed(() => editorState.bold)
 /** 是否斜体 */
@@ -211,16 +217,6 @@ watch(() => editorState.size, v => { if (v) currentSize.value = v })
 watch(() => editorState.color, v => { if (v) fontColor.value = v })
 /** 监听高亮颜色变化 */
 watch(() => editorState.highlight, v => { if (v) highlightColor.value = v })
-/** 监听标题级别变化 */
-watch(() => editorState.level, v => { currentTitle.value = v })
-
-/** 当前标题级别的中文标签 */
-const currentTitleLabel = computed(() => currentTitle.value ? TITLE_LEVEL_MAP[currentTitle.value] || '正文' : '正文')
-
-/** 挂载时检测护眼模式是否已启用 */
-onMounted(() => {
-  isEyeCareEnabled.value = document.body.classList.contains('eye-care-mode')
-})
 
 /**
  * 统一命令处理入口，分发工具栏、修订、模式、纸张、护眼等命令
@@ -257,9 +253,12 @@ const handleCommand = (cmd: string, ...args: any[]) => {
       showLineBreak.value = !showLineBreak.value
       emit('command', 'updateOptions', { lineBreak: { disabled: !showLineBreak.value } })
       return
+    case 'toggleRuler':
+      showRuler.value = !showRuler.value
+      emit('command', 'setRulerVisible', showRuler.value)
+      return
     case 'toggleEyeCare':
-      document.body.classList.toggle('eye-care-mode')
-      isEyeCareEnabled.value = document.body.classList.contains('eye-care-mode')
+      isEyeCareEnabled.value = !isEyeCareEnabled.value
       emit('command', 'eyeCareChange', isEyeCareEnabled.value)
       return
     case 'toggleToc':
@@ -348,7 +347,7 @@ const handleZoom = (v: number) => { zoomPercent.value = v; emit('command', 'page
  * 处理标题级别变更
  * @param v - 标题级别，null 表示正文
  */
-const handleTitle = (v: string | null) => { currentTitle.value = v; emit('command', 'title', v) }
+const handleTitle = (v: string | null) => emit('command', 'title', v)
 /**
  * 处理行距变更
  * @param v - 行距值

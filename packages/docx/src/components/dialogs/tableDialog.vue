@@ -1,5 +1,5 @@
 <template>
-  <a-modal v-model:open="visible" width="600px" :closable="false" class="insert-table-dialog app-dialog">
+  <VdDialog v-model:open="visible" width="600px" :closable="false" class="insert-table-dialog app-dialog">
     <template #title>
       <div class="custom-dialog-header">
         <AppstoreOutlined class="title-icon" />
@@ -155,22 +155,17 @@
     </div>
     <template #footer>
       <div class="dialog-footer">
-        <a-button type="primary" @click="confirmInsertTable">
-          <CheckOutlined />
-          确定
-        </a-button>
-        <a-button @click="visible = false">
-          <CloseOutlined />
-          取消
-        </a-button>
+        <VdButton type="primary" icon="check" @click="confirmInsertTable">确定</VdButton>
+        <VdButton icon="close" @click="visible = false">取消</VdButton>
       </div>
     </template>
-  </a-modal>
+  </VdDialog>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { AppstoreOutlined, CheckOutlined, CloseOutlined, FileOutlined, BorderOutlined, EditOutlined } from '@ant-design/icons-vue'
+import { VdDialog, VdButton } from '@vervedoc/ui'
+import { AppstoreOutlined, FileOutlined, BorderOutlined, EditOutlined } from '@ant-design/icons-vue'
 
 /** 组件 props 定义 */
 const props = defineProps<{

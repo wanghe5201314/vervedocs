@@ -32,6 +32,7 @@ const data: IElement[] = []
 const options = {
   defaultFont: '微软雅黑',
   defaultSize: 14,
+  showRuler: true,
   marginIndicatorDisabled: false,
   marginIndicatorSize: 25,
   marginIndicatorColor: '#CCCCCC',
@@ -125,13 +126,13 @@ const {
 const applyOptionsPatch = (patch: any) => {
   if (!editorInstance) return
   const currentOptions = editorInstance.command.getOptions?.()
-  editorInstance.command.executeUpdateOptions({
-    ...(currentOptions || {}),
-    ...(patch || {}),
-    background: { ...(currentOptions?.background || {}), ...(patch?.background || {}) },
-    group: { ...(currentOptions?.group || {}), ...(patch?.group || {}) },
-    lineBreak: { ...(currentOptions?.lineBreak || {}), ...(patch?.lineBreak || {}) }
-  })
+  const merged = { ...(patch || {}) }
+  for (const key of ['background', 'group', 'lineBreak']) {
+    if (Object.prototype.hasOwnProperty.call(merged, key)) {
+      merged[key] = { ...(currentOptions?.[key] || {}), ...(merged[key] || {}) }
+    }
+  }
+  editorInstance.command.executeUpdateOptions(merged)
 }
 
 const {
@@ -246,6 +247,12 @@ const setupEditorListeners = () => {
 
     document.addEventListener('mousedown', handleGlobalMouseDown)
   }
+
+  const openTableProperties = () => emit('command', 'tablePropertiesDialog')
+  editorInstance.listener.on('requestTableProperties', openTableProperties)
+  eventBusSubscriptions.push({
+    unsubscribe: () => editorInstance?.listener.off('requestTableProperties', openTableProperties)
+  })
 
   // 目录变化
   editorInstance.listener.toc.tocListener((catalog: any[]) => {
@@ -385,6 +392,7 @@ const executeCommand = (command: string, ...args: any[]) => {
 
   const commandMap: Record<string, Function> = {
     updateOptions: (patch: any) => applyOptionsPatch(patch),
+    setRulerVisible: (visible: boolean) => editorInstance.command.executeSetRulerVisible(visible),
     setZone: (zone: string) => editorInstance.command.executeSetZone(zone),
     setValue: (value: any, options?: any) => editorInstance.command.executeSetValue(value, options),
     replaceRange: (range: any) => editorInstance.command.executeReplaceRange(range),
@@ -463,6 +471,14 @@ const executeCommand = (command: string, ...args: any[]) => {
     tableBorderColor: tableBorderColorFn,
     tableBorderWidth: tableBorderWidthFn,
     tableBorderExternalWidth: tableBorderExternalWidthFn,
+    getTableBorders: () => editorInstance.command.getTableBorders(),
+    tableBorders: (patch: any) => editorInstance.command.executeSetTableBorders(patch),
+    getTableDialogContext: () => ({ range: structuredClone(editorInstance.command.getRange()), zone: editorInstance.command.getZone() }),
+    restoreTableDialogContext: (context: any) => {
+      editorInstance.command.executeSetZone(context.zone)
+      editorInstance.command.executeReplaceRange(context.range)
+    },
+    focusEditor: () => editorContainer.value?.querySelector('textarea')?.focus(),
 
     // 图片
     image: imageFn,

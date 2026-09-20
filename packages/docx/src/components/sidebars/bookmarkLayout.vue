@@ -20,14 +20,14 @@
           :status="nameError ? 'error' : ''"
           @keydown.enter.prevent="handleAdd"
         />
-        <a-button
+        <VdButton
           type="primary"
           size="small"
           :disabled="!canAdd"
           @click="handleAdd"
         >
           添加
-        </a-button>
+        </VdButton>
       </div>
 
       <div v-if="hasSelectionRange" class="bookmark-tip">
@@ -89,7 +89,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { CloseOutlined, RightOutlined, DeleteOutlined } from '@ant-design/icons-vue'
-import { VdIcon } from '@vervedoc/ui'
+import { VdIcon, VdButton } from '@vervedoc/ui'
 import type { IBookmarkApi } from '@/composables/use-bookmarks'
 
 const props = defineProps<{

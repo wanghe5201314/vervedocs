@@ -1,12 +1,8 @@
 <template>
-  <a-modal
+  <VdDialog
     :open="visible"
     :title="mode === 'protect' ? '保护文档' : '解密文档'"
-    :confirm-loading="loading"
     :z-index="10000"
-    ok-text="确认"
-    cancel-text="取消"
-    @ok="handleOk"
     @cancel="handleCancel"
   >
     <a-input-password
@@ -15,11 +11,16 @@
       @press-enter="handleOk"
     />
     <div v-if="error" class="password-error">{{ error }}</div>
-  </a-modal>
+    <template #footer>
+      <VdButton @click="handleCancel">取消</VdButton>
+      <VdButton type="primary" :loading="loading" @click="handleOk">确认</VdButton>
+    </template>
+  </VdDialog>
 </template>
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { VdDialog, VdButton } from '@vervedoc/ui'
 
 const props = defineProps<{
   visible: boolean

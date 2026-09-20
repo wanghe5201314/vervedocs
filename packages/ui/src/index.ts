@@ -7,3 +7,8 @@ export {
   VdRibbonTabTitle
 } from './components/ribbon'
 export type { RibbonTabMode, RibbonButtonAppearance } from './components/ribbon'
+export { VdTree, buildTreeFromFlat } from './components/tree'
+export type { VdTreeNode, VdFlatNode } from './components/tree'
+export { VdCard } from './components/card'
+export { VdDialog } from './components/dialog'
+export { VdButton } from './components/button'

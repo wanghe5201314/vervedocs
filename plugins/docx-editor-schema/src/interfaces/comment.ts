@@ -6,17 +6,8 @@
 
 import type { IComment } from '../types'
 
-/** Docx 批注元数据接口 */
-export interface DocxCommentMeta {
-  /** 批注 ID */
-  id: string | number
-  /** 批注内容 */
-  content: string
-  /** 作者 */
-  author?: string
-  /** 日期 */
-  date?: string
-}
+/** 导入、保存、导出共用的批注协议。 */
+export type { IDocxCommentMeta as DocxCommentMeta } from '../types'
 
 /** 批注回调接口 */
 export interface CommentCallbacks {

@@ -41,6 +41,9 @@ import { collectGroupAnchors, collectRevisionAnchors, type AnchorInfo } from './
 import { CaretNavigation } from './caret-navigation'
 import { ZoneManager } from './zone-manager'
 
+// 固定黑色 I-beam，避免系统文本指针在白色页面上不可见。
+const TEXT_CURSOR = `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path d="M8 3h8M12 3v18M8 21h8" fill="none" stroke="black" stroke-width="2"/></svg>')}") 9 9, text`
+
 /** Draw 门面依赖：装配文档、状态管理器与各类回调 */
 export interface DrawDeps {
   /** 文档元数据 */
@@ -79,10 +82,19 @@ export class Draw {
   private canvasHost: HTMLDivElement
   /** canvas 渲染器 */
   private renderer: CanvasRenderer
+
+  setChartRenderer(renderer: import('@vervedoc/docx-editor-schema').IChartRenderer | null): void {
+    this.renderer.setChartRenderer(renderer)
+    this.thumbnailCache.clear()
+    this.forceFullRender = true
+    this.scheduleRender()
+  }
   /** 排版引擎 */
   private engine: LayoutEngine
   /** 最近一次排版结果 */
   private layout: DocumentLayout | null = null
+  private diagnosticNotice?: HTMLDivElement
+  private diagnosticSignature = ''
 
   /** 文档元数据 */
   private document: IDocxDocumentMeta
@@ -112,7 +124,7 @@ export class Draw {
   private renderState?: RenderState
   private paintedState?: RenderState
   private forceFullRender = true
-  private thumbnailCache = new Map<number, { signature: string; image: string }>()
+  private thumbnailCache = new Map<number, { signature: string; image: string; foreground?: string }>()
 
   /** 隐藏 textarea：作为输入焦点与 IME 组合的宿主 */
   private inputEl!: HTMLTextAreaElement
@@ -210,6 +222,7 @@ export class Draw {
     this.wrapper.style.inset = '0'
     this.wrapper.style.overflow = 'auto'
     this.wrapper.style.background = 'transparent'
+    this.wrapper.style.cursor = TEXT_CURSOR
     this.wrapper.style.zIndex = '5'
 
     // 撑起文档总高度的占位元素
@@ -236,6 +249,7 @@ export class Draw {
       groupColors: (options as unknown as { group?: { groupColors?: Record<string, import('@vervedoc/docx-editor-schema').IGroupColor> } }).group?.groupColors
     })
 
+    this.renderer.setEyeCare(!!options.eyeCare)
     this.engine = new LayoutEngine(this.toLayoutOptions())
 
     this.wrapper.addEventListener('scroll', this.onScroll, { passive: true })
@@ -266,6 +280,7 @@ export class Draw {
           this.imageWidget?.update()
           this.chartWidget?.update()
           this.paragraphWidget?.update()
+          this.rulerWidget?.update()
         }
       })
     }
@@ -289,6 +304,7 @@ export class Draw {
       zIndex: '10',
       background: 'transparent',
       color: 'transparent',
+      cursor: TEXT_CURSOR,
       caretColor: 'transparent'
     } as CSSStyleDeclaration)
     this.inputEl.setAttribute('autocorrect', 'off')
@@ -324,7 +340,9 @@ export class Draw {
       onCommand: (cmd: string, ...args: any[]) => this.onCommand?.(cmd, ...args),
       hit: (clientX: number, clientY: number) => this.hit(clientX, clientY),
       focusInput: () => this.focusInput(),
-      setCursor: (cursor: string) => { this.wrapper.style.cursor = cursor }
+      setCursor: (cursor: string) => {
+        this.wrapper.style.cursor = cursor === 'text' || cursor === 'default' ? TEXT_CURSOR : cursor
+      }
     })
     this.tableWidget.create()
     this.headerFooterWidget = new HeaderFooterWidget({
@@ -385,9 +403,26 @@ export class Draw {
       getWrapperWidth: () => this.wrapper.clientWidth,
       getWrapperHeight: () => this.wrapper.clientHeight,
       getPageOffsetX: () => this.getPageOffsetX(),
-      getScale: () => Number(this.options.scale ?? 1),
+      // Layout coordinates are already the renderer's page coordinates.
+      getScale: () => (this.layout?.pageWidth ?? Number(this.options.pageWidth ?? 794)) / Number(this.options.pageWidth ?? 794),
       getPageMargins: () => (this.options.pageMargins as [number, number, number, number]) ?? [100, 120, 100, 120],
-      getPageGap: () => Number((this.options as unknown as { pageGap?: number }).pageGap ?? 24),
+      getParagraphIndent: () => {
+        const pos = this.range?.getFocus()
+        const paragraph = pos ? findParagraphByPos(this.layout, pos) : null
+        if (!paragraph) return null
+        const run = paragraph.lines[0]?.inlines[0]?.run
+        const attr = (key: string) => Number(
+          (paragraph.block as unknown as Record<string, unknown> | null)?.[key] ??
+          (run as unknown as Record<string, unknown> | undefined)?.[key] ?? 0
+        )
+        const left = Math.max(0, attr('paragraphIndentLeft'))
+        const hanging = Math.max(0, attr('indentHanging'))
+        return {
+          first: left + (hanging ? 0 : Math.max(0, attr('paragraphFirstLineIndent'))),
+          left: left + hanging,
+          right: Math.max(0, attr('paragraphIndentRight'))
+        }
+      },
       onCommand: (cmd: string, ...args: any[]) => this.onCommand?.(cmd, ...args)
     })
     this.rulerWidget.create()
@@ -425,6 +460,7 @@ export class Draw {
     })
 
     this.zoneManager = new ZoneManager({
+      getPage: () => this.layout?.pages.find(page => this.scrollY < page.rect.y + page.rect.height),
       getZone: () => this.zone,
       setZoneState: (zone: Zone) => { this.zone = zone },
       getDocument: () => this.document,
@@ -486,7 +522,7 @@ export class Draw {
 
   private onMouseDown = (e: MouseEvent): void => {
     this.eventBus?.emit('editorMousedown', e)
-    if (!this.range) return
+    if (!this.range || e.button !== 0) return
     // 阻止 mousedown 默认行为抢走隐藏输入框的焦点
     e.preventDefault()
 
@@ -527,6 +563,7 @@ export class Draw {
     this.range.setCaret(pos)
     this.dragAnchor = pos
     this.isDragging = true
+    this.wrapper.style.cursor = TEXT_CURSOR
     this.finishMouseSelect()
   }
 
@@ -535,12 +572,13 @@ export class Draw {
    * @param e 鼠标事件
    */
   private onMouseMove = (e: MouseEvent): void => {
-    this.tableWidget?.handleMouseMove(e)
+    // 文本选区拖拽保持文本指针；表格边框悬浮和拖拽优先于链接指针。
+    if (!this.isDragging && this.tableWidget?.handleMouseMove(e)) return
     // 非拖拽时：hover 超链接显示手型，提示可 Ctrl+点击跳转
     if (!this.isDragging) {
       const pos = this.hit(e.clientX, e.clientY)
       const url = pos ? this.findHyperlinkByPos(pos) : null
-      this.wrapper.style.cursor = url ? 'pointer' : 'text'
+      this.wrapper.style.cursor = url ? 'pointer' : TEXT_CURSOR
       // 正文模式下，悬浮页眉/页脚区域显示提示
       this.updateZoneHoverTooltip(e)
       return
@@ -593,10 +631,18 @@ export class Draw {
   private onMouseUp = (e: MouseEvent): void => {
     this.eventBus?.emit('editorMouseup', e)
     this.tableWidget?.handleMouseUp(e)
+    const wasDragging = this.isDragging
+    if (wasDragging && this.dragRafId != null && this.dragPendingPos && this.dragAnchor && this.range) {
+      this.range.setRange({ anchor: this.dragAnchor, focus: this.dragPendingPos })
+    }
     this.isDragging = false
     this.dragAnchor = null
     this.dragPendingPos = null
     if (this.dragRafId != null) { cancelAnimationFrame(this.dragRafId); this.dragRafId = null }
+    if (wasDragging) {
+      const style = this.onCommand?.('getRangeStyle')
+      if (style) this.listener?.emit('formatChange', style)
+    }
     // 松开鼠标后才显示悬浮工具栏
     this.selectionToolbarWidget?.update()
 
@@ -942,6 +988,12 @@ export class Draw {
    */
   updateOptions(patch: Partial<IEditorOption>): void {
     Object.assign(this.options, patch)
+    if (Object.prototype.hasOwnProperty.call(patch, 'eyeCare')) {
+      this.renderer.setEyeCare(!!this.options.eyeCare)
+      this.listener?.emit('thumbnailAppearanceChange')
+    }
+    // View-only toggles must not enter the document layout/render lifecycle.
+    if (Object.keys(patch).every(key => key === 'eyeCare')) return
     this.reformatWithInvalidation()
   }
 
@@ -971,22 +1023,29 @@ export class Draw {
     this.syncPageNumberToRenderer()
     this.syncWatermarkToRenderer()
     const visualSignature = JSON.stringify([
-      this.options, this.layout.pages.length
+      { ...this.options, eyeCare: undefined }, this.layout.pages.length
     ])
     const images: string[] = []
     for (const page of this.layout.pages) {
       const signature = `${visualSignature}|${this.renderState?.pageSignatures.get(page.index)}`
-      const cached = this.thumbnailCache.get(page.index)
-      const image = cached?.signature === signature
-        ? cached.image
-        : this.renderer.renderPageThumbnail(page, 0.7, this.layout.pages.length)
-      this.thumbnailCache.set(page.index, { signature, image })
-      if (image) images.push(image)
+      let cached = this.thumbnailCache.get(page.index)
+      if (cached?.signature !== signature) {
+        let foreground: string | undefined
+        const image = this.renderer.renderPageThumbnail(page, 0.7, this.layout.pages.length, value => { foreground = value })
+        cached = { signature, image, foreground }
+        this.thumbnailCache.set(page.index, cached)
+      }
+      if (cached.image) images.push(cached.image)
     }
     for (const index of this.thumbnailCache.keys()) {
       if (index >= this.layout.pages.length) this.thumbnailCache.delete(index)
     }
     return images
+  }
+
+  /** Cached transparent content only: this never renders pages on an appearance toggle. */
+  getThumbnailForegrounds(): string[] {
+    return Array.from(this.thumbnailCache.values(), cached => cached.foreground ?? '')
   }
 
   /**
@@ -1072,11 +1131,15 @@ export class Draw {
 
   /** 设置当前高亮的批注/修订组 ID（鼠标悬浮气泡时调用） */
   setActiveGroup(groupId: string | null): void {
-    this.renderer.updateVisualOptions({ activeGroupId: groupId })
-    this.renderer.invalidateAll()
-    this.thumbnailCache.clear()
-    this.forceFullRender = true
-    this.scheduleRender()
+    if (!this.renderer.setActiveGroup(groupId) || !this.layout) return
+    // Hover is transient: paint now, without rebuilding cards, widgets or thumbnails.
+    // Keep any pending document RAF intact; it still owns its normal lifecycle hooks.
+    this.renderer.render(this.layout, this.scrollY, this.viewportHeight)
+  }
+
+  setActiveRevision(revisionId: string | null, color?: string): void {
+    if (!this.renderer.setActiveRevision(revisionId, color) || !this.layout) return
+    this.renderer.render(this.layout, this.scrollY, this.viewportHeight)
   }
 
   /**
@@ -1125,6 +1188,7 @@ export class Draw {
 
   /** 销毁视图：解绑事件、断开 ResizeObserver、取消 RAF/定时器、销毁各 widget、移除 DOM。 */
   destroy(): void {
+    this.diagnosticNotice?.remove()
     this.wrapper.removeEventListener('scroll', this.onScroll)
     this.wrapper.removeEventListener('mousedown', this.onMouseDown)
     this.wrapper.removeEventListener('contextmenu', this.onContextMenu)
@@ -1178,18 +1242,37 @@ export class Draw {
     }
     const bookmarkMarkers: { name: string; position: string; path: Path }[] = []
     formatElementTree(this.document.elements, { editorOptions: this.options, bookmarkMarkers })
-    if (bookmarkMarkers.length > 0) {
+    // Imported markers initialize the runtime index; repainting must not undo edits.
+    if (this.document.bookmarks === undefined && bookmarkMarkers.length > 0) {
       this.document.bookmarks = pairBookmarkMarkers(bookmarkMarkers)
     }
-    const headerElements = this.document.sections?.header
-    const footerElements = this.document.sections?.footer
-    if (headerElements?.length) formatElementTree(headerElements, { editorOptions: this.options })
-    if (footerElements?.length) formatElementTree(footerElements, { editorOptions: this.options })
-    const layout = this.engine.layout(this.document.elements, headerElements, footerElements)
+    const headerElements = this.document.header ?? this.document.contentZones?.header
+    const footerElements = this.document.footer ?? this.document.contentZones?.footer
+    for (const elements of [headerElements, footerElements, ...Object.values(this.document.headerFooterParts ?? {})]) {
+      if (elements?.length) formatElementTree(elements, { editorOptions: this.options })
+    }
+    const layout = this.engine.layout(this.document.elements, headerElements, footerElements, this.document)
 
     const { state, dirty } = prepareRenderState(layout, this.renderState)
     this.renderState = state
     this.layout = layout
+    const diagnostics = layout.diagnostics ?? []
+    const signature = JSON.stringify(diagnostics)
+    if (signature !== this.diagnosticSignature) {
+      this.diagnosticSignature = signature
+      this.diagnosticNotice?.remove()
+      this.diagnosticNotice = undefined
+      if (diagnostics.length) {
+        const notice = document.createElement('div')
+        notice.className = 'vervedocs-layout-diagnostics'
+        notice.setAttribute('role', 'status')
+        notice.style.cssText = 'position:absolute;top:0;left:0;right:0;z-index:100;max-height:120px;overflow:auto;white-space:pre-wrap;padding:8px 12px;background:#fff4ce;color:#663c00;font-size:13px;'
+        notice.textContent = diagnostics.map(item => `[${item.zone} / ${item.path.join('.')} / ${item.feature}] ${item.message}`).join('\n')
+        this.container.appendChild(notice)
+        this.diagnosticNotice = notice
+      }
+      this.listener?.emit('layoutDiagnosticsChange', diagnostics)
+    }
     this.listener?.emit('pageCountChange', layout.pages.length)
 
     // scroller 撑起文档总高（页面居中通过 CSS margin:0 auto）

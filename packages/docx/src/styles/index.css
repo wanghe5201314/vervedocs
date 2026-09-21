@@ -73,30 +73,14 @@ ul {
 
 
 /* ==================== 对话框通用样式 ==================== */
-.app-dialog .ant-modal-body {
-  padding: 14px 16px;
-}
-
-.app-dialog .ant-modal-footer {
-  padding: 10px 16px 14px;
-  border-top: 1px solid #f0f0f0;
-}
-
-.app-dialog .ant-modal-header {
-  padding: 14px 16px 8px;
+.app-dialog {
+  --vd-dialog-body-padding: 14px 16px;
+  --vd-dialog-footer-padding: 10px 16px 14px;
 }
 
 .app-dialog .dialog-card {
-  border-radius: 10px;
-}
-
-.app-dialog .dialog-card .ant-card-head {
-  padding: 10px 12px;
-  font-weight: 600;
-}
-
-.app-dialog .dialog-card .ant-card-body {
-  padding: 12px;
+  --vd-card-header-padding: 10px 12px;
+  --vd-card-body-padding: 12px;
 }
 
 .app-dialog .dialog-grid-2 {
@@ -342,9 +326,7 @@ ul {
 
 
 /* 字数统计面板 */
-.wordcount-panel { min-width: 280px; border-radius: 8px; }
-.wordcount-panel .ant-card-head { border-bottom: 1px solid #e0e0e0; }
-.wordcount-panel .ant-card-head-title { font-size: 14px; font-weight: 600; color: #202124; }
+.wordcount-panel { min-width: 280px; --vd-card-border: #e0e0e0; --vd-card-title-size: 14px; }
 .wc-header { font-size: 14px; font-weight: 600; color: #202124; margin-bottom: 16px; }
 .wc-grid { display: flex; flex-direction: column; gap: 10px; }
 .wc-row { display: flex; justify-content: space-between; align-items: center; }
@@ -353,9 +335,7 @@ ul {
 .wc-tip { margin-top: 16px; font-size: 12px; color: #888; }
 
 /* 表格选择器 */
-.table-selector { border-radius: 8px; }
-.table-selector .ant-card-head { border-bottom: 1px solid #e0e0e0; }
-.table-selector .ant-card-head-title { font-size: 14px; font-weight: 600; color: #202124; }
+.table-selector { --vd-card-border: #e0e0e0; --vd-card-title-size: 14px; }
 .table-grid { display: flex; flex-direction: column; gap: 2px; }
 .tgrid-row { display: flex; gap: 2px; }
 .tgrid-cell { width: 18px; height: 18px; border: 1px solid #dadce0; cursor: pointer; transition: all 0.1s; background: #fff; }

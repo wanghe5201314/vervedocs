@@ -60,9 +60,9 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { VdDialog, VdButton } from '@vervedoc/ui'
+import { VdDialog, VdButton, useDialogConfirm } from '@vervedoc/ui'
 import { LoadingOutlined } from '@ant-design/icons-vue'
-import { message, Modal } from 'ant-design-vue'
+import { message } from 'ant-design-vue'
 import type { IVersion } from '@/types/comment'
 import {
   fetchDocumentVersions,
@@ -70,6 +70,8 @@ import {
   nameDocumentVersion,
   restoreDocumentVersion
 } from '@/api/document.api'
+
+const confirm = useDialogConfirm()
 
 /** 组件 props 定义 */
 const props = defineProps<{
@@ -183,12 +185,13 @@ const handlePreview = (version: IVersion) => {
 const handleRestore = async (version: IVersion) => {
   if (!props.docId) return
   try {
-    await Modal.confirm({
+    const accepted = await confirm({
       content: `确定要恢复到"${version.name || '版本 ' + version.versionNumber}"吗？当前内容将自动保存为新版本。`,
       title: '恢复版本',
       okText: '确定恢复',
       cancelText: '取消'
     })
+    if (!accepted) return
     const content = await restoreDocumentVersion(props.docId, version.versionNumber)
     message.success('版本已恢复')
     emit('restore', content)

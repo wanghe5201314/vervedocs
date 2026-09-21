@@ -1,5 +1,6 @@
 import { ref, h } from 'vue'
-import { message, Modal } from 'ant-design-vue'
+import { message } from 'ant-design-vue'
+import { useDialogConfirm } from '@vervedoc/ui'
 import { emitExternalEvent } from '@/composables/use-external-events'
 import type { DocumentMeta } from '@/types/document'
 import type { ReplaceDocumentPayload } from '@/composables/use-replace-document'
@@ -23,6 +24,7 @@ export function useDocumentActions(options: {
   /** 整文档替换（清空正文/页眉页脚/批注） */
   applyDocumentReplace: (payload: ReplaceDocumentPayload) => Promise<void>
 }) {
+  const confirm = useDialogConfirm()
   const {
     documentMeta,
     emitMetaChange,
@@ -51,10 +53,12 @@ export function useDocumentActions(options: {
    */
   const renameDoc = async () => {
     const renameValue = ref(String(documentMeta.name || '').trim() || '新建文档')
-    Modal.confirm({
+    await confirm({
       title: '重命名',
       content: () => h('div', {}, [
         h('input', {
+          autofocus: true,
+          'aria-label': '文档名称',
           value: renameValue.value,
           onInput: (e: Event) => { renameValue.value = (e.target as HTMLInputElement).value },
           style: 'width:100%;padding:4px 8px;border:1px solid #d9d9d9;border-radius:4px;',
@@ -65,7 +69,7 @@ export function useDocumentActions(options: {
       cancelText: '取消',
       onOk: async () => {
         const next = String(renameValue.value || '').trim()
-        if (!next) return
+        if (!next) return false
         documentMeta.name = next
         emitMetaChange()
         if (String(documentMeta.id || '').trim() !== 'local') {

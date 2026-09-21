@@ -17,7 +17,7 @@ import {
  * - POST /documents/translate/word → docx → json
  * - POST /documents/render         → json → docx（?format=docx|pdf）
  */
-const DOCX_SERVER_BASE = 'http://localhost:1320'
+const DOCX_SERVER_BASE = '/docx-api'
 
 
 const serverImport: DocxImportCallback = async data => {

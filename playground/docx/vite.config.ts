@@ -58,6 +58,11 @@ export default defineConfig(({ mode }) => {
         allow: [playgroundDir, docxPackageDir, path.resolve(playgroundDir, '../..')]
       },
       proxy: {
+        '/docx-api': {
+          target: 'http://127.0.0.1:1320',
+          changeOrigin: true,
+          rewrite: requestPath => requestPath.replace(/^\/docx-api/, '')
+        },
         '/api': {
           target: env.VITE_BIZ_PROXY_TARGET || env.VITE_API_BASE_URL || 'http://127.0.0.1:8090',
           changeOrigin: true

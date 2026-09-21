@@ -64,7 +64,12 @@
             @mousedown="handleResizeStart"
           ></div>
           <div class="split-right">
-            <div class="editor-area" ref="editorAreaRef">
+            <div
+              class="editor-area"
+              ref="editorAreaRef"
+              :inert="fileOperationLoading ? true : undefined"
+              :aria-busy="!!fileOperationLoading"
+            >
 
               <Editor
                 v-if="isContentVisible || hasEditorMounted"
@@ -74,6 +79,20 @@
                 @ready="handleReady"
                 @saved="handleEditorSaved"
               />
+            </div>
+            <div v-if="fileOperationLoading" class="file-operation-overlay">
+              <div
+                class="file-operation-panel"
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                <span class="file-operation-spinner" aria-hidden="true"></span>
+                <div class="file-operation-text">
+                  <div>{{ fileOperationLoading }}</div>
+                  <div class="file-operation-poem" aria-hidden="true">{{ loadingPoems[loadingPoemIndex] }}</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -330,6 +349,29 @@ const {
 
 /** 应用忙碌状态：idle 空闲、loading 加载中、saving 保存中 */
 const busyState = ref<'idle' | 'loading' | 'saving'>('idle')
+let fileOperationPending = false
+const fileOperationLoading = ref('')
+const loadingPoems = [
+  '功崇惟志，业广惟勤。 —— 《尚书·周官》',
+  '锲而不舍，金石可镂。 —— 《荀子·劝学》',
+  '满招损，谦受益。 —— 《尚书·大禹谟》',
+  '功崇惟志，业广惟勤。 —— 《尚书·周官》',
+  '千里之行，始于足下。 —— 《老子·第六十四章》',
+  '合抱之木，生于毫末。 —— 《老子·第六十四章》',
+  '生于忧患，死于安乐。 —— 《孟子·告子下》',
+  '天将降大任于是人也，必先苦其心志。 —— 《孟子·告子下》',
+  '三军可夺帅也，匹夫不可夺志也。 —— 《论语·子罕》',
+]
+const loadingPoemIndex = ref(0)
+
+watch(fileOperationLoading, (loading, _previous, onCleanup) => {
+  if (!loading) return
+  loadingPoemIndex.value = 0
+  const timer = setInterval(() => {
+    loadingPoemIndex.value = (loadingPoemIndex.value + 1) % loadingPoems.length
+  }, 2000)
+  onCleanup(() => clearInterval(timer))
+}, { flush: 'sync' })
 
 
 /** 应用是否就绪 */
@@ -858,7 +900,6 @@ const handleReady = (...args: any[]) => {
 
 /** 组件卸载前清理协同资源 */
 onBeforeUnmount(() => {
-
   cleanupCollaboration()
 })
 
@@ -940,6 +981,7 @@ const aiCommands: Record<
 
 /** 处理文档导入：弹出文件选择框，调用导入回调并替换文档内容 */
 const handleImportDoc = () => {
+  if (fileOperationPending) return
   if (!importCallback) {
     message.warning('未配置导入回调，导入功能不可用')
     return
@@ -949,9 +991,12 @@ const handleImportDoc = () => {
   input.accept = '.doc,.docx'
   input.onchange = async () => {
     const file = input.files?.[0]
-    if (!file) return
+    if (!file || fileOperationPending) return
+    fileOperationPending = true
     try {
+      fileOperationLoading.value = '正在导入文档...'
       busyState.value = 'loading'
+      await nextTick()
       const arrayBuffer = await file.arrayBuffer()
       const result = await importCallback(arrayBuffer)
       if (!result.success || !result.elements?.length) {
@@ -971,6 +1016,8 @@ const handleImportDoc = () => {
     } catch (e) {
       message.error(`导入失败: ${(e as Error)?.message || '未知错误'}`)
     } finally {
+      fileOperationLoading.value = ''
+      fileOperationPending = false
       busyState.value = 'idle'
     }
   }
@@ -978,34 +1025,43 @@ const handleImportDoc = () => {
 }
 
 /** 处理文档导出：获取编辑器内容并调用导出回调，触发浏览器下载 */
-const handleExportDoc = () => {
+const handleExportDoc = async () => {
+  if (fileOperationPending) return
   if (!exportCallback) {
     message.warning('未配置导出回调，导出功能不可用')
     return
   }
   const instance = getEditorInstance()
-  const value = instance?.command?.getValue?.()
-  if (!value) return
-  Promise.resolve()
-    .then(() => exportCallback(toDocxExportDocument(value)))
-    .then(result => {
-      if (!result.success || !result.data) {
-        message.error(`导出失败: ${result.error || '未知错误'}`)
-        return
-      }
-      const blob = new Blob([result.data], {
-        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-      })
-      const url = URL.createObjectURL(blob)
+  if (!instance) return
+  fileOperationPending = true
+  try {
+    fileOperationLoading.value = '正在导出文档...'
+    await nextTick()
+    const value = instance.command?.getValue?.()
+    if (!value) return
+    const result = await exportCallback(toDocxExportDocument(value))
+    if (!result.success || !result.data) {
+      message.error(`导出失败: ${result.error || '未知错误'}`)
+      return
+    }
+    const blob = new Blob([result.data], {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    })
+    const url = URL.createObjectURL(blob)
+    try {
       const a = document.createElement('a')
       a.href = url
       a.download = `${documentMeta.name || '文档'}.docx`
       a.click()
+    } finally {
       URL.revokeObjectURL(url)
-    })
-    .catch(e => {
-      message.error(`导出失败: ${(e as Error)?.message || '未知错误'}`)
-    })
+    }
+  } catch (e) {
+    message.error(`导出失败: ${(e as Error)?.message || '未知错误'}`)
+  } finally {
+    fileOperationLoading.value = ''
+    fileOperationPending = false
+  }
 }
 
 /** 处理文档保护：隐藏内容并弹出保护密码输入框 */
@@ -1330,6 +1386,7 @@ defineExpose({
 }
 
 .split-right {
+  position: relative;
   flex: 1;
   overflow: hidden;
   min-width: 0;
@@ -1350,6 +1407,70 @@ defineExpose({
   overflow: auto;
   background: #e2e2e2;
   position: relative;
+}
+
+.file-operation-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.45);
+  cursor: wait;
+}
+
+.file-operation-panel {
+  box-sizing: border-box;
+  width: 380px;
+  min-height: 96px;
+  max-width: calc(100% - 32px);
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  border-radius: 8px;
+  background: #444;
+  color: #fff;
+  font-size: 14px;
+  line-height: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
+}
+
+.file-operation-text {
+  min-width: 0;
+}
+
+.file-operation-poem {
+  margin-top: 6px;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.file-operation-spinner {
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-right-color: #fff;
+  border-radius: 50%;
+  animation: file-operation-spin 0.8s linear infinite;
+}
+
+@keyframes file-operation-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .file-operation-spinner {
+    animation: none;
+  }
 }
 
 .editor-protect-overlay {

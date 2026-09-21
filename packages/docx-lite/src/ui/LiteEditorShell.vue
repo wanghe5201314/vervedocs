@@ -14,6 +14,7 @@
           @show-popup="showPopup"
         />
         <DesktopToolbar
+          :format-state="toolbarStyle"
           :zoom-text="zoomText"
           @command="runCommand"
           @font-change="handleFontChange"
@@ -84,6 +85,7 @@
 
       <MobileBottomBar
         v-if="isMobile"
+        :format-state="toolbarStyle"
         :zoom-text="zoomText"
         @command="runCommand"
         @font-change="handleFontChange"
@@ -231,9 +233,9 @@
 </template>
 
 <script setup lang="ts">
-import type {IDocxDocumentMeta, IEditorOption, IElement, TitleLevel} from '@vervedoc/core'
-import DocxEditor, {TITLE_LEVEL, PAPER_SIZE_LIST, DEFAULT_PAPER_SIZE, LaTexParticle} from '@vervedoc/core'
-import {computed, onBeforeUnmount, onMounted, reactive, ref} from 'vue'
+import type {IDocxDocumentMeta, IEditorOption, IElement, IRangeStyle, TitleLevel} from '@vervedoc/core'
+import DocxEditor, {TITLE_LEVEL, PAPER_SIZE_LIST, DEFAULT_PAPER_SIZE, FONT_FAMILY_VALUE, LaTexParticle} from '@vervedoc/core'
+import {computed, onBeforeUnmount, onMounted, reactive, ref, watch} from 'vue'
 import type {ImportMode, LiteEditorShellExposed, SaveSnapshot, WordEditorOptions} from '../object/word-editor.types'
 import {useResponsive} from '../composables/useResponsive'
 import {useTouch} from '../composables/useTouch'
@@ -288,6 +290,25 @@ const randomId = () =>
 const shellRef = ref<HTMLDivElement | null>(null)
 const editorContainerRef = ref<HTMLDivElement | null>(null)
 const editor = ref<DocxEditor | null>(null)
+const rangeStyle = ref<Partial<IRangeStyle>>({})
+const formatUnsubscribers: Array<() => void> = []
+const toolbarStyle = computed(() => {
+  const style = rangeStyle.value
+  const font = style.font || props.options?.defaultFont || '微软雅黑'
+  return {
+    ...style,
+    font: FONT_FAMILY_VALUE[font] ?? font,
+    size: style.size || (props.options?.defaultSize ?? 14) * 72 / 96,
+    color: style.color || '#000000',
+    highlight: style.highlight || '#ffff00',
+    level: Object.keys(TITLE_LEVEL_MAP).find(key => TITLE_LEVEL_MAP[key] === style.level) || '',
+    rowFlex: style.rowFlex || 'left',
+    lineHeight: style.lineHeight || 1.5
+  }
+})
+const syncToolbarStyle = () => {
+  if (editor.value) rangeStyle.value = editor.value.command.getRangeStyle()
+}
 const tocRefreshTimer = ref<number | null>(null)
 const activeDropdown = ref<string | null>(null)
 const activePopup = ref<'table' | 'link' | 'search' | 'shortcuts' | 'toc' | 'formula' | null>(null)
@@ -297,7 +318,7 @@ const selectedPaperSizeIndex = ref(PAPER_SIZE_LIST.findIndex(p => p.key === DEFA
 const paperSizeMenuOpen = ref(false)
 const moreMenuOpen = ref(false)
 const zoomText = ref('100%')
-const statusPageText = ref('=共 1 页')
+const statusPageText = ref('共 1 页')
 const statusWordsText = ref('0 字')
 const saveIndicatorText = ref('')
 const saveIndicatorSaving = ref(false)
@@ -377,17 +398,27 @@ const flatToc = computed<FlatTocItem[]>(() => {
   return result
 })
 
+let scaleBeforeMobile: number | null = null
+
 const updateMobileScale = () => {
-  if (!isMobile.value || !editorContainerRef.value) return
+  if (!isMobile.value || !editorContainerRef.value || !editor.value) return
   const wrapper = editorContainerRef.value.parentElement
   if (!wrapper) return
-  const availableWidth = wrapper.clientWidth - 24
-  const paperWidth = selectedPaperSize.value.width
+  // #region debug-point A:缩放前尺寸
+  void fetch('http://192.168.3.37:7777/event', { method: 'POST', body: JSON.stringify({ sessionId: 'mobile-canvas-render', runId: 'post-fix', hypothesisId: 'A', location: 'LiteEditorShell:updateMobileScale', msg: '[DEBUG] 缩放前尺寸', data: { coreScale: editor.value.command.getOptions().scale, viewport: [innerWidth, innerHeight], wrapper: wrapper.getBoundingClientRect().toJSON(), container: editorContainerRef.value.getBoundingClientRect().toJSON(), height: editorContainerRef.value.style.height, transform: editorContainerRef.value.style.transform, overflow: getComputedStyle(wrapper).overflow, canvases: Array.from(editorContainerRef.value.querySelectorAll('canvas')).slice(0, 3).map(canvas => ({ width: canvas.width, height: canvas.height, rect: canvas.getBoundingClientRect().toJSON() })) }, ts: Date.now() }) }).catch(() => {})
+  // #endregion
+  const availableWidth = editorContainerRef.value.clientWidth
+  const options = editor.value.command.getOptions()
+  const paperWidth = options.pageWidth ?? selectedPaperSize.value.width
+  if (availableWidth <= 0 || paperWidth <= 0) return
   const scale = Math.min(1, availableWidth / paperWidth)
-  editorContainerRef.value.style.transform = `scale(${scale})`
-  editorContainerRef.value.style.transformOrigin = 'top center'
-  const realHeight = editorContainerRef.value.getBoundingClientRect().height / scale
-  editorContainerRef.value.style.height = `${Math.round(realHeight * scale)}px`
+  scaleBeforeMobile ??= options.scale ?? 1
+  if (Math.abs((options.scale ?? 1) - scale) > 0.0001) {
+    editor.value.command.executeSetPageScale(scale)
+  }
+  // #region debug-point B:缩放后布局
+  void fetch('http://192.168.3.37:7777/event', { method: 'POST', body: JSON.stringify({ sessionId: 'mobile-canvas-render', runId: 'post-fit-fix', hypothesisId: 'B', location: 'LiteEditorShell:updateMobileScale', msg: '[DEBUG] 缩放后布局', data: { scale, coreScale: editor.value.command.getOptions().scale, availableWidth, paperWidth, layoutPageWidth: editor.value.draw.getLayout()?.pageWidth, availableToPaperRatio: availableWidth / paperWidth, wrapper: wrapper.getBoundingClientRect().toJSON(), container: editorContainerRef.value.getBoundingClientRect().toJSON(), height: editorContainerRef.value.style.height, transform: editorContainerRef.value.style.transform, canvases: Array.from(editorContainerRef.value.querySelectorAll('canvas')).slice(0, 3).map(canvas => ({ width: canvas.width, height: canvas.height, rect: canvas.getBoundingClientRect().toJSON() })), pageBackgrounds: Array.from(editorContainerRef.value.querySelectorAll('.vd-page-bg')).slice(0, 2).map(page => page.getBoundingClientRect().toJSON()), scrollHeight: wrapper.scrollHeight, clientHeight: wrapper.clientHeight }, ts: Date.now() }) }).catch(() => {})
+  // #endregion
 }
 
 const createEditor = () => {
@@ -401,8 +432,18 @@ const createEditor = () => {
     marginIndicatorDisabled: isMobile.value,
     ...(props.options as IEditorOption | undefined)
   })
+  // #region debug-point C:初始化环境
+  void fetch('http://192.168.3.37:7777/event', { method: 'POST', body: JSON.stringify({ sessionId: 'mobile-canvas-render', runId: 'post-fix', hypothesisId: 'C', location: 'LiteEditorShell:createEditor', msg: '[DEBUG] 初始化环境', data: { mobile: isMobile.value, viewport: [innerWidth, innerHeight], dpr: devicePixelRatio, coreScale: editor.value.command.getOptions().scale, paperWidth: editor.value.command.getOptions().pageWidth, wrapper: editorContainerRef.value.parentElement?.getBoundingClientRect().toJSON(), container: editorContainerRef.value.getBoundingClientRect().toJSON(), canvases: Array.from(editorContainerRef.value.querySelectorAll('canvas')).slice(0, 3).map(canvas => ({ width: canvas.width, height: canvas.height, rect: canvas.getBoundingClientRect().toJSON() })) }, ts: Date.now() }) }).catch(() => {})
+  // #endregion
+
+  formatUnsubscribers.push(
+    editor.value.listener.range.formatListener(style => { rangeStyle.value = style }),
+    editor.value.listener.range.rangeListener(syncToolbarStyle)
+  )
+  syncToolbarStyle()
 
   editor.value.listener.content.contentListener(() => {
+    syncToolbarStyle()
     void updateWordCount()
     refreshTocLater()
     props.onChange?.()
@@ -441,24 +482,16 @@ const focusEditorAgent = () => {
 const runCommand = <T = any>(command: string, ...args: any[]): T | undefined => {
   if (!editor.value) return undefined
   try {
-    focusEditorAgent()
+    if (!command.startsWith('get')) focusEditorAgent()
     const cmd = editor.value.command as any
     const fn = cmd?.[command]
     if (typeof fn === 'function') {
-      return fn.call(cmd, ...args) as T
+      const result = fn.call(cmd, ...args) as T
+      if (!command.startsWith('get')) syncToolbarStyle()
+      return result
     }
   } catch (error) {
     console.error(`执行失败: ${command}`, error)
-  }
-  return undefined
-}
-
-const runCommandWithFallback = (commands: string[], ...args: any[]) => {
-  for (const command of commands) {
-    const fn = (editor.value?.command as any)?.[command]
-    if (typeof fn === 'function') {
-      return runCommand(command, ...args)
-    }
   }
   return undefined
 }
@@ -556,7 +589,7 @@ const handleTocClick = (id?: string) => {
 const applyPaperSize = () => {
   const width = paperDirection.value === 'horizontal' ? selectedPaperSize.value.height : selectedPaperSize.value.width
   const height = paperDirection.value === 'horizontal' ? selectedPaperSize.value.width : selectedPaperSize.value.height
-  runCommand('executePaperSize', width, height)
+  runCommand('executeSetPaperSize', width, height)
   if (isMobile.value) {
     requestAnimationFrame(() => updateMobileScale())
   }
@@ -564,7 +597,7 @@ const applyPaperSize = () => {
 
 const togglePaperDirection = () => {
   paperDirection.value = paperDirection.value === 'vertical' ? 'horizontal' : 'vertical'
-  runCommand('executePaperDirection', paperDirection.value)
+  runCommand('executeSetPaperDirection', paperDirection.value)
   applyPaperSize()
 }
 
@@ -583,7 +616,7 @@ const confirmInsertLink = () => {
   const url = linkUrl.value.trim()
   if (!url) return
   const text = linkText.value.trim() || url
-  runCommand('executeHyperlink', { type: 'hyperlink', value: text, url })
+  runCommand('executeHyperlink', { url, valueList: [{ type: 'text', value: text }] })
   closePopup()
 }
 
@@ -641,7 +674,7 @@ const insertImage = () => {
       image.onload = () => {
         const maxWidth = 400
         const scale = image.width > maxWidth ? maxWidth / image.width : 1
-        runCommand('executeImage', {
+        runCommand('executeInsertImage', {
           value,
           width: Math.round(image.width * scale),
           height: Math.round(image.height * scale)
@@ -749,27 +782,27 @@ const resolveImportMode = (mode: ImportMode) => {
 }
 
 const handleFontChange = (value: string) => {
-  runCommand('executeFont', value)
+  runCommand('executeSetFont', value)
 }
 
 const handleFontSizeChange = (value: number) => {
-  runCommand('executeSize', value)
+  runCommand('executeSetSize', value * 96 / 72)
 }
 
 const handleFontColorChange = (value: string) => {
-  runCommand('executeColor', value)
+  runCommand('executeSetColor', value)
 }
 
 const handleHighlightChange = (value: string) => {
-  runCommand('executeHighlight', value)
+  runCommand('executeSetHighlight', value)
 }
 
 const handleTitleLevelChange = (value: string) => {
-  runCommand('executeTitle', value ? TITLE_LEVEL_MAP[value] : null)
+  runCommand('executeSetTitle', value ? TITLE_LEVEL_MAP[value] : null)
 }
 
 const handleLineHeightChange = (value: number) => {
-  runCommandWithFallback(['executeLineHeight', 'executeRowMargin'], value)
+  runCommand('executeSetLineHeight', value, 'auto')
 }
 
 const handleGlobalMouseDown = (event: MouseEvent) => {
@@ -822,6 +855,8 @@ const destroyShell = () => {
     tocRefreshTimer.value = null
   }
   importModeResolver.value = null
+  formatUnsubscribers.splice(0).forEach(unsubscribe => unsubscribe())
+  rangeStyle.value = {}
   editor.value?.destroy()
   editor.value = null
 }
@@ -832,6 +867,15 @@ const setTitle = (title: string) => {
 
 let mobileResizeObserver: ResizeObserver | null = null
 
+watch(isMobile, mobile => {
+  if (mobile) {
+    updateMobileScale()
+  } else if (editor.value && scaleBeforeMobile !== null) {
+    editor.value.command.executeSetPageScale(scaleBeforeMobile)
+    scaleBeforeMobile = null
+  }
+}, { flush: 'post' })
+
 onMounted(() => {
   createEditor()
   void updateWordCount()
@@ -839,7 +883,7 @@ onMounted(() => {
   document.addEventListener('mousedown', handleGlobalMouseDown)
   document.addEventListener('keydown', handleGlobalKeyDown)
 
-  if (isMobile.value && editorContainerRef.value) {
+  if (editorContainerRef.value) {
     requestAnimationFrame(() => updateMobileScale())
     mobileResizeObserver = new ResizeObserver(() => updateMobileScale())
     mobileResizeObserver.observe(editorContainerRef.value)

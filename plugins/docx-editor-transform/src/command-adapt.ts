@@ -2038,6 +2038,7 @@ export class CommandAdapt {
   setPaperSize(width: number, height: number): void {
     this.draw.setPageSize(width, height)
     this.listener?.emit('pageSizeChange', { width, height })
+    this.listener?.emit('contentChange')
   }
 
   /**
@@ -2046,12 +2047,14 @@ export class CommandAdapt {
    */
   setPaperDirection(direction: 'vertical' | 'horizontal'): void {
     const opts = this.draw.getOptions()
-    const w = Number(opts.pageWidth ?? 794)
-    const h = Number(opts.pageHeight ?? 1123)
+    const doc = this.draw.getDocument()
+    const section = doc.sections?.[0]
+    const w = Number(section?.pageWidth ?? doc.pageWidth ?? opts.pageWidth ?? 794)
+    const h = Number(section?.pageHeight ?? doc.pageHeight ?? opts.pageHeight ?? 1123)
     if (direction === 'horizontal') {
-      this.draw.setPageSize(Math.max(w, h), Math.min(w, h))
+      this.setPaperSize(Math.max(w, h), Math.min(w, h))
     } else {
-      this.draw.setPageSize(Math.min(w, h), Math.max(w, h))
+      this.setPaperSize(Math.min(w, h), Math.max(w, h))
     }
   }
 

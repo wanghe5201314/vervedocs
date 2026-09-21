@@ -67,7 +67,8 @@
             <div class="editor-area" ref="editorAreaRef">
 
               <Editor
-                v-if="isContentVisible"
+                v-if="isContentVisible || hasEditorMounted"
+                v-show="isContentVisible"
                 ref="editorRef"
                 @command="handleEditorCommand"
                 @ready="handleReady"
@@ -267,6 +268,8 @@ const exportCallback = inject<DocxExportCallback | undefined>(
 
 /** 文档内容是否可见（受保护时为 false） */
 const isContentVisible = ref(true)
+/** 首次解锁前不挂载；挂载后隐藏时保留文档、历史和协同连接。 */
+const hasEditorMounted = ref(false)
 /** 文档保护密码的 SHA-256 哈希值 */
 const protectPasswordHash = ref<string | null>(null)
 /** 密码弹窗是否可见 */
@@ -755,6 +758,7 @@ const normalizeContent = (content: any): any => {
  * @param args - 编辑器就绪事件参数
  */
 const handleReady = (...args: any[]) => {
+  hasEditorMounted.value = true
   isAppReady.value = true
   emitExternalEvent('ready', args[0] ?? null)
   if (loaded) return
@@ -1112,6 +1116,13 @@ const handleCommand = (command: string, ...args: any[]) => {
       return handleImportDoc()
     case 'export':
       return handleExportDoc()
+    case 'print':
+      try {
+        return executeCommand('print')
+      } catch (error) {
+        message.error(`打印失败: ${(error as Error)?.message || '未知错误'}`)
+        return
+      }
     case 'preview':
       return emitExternalEvent('statusChange', { command: 'preview', args: [] })
     case 'protect':

@@ -496,6 +496,9 @@ export class Draw {
     this.inputEl.addEventListener('compositionend', (e) => {
       this.isComposing = false
       const text = (e as CompositionEvent).data ?? ''
+      // #region debug-point readonly-composition
+      if (this.options.readonly || this.options.disabled) void fetch('http://192.168.3.37:7777/event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: 'mobile-canvas-render', runId: 'input-pipeline', hypothesisId: 'E', location: 'Draw:compositionend', msg: 'Restricted composition callback', data: { readonly: this.options.readonly, disabled: this.options.disabled, hasText: !!text } }) }).catch(() => {})
+      // #endregion debug-point readonly-composition
       if (text) this.onInput?.(text)
       this.inputEl.value = ''
     })
@@ -914,6 +917,10 @@ export class Draw {
    * @param scale 缩放倍数
    */
   setScale(scale: number): void {
+    // #region debug-point scale-pipeline
+    const canvas = this.canvasHost.querySelector('canvas')
+    void fetch('http://192.168.3.37:7777/event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: 'mobile-canvas-render', runId: 'scale-pipeline', hypothesisId: 'D', location: 'Draw:setScale', msg: 'Scale pipeline', data: { requestedScale: scale, previousScale: this.options.scale, pageWidth: this.layout?.pageWidth, viewportWidth: this.viewportWidth, viewportHeight: this.viewportHeight, scrollerWidth: this.scroller.offsetWidth, matrix: canvas?.getContext('2d')?.getTransform().a, dpr: window.devicePixelRatio, readonly: this.options.readonly, disabled: this.options.disabled } }) }).catch(() => {})
+    // #endregion debug-point scale-pipeline
     this.options.scale = scale
     this.reformatWithInvalidation()
   }
@@ -973,6 +980,16 @@ export class Draw {
   setPageSize(width: number, height: number): void {
     this.options.pageWidth = width
     this.options.pageHeight = height
+    // Imported document geometry takes precedence over layout option defaults.
+    const paperDirection = width > height ? 'horizontal' : 'vertical'
+    this.document.pageWidth = width
+    this.document.pageHeight = height
+    this.document.paperDirection = paperDirection
+    for (const section of this.document.sections ?? []) {
+      section.pageWidth = width
+      section.pageHeight = height
+      section.paperDirection = paperDirection
+    }
     this.reformatWithInvalidation()
   }
 
@@ -997,20 +1014,48 @@ export class Draw {
     this.reformatWithInvalidation()
   }
 
-  /** 打印：打开新窗口写入 canvas 图片 */
+  /** 打印完整分页，不依赖仅包含当前视口的 Canvas 图层。 */
   print(): void {
-    const canvases = this.scroller.querySelectorAll('canvas')
-    if (canvases.length === 0) return
-    const w = window.open('', '_blank', 'width=900,height=700')
-    if (!w) return
-    w.document.write('<style>body{margin:0}@media print{.page{page-break-after:always}}</style>')
-    canvases.forEach(c => {
-      const img = (c as HTMLCanvasElement).toDataURL('image/png')
-      w.document.write(`<img class="page" src="${img}" style="width:100%"/>`)
-    })
-    w.document.close()
-    w.focus()
-    w.print()
+    if (!this.layout?.pages.length) return
+    const frame = document.createElement('iframe')
+    frame.title = '文档打印'
+    frame.setAttribute('aria-hidden', 'true')
+    frame.tabIndex = -1
+    frame.style.cssText = 'position:fixed;width:0;height:0;border:0;left:-10000px;top:0;'
+    try {
+      const images = this.getPageThumbnails()
+      const pageStyles = this.layout.pages.map((page, index) =>
+        `@page docx-page-${index}{size:${page.rect.width}px ${page.rect.height}px;margin:0}`
+      ).join('')
+      const pages = this.layout.pages.map((page, index) =>
+        `<div class="page" style="page:docx-page-${index};width:${page.rect.width}px;height:${page.rect.height}px"><img src="${images[index]}" alt=""/></div>`
+      ).join('')
+      // Wait for every page image before opening the native print dialog.
+      frame.onload = () => {
+        const w = frame.contentWindow
+        if (!w) {
+          frame.remove()
+          return
+        }
+        frame.onload = null
+        w.addEventListener('afterprint', () => {
+          setTimeout(() => frame.remove(), 0)
+        }, { once: true })
+        w.focus()
+        w.print()
+      }
+      frame.srcdoc = `<!doctype html><html><head><meta charset="UTF-8"><title>打印文档</title><style>
+        @page{margin:0}${pageStyles}
+        body{margin:0}
+        .page{break-after:page;page-break-after:always}
+        .page:last-child{break-after:auto;page-break-after:auto}
+        .page img{display:block;width:100%;height:100%}
+      </style></head><body>${pages}</body></html>`
+      document.body.appendChild(frame)
+    } catch (error) {
+      frame.remove()
+      throw error
+    }
   }
 
   /**

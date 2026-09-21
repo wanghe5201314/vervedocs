@@ -2,17 +2,18 @@
  * ParagraphWidget —— 段落格式悬浮 widget
  *
  * 光标在段落中或鼠标悬浮在段落上时，在首行左侧显示小图标，
- * 点击弹出菜单可修改标题类型、对齐方式、列表。
+ * 点击弹出菜单可修改标题类型、对齐方式。
  */
 
 import type { DocumentLayout, ParagraphBlock, BlockNode } from '../layout-types'
 import type { RangeManager } from '@vervedoc/docx-editor-state'
-import type { IPosition } from '@vervedoc/docx-editor-schema'
+import type { IPosition, IRangeStyle } from '@vervedoc/docx-editor-schema'
 import { TITLE_LEVEL, ROW_FLEX, comparePosition } from '@vervedoc/docx-editor-schema'
 import { ContextMenu, type MenuItem } from '../context-menu'
 import { ParagraphLayoutWidget } from './layout/paragraph-layout-widget'
 import { FontLayoutWidget } from './layout/font-layout-widget'
 import { positionHandle } from './handle-position'
+import '../assets/css/paragraph-handle-menu.css'
 
 
 /**
@@ -32,7 +33,7 @@ export interface ParagraphWidgetDeps {
   /** 获取页面水平偏移量（像素） */
   getPageOffsetX: () => number
   /** 触发编辑器命令的回调 */
-  onCommand: (cmd: string, ...args: any[]) => void
+  onCommand: (cmd: string, ...args: any[]) => any
   /** 根据客户端坐标命中测试，返回位置信息或 null */
   hit: (clientX: number, clientY: number) => IPosition | null
   /** 临时抑制工具栏显示 */
@@ -44,8 +45,7 @@ export interface ParagraphWidgetDeps {
 /**
  * 段落格式悬浮 widget
  *
- * 在段落首行左侧显示拖拽手柄，点击后弹出菜单可修改标题级别、对齐方式、
- * 列表，以及在当前段落下方插入图片、段落、表格等元素。
+ * 在段落首行左侧显示拖拽手柄，点击后弹出两行格式菜单，可修改标题级别和对齐方式。
  */
 export class ParagraphWidget {
   /** 段落左侧的拖拽手柄 DOM 元素 */
@@ -231,53 +231,85 @@ export class ParagraphWidget {
   }
 
   /**
-   * 在手柄左侧弹出格式菜单
+   * 在手柄下方弹出格式菜单
    *
-   * 菜单包含标题级别、对齐方式以及"在下方插入"子菜单（图片、段落、表格等）。
+   * 第一行为正文和 H1-H4，第二行为五种对齐方式。
    * 同时绑定滚动隐藏和点击外部关闭逻辑。
    */
   private showMenu(): void {
     this.hideMenu()
     if (!this.handle || !this.currentBlock) return
 
-    const fire = (cmd: string, ...args: any[]) => { this.deps.onCommand(cmd, ...args) }
+    const style: Partial<IRangeStyle> = this.deps.onCommand('getRangeStyle') ?? {}
+    const alignment = style.rowFlex === ROW_FLEX.ALIGNMENT ? ROW_FLEX.JUSTIFY : (style.rowFlex || ROW_FLEX.LEFT)
+    const menu = document.createElement('div')
+    menu.className = 'ce-paragraph-handle-menu'
+    menu.setAttribute('role', 'toolbar')
+    menu.setAttribute('aria-label', '段落格式')
+    menu.addEventListener('mousedown', e => e.preventDefault())
+    menu.addEventListener('keydown', e => {
+      e.stopPropagation()
+      if (e.key === 'Escape') {
+        this.hideMenu()
+        this.deps.focusInput()
+      }
+    })
 
-    const insertBelow = (cmd: string, ...args: any[]) => {
-      if (!this.currentBlock) return
-      const { parentPath, endIndex } = this.currentBlock
-      const caretPath = [...parentPath, Math.max(0, endIndex - 1)] as IPosition['path']
-      fire('executeSetCaret', caretPath, 0)
-      fire(cmd, ...args)
+    const addButton = (label: string, active: boolean, command: string, value: unknown) => {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.title = label
+      button.setAttribute('aria-label', label)
+      button.setAttribute('aria-pressed', String(active))
+      button.addEventListener('click', () => {
+        this.hideMenu()
+        this.deps.onCommand(command, value)
+        this.deps.focusInput()
+      })
+      menu.appendChild(button)
+      return button
     }
 
-    const items: MenuItem[] = [
-      { label: '正文', icon: 'title', onClick: () => fire('executeTitle', null) },
-      { label: '一级标题', icon: 'title', onClick: () => fire('executeTitle', TITLE_LEVEL.FIRST) },
-      { label: '二级标题', icon: 'title', onClick: () => fire('executeTitle', TITLE_LEVEL.SECOND) },
-      { label: '三级标题', icon: 'title', onClick: () => fire('executeTitle', TITLE_LEVEL.THIRD) },
-      { label: '四级标题', icon: 'title', onClick: () => fire('executeTitle', TITLE_LEVEL.FOURTH) },
-      { label: '五级标题', icon: 'title', onClick: () => fire('executeTitle', TITLE_LEVEL.FIFTH) },
-      { label: '六级标题', icon: 'title', onClick: () => fire('executeTitle', TITLE_LEVEL.SIXTH) },
-      { label: '左对齐', icon: 'format_align_left', onClick: () => fire('executeRowFlex', ROW_FLEX.LEFT) },
-      { label: '居中', icon: 'format_align_center', onClick: () => fire('executeRowFlex', ROW_FLEX.CENTER) },
-      { label: '右对齐', icon: 'format_align_right', onClick: () => fire('executeRowFlex', ROW_FLEX.RIGHT) },
-      { label: '两端对齐', icon: 'format_align_justify', onClick: () => fire('executeRowFlex', ROW_FLEX.JUSTIFY) },
-      { label: '---' },
-      {
-        label: '在下方插入', icon: 'add', submenu: [
-          { label: '图片', icon: 'image', onClick: () => insertBelow('requestInsertImage') },
-          { label: '段落', icon: 'text_fields', onClick: () => insertBelow('executeSplitParagraph') },
-          { label: '表格', icon: 'table_chart', onClick: () => insertBelow('executeInsertTable', 3, 4) },
-          { label: '分割线', icon: 'horizontal_rule', onClick: () => insertBelow('executeSeparator') },
-          { label: '超链接', icon: 'link', onClick: () => insertBelow('requestInsertHyperlink') },
-          { label: '公式', icon: 'functions', onClick: () => insertBelow('requestInsertFormula') }
-        ]
+    const levels = [null, TITLE_LEVEL.FIRST, TITLE_LEVEL.SECOND, TITLE_LEVEL.THIRD, TITLE_LEVEL.FOURTH]
+    const labels = ['正文', '一级标题', '二级标题', '三级标题', '四级标题']
+    levels.forEach((level, index) => {
+      const button = addButton(labels[index], (style.level ?? null) === level, 'executeTitle', level)
+      button.className = 'ce-paragraph-handle-menu__heading'
+      button.append(index === 0 ? 'T' : 'H')
+      if (index > 0) {
+        const sub = document.createElement('sub')
+        sub.textContent = String(index)
+        button.appendChild(sub)
       }
+    })
+
+    const alignments = [
+      { label: '左对齐', value: ROW_FLEX.LEFT, path: 'M4 5H19M4 12H12M4 19H19' },
+      { label: '居中', value: ROW_FLEX.CENTER, path: 'M4 5H19M8 12H15M4 19H19' },
+      { label: '右对齐', value: ROW_FLEX.RIGHT, path: 'M4 5H19M11 12H19M4 19H19' },
+      { label: '两端对齐', value: ROW_FLEX.JUSTIFY, path: 'M4 5H19M4 12H19M4 19H19' },
+      { label: '分散对齐', value: ROW_FLEX.DISTRIBUTE, path: 'M3 4V20M21 4V20M7 13H17M7 19H17' }
     ]
+    for (const item of alignments) {
+      const button = addButton(item.label, alignment === item.value, 'executeRowFlex', item.value)
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+      svg.setAttribute('viewBox', '0 0 24 24')
+      svg.setAttribute('aria-hidden', 'true')
+      const path = document.createElementNS(svg.namespaceURI, 'path')
+      path.setAttribute('d', item.path)
+      svg.appendChild(path)
+      if (item.value === ROW_FLEX.DISTRIBUTE) {
+        const arrows = document.createElementNS(svg.namespaceURI, 'path')
+        arrows.setAttribute('d', 'M9 4L7 6L9 8M15 4L17 6L15 8')
+        arrows.setAttribute('stroke', '#527bb5')
+        svg.appendChild(arrows)
+      }
+      button.appendChild(svg)
+    }
 
     const hx = parseFloat(this.handle.style.left)
     const hy = parseFloat(this.handle.style.top)
-    this.contextMenu.show(hx, hy + 22, items)
+    this.contextMenu.showContent(hx, hy + 22, menu)
   }
 
   /**

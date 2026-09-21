@@ -105,9 +105,13 @@ export class ContextMenu {
    * @returns 无返回值
    */
   show(x: number, y: number, items: MenuItem[]): void {
+    this.showContent(x, y, this.buildMenu(items, false))
+  }
 
+  /** Display custom menu content with the same positioning and dismissal lifecycle. */
+  showContent(x: number, y: number, content: HTMLDivElement): void {
     this.hide()
-    this.menuEl = this.buildMenu(items, false)
+    this.menuEl = content
     this.menuEl.style.left = `${x}px`
     this.menuEl.style.top = `${y}px`
     document.body.appendChild(this.menuEl)

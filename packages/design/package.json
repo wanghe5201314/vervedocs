@@ -27,7 +27,7 @@
         "types": "./dist/index.d.ts",
         "import": "./dist/vervedoc-design.js"
       },
-      "./styles.css": "./dist/styles.css",
+      "./styles.css": "./src/styles/index.css",
       "./tokens.css": "./src/styles/tokens.css",
       "./icons.css": "./src/fonts/material-symbols.css"
     }

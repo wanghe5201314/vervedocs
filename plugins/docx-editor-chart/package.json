@@ -1,6 +1,6 @@
 {
   "name": "@vervedoc/docx-editor-chart",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "DocxEditor 图表插件 - 基于 Chart.js",
   "author": "wanghe",
   "license": "MIT",

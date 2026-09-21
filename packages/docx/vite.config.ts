@@ -13,6 +13,7 @@ const name = 'docx'
 const pkg = JSON.parse(
   readFileSync(path.resolve(currentDir, 'package.json'), 'utf8')
 ) as { version?: string }
+let editorCss = ''
 
 const autoImportPlugins = [
   AutoImport({
@@ -42,7 +43,26 @@ export default defineConfig({
     vue({
       isProduction: true,
     }),
-    cssInjectedByJsPlugin(),
+    cssInjectedByJsPlugin({
+      preRenderCSSCode(css) {
+        editorCss = css
+        return css
+      },
+    }),
+    {
+      name: 'docx-export-stylesheet',
+      apply: 'build',
+      enforce: 'post',
+      buildStart() {
+        editorCss = ''
+      },
+      generateBundle() {
+        // Preserve the public stylesheet after the injection plugin consumes CSS assets.
+        if (editorCss) {
+          this.emitFile({ type: 'asset', fileName: 'docx.css', source: editorCss })
+        }
+      },
+    },
     dts({
       include: ['src/**/*.ts'],
       tsconfigPath: path.resolve(currentDir, 'tsconfig.json'),

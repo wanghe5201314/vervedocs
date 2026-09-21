@@ -1,6 +1,6 @@
 {
   "name": "@vervedoc/docx-editor-state",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "DocxEditor 状态层 - 管理编辑器状态、事件总线、监听器",
   "author": "wanghe",
   "license": "MIT",

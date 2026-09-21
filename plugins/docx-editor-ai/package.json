@@ -1,6 +1,6 @@
 {
   "name": "@vervedoc/docx-editor-ai",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "DocxEditor AI 智能编辑插件 - 选中内容智能修改、润色、翻译等",
   "author": "wanghe",
   "license": "MIT",

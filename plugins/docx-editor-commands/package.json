@@ -1,6 +1,6 @@
 {
   "name": "@vervedoc/docx-editor-commands",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "DocxEditor 控件扩展插件 - 文档控件交互",
   "author": "wanghe",
   "license": "MIT",

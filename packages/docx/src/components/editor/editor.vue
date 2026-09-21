@@ -220,17 +220,15 @@ const setupEditorListeners = () => {
   const syncAbility = () => {
     if (!editorInstance?.command?.getIsReadonly) return
     const range = editorInstance.command.getRange()
-    if (!range) return
-    const { startIndex, endIndex } = range
-    const focused = !!(~startIndex || ~endIndex)
     const ability = {
-      focused,
+      focused: !!range,
       readonly: editorInstance.command.getIsReadonly(),
       disabled: editorInstance.command.getIsDisabled(),
       canInput: editorInstance.command.getIsCanInput()
     }
     emit('command', 'editorAbilityChange', ability)
   }
+  editorInstance.listener.on('abilityChange', syncAbility)
 
   // 监听容器焦点事件，更新inCanvas状态
   if (editorContainer.value) {
@@ -615,10 +613,7 @@ const executeCommand = (command: string, ...args: any[]) => {
       const mode = args[0]
       const ability = editorInstance?.command?.getIsReadonly
         ? {
-            focused: (() => {
-              const { startIndex, endIndex } = editorInstance.command.getRange()
-              return !!(~startIndex || ~endIndex)
-            })(),
+            focused: !!editorInstance.command.getRange(),
             readonly: editorInstance.command.getIsReadonly(),
             disabled: editorInstance.command.getIsDisabled(),
             canInput: editorInstance.command.getIsCanInput()

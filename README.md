@@ -194,8 +194,7 @@ cd vervedocs
 # 安装全部依赖
 pnpm install
 
-# 启动各包开发服务器
-pnpm dev:core
+# 启动演示开发服务器（直接加载编辑器源码）
 pnpm dev:docx
 pnpm dev:docx-lite
 pnpm dev:excel
@@ -211,7 +210,7 @@ pnpm typecheck
 也可以用 filter 操作单个包：
 
 ```bash
-pnpm --filter @vervedoc/core dev
+pnpm --filter @vervedoc/docx-playground dev
 pnpm --filter @vervedoc/core build
 ```
 

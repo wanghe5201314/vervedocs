@@ -5,6 +5,7 @@
 export * from './types'
 export * from './constants'
 export * from './author-color'
+export * from './revision'
 export * from './walk'
 export * from './format'
 export * from './export'

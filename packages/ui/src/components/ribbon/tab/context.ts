@@ -1,6 +1,6 @@
 import type { InjectionKey, Ref } from 'vue'
 
-export type RibbonTabMode = 'panel' | 'dropdown'
+export type RibbonTabMode = 'panel' | 'dropdown' | 'action'
 
 export interface RibbonTabContext {
   activeKey: Ref<string | undefined>

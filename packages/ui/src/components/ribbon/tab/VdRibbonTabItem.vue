@@ -25,6 +25,10 @@ const props = withDefaults(
   }
 )
 
+const emit = defineEmits<{
+  activate: []
+}>()
+
 provideRibbonButtonDefaults(() => props.buttonDefaults)
 
 const tab = inject(RIBBON_TAB_CONTEXT_KEY)
@@ -36,6 +40,7 @@ const dropdownOpen = ref(false)
 const navTo = computed(() => tab.navSelector.value)
 
 const isActive = computed(() => {
+  if (props.mode === 'action') return false
   if (props.mode === 'dropdown') return dropdownOpen.value
   return tab.activeKey.value === props.itemKey
 })
@@ -43,6 +48,10 @@ const isActive = computed(() => {
 const activate = () => {
   if (props.disabled) return
   if (props.mode === 'dropdown') return
+  if (props.mode === 'action') {
+    emit('activate')
+    return
+  }
   tab.setActiveKey(props.itemKey)
 }
 
@@ -105,8 +114,8 @@ provide(RIBBON_TAB_ITEM_CONTEXT_KEY, {
         'vd-ribbon-tab__tab--active': isActive,
         'vd-ribbon-tab__tab--disabled': disabled
       }"
-      role="tab"
-      :aria-selected="isActive"
+      :role="mode === 'action' ? 'button' : 'tab'"
+      :aria-selected="mode === 'action' ? undefined : isActive"
       :aria-disabled="disabled || undefined"
       tabindex="0"
       @mouseenter="onTabHover"

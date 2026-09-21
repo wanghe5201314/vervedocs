@@ -316,7 +316,6 @@ function group(exprs: Expr[]): Expr {
     return null
   }
   const bbox: Bbox = computeBbox(exprs)
-  // console.log(exprs,bbox);
   for (let i = 0; i < exprs.length; i++) {
     if (!exprs[i].bbox) {
       continue

@@ -23,9 +23,7 @@ export const UI_EL_SIZE = 'small' as const
  */
 export const EDITOR_MODE_LIST = [
   { value: 'edit', label: '常规模式', icon: 'cursor-default', title: '常规编辑模式，可自由编辑文档内容' },
-  { value: 'revision', label: '修订模式', icon: 'pencil-plus', title: '修订模式，所有编辑操作将记录为修订' },
   { value: 'readonly', label: '只读模式', icon: 'eye-outline', title: '只读模式，仅可查看文档不可编辑' },
-  { value: 'clean', label: '清洁模式', icon: 'eye-off-outline', title: '清洁模式，隐藏所有标记和批注' },
   { value: 'form', label: '表单模式', icon: 'form-select', title: '表单模式，仅可编辑表单域' }
 ]
 

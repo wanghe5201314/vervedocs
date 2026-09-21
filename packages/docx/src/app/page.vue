@@ -110,6 +110,7 @@
       ref="footerRef"
       v-show="bottomNavVisible"
       :document-meta="documentMeta"
+      :is-track-changes="isTrackChanges"
       @command="handleCommand"
     />
 
@@ -1255,8 +1256,10 @@ const handleCommand = (command: string, ...args: any[]) => {
     }
     case 'toggleTrackChanges': {
       isTrackChanges.value = !!args[0]
-      executeCommand('updateOptions', { trackChanges: isTrackChanges.value })
-      activeDock.value = isTrackChanges.value ? 'revision' : 'search'
+      executeCommand('updateOptions', {
+        trackChanges: isTrackChanges.value,
+        revisionAuthor: collaborationConfig?.user?.userName || '当前用户'
+      })
       return
     }
     case 'revisionDisplayMode': {

@@ -9,11 +9,12 @@ import type {
   IDocxDocumentMeta, IElement, IImageElement, Path, ITextElement,
   ITitleElement, ITableElement, IListElement, ListTypeName, IPosition, IRange, ITd, VerticalAlign,
   IAutoTocItem, IAutoTocResult, DocumentLayout, IBookmark, IEditorOption, BlockNode,
-  HistorySnapshot, IHistoryManager, TableBorderPreset
+  HistorySnapshot, IHistoryManager, TableBorderPreset, RevisionMeta
 } from '@vervedoc/docx-editor-schema'
 import {
   getByPath, getParentContainer, cloneTree, walkTree, isSamePath, splitParagraphs, comparePath, formatElementTree,
-  DEFAULT_EDITOR_OPTION, applyImageLayout, updateImageLayout, TableBorder, BULLET_STYLES, NUMBER_STYLES, toDocxExportDocument
+  DEFAULT_EDITOR_OPTION, applyImageLayout, updateImageLayout, TableBorder, BULLET_STYLES, NUMBER_STYLES, toDocxExportDocument,
+  clearRevision, snapshotRevisionFormat, recordFormatRevision
 } from '@vervedoc/docx-editor-schema'
 import type { RangeManager, IRangeStyle, IEditorAbility, Listener } from '@vervedoc/docx-editor-state'
 
@@ -83,6 +84,110 @@ export class CommandAdapt {
   private _searchDocument: IDocxDocumentMeta | null = null
   private _searchZone: Zone = 'main'
   private _searchContent = ''
+  private _revisionSequence = 0
+
+  private newRevision(type: 'insert' | 'delete' | 'format'): RevisionMeta {
+    // Numeric IDs are also accepted by Word's w:id attribute.
+    this._revisionSequence = Math.max(Date.now(), this._revisionSequence + 1)
+    return {
+      revisionId: String(this._revisionSequence),
+      revisionType: type,
+      revisionAuthor: String(this.draw.getOptions().revisionAuthor || '当前用户'),
+      revisionDate: new Date().toISOString()
+    }
+  }
+
+  private formatElements(elements: IElement[], mutate: (element: IElement) => void): void {
+    const tracking = !!this.draw.getOptions().trackChanges
+    const meta = tracking ? this.newRevision('format') : null
+    for (const element of elements) {
+      if ((element as ITextElement).revisionType === 'delete') continue
+      const before = meta ? snapshotRevisionFormat(element) : null
+      mutate(element)
+      if (meta && before) recordFormatRevision(element, before, meta)
+    }
+  }
+
+  private mergeAdjacentDeletions(doc: IDocxDocumentMeta, runs: ITextElement[], meta: RevisionMeta): void {
+    const targets = new Set<IElement>(runs)
+    const parents = new Set<IElement[]>()
+    walkTree(doc.elements, (node, ctx) => {
+      if (targets.has(node) && Array.isArray(ctx.parent)) parents.add(ctx.parent)
+    })
+    for (const parent of parents) {
+      let index = 0
+      while (index < parent.length) {
+        const group: ITextElement[] = []
+        while (index < parent.length) {
+          const node = parent[index]
+          if (node.type !== 'text' || node.revisionType !== 'delete' ||
+            node.revisionAuthor !== meta.revisionAuthor || node.extension?.bookmarkMarker ||
+            /^[\u200B\uFEFF]+$/.test(node.value)) break
+          group.push(node as ITextElement)
+          index++
+        }
+        if (group.length > 1 && group.some(node => targets.has(node))) {
+          // Reuse the existing ID in either direction; keep each run's restore data intact.
+          const existing = group.find(node => node.revisionId !== meta.revisionId) ?? group[0]
+          for (const node of group) {
+            node.revisionId = existing.revisionId
+            node.revisionDate = existing.revisionDate
+          }
+        }
+        index++
+      }
+    }
+  }
+
+  private deleteTrackedRange(doc: IDocxDocumentMeta, start: IPosition, end: IPosition, commit: boolean): boolean {
+    const adjusted = this.splitBoundaryRuns(doc, start, end)
+    const runs = this.collectRunsInRange(doc.elements, adjusted.start, adjusted.end)
+    if (!runs.length) return false
+    const meta = this.newRevision('delete')
+    for (const run of runs) {
+      if (run.revisionType === 'delete') continue
+      if (run.revisionType === 'insert' && run.revisionAuthor === meta.revisionAuthor) {
+        run.value = ''
+        clearRevision(run)
+      } else {
+        const previous = run.revisionId ? {
+          revisionId: run.revisionId, revisionType: run.revisionType,
+          revisionAuthor: run.revisionAuthor, revisionDate: run.revisionDate,
+          revisionOldRPr: run.revisionOldRPr,
+          oldProps: run.extension?.revisionOldProps
+        } : null
+        clearRevision(run)
+        Object.assign(run, meta)
+        if (previous) run.extension = { ...run.extension, revisionPrevious: previous }
+      }
+    }
+    this.mergeAdjacentDeletions(doc, runs, meta)
+    this.range.setCaret(adjusted.start)
+    if (commit) this._commit(doc, 'text')
+    return true
+  }
+
+  private deleteTrackedCharacter(backward: boolean): void {
+    const pos = this.range.getFocus()
+    if (!pos) return
+    const doc = this.draw.getActiveDocument()
+    const parent = getParentContainer(doc.elements, pos.path)
+    if (!parent) return
+    const current = Number(pos.path[pos.path.length - 1])
+    for (let index = current; index >= 0 && index < parent.length; index += backward ? -1 : 1) {
+      const run = parent[index]
+      if (run.type !== 'text') return
+      if (run.revisionType === 'delete' || !run.value.length || run.extension?.bookmarkMarker) continue
+      const offset = index === current ? pos.offset : backward ? run.value.length : 0
+      if ((backward && offset <= 0) || (!backward && offset >= run.value.length)) continue
+      const text = backward ? Array.from(run.value.slice(0, offset)).at(-1)! : Array.from(run.value.slice(offset))[0]
+      const path: Path = [...pos.path.slice(0, -1), index]
+      this.deleteTrackedRange(doc,
+        { path, offset: backward ? offset - text.length : offset },
+        { path, offset: backward ? offset : offset + text.length }, true)
+      return
+    }
+  }
 
   private validateSearch(): void {
     if (this._searchDocument !== this.draw.getDocument() ||
@@ -160,6 +265,7 @@ export class CommandAdapt {
   }
 
   commitPluginTransaction(action: (doc: IDocxDocumentMeta) => boolean | void): void {
+    if (!this.getIsCanInput()) return
     const doc = cloneTree(this.draw.getDocument())
     if (action(doc) === false) return
     this.range.clear()
@@ -209,6 +315,7 @@ export class CommandAdapt {
     action: (doc: IDocxDocumentMeta) => boolean | void,
     coalesceKey?: string
   ): void {
+    if (!this.getIsCanInput()) return
     const doc = this.draw.getActiveDocument()
     if (action(doc) !== false) {
       this._commit(doc, coalesceKey)
@@ -222,8 +329,9 @@ export class CommandAdapt {
    * @param text 待插入的文本内容
    */
   insertText(text: string): void {
+    if (!this.getIsCanInput()) return
     if (typeof text !== 'string' || !text) return
-    if (this.deleteSelection()) {
+    if (this.deleteSelection(false)) {
       // 选区已删除，光标在原选区 start，继续插入 text
     }
     const pos = this.range.getFocus()
@@ -235,6 +343,27 @@ export class CommandAdapt {
       const t = node as ITextElement
       const before = t.value.slice(0, pos.offset)
       const after = t.value.slice(pos.offset)
+      const tracking = !!this.draw.getOptions().trackChanges
+      const author = String(this.draw.getOptions().revisionAuthor || '当前用户')
+      if ((tracking && !(t.revisionType === 'insert' && t.revisionAuthor === author)) ||
+        (!tracking && t.revisionId)) {
+        const parent = getParentContainer(doc.elements, pos.path)
+        if (!parent) return
+        const index = Number(pos.path[pos.path.length - 1])
+        const inserted = cloneTree(t)
+        clearRevision(inserted)
+        inserted.value = text
+        if (tracking) Object.assign(inserted, this.newRevision('insert'))
+        const parts: ITextElement[] = []
+        if (before) parts.push({ ...cloneTree(t), value: before })
+        const insertIndex = index + parts.length
+        parts.push(inserted)
+        if (after) parts.push({ ...cloneTree(t), value: after })
+        parent.splice(index, 1, ...parts)
+        this.range.setCaret({ path: [...pos.path.slice(0, -1), insertIndex], offset: text.length })
+        this._commit(doc, 'text')
+        return
+      }
       t.value = before + text + after
       this.range.setCaret({ path: pos.path.slice() as Path, offset: pos.offset + text.length })
       // 不可迁移：前置 deleteSelection() 可能已 commit
@@ -244,11 +373,15 @@ export class CommandAdapt {
 
   /** 删除当前选区内容（若已 collapsed 则不操作）。光标收缩到选区 start。返回是否实际删除。 */
   deleteSelection(commit = true): boolean {
+    if (!this.getIsCanInput()) return false
     if (this.range.isCollapsed()) return false
     const ordered = this.range.getOrdered()
     if (!ordered) return false
     const { start, end } = ordered
     const doc = this.draw.getActiveDocument()
+    if (this.draw.getOptions().trackChanges) {
+      return this.deleteTrackedRange(doc, start, end, commit)
+    }
 
     const runs: { path: Path; parent: IElement[]; idx: number }[] = []
     walkTree(doc.elements, (node, ctx) => {
@@ -334,14 +467,14 @@ export class CommandAdapt {
   locateRevision(id: string): boolean {
     if (!id) return false
     const doc = this.draw.getDocument()
-    const elements = doc.elements || []
-    for (let i = 0; i < elements.length; i++) {
-      if ((elements[i] as any).revisionId === id) {
-        this.setRange(i, i)
-        return true
-      }
-    }
-    return false
+    let position: IPosition | null = null
+    walkTree(doc.elements, (node, ctx) => {
+      if (!position && (node as ITextElement).revisionId === id) position = { path: ctx.path, offset: 0 }
+    })
+    if (!position) return false
+    this.range.setCaret(position)
+    this.draw.scrollPositionIntoView?.(position)
+    return true
   }
 
   /** 提取当前选区纯文本（用于复制/剪切）。 */
@@ -384,7 +517,12 @@ export class CommandAdapt {
    * 列表起点先取消编号，其他 run 起点尝试与前一个 text run 合并。
    */
   deleteBackward(): void {
+    if (!this.getIsCanInput()) return
     if (this.deleteSelection()) return
+    if (this.draw.getOptions().trackChanges) {
+      this.deleteTrackedCharacter(true)
+      return
+    }
     const pos = this.range.getFocus()
     if (!pos) return
     const doc = this.draw.getActiveDocument()
@@ -450,7 +588,12 @@ export class CommandAdapt {
    * 向前删除一个字符（Delete 行为）。若有选区则删除选区；否则删除光标后一个字符。
    */
   deleteForward(): void {
+    if (!this.getIsCanInput()) return
     if (this.deleteSelection()) return
+    if (this.draw.getOptions().trackChanges) {
+      this.deleteTrackedCharacter(false)
+      return
+    }
     this.execute(doc => {
       const pos = this.range.getFocus()
       if (!pos) return false
@@ -487,14 +630,8 @@ export class CommandAdapt {
       t.value = before
       // 插入段落分隔标记 + 后半 text
       const sep: ITextElement = { type: 'text', value: '\u200B' } as ITextElement
-      const rest: ITextElement = { type: 'text', value: after } as ITextElement
-      // 继承字体/字号
-      const anyT = t as unknown as Record<string, unknown>
-      for (const k of ['font', 'size', 'bold', 'color']) {
-        if (anyT[k] != null) {
-          (rest as unknown as Record<string, unknown>)[k] = anyT[k]
-        }
-      }
+      // Splitting must preserve pending revisions and their independent format snapshots.
+      const rest: ITextElement = { ...cloneTree(t), value: after }
       parent.splice(idx + 1, 0, sep, rest)
       const newPath = pos.path.slice() as Path
       newPath[newPath.length - 1] = idx + 2
@@ -581,12 +718,7 @@ export class CommandAdapt {
       const groups = splitParagraphs(parent)
       for (const g of groups) {
         if (cursorIdx < g.start || cursorIdx >= g.end) continue
-        if (g.block) {
-          ;(g.block as unknown as Record<string, unknown>).rowFlex = flex
-        }
-        for (const r of g.runs) {
-          ;(r as unknown as Record<string, unknown>).rowFlex = flex
-        }
+        this.formatElements(g.block ? [g.block, ...g.runs] : g.runs, r => { r.rowFlex = flex })
         return
       }
       return false
@@ -609,11 +741,11 @@ export class CommandAdapt {
       for (const g of groups) {
         if (cursorIdx < g.start || cursorIdx >= g.end) continue
         const targets = g.block ? [g.block, ...g.runs] : g.runs
-        for (const r of targets) {
+        this.formatElements(targets, r => {
           const any = r as unknown as Record<string, unknown>
           any.lineHeight = lh
           any.lineHeightRule = rule
-        }
+        })
         return
       }
       return false
@@ -635,11 +767,11 @@ export class CommandAdapt {
       for (const g of groups) {
         if (cursorIdx < g.start || cursorIdx >= g.end) continue
         const targets = g.block ? [g.block, ...g.runs] : g.runs
-        for (const r of targets) {
+        this.formatElements(targets, r => {
           const any = r as unknown as Record<string, unknown>
           any.paragraphSpacingBefore = margin
           any.paragraphSpacingAfter = margin
-        }
+        })
         return
       }
       return false
@@ -737,6 +869,7 @@ export class CommandAdapt {
 
   /** 格式刷：首次调用复制当前 run 格式，二次调用应用到当前 run */
   paintFormat(): void {
+    if (!this.getIsCanInput()) return
     if (this._paintFmt) {
       this.mutateRun(run => {
         Object.assign(run, this._paintFmt)
@@ -762,14 +895,7 @@ export class CommandAdapt {
    * @param fn 对目标 run 的变更函数
    */
   private mutateRun(fn: (run: ITextElement) => void): void {
-    this.execute(doc => {
-      const pos = this.range.getFocus()
-      if (!pos) return false
-      const node = getByPath(doc.elements, pos.path)
-      if (!node || node.type !== 'text') return false
-      fn(node as ITextElement)
-      return
-    })
+    this.mutateRuns(fn)
   }
 
   /**
@@ -777,44 +903,28 @@ export class CommandAdapt {
    * toggleKey 传入时：若 value 为 undefined 则按"选区内任一 run 未设置 → 全设 true，全已设 → 全取消"toggle。
    */
   private mutateRuns(fn: (run: ITextElement) => void, toggleKey?: keyof ITextElement): void {
+    if (!this.getIsCanInput()) return
     const doc = this.draw.getActiveDocument()
     const ordered = this.range.getOrdered()
-    if (!ordered) {
-      const pos = this.range.getFocus()
-      if (!pos) return
-      const node = getByPath(doc.elements, pos.path)
-      if (!node || node.type !== 'text') return
-      fn(node as ITextElement)
-      // 不可迁移：多个分支各自 commit
-      this._commit(doc)
-      return
-    }
+    if (!ordered) return
     const { start, end } = ordered
-
-    const adjusted = this.splitBoundaryRuns(doc, start, end)
+    const collapsed = this.range.isCollapsed()
+    const adjusted = collapsed ? { start, end } : this.splitBoundaryRuns(doc, start, end)
     this.range.setRange({ anchor: adjusted.start, focus: adjusted.end })
-    const selectedRuns = this.collectRunsInRange(doc.elements, adjusted.start, adjusted.end)
-    if (selectedRuns.length === 0) {
-      const pos = this.range.getFocus()
-      if (!pos) return
-      const node = getByPath(doc.elements, pos.path)
-      if (!node || node.type !== 'text') return
-      fn(node as ITextElement)
-      // 不可迁移：多个分支各自 commit
-      this._commit(doc)
-      return
-    }
-    if (toggleKey) {
-      const allSet = selectedRuns.every(r => Boolean((r as unknown as Record<string, unknown>)[toggleKey]))
-      for (const r of selectedRuns) {
-        (fn as (run: ITextElement) => void)(r)
-        if ((r as unknown as Record<string, unknown>)[toggleKey] === undefined) {
-          ;(r as unknown as Record<string, unknown>)[toggleKey] = !allSet
-        }
+    const node = collapsed ? getByPath(doc.elements, start.path) : null
+    const selectedRuns = (collapsed
+      ? node?.type === 'text' ? [node] : []
+      : this.collectRunsInRange(doc.elements, adjusted.start, adjusted.end)
+    ).filter(run => run.revisionType !== 'delete')
+    if (!selectedRuns.length) return
+    const allSet = toggleKey ? selectedRuns.every(r => Boolean(r[toggleKey])) : false
+    this.formatElements(selectedRuns, element => {
+      const run = element as ITextElement
+      fn(run)
+      if (toggleKey && run[toggleKey] === undefined) {
+        ;(run as unknown as Record<string, unknown>)[toggleKey] = !allSet
       }
-    } else {
-      for (const r of selectedRuns) fn(r)
-    }
+    })
     // 不可迁移：多个分支各自 commit
     this._commit(doc)
   }
@@ -842,7 +952,7 @@ export class CommandAdapt {
             const idx = startPath[startPath.length - 1] as number
             const after = t.value.slice(startOffset)
             t.value = t.value.slice(0, startOffset)
-            const second = { ...t, value: after } as ITextElement
+            const second = { ...cloneTree(t), value: after } as ITextElement
             parent.splice(idx + 1, 0, second as IElement)
             startPath = startPath.slice() as Path
             startPath[startPath.length - 1] = idx + 1
@@ -852,9 +962,9 @@ export class CommandAdapt {
               endOffset = end.offset - start.offset
             } else {
               const startParent = start.path.slice(0, -1)
-              const endParent = endPath.slice(0, -1)
-              if (isSamePath(startParent, endParent)) {
-                endPath[endPath.length - 1] = (endPath[endPath.length - 1] as number) + 1
+              const depth = startParent.length
+              if (isSamePath(startParent, endPath.slice(0, depth)) && Number(endPath[depth]) > idx) {
+                endPath[depth] = Number(endPath[depth]) + 1
               }
             }
           }
@@ -873,7 +983,7 @@ export class CommandAdapt {
             const idx = endPath[endPath.length - 1] as number
             const after = t.value.slice(endOffset)
             t.value = t.value.slice(0, endOffset)
-            const second = { ...t, value: after } as ITextElement
+            const second = { ...cloneTree(t), value: after } as ITextElement
             parent.splice(idx + 1, 0, second as IElement)
           }
         }
@@ -902,7 +1012,10 @@ export class CommandAdapt {
     }
     if (startIdx === -1 || endIdx === -1) return []
     if (startIdx > endIdx) { const t = startIdx; startIdx = endIdx; endIdx = t }
-    return runs.slice(startIdx, endIdx + 1).map(r => r.node)
+    return runs.slice(startIdx, endIdx + 1)
+      .filter(r => (!isSamePath(r.path, start.path) || start.offset < r.node.value.length) &&
+        (!isSamePath(r.path, end.path) || end.offset > 0) && !r.node.extension?.bookmarkMarker)
+      .map(r => r.node)
   }
 
   /* -------------------- 标题 / 列表 -------------------- */
@@ -912,6 +1025,7 @@ export class CommandAdapt {
    * @param level 标题级别，null 表示取消标题
    */
   setTitle(level: ITitleElement['level'] | null): void {
+    if (!this.getIsCanInput()) return
     const selection = this.range.getRange()
     const ordered = this.range.getOrdered()
     if (!selection || !ordered) return
@@ -1403,6 +1517,7 @@ export class CommandAdapt {
    * @param width 列宽
    */
   setTableColWidth(tableIndex: number, colIndex: number, width: number): void {
+    if (!this.getIsCanInput()) return
     const doc = this.draw.getDocument()
     const table = doc.elements[tableIndex]
     if (!table || table.type !== 'table') return
@@ -1425,6 +1540,7 @@ export class CommandAdapt {
    * @param height 行高
    */
   setTableRowHeight(tableIndex: number, rowIndex: number, height: number): void {
+    if (!this.getIsCanInput()) return
     const doc = this.draw.getDocument()
     const table = doc.elements[tableIndex]
     if (!table || table.type !== 'table') return
@@ -1631,11 +1747,13 @@ export class CommandAdapt {
    * @param path 图片路径
    */
   resetImageSize(path: Path): void {
+    if (!this.getIsCanInput()) return
     const doc = this.draw.getActiveDocument()
     const el = getByPath(doc.elements, path) as unknown as { type: string; value?: string; width: number; height: number } | null
     if (!el || el.type !== 'image' || !el.value) return
     const img = new Image()
     img.onload = () => {
+      if (!this.getIsCanInput()) return
       el.width = img.naturalWidth
       el.height = img.naturalHeight
       updateImageLayout(el as IImageElement, { width: el.width, height: el.height })
@@ -1664,6 +1782,7 @@ export class CommandAdapt {
    * @param path 图片路径
    */
   replaceImage(path: Path): void {
+    if (!this.getIsCanInput()) return
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = 'image/*'
@@ -1679,6 +1798,7 @@ export class CommandAdapt {
         if (!el || el.type !== 'image') return
         const img = new Image()
         img.onload = () => {
+          if (!this.getIsCanInput()) return
           el.value = value
           el.width = img.naturalWidth
           el.height = img.naturalHeight
@@ -2036,6 +2156,8 @@ export class CommandAdapt {
    * @param height 高度
    */
   setPaperSize(width: number, height: number): void {
+    // Paper settings remain available in readonly mode.
+    if (this.getIsDisabled()) return
     this.draw.setPageSize(width, height)
     this.listener?.emit('pageSizeChange', { width, height })
     this.listener?.emit('contentChange')
@@ -2119,6 +2241,7 @@ export class CommandAdapt {
    * @param value 分栏数量
    */
   setColumns(value: number): void {
+    if (!this.getIsCanInput()) return
     this.draw.updateOptions({ columnCount: value } as Partial<IEditorOption>)
   }
 
@@ -2128,6 +2251,11 @@ export class CommandAdapt {
    */
   updateOptions(patch: Partial<IEditorOption>): void {
     this.draw.updateOptions(patch)
+    if ('readonly' in patch || 'disabled' in patch) {
+      if (!this.getIsCanInput()) this._paintFmt = null
+      this.listener?.emit('formatChange', this.getRangeStyle())
+      this.listener?.emit('abilityChange', this.getAbility())
+    }
   }
 
   /**
@@ -2143,6 +2271,7 @@ export class CommandAdapt {
    * @param margins 边距数组，顺序为上、右、下、左
    */
   setPaperMargin(margins: number[]): void {
+    if (!this.getIsCanInput()) return
     const m = [
       Math.max(0, Math.round(margins[0] ?? 0)),
       Math.max(0, Math.round(margins[1] ?? 0)),
@@ -2172,6 +2301,7 @@ export class CommandAdapt {
    * @param payload 水印参数，可包含 data/content/color/opacity/size/font/repeat
    */
   addWatermark(payload: { data?: string; content?: string; color?: string; opacity?: number; size?: number; font?: string; repeat?: boolean; gapX?: number; gapY?: number } | any): void {
+    if (!this.getIsCanInput()) return
     const p = payload || {}
     this.draw.updateOptions({ watermark: {
       data: p.data || p.content || '',
@@ -2187,6 +2317,7 @@ export class CommandAdapt {
 
   /** 删除水印 */
   deleteWatermark(): void {
+    if (!this.getIsCanInput()) return
     this.draw.updateOptions({ watermark: null } as Partial<IEditorOption>)
   }
 
@@ -2238,6 +2369,7 @@ export class CommandAdapt {
    * @returns 是否还存在后续命中
    */
   replace(text: string, opts?: { index?: number }): boolean {
+    if (!this.getIsCanInput()) return false
     this.validateSearch()
     if (opts?.index != null) {
       if (!Number.isInteger(opts.index) || opts.index < 0 || opts.index >= this._searchHits.length) return false
@@ -2340,6 +2472,7 @@ export class CommandAdapt {
    * @returns 包含替换数量 count 的结果对象
    */
   replaceAll(keyword: string, replacement: string): { count: number } {
+    if (!this.getIsCanInput()) return { count: 0 }
     this.search(keyword)
     let count = 0
     while (this._searchIdx < this._searchHits.length) {
@@ -2356,6 +2489,7 @@ export class CommandAdapt {
    * @returns 包含新的命中数量 count 的结果对象
    */
   replaceOne(result: { resultIndex: number; keyword: string }, replacement: string): { count: number } {
+    if (!this.getIsCanInput()) return { count: 0 }
     if (!result || !replacement) return { count: 0 }
     this.replace(replacement, { index: result.resultIndex })
     return this.search(result.keyword)
@@ -2391,6 +2525,7 @@ export class CommandAdapt {
    * @param payload 书签参数，包含 name
    */
   addBookmark(payload: { name: string }): void {
+    if (!this.getIsCanInput()) return
     const range = this.range.getRange()
     if (!range) return
     const doc = this.draw.getDocument()
@@ -2408,6 +2543,7 @@ export class CommandAdapt {
    * @param payload 书签参数，包含 name
    */
   deleteBookmark(payload: { name: string }): void {
+    if (!this.getIsCanInput()) return
     const doc = this.draw.getDocument()
     if (!doc.bookmarks) return
     doc.bookmarks = doc.bookmarks.filter(b => b.name !== payload.name)
@@ -2502,6 +2638,7 @@ export class CommandAdapt {
 
   /** 撤销上一步操作，恢复历史快照并通知选区样式与能力变更。 */
   undo(): void {
+    if (!this.getIsCanInput()) return
     if (!this._historyManager) return
     const current: HistorySnapshot = {
       doc: cloneTree(this.draw.getDocument()),
@@ -2525,6 +2662,7 @@ export class CommandAdapt {
 
   /** 重做下一步操作，恢复历史快照并通知选区样式与能力变更。 */
   redo(): void {
+    if (!this.getIsCanInput()) return
     if (!this._historyManager) return
     const current: HistorySnapshot = {
       doc: cloneTree(this.draw.getDocument()),
@@ -2559,6 +2697,7 @@ export class CommandAdapt {
 
   /** 清除页眉内容并回到正文 */
   clearHeader(): void {
+    if (!this.getIsCanInput()) return
     this.setZone('header')
     this.selectAll()
     this.deleteBackward()
@@ -2567,6 +2706,7 @@ export class CommandAdapt {
 
   /** 清除页脚内容并回到正文 */
   clearFooter(): void {
+    if (!this.getIsCanInput()) return
     this.setZone('footer')
     this.selectAll()
     this.deleteBackward()
@@ -2578,6 +2718,7 @@ export class CommandAdapt {
    * @param payload 页码配置对象
    */
   setPageNumber(payload: Record<string, unknown>): void {
+    if (!this.getIsCanInput()) return
     const currentOptions = this.draw.getOptions() || {}
     this.draw.updateOptions({
       ...currentOptions,
@@ -2652,6 +2793,7 @@ export class CommandAdapt {
    * @param elements 待插入的元素数组
    */
   insertElementList(elements: IElement[]): void {
+    if (!this.getIsCanInput()) return
     if (!elements || elements.length === 0) return
     if (elements.some(element => this.isSectionBoundary(element))) {
       throw new TypeError('粘贴分节符必须通过 pasteFragment 同时传入 sections')
@@ -2758,6 +2900,7 @@ export class CommandAdapt {
   }
 
   pasteFragment(fragment: Partial<IDocxDocumentMeta>): void {
+    if (!this.getIsCanInput()) return
     if (!fragment.elements?.length || this.draw.getZone() !== 'main') return
     const boundaries = fragment.elements.filter(element => this.isSectionBoundary(element)).length
     if (boundaries && fragment.sections?.length !== boundaries + 1) throw new TypeError('剪贴板 sections 与分节符数量不一致')
@@ -2879,14 +3022,14 @@ export class CommandAdapt {
       const group = splitParagraphs(parent).find(g => cursorIdx >= g.start && cursorIdx < g.end)
       if (!group) return false
       const targets = group.block ? [group.block, ...group.runs] : group.runs
-      for (const target of targets) {
+      this.formatElements(targets, target => {
         Object.assign(target, {
           paragraphIndentLeft: left,
           paragraphIndentRight: right,
           paragraphFirstLineIndent: first - left,
           indentHanging: undefined
         })
-      }
+      })
       return
     })
   }
@@ -2908,10 +3051,10 @@ export class CommandAdapt {
       for (const g of groups) {
         if (cursorIdx < g.start || cursorIdx >= g.end) continue
         const targets = g.block ? [g.block, ...g.runs] : g.runs
-        for (const r of targets) {
+        this.formatElements(targets, r => {
           (r as unknown as Record<string, unknown>).paragraphFirstLineIndent = indentPx
           delete (r as unknown as Record<string, unknown>).indentHanging
-        }
+        })
         return
       }
       return false
@@ -2969,9 +3112,9 @@ export class CommandAdapt {
       for (const g of groups) {
         if (cursorIdx < g.start || cursorIdx >= g.end) continue
         const targets = g.block ? [g.block, ...g.runs] : g.runs
-        for (const r of targets) {
+        this.formatElements(targets, r => {
           (r as unknown as Record<string, unknown>)[key] = value
-        }
+        })
         return
       }
       return false
@@ -3072,8 +3215,8 @@ export class CommandAdapt {
       color: '', highlight: '', font: '', size: 0, level: null,
       rowFlex: 'left', lineHeight: 1.5, lineHeightRule: 'auto', paragraphFirstLineIndent: 0,
       characterScale: 100, painter: !!this._paintFmt,
-      undo: this._historyManager?.canUndo() ?? false,
-      redo: this._historyManager?.canRedo() ?? false
+      undo: this.getIsCanInput() && (this._historyManager?.canUndo() ?? false),
+      redo: this.getIsCanInput() && (this._historyManager?.canRedo() ?? false)
     }
 
     if (!pos) return defaultStyle
@@ -3124,8 +3267,8 @@ export class CommandAdapt {
       paragraphFirstLineIndent: (paraEl.paragraphFirstLineIndent as number) ?? 0,
       characterScale: (el.characterScale as number) ?? 100,
       painter: !!this._paintFmt,
-      undo: this._historyManager?.canUndo() ?? false,
-      redo: this._historyManager?.canRedo() ?? false
+      undo: this.getIsCanInput() && (this._historyManager?.canUndo() ?? false),
+      redo: this.getIsCanInput() && (this._historyManager?.canRedo() ?? false)
     }
   }
 
@@ -3222,8 +3365,8 @@ export class CommandAdapt {
       readonly: this.getIsReadonly(),
       disabled: this.getIsDisabled(),
       canInput: this.getIsCanInput(),
-      canUndo: this._historyManager?.canUndo() ?? false,
-      canRedo: this._historyManager?.canRedo() ?? false
+      canUndo: this.getIsCanInput() && (this._historyManager?.canUndo() ?? false),
+      canRedo: this.getIsCanInput() && (this._historyManager?.canRedo() ?? false)
     }
   }
 
@@ -3235,11 +3378,13 @@ export class CommandAdapt {
     if (mode === 'paging' || mode === 'continuity') {
       this.draw.updateOptions({ pageMode: mode })
     } else if (mode === 'readonly') {
+      this._paintFmt = null
       this.draw.updateOptions({ readonly: true } as Partial<IEditorOption>)
     } else if (mode === 'edit') {
       this.draw.updateOptions({ readonly: false } as Partial<IEditorOption>)
     }
     // 模式切换后通知能力变更（readonly/disabled 状态可能变化）
+    this.listener?.emit('formatChange', this.getRangeStyle())
     this.listener?.emit('abilityChange', this.getAbility())
   }
 
@@ -3276,6 +3421,7 @@ export class CommandAdapt {
 
   /** 将当前选区内的元素标记为同一群组，返回 groupId 或 null。 */
   setGroup(update?: (doc: IDocxDocumentMeta, groupId: string) => void): string | null {
+    if (!this.getIsCanInput()) return null
     const doc = this.draw.getActiveDocument()
     const ordered = this.range.getOrdered()
     if (!ordered || this.range.isCollapsed()) return null

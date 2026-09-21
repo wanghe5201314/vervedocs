@@ -43,6 +43,8 @@ interface DragState {
  * 由外部宿主提供，用于获取编辑器布局、选区、容器信息以及触发命令等。
  */
 export interface TableWidgetDeps {
+  /** Whether editing interactions are currently allowed. */
+  canEdit: () => boolean
   /** 获取当前文档布局，可能为 null */
   getLayout: () => DocumentLayout | null
   /** 获取当前选区管理器，可能为 null */
@@ -91,7 +93,9 @@ export class TableWidget {
 
   constructor(private deps: TableWidgetDeps) {
     this.panel = new TablePropertiesWidget({
-      onCommand: (cmd, ...args) => this.deps.onCommand(cmd, ...args),
+      onCommand: (cmd, ...args) => {
+        if (this.deps.canEdit()) this.deps.onCommand(cmd, ...args)
+      },
       focusInput: () => this.deps.focusInput()
     })
   }
@@ -138,6 +142,7 @@ export class TableWidget {
     el.addEventListener('mousedown', (e) => {
       e.preventDefault()
       e.stopPropagation()
+      if (!this.deps.canEdit()) return
       this.deps.onCommand('executeSelectTable')
     })
     document.body.appendChild(el)
@@ -185,6 +190,7 @@ export class TableWidget {
     el.addEventListener('mousedown', (e) => {
       e.preventDefault()
       e.stopPropagation()
+      if (!this.deps.canEdit()) return
       this.deps.onCommand('executeInsertTableCol', 'right')
     })
     document.body.appendChild(el)
@@ -232,6 +238,7 @@ export class TableWidget {
     el.addEventListener('mousedown', (e) => {
       e.preventDefault()
       e.stopPropagation()
+      if (!this.deps.canEdit()) return
       this.deps.onCommand('executeInsertTableRow', 'below')
     })
     document.body.appendChild(el)
@@ -246,6 +253,7 @@ export class TableWidget {
    * 当光标位于表格内时，显示全选、添加列、添加行手柄；否则隐藏全部手柄。
    */
   update(): void {
+    if (!this.deps.canEdit()) { this.resetInteraction(); return }
     if (!this.handle) return
     const layout = this.deps.getLayout()
     const range = this.deps.getRange()
@@ -306,6 +314,15 @@ export class TableWidget {
     if (this.addRowHandle) this.addRowHandle.style.display = 'none'
   }
 
+  private resetInteraction(): void {
+    this.hideHandles()
+    this.hideContextMenu()
+    this.panel.hide()
+    if (this.dragState || this.cursorChanged) this.deps.setCursor('default')
+    this.dragState = null
+    this.cursorChanged = false
+  }
+
   /* -------------------- 右键菜单 -------------------- */
 
   /**
@@ -318,6 +335,7 @@ export class TableWidget {
    * @returns 命中表格并显示菜单返回 true，否则返回 false
    */
   showContextMenu(clientX: number, clientY: number): boolean {
+    if (!this.deps.canEdit()) return false
     const layout = this.deps.getLayout()
     const range = this.deps.getRange()
     if (!layout || !range) return false
@@ -341,7 +359,9 @@ export class TableWidget {
     this.deps.focusInput()
 
     const icons = ContextMenu.getIcons()
-    const fire = (cmd: string, ...args: any[]) => { this.deps.onCommand(cmd, ...args) }
+    const fire = (cmd: string, ...args: any[]) => {
+      if (this.deps.canEdit()) this.deps.onCommand(cmd, ...args)
+    }
 
     const items: MenuItem[] = [
       {
@@ -399,7 +419,7 @@ export class TableWidget {
       { label: '重复表头行', icon: icons.repeatHeader, onClick: () => fire('executeToggleRepeatHeader') },
       { label: '---' },
       { label: '超链接', icon: icons.link, shortcut: 'Ctrl+K', onClick: () => fire('executeHyperlink') },
-      { label: '表格属性', icon: icons.tableProp, onClick: () => this.panel.show(pos) },
+      { label: '表格属性', icon: icons.tableProp, onClick: () => { if (this.deps.canEdit()) this.panel.show(pos) } },
     ]
 
     this.contextMenu.show(clientX, clientY, items)
@@ -479,6 +499,7 @@ export class TableWidget {
    * @returns 命中边框并进入拖拽返回 true，否则返回 false
    */
   handleMouseDown(e: MouseEvent): boolean {
+    if (!this.deps.canEdit()) { this.resetInteraction(); return false }
     if (this.dragState) return true
     const border = this.detectBorder(e.clientX, e.clientY)
     if (!border) return false
@@ -504,6 +525,7 @@ export class TableWidget {
    * @param e 鼠标事件
    */
   handleMouseMove(e: MouseEvent): boolean {
+    if (!this.deps.canEdit()) { this.resetInteraction(); return false }
     if (this.dragState) {
       e.preventDefault()
       const delta = this.dragState.type === 'col' ? e.clientX - this.dragState.startClient : e.clientY - this.dragState.startClient

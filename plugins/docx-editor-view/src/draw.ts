@@ -288,6 +288,8 @@ export class Draw {
     // 隐藏输入框（textarea）：捕获所有键盘 & IME 输入
     this.inputEl = document.createElement('textarea')
     this.inputEl.className = 'vervedocs-hidden-input'
+    this.inputEl.readOnly = !!options.readonly
+    this.inputEl.disabled = !!options.disabled
     Object.assign(this.inputEl.style, {
       position: 'absolute',
       left: '0px',
@@ -318,6 +320,7 @@ export class Draw {
     this.reformatAndRender()
     this.startCaretBlink()
     this.selectionToolbarWidget = new SelectionToolbarWidget({
+      canEdit: () => !this.options.readonly && !this.options.disabled,
       getLayout: () => this.layout,
       getRange: () => this.range ?? null,
       getDocument: () => this.document,
@@ -332,6 +335,7 @@ export class Draw {
     })
     this.selectionToolbarWidget.create()
     this.tableWidget = new TableWidget({
+      canEdit: () => !this.options.readonly && !this.options.disabled,
       getLayout: () => this.layout,
       getRange: () => this.range ?? null,
       getContainerRect: () => this.canvasHost.getBoundingClientRect(),
@@ -385,6 +389,7 @@ export class Draw {
     })
     this.chartWidget.create()
     this.paragraphWidget = new ParagraphWidget({
+      canEdit: () => !this.options.readonly && !this.options.disabled,
       getLayout: () => this.layout,
       getRange: () => this.range ?? null,
       getContainerRect: () => this.canvasHost.getBoundingClientRect(),
@@ -496,10 +501,7 @@ export class Draw {
     this.inputEl.addEventListener('compositionend', (e) => {
       this.isComposing = false
       const text = (e as CompositionEvent).data ?? ''
-      // #region debug-point readonly-composition
-      if (this.options.readonly || this.options.disabled) void fetch('http://192.168.3.37:7777/event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: 'mobile-canvas-render', runId: 'input-pipeline', hypothesisId: 'E', location: 'Draw:compositionend', msg: 'Restricted composition callback', data: { readonly: this.options.readonly, disabled: this.options.disabled, hasText: !!text } }) }).catch(() => {})
-      // #endregion debug-point readonly-composition
-      if (text) this.onInput?.(text)
+      if (text && !this.options.readonly && !this.options.disabled) this.onInput?.(text)
       this.inputEl.value = ''
     })
 
@@ -508,7 +510,7 @@ export class Draw {
       if (this.isComposing) return
       const ie = e as InputEvent
       const data = ie.data ?? this.inputEl.value
-      if (data) this.onInput?.(data)
+      if (data && !this.options.readonly && !this.options.disabled) this.onInput?.(data)
       this.inputEl.value = ''
     })
   }
@@ -524,27 +526,28 @@ export class Draw {
   }
 
   private onMouseDown = (e: MouseEvent): void => {
+    if (this.options.disabled) return
     this.eventBus?.emit('editorMousedown', e)
     if (!this.range || e.button !== 0) return
     // 阻止 mousedown 默认行为抢走隐藏输入框的焦点
     e.preventDefault()
 
     // 表格边框拖拽
-    if (this.tableWidget?.handleMouseDown(e)) return
+    if (!this.options.readonly && this.tableWidget?.handleMouseDown(e)) return
 
     // 图片选中/缩放
-    if (this.imageWidget?.handleMouseDown(e)) {
+    if (!this.options.readonly && this.imageWidget?.handleMouseDown(e)) {
       this.eventBus?.emit('imageMousedown', e)
       return
     }
 
     // 图表选中/缩放
-    if (this.chartWidget?.handleMouseDown(e)) {
+    if (!this.options.readonly && this.chartWidget?.handleMouseDown(e)) {
       return
     }
 
     // 双击页眉/页脚区域：切换编辑区域
-    if (this.headerFooterWidget?.handleMouseDown(e)) return
+    if (!this.options.readonly && this.headerFooterWidget?.handleMouseDown(e)) return
 
     const pos = this.hit(e.clientX, e.clientY)
     if (!pos) { this.inputEl.focus(); return }
@@ -666,6 +669,7 @@ export class Draw {
    */
   private onContextMenu = (e: MouseEvent): void => {
     e.preventDefault()
+    if (this.options.readonly || this.options.disabled) return
 
     // 命中超链接时通知 UI 显示超链接右键菜单
     const pos = this.hit(e.clientX, e.clientY)
@@ -837,7 +841,7 @@ export class Draw {
     }
     // 光标（DOM 绘制）
     const pos = this.range.getFocus()
-    if (!pos) {
+    if (!pos || this.options.readonly || this.options.disabled) {
       this.caretWidget?.hide()
       return
     }
@@ -917,10 +921,6 @@ export class Draw {
    * @param scale 缩放倍数
    */
   setScale(scale: number): void {
-    // #region debug-point scale-pipeline
-    const canvas = this.canvasHost.querySelector('canvas')
-    void fetch('http://192.168.3.37:7777/event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: 'mobile-canvas-render', runId: 'scale-pipeline', hypothesisId: 'D', location: 'Draw:setScale', msg: 'Scale pipeline', data: { requestedScale: scale, previousScale: this.options.scale, pageWidth: this.layout?.pageWidth, viewportWidth: this.viewportWidth, viewportHeight: this.viewportHeight, scrollerWidth: this.scroller.offsetWidth, matrix: canvas?.getContext('2d')?.getTransform().a, dpr: window.devicePixelRatio, readonly: this.options.readonly, disabled: this.options.disabled } }) }).catch(() => {})
-    // #endregion debug-point scale-pipeline
     this.options.scale = scale
     this.reformatWithInvalidation()
   }
@@ -1005,12 +1005,23 @@ export class Draw {
    */
   updateOptions(patch: Partial<IEditorOption>): void {
     Object.assign(this.options, patch)
+    if ('readonly' in patch || 'disabled' in patch) {
+      this.inputEl.readOnly = !!this.options.readonly
+      this.inputEl.disabled = !!this.options.disabled
+      this.inputEl.value = ''
+      this.isComposing = false
+      this._suppressToolbar = false
+      this.selectionToolbarWidget?.update()
+      this.paragraphWidget?.update()
+      this.tableWidget?.update()
+      this.renderCaretIfAny()
+    }
     if (Object.prototype.hasOwnProperty.call(patch, 'eyeCare')) {
       this.renderer.setEyeCare(!!this.options.eyeCare)
       this.listener?.emit('thumbnailAppearanceChange')
     }
     // View-only toggles must not enter the document layout/render lifecycle.
-    if (Object.keys(patch).every(key => key === 'eyeCare')) return
+    if (Object.keys(patch).every(key => ['eyeCare', 'readonly', 'disabled'].includes(key))) return
     this.reformatWithInvalidation()
   }
 

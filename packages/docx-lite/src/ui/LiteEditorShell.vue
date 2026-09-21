@@ -402,11 +402,6 @@ let scaleBeforeMobile: number | null = null
 
 const updateMobileScale = () => {
   if (!isMobile.value || !editorContainerRef.value || !editor.value) return
-  const wrapper = editorContainerRef.value.parentElement
-  if (!wrapper) return
-  // #region debug-point A:缩放前尺寸
-  void fetch('http://192.168.3.37:7777/event', { method: 'POST', body: JSON.stringify({ sessionId: 'mobile-canvas-render', runId: 'post-fix', hypothesisId: 'A', location: 'LiteEditorShell:updateMobileScale', msg: '[DEBUG] 缩放前尺寸', data: { coreScale: editor.value.command.getOptions().scale, viewport: [innerWidth, innerHeight], wrapper: wrapper.getBoundingClientRect().toJSON(), container: editorContainerRef.value.getBoundingClientRect().toJSON(), height: editorContainerRef.value.style.height, transform: editorContainerRef.value.style.transform, overflow: getComputedStyle(wrapper).overflow, canvases: Array.from(editorContainerRef.value.querySelectorAll('canvas')).slice(0, 3).map(canvas => ({ width: canvas.width, height: canvas.height, rect: canvas.getBoundingClientRect().toJSON() })) }, ts: Date.now() }) }).catch(() => {})
-  // #endregion
   const availableWidth = editorContainerRef.value.clientWidth
   const options = editor.value.command.getOptions()
   const paperWidth = options.pageWidth ?? selectedPaperSize.value.width
@@ -416,9 +411,6 @@ const updateMobileScale = () => {
   if (Math.abs((options.scale ?? 1) - scale) > 0.0001) {
     editor.value.command.executeSetPageScale(scale)
   }
-  // #region debug-point B:缩放后布局
-  void fetch('http://192.168.3.37:7777/event', { method: 'POST', body: JSON.stringify({ sessionId: 'mobile-canvas-render', runId: 'post-fit-fix', hypothesisId: 'B', location: 'LiteEditorShell:updateMobileScale', msg: '[DEBUG] 缩放后布局', data: { scale, coreScale: editor.value.command.getOptions().scale, availableWidth, paperWidth, layoutPageWidth: editor.value.draw.getLayout()?.pageWidth, availableToPaperRatio: availableWidth / paperWidth, wrapper: wrapper.getBoundingClientRect().toJSON(), container: editorContainerRef.value.getBoundingClientRect().toJSON(), height: editorContainerRef.value.style.height, transform: editorContainerRef.value.style.transform, canvases: Array.from(editorContainerRef.value.querySelectorAll('canvas')).slice(0, 3).map(canvas => ({ width: canvas.width, height: canvas.height, rect: canvas.getBoundingClientRect().toJSON() })), pageBackgrounds: Array.from(editorContainerRef.value.querySelectorAll('.vd-page-bg')).slice(0, 2).map(page => page.getBoundingClientRect().toJSON()), scrollHeight: wrapper.scrollHeight, clientHeight: wrapper.clientHeight }, ts: Date.now() }) }).catch(() => {})
-  // #endregion
 }
 
 const createEditor = () => {
@@ -432,9 +424,6 @@ const createEditor = () => {
     marginIndicatorDisabled: isMobile.value,
     ...(props.options as IEditorOption | undefined)
   })
-  // #region debug-point C:初始化环境
-  void fetch('http://192.168.3.37:7777/event', { method: 'POST', body: JSON.stringify({ sessionId: 'mobile-canvas-render', runId: 'post-fix', hypothesisId: 'C', location: 'LiteEditorShell:createEditor', msg: '[DEBUG] 初始化环境', data: { mobile: isMobile.value, viewport: [innerWidth, innerHeight], dpr: devicePixelRatio, coreScale: editor.value.command.getOptions().scale, paperWidth: editor.value.command.getOptions().pageWidth, wrapper: editorContainerRef.value.parentElement?.getBoundingClientRect().toJSON(), container: editorContainerRef.value.getBoundingClientRect().toJSON(), canvases: Array.from(editorContainerRef.value.querySelectorAll('canvas')).slice(0, 3).map(canvas => ({ width: canvas.width, height: canvas.height, rect: canvas.getBoundingClientRect().toJSON() })) }, ts: Date.now() }) }).catch(() => {})
-  // #endregion
 
   formatUnsubscribers.push(
     editor.value.listener.range.formatListener(style => { rangeStyle.value = style }),

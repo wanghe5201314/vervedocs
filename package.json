@@ -13,7 +13,6 @@
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
-    "dev:core": "pnpm --filter @vervedoc/core dev",
     "dev:docx": "pnpm --filter @vervedoc/docx-playground dev",
     "dev:docx-lite": "pnpm --filter @vervedoc/docx-lite-playground dev",
     "dev:excel": "pnpm --filter @vervedoc/excel-playground dev",

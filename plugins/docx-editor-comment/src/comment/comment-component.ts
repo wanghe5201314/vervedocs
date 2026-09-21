@@ -138,8 +138,14 @@ export class CommentComponent {
     return this._comments
   }
 
+  private canEdit(): boolean {
+    const options = this._command?.getOptions()
+    return !!options && !options.readonly && !options.disabled
+  }
+
   /** 整体替换批注列表并同步高亮颜色 */
   public setAll(comments: IComment[]): void {
+    if (!this.canEdit()) return
     this._comments = cloneTree(comments)
     this._drafts.clear()
     this._clearCards()
@@ -149,7 +155,7 @@ export class CommentComponent {
 
   /** 新建批注：在高亮选区上创建编辑态气泡，返回新批注或 null（无选区时） */
   public add(userName: string = '当前用户'): IComment | null {
-    if (!this._command) return null
+    if (!this._command || !this.canEdit()) return null
     let newComment: IComment | null = null
     const id = this._nextCommentId()
     const commentGroupId = `comment_${id}`
@@ -223,6 +229,7 @@ export class CommentComponent {
 
   /** 删除指定 ID 的批注，清除文档高亮并触发 onDelete 回调 */
   public delete(id: string): void {
+    if (!this.canEdit()) return
     const idx = this._comments.findIndex(c => c.id === id)
     if (idx !== -1) {
       const comment = this._comments[idx]
@@ -242,6 +249,7 @@ export class CommentComponent {
 
   /** 取消编辑态批注：空内容则删除，有内容则退出编辑态 */
   private cancel(id: string): void {
+    if (!this.canEdit()) return
     const idx = this._comments.findIndex(c => c.id === id)
     if (idx === -1) return
     const comment = this._comments[idx]
@@ -256,6 +264,7 @@ export class CommentComponent {
 
   /** 回复指定批注 */
   private reply(id: string, content: string, userName: string = '当前用户'): void {
+    if (!this.canEdit()) return
     const comment = this._comments.find(c => c.id === id)
     if (!comment) return
     if (!comment.replies) comment.replies = []
@@ -273,6 +282,7 @@ export class CommentComponent {
 
   /** 标记批注为已解决/未解决 */
   private resolve(id: string, resolved: boolean): void {
+    if (!this.canEdit()) return
     const comment = this._comments.find(c => c.id === id)
     if (comment) {
       comment.status = resolved ? 2 : 1
@@ -896,6 +906,7 @@ export class CommentComponent {
   }
 
   private _handleSave(comment: IComment): void {
+    if (!this.canEdit()) return
     const content = this._drafts.get(comment.id) ?? comment.content
     if (!content.trim()) {
       this._handleCancel(comment)

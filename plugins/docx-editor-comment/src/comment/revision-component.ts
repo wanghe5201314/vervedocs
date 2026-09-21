@@ -1,5 +1,6 @@
 import dayjs from 'dayjs'
 import type { IDocxDocumentMeta } from '@vervedoc/docx-editor-schema'
+import { clearRevision, getRevisionOldProps, restoreRevisionFormat } from '@vervedoc/docx-editor-schema'
 
 function revisionNodes(doc: IDocxDocumentMeta): Array<{ el: any; parent: any[]; index: number }> {
   const nodes: Array<{ el: any; parent: any[]; index: number }> = []
@@ -240,16 +241,30 @@ export class RevisionComponent {
 
 
   private _formatRevisionDesc(el: any): string {
-    const old = el.revisionOldProps || {}
+    const old = getRevisionOldProps(el)
     const parts: string[] = []
-    if (!!el.bold !== !!old.bold) parts.push(el.bold ? '加粗' : '取消加粗')
-    if (!!el.italic !== !!old.italic) parts.push(el.italic ? '斜体' : '取消斜体')
-    if (!!el.underline !== !!old.underline) parts.push(el.underline ? '下划线' : '取消下划线')
-    if (!!el.strikeout !== !!old.strikeout) parts.push(el.strikeout ? '删除线' : '取消删除线')
-    if ((el.color || '#000000') !== (old.color || '#000000')) parts.push(`字体颜色: ${el.color || '黑色'}`)
-    if ((el.size || 0) !== (old.size || 0)) parts.push(`字号: ${el.size}pt`)
-    if ((el.font || '') !== (old.font || '')) parts.push(`字体: ${el.font}`)
-    if ((el.highlight || '') !== (old.highlight || '')) parts.push(`高亮: ${el.highlight}`)
+    const boolLabels: Record<string, string> = {
+      bold: '加粗', italic: '斜体', underline: '下划线', strikeout: '删除线',
+      doubleStrikeout: '双删除线', hidden: '隐藏', superscript: '上标', subscript: '下标'
+    }
+    const labels: Record<string, string> = {
+      color: '字体颜色', size: '字号', font: '字体', highlight: '高亮',
+      characterScale: '字符缩放', letterSpacing: '字符间距', textDecoration: '装饰线样式',
+      rowFlex: '对齐方式', lineHeight: '行距', lineHeightRule: '行距规则', rowMargin: '行间距',
+      paragraphIndentLeft: '左缩进', paragraphIndentRight: '右缩进', paragraphFirstLineIndent: '首行缩进',
+      indentHanging: '悬挂缩进', paragraphSpacingBefore: '段前间距', paragraphSpacingAfter: '段后间距'
+    }
+    const alignments: Record<string, string> = {
+      left: '左对齐', center: '居中', right: '右对齐', justify: '两端对齐', alignment: '两端对齐', distribute: '分散对齐'
+    }
+    for (const [key, value] of Object.entries(old)) {
+      if ((el[key] ?? null) === value) continue
+      if (boolLabels[key]) parts.push(`${el[key] ? '' : '取消'}${boolLabels[key]}`)
+      else if (labels[key]) {
+        const current = el[key] ?? '默认'
+        parts.push(`${labels[key]}: ${key === 'rowFlex' ? alignments[current] || current : current}${key === 'size' && el[key] != null ? 'pt' : ''}`)
+      }
+    }
     return parts.length ? `设置格式: ${parts.join('，')}` : '设置格式'
   }
 
@@ -266,6 +281,9 @@ export class RevisionComponent {
       if (existing) {
         if (el.revisionType !== 'format') {
           existing.content += el.value || ''
+        } else {
+          const description = this._formatRevisionDesc(el)
+          if (!existing.content.split('；').includes(description)) existing.content += `；${description}`
         }
         existing.lastIndex = i
       } else {
@@ -481,18 +499,21 @@ export class RevisionComponent {
       for (const { el, parent, index } of revisionNodes(doc).reverse()) {
         if (!el.revisionId || !el.revisionType || (revisionId !== undefined && el.revisionId !== revisionId)) continue
         changed = true
-        if (el.revisionType === (accept ? 'delete' : 'insert')) {
-          parent.splice(index, 1)
-        } else {
-          if (!accept && el.revisionType === 'format' && el.revisionOldProps) {
-            Object.assign(el, el.revisionOldProps)
+        do {
+          if (el.revisionType === (accept ? 'delete' : 'insert')) {
+            parent.splice(index, 1)
+            if (!parent.length) parent.push({ type: 'text', value: '' })
+            break
           }
-          delete el.revisionId
-          delete el.revisionType
-          delete el.revisionAuthor
-          delete el.revisionDate
-          delete el.revisionOldProps
-        }
+          const previous = !accept && el.revisionType === 'delete' ? el.extension?.revisionPrevious : null
+          if (!accept && el.revisionType === 'format') restoreRevisionFormat(el)
+          clearRevision(el)
+          if (previous) {
+            const { oldProps, ...metadata } = previous
+            Object.assign(el, metadata)
+            if (oldProps) el.extension = { ...el.extension, revisionOldProps: oldProps }
+          }
+        } while (revisionId === undefined && el.revisionId)
       }
       return changed
     })

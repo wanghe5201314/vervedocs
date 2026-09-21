@@ -11,9 +11,7 @@
       :pinned="toolbarVisible !== false"
       :button-defaults="{ variant: 'flat' }"
     >
-      <VdRibbonTabItem item-key="file" mode="dropdown" title="文件">
-        <FileTab :is-importing="isImporting" @command="handleCommand" />
-      </VdRibbonTabItem>
+      <VdRibbonTabItem item-key="file" mode="action" title="文件" @activate="openFilePanel" />
 
       <VdRibbonTabItem
         item-key="home"
@@ -112,6 +110,14 @@
       </VdRibbonTabItem>
     </VdRibbonTab>
   </div>
+  <FileTab
+    :open="filePanelOpen"
+    :is-importing="isImporting"
+    :document-name="props.documentName"
+    :document-stats="props.documentStats"
+    @close="closeFilePanel"
+    @command="handleCommand"
+  />
 </template>
 
 <script setup lang="ts">
@@ -169,6 +175,9 @@ const selectedBgColor = ref('#FFFFFF')
 const currentPaperSizeName = ref('A4')
 /** 是否正在导入 */
 const isImporting = ref(false)
+const filePanelOpen = ref(false)
+const openFilePanel = () => { filePanelOpen.value = true }
+const closeFilePanel = () => { filePanelOpen.value = false }
 
 /** 是否显示换行符 */
 const showLineBreak = ref(false)

@@ -1,7 +1,7 @@
 /**
  * VerveDocs Schema —— 全新树模型
  *
- * 数据形态严格与 test-output.json 对齐，字段命名 1:1 保留，
+ * 数据形态严格与 DOCX 导入/导出协议对齐，字段命名 1:1 保留，
  * 禁止扁平化：valueList / trList / tdList / colgroup 全部原样递归。
  */
 
@@ -595,6 +595,14 @@ export interface IBookmark {
 
 /** 编辑器选项 */
 export interface IEditorOption {
+  /** Record text edits and formatting changes as revisions. */
+  trackChanges?: boolean
+  /** Display name used for newly created revisions. */
+  revisionAuthor?: string
+  /** Allow selection and copying, but prevent document editing. */
+  readonly?: boolean
+  /** Disable editor input. */
+  disabled?: boolean
   /** Screen-only eye-care background; does not change the document paper color. */
   eyeCare?: boolean
   /** 默认字体 */

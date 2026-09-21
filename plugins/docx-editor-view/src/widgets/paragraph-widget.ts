@@ -22,6 +22,8 @@ import '../assets/css/paragraph-handle-menu.css'
  * 由外部宿主提供，用于获取编辑器布局、选区、容器信息以及触发命令等。
  */
 export interface ParagraphWidgetDeps {
+  /** Whether editing interactions are currently allowed. */
+  canEdit: () => boolean
   /** 获取当前文档布局，可能为 null */
   getLayout: () => DocumentLayout | null
   /** 获取当前选区管理器，可能为 null */
@@ -65,7 +67,9 @@ export class ParagraphWidget {
    * @param deps 依赖注入对象
    */
   constructor(private deps: ParagraphWidgetDeps) {
-    const onCommand = (cmd: string, ...args: any[]) => this.deps.onCommand(cmd, ...args)
+    const onCommand = (cmd: string, ...args: any[]) => {
+      if (this.deps.canEdit()) return this.deps.onCommand(cmd, ...args)
+    }
     this.panel.setDeps({ onCommand })
     this.fontPanel.setDeps({ onCommand })
   }
@@ -112,6 +116,13 @@ export class ParagraphWidget {
    * 当光标位于段落中时，将手柄定位到段落首行左侧；否则隐藏手柄。
    */
   update(): void {
+    if (!this.deps.canEdit()) {
+      this.hide()
+      this.panel.hide()
+      this.fontPanel.hide()
+      this.currentBlock = null
+      return
+    }
     if (!this.handle) return
     const layout = this.deps.getLayout()
     const range = this.deps.getRange()
@@ -155,6 +166,7 @@ export class ParagraphWidget {
    * 根据段落首行第一个 inline 和末行最后一个 inline 设置选区范围。
    */
   private selectParagraph(): void {
+    if (!this.deps.canEdit()) return
     const range = this.deps.getRange()
     if (!range || !this.currentBlock) return
     const lines = this.currentBlock.lines
@@ -238,6 +250,7 @@ export class ParagraphWidget {
    */
   private showMenu(): void {
     this.hideMenu()
+    if (!this.deps.canEdit()) return
     if (!this.handle || !this.currentBlock) return
 
     const style: Partial<IRangeStyle> = this.deps.onCommand('getRangeStyle') ?? {}
@@ -263,6 +276,7 @@ export class ParagraphWidget {
       button.setAttribute('aria-pressed', String(active))
       button.addEventListener('click', () => {
         this.hideMenu()
+        if (!this.deps.canEdit()) return
         this.deps.onCommand(command, value)
         this.deps.focusInput()
       })
@@ -331,6 +345,7 @@ export class ParagraphWidget {
    * @returns 命中段落并显示菜单返回 true，否则 false
    */
   showContextMenu(clientX: number, clientY: number): boolean {
+    if (!this.deps.canEdit()) return false
     const layout = this.deps.getLayout()
     const range = this.deps.getRange()
     if (!layout || !range) return false
@@ -352,15 +367,17 @@ export class ParagraphWidget {
     this.deps.focusInput()
 
     const icons = ContextMenu.getIcons()
-    const fire = (cmd: string, ...args: any[]) => { this.deps.onCommand(cmd, ...args) }
+    const fire = (cmd: string, ...args: any[]) => {
+      if (this.deps.canEdit()) this.deps.onCommand(cmd, ...args)
+    }
 
     const items: MenuItem[] = [
       { label: '剪切', icon: 'content_cut', shortcut: 'Ctrl+X', onClick: () => fire('executeCut') },
       { label: '复制', icon: 'content_copy', shortcut: 'Ctrl+C', onClick: () => fire('executeCopy') },
       { label: '粘贴', icon: 'content_paste', shortcut: 'Ctrl+V', onClick: () => fire('executePaste') },
       { label: '---' },
-      { label: '字体...', icon: 'format_size', onClick: () => this.fontPanel.show() },
-      { label: '段落高级设置', icon: 'subject', onClick: () => this.panel.show() },
+      { label: '字体...', icon: 'format_size', onClick: () => { if (this.deps.canEdit()) this.fontPanel.show() } },
+      { label: '段落高级设置', icon: 'subject', onClick: () => { if (this.deps.canEdit()) this.panel.show() } },
       { label: '---' },
       { label: '超链接', icon: icons.link, shortcut: 'Ctrl+K', onClick: () => fire('requestInsertHyperlink') },
       { label: '插入批注', icon: 'comment', onClick: () => fire('requestInsertComment') },

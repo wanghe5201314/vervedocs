@@ -120,7 +120,7 @@ export class DocxEditor {
     }
     this.eventBus = new EventBus()
     this.range = new RangeManager(this.listener)
-    for (const event of ['contentChange', 'documentSet', 'rangeChange', 'zoneChange'] as const) {
+    for (const event of ['contentChange', 'documentSet', 'rangeChange', 'zoneChange', 'abilityChange'] as const) {
       this.listener.on(event, () => { this.clipboardEpoch++ })
     }
 
@@ -204,6 +204,7 @@ export class DocxEditor {
       })
       .use((cmd, args, next) => {
         if (cmd === 'executeCopy' || cmd === 'executeCut') {
+          if (cmd === 'executeCut' && !this.command.getIsCanInput()) return
           const text = this.command.executeCopy()
           if (!navigator.clipboard) return
           const isCurrent = this.clipboardGuard()
@@ -221,6 +222,7 @@ export class DocxEditor {
           }).catch(() => {})
         }
         if (['executePaste', 'executePastePlain', 'executePasteNoFormat'].includes(cmd)) {
+          if (!this.command.getIsCanInput()) return
           if (args.length > 0) return next()
           if (!navigator.clipboard) return
           const isCurrent = this.clipboardGuard()
@@ -304,8 +306,7 @@ export class DocxEditor {
       executeDeleteGroup: (groupId: string) => { this.command?.executeDeleteGroup(groupId) },
       executeLocationGroup: (groupId: string) => { this.command?.executeLocationGroup(groupId) },
       executeUpdateOptions: (opts: any) => {
-        Object.assign(editorOptions, opts)
-        drawRef.setDocument(drawRef.getDocument())
+        this.adapt.updateOptions(opts)
       },
       setActiveGroup: (groupId: string | null) => { drawRef.setActiveGroup(groupId) },
       setActiveRevision: (revisionId, color) => { drawRef.setActiveRevision(revisionId, color) },

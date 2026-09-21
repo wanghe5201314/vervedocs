@@ -17,6 +17,8 @@ import type { Zone } from './header-footer-widget'
  * 由外部宿主提供，用于获取编辑器布局、选区、容器信息以及触发命令等。
  */
 export interface SelectionToolbarWidgetDeps {
+  /** Whether editing interactions are currently allowed. */
+  canEdit: () => boolean
   /** 获取当前文档布局，可能为 null */
   getLayout: () => DocumentLayout | null
   /** 获取当前选区管理器，可能为 null */
@@ -78,7 +80,9 @@ export class SelectionToolbarWidget {
       fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif',
     } as CSSStyleDeclaration)
 
-    const fire = (cmd: string, ...args: any[]) => { this.deps.onCommand?.(cmd, ...args) }
+    const fire = (cmd: string, ...args: any[]) => {
+      if (this.deps.canEdit()) this.deps.onCommand?.(cmd, ...args)
+    }
 
 
     const mkBtn = (icon: string, cmd: string, args: any[] = [], title = ''): HTMLButtonElement => {
@@ -199,10 +203,12 @@ export class SelectionToolbarWidget {
 
   /** 更新工具栏：折叠选区/表格内选区时隐藏，否则定位到选区起点上方并回显格式状态。 */
   update(): void {
+    if (!this.toolbar) return
+    const tb = this.toolbar
+    if (!this.deps.canEdit()) { tb.style.display = 'none'; return }
     const layout = this.deps.getLayout()
     const range = this.deps.getRange()
-    if (!this.toolbar || !layout || !range) return
-    const tb = this.toolbar
+    if (!layout || !range) { tb.style.display = 'none'; return }
     if (this.deps.isSuppressToolbar()) { tb.style.display = 'none'; this.deps.consumeSuppressToolbar(); return }
     if (range.isCollapsed()) {
       tb.style.display = 'none'

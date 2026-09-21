@@ -8,12 +8,6 @@
           <a-checkbox v-model:checked="tocVisible" @change="handleToggleToc">显示导航窗格</a-checkbox>
         </div>
       </a-tooltip>
-      <a-tooltip placement="top">
-        <template #title><span style="font-size: 11px">连页模式下，编辑器将不会显示分页</span></template>
-        <div class="footer-item">
-          <a-checkbox v-model:checked="isContinuityMode" @change="handlePageModeChange">连页模式</a-checkbox>
-        </div>
-      </a-tooltip>
       <div class="footer-divider"></div>
 
       <!-- 纸张方向 -->
@@ -47,6 +41,8 @@
       </div>
     </div>
 
+
+    <div class="footer-center" role="status">修订模式：{{ isTrackChanges ? '开' : '关' }}</div>
 
     <div class="footer-right">
       <div class="footer-info">
@@ -92,6 +88,7 @@ import { VdIcon } from '@vervedoc/ui'
 
 const props = defineProps<{
   documentMeta: DocumentMeta
+  isTrackChanges?: boolean
 }>()
 
 // 事件触发
@@ -99,8 +96,6 @@ const emit = defineEmits(['command'])
 
 /** 目录是否可见 */
 const tocVisible = ref(true)
-/** 是否为连页模式 */
-const isContinuityMode = ref(false)
 
 
 /** 选中的纸张方向 */
@@ -146,16 +141,6 @@ const scalePercentage = ref(100)
 const handleToggleToc = () => {
   emit('command', 'toggleToc', tocVisible.value)
 }
-
-/**
- * 处理页面模式切换
- * @param val - 是否为连页模式
- */
-const handlePageModeChange = (val: any) => {
-  const mode = val ? 'continuity' : 'paging'
-  emit('command', 'pageMode', mode)
-}
-
 
 /** 处理纸张方向切换：纵向与横向互切 */
 const handleTogglePaperDirection = () => {
@@ -248,7 +233,14 @@ defineExpose({
 .footer-left, .footer-right {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 6px;
+}
+
+.footer-center {
+  flex: 1;
+  padding: 0 12px;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .footer-item {

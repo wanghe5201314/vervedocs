@@ -145,17 +145,11 @@ const currentModeIcon = computed(() => {
 })
 
 /**
- * 处理编辑器模式选择，修订模式特殊处理
+ * 处理编辑器模式选择
  * @param modeValue - 模式值
  */
 const handleModeSelect = (modeValue: string) => {
-  if (modeValue === 'revision') {
-    emit('command', 'toggleTrackChanges', true)
-    emit('command', 'mode', 'edit')
-  } else {
-    emit('command', 'toggleTrackChanges', false)
-    emit('command', 'mode', modeValue)
-  }
+  emit('command', 'mode', modeValue)
 }
 
 /**

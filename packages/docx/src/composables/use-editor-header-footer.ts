@@ -42,37 +42,14 @@ export function useEditorHeaderFooter(options: {
   function clearHeader() {
     const instance = getEditorInstance()
     if (!instance) return
-    instance.command.executeSetZone('header')
-    instance.command.executeSelectAll()
-    instance.command.executeBackspace()
-    instance.command.executeSetZone('main')
+    instance.command.executeClearHeader()
   }
 
   /** 清除页脚内容并回到正文主体区域 */
   function clearFooter() {
     const instance = getEditorInstance()
     if (!instance) return
-    instance.command.executeSetZone('footer')
-    instance.command.executeSelectAll()
-    instance.command.executeBackspace()
-    instance.command.executeSetZone('main')
-  }
-
-  /**
-   * 设置页码配置项
-   * @param payload 页码配置补丁对象，会与现有页码配置合并
-   */
-  function setPageNumber(payload: any) {
-    const instance = getEditorInstance()
-    if (!instance) return
-    const currentOptions = instance.command.getOptions?.() || {}
-    instance.command.executeUpdateOptions({
-      ...currentOptions,
-      pageNumber: {
-        ...(currentOptions.pageNumber || {}),
-        ...payload
-      }
-    })
+    instance.command.executeClearFooter()
   }
 
   return {
@@ -80,7 +57,6 @@ export function useEditorHeaderFooter(options: {
     footer,
     mainZone,
     clearHeader,
-    clearFooter,
-    setPageNumber
+    clearFooter
   }
 }

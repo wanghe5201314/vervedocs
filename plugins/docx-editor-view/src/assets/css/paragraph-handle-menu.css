@@ -1,0 +1,65 @@
+.ce-paragraph-handle-menu {
+  position: fixed;
+  z-index: 10000;
+  display: grid;
+  grid-template-columns: repeat(5, 30px);
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background: #fff;
+  color: #303133;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
+  user-select: none;
+}
+
+.ce-paragraph-handle-menu button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 28px;
+  padding: 4px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.ce-paragraph-handle-menu button:hover {
+  background: #edf2fb;
+}
+
+.ce-paragraph-handle-menu button[aria-pressed="true"] {
+  border-color: #b6cbed;
+  background: #dce8ff;
+  color: #1f57b8;
+}
+
+.ce-paragraph-handle-menu button:focus-visible {
+  outline: 2px solid #1f57b8;
+  outline-offset: 1px;
+}
+
+.ce-paragraph-handle-menu svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ce-paragraph-handle-menu__heading {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.ce-paragraph-handle-menu__heading sub {
+  align-self: flex-end;
+  font-size: 10px;
+  line-height: 14px;
+}

@@ -29,7 +29,10 @@ export default defineConfig(() => {
     if (id === '@vervedoc/excel-parser' || id.startsWith('@vervedoc/excel-parser/')) {
       return true
     }
-    if (id === '@vervedoc/icons' || id.startsWith('@vervedoc/icons/')) {
+    if (id === '@vervedoc/design' || id.startsWith('@vervedoc/design/')) {
+      return true
+    }
+    if (id === '@vervedoc/ui' || id.startsWith('@vervedoc/ui/')) {
       return true
     }
     return false

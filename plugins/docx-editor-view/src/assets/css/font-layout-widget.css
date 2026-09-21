@@ -1,0 +1,237 @@
+.fw-panel-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.28);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fw-panel {
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  width: 560px;
+  font-size: 12px;
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  color: #303133;
+}
+
+.fw-panel-title {
+  padding: 10px 16px;
+  border-bottom: 1px solid #ebeef5;
+  font-weight: 400;
+  font-size: 13px;
+}
+
+/* ===== Tab 切换栏 ===== */
+.fw-tabs {
+  display: flex;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.fw-tab {
+  padding: 8px 16px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  color: #606266;
+  user-select: none;
+}
+
+.fw-tab:hover {
+  color: #4096ff;
+}
+
+.fw-tab-active {
+  color: #4096ff;
+  border-bottom-color: #4096ff;
+}
+
+/* ===== 面板主体 ===== */
+.fw-panel-body {
+  padding: 14px 16px;
+  height: 440px;
+  overflow-y: auto;
+}
+
+.fw-pane {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fw-pane-active {
+  display: flex;
+}
+
+/* ===== 分组 ===== */
+.fw-group {
+  border: 1px solid #ebeef5;
+  border-radius: 2px;
+  padding: 8px 12px 10px;
+  margin: 0;
+}
+
+.fw-group legend {
+  padding: 0 6px;
+  color: #909399;
+  font-size: 11px;
+}
+
+/* ===== 行与字段 ===== */
+.fw-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.fw-label {
+  flex-shrink: 0;
+  min-width: 56px;
+  color: #606266;
+}
+
+.fw-input {
+  height: 26px;
+  border: 1px solid #dcdfe6;
+  border-radius: 0;
+  font-size: 12px;
+  padding: 0 6px;
+  outline: none;
+  box-sizing: border-box;
+  background: #fff;
+  color: #303133;
+}
+
+select.fw-input {
+  flex: 1;
+  min-width: 90px;
+}
+
+.fw-input:focus {
+  border-color: #4096ff;
+}
+
+.fw-input:disabled {
+  background: #f5f7fa;
+  color: #c0c4cc;
+  cursor: not-allowed;
+}
+
+.fw-sm {
+  width: 56px;
+  flex-shrink: 0;
+}
+
+.fw-unit {
+  flex-shrink: 0;
+  color: #909399;
+  font-size: 11px;
+}
+
+.fw-color {
+  width: 40px;
+  height: 26px;
+  border: 1px solid #dcdfe6;
+  border-radius: 0;
+  padding: 2px;
+  cursor: pointer;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+/* ===== 复选框 ===== */
+.fw-check-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 16px;
+}
+
+.fw-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  cursor: pointer;
+  color: #606266;
+}
+
+.fw-check input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+}
+
+.fw-check:has(input:disabled) {
+  color: #c0c4cc;
+  cursor: not-allowed;
+}
+
+/* ===== 预览区 ===== */
+.fw-preview-box {
+  border: 1px solid #ebeef5;
+  border-radius: 2px;
+  padding: 8px 12px;
+  background: #fafafa;
+}
+
+.fw-preview-label {
+  color: #909399;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.fw-preview {
+  min-height: 48px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #ebeef5;
+  overflow: hidden;
+  line-height: 1.6;
+  color: #303133;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* ===== 占位提示 ===== */
+.fw-placeholder {
+  padding: 16px 0;
+  text-align: center;
+  color: #c0c4cc;
+  font-size: 12px;
+}
+
+/* ===== 底部按钮 ===== */
+.fw-panel-actions {
+  padding: 10px 16px;
+  border-top: 1px solid #ebeef5;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.fw-panel-actions button {
+  height: 28px;
+  padding: 0 16px;
+  border: 1px solid #dcdfe6;
+  border-radius: 0;
+  background: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  color: #303133;
+}
+
+.fw-panel-actions button:hover {
+  border-color: #c0c4cc;
+}
+
+.fw-panel-actions button:last-child {
+  background: #4096ff;
+  color: #fff;
+  border-color: #4096ff;
+}
+
+.fw-panel-actions button:last-child:hover {
+  background: #1677ff;
+  border-color: #1677ff;
+}

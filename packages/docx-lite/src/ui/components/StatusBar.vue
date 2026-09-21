@@ -4,8 +4,8 @@
       <label class="catalog-toggle-label">
         <input
           type="checkbox"
-          :checked="catalogOpen"
-          @change="$emit('catalogToggle', ($event.target as HTMLInputElement).checked)"
+          :checked="tocOpen"
+          @change="$emit('tocToggle', ($event.target as HTMLInputElement).checked)"
         />
         <span>显示导航窗格</span>
       </label>
@@ -47,7 +47,7 @@ interface PaperSizePreset {
 }
 
 defineProps<{
-  catalogOpen: boolean
+  tocOpen: boolean
   statusWordsText: string
   statusPageText: string
   paperDirectionText: string
@@ -59,7 +59,7 @@ defineProps<{
 }>()
 
 defineEmits<{
-  catalogToggle: [checked: boolean]
+  tocToggle: [checked: boolean]
   togglePaperDirection: []
   togglePaperSizeMenu: []
   setPaperSize: [index: number]

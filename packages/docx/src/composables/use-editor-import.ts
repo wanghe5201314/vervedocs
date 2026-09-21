@@ -1,11 +1,6 @@
 import { nextTick } from 'vue'
-import { PaperDirection } from '@vervedoc/core'
+import { adjustFloatImagePositions } from '@vervedoc/core'
 import { replaceDocument } from '@/composables/use-replace-document'
-
-/**
- * 事件发射函数类型
- */
-type EmitFn = (event: string, ...args: any[]) => void
 
 /**
  * 编辑器实例接口（导入所需的最小能力）
@@ -17,7 +12,7 @@ interface EditorInstance {
     /** 获取当前文档值 */
     getValue: () => { data?: { main?: any[] } }
     /** 设置文档值 */
-    executeSetValue: (value: { main: any[]; header?: any[]; footer?: any[] }) => void
+    executeSetValue: (value: { main: any[]; header?: any[]; footer?: any[]; comments?: unknown[]; styles?: unknown; numbering?: unknown; theme?: unknown }) => void
   }
   comment?: any
   revision?: any
@@ -26,21 +21,18 @@ interface EditorInstance {
 /**
  * 文档导入 composable
  * @param options 配置项
- * @returns JSON 文件导入方法
+ * @returns 包含 JSON 文件导入方法的对象
  */
 export function useEditorImport(options: {
-  /** 事件发射函数 */
-  emit: EmitFn
   /** 获取编辑器实例 */
   getEditorInstance: () => EditorInstance | null
-  /** 刷新目录 */
-  refreshCatalog: () => Promise<void>
 }) {
-  const { getEditorInstance, refreshCatalog } = options
+  const { getEditorInstance } = options
 
   /**
    * 导入 JSON 文件并整文档替换到编辑器
    * @param payload 导入参数，可包含 url、onProgress、onComplete
+   * @returns 无返回值
    */
   async function importJsonFile(payload?: any) {
     const url = String(payload?.url || '').trim()
@@ -79,30 +71,12 @@ export function useEditorImport(options: {
         return
       }
       const editorOptions = inst.command.getOptions?.()
-      const margins = editorOptions?.margins || [96, 120, 96, 120]
-      const paperDirection = editorOptions?.paperDirection
-      const marginTop = paperDirection === PaperDirection.HORIZONTAL ? margins[1] : margins[0]
-      const marginLeft = paperDirection === PaperDirection.HORIZONTAL ? margins[0] : margins[3]
-      const defaultSize = editorOptions?.defaultSize || 14
-      for (let li = 0; li < main.length; li++) {
-        const el = main[li]
-        if (el.imgDisplay && el.imgDisplay !== 'inline' && el.imgDisplay !== 'block' && el.imgFloatPosition) {
-          let fontSize = defaultSize
-          for (let ni = li + 1; ni < Math.min(li + 10, main.length); ni++) {
-            if (main[ni].size && main[ni].value && main[ni].value.trim()) {
-              fontSize = main[ni].size
-              break
-            }
-          }
-          const ascent = fontSize * 0.8
-          el.imgFloatPosition.x += marginLeft
-          el.imgFloatPosition.y += marginTop + ascent
-        }
-      }
+      adjustFloatImagePositions(main, editorOptions)
 
+      // Java 已解析元素的有效样式；保留原始文档元数据，导出仍需其继承链和单位。
       await replaceDocument(
-        { getEditorInstance, refreshCatalog },
-        { main, header, footer, comments }
+        { getEditorInstance },
+        { ...(Array.isArray(json) ? {} : json), main, header, footer, comments }
       )
 
       onProgress?.(100, '加载完成!')

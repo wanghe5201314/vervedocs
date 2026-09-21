@@ -29,8 +29,6 @@ export class WordEditor {
       title: config.title,
       data: config.data,
       options: config.options,
-      importCallback: config.importCallback,
-      exportCallback: config.exportCallback,
       onReady: config.onReady,
       onChange: config.onChange,
       onPageChange: config.onPageChange,

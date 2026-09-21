@@ -12,25 +12,36 @@ import {
 
 /** 工具栏位置 */
 interface Position {
+  /** 视口横坐标 */
   x: number
+  /** 视口纵坐标 */
   y: number
 }
 
 /** 工具栏配置 */
 export interface FloatingToolbarConfig {
+  /** 启用的 AI 操作列表 */
   enabledActions: AIAction[]
+  /** 翻译支持的目标语言列表 */
   translateLanguages: TranslateLanguage[]
+  /** 自定义操作项列表 */
   customActions: CustomAction[]
+  /** 国际化文案配置 */
   i18n: I18nConfig
 }
 
 /** 工具栏事件回调 */
 export interface FloatingToolbarCallbacks {
+  /** 触发 AI 操作回调 */
   onAction: (action: AIAction, options?: {
+    /** 翻译目标语言 */
     targetLanguage?: TranslateLanguage
+    /** 自定义提示词 */
     customPrompt?: string
+    /** 自定义操作 ID */
     customActionId?: string
   }) => void
+  /** 请求显示自定义指令输入框回调 */
   onCustomInput: () => void
 }
 
@@ -39,7 +50,7 @@ const AI_ICON = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentCo
   <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
 </svg>`
 
-/** 操作图标映射 */
+/** 操作图标映射：每种 AIAction 对应的 SVG 字符串 */
 const ACTION_ICONS: Record<AIAction, string> = {
   [AIAction.POLISH]: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>`,
   [AIAction.TRANSLATE]: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 8 6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"/></svg>`,
@@ -54,16 +65,33 @@ const ACTION_ICONS: Record<AIAction, string> = {
 
 /**
  * 悬浮工具栏类
+ *
+ * 在编辑器选区附近显示 AI 操作悬浮工具栏，支持内置操作、
+ * 翻译子菜单与自定义操作项，鼠标悬停保持显示、离开延迟隐藏。
  */
 export class FloatingToolbar {
+  /** 工具栏挂载的容器元素 */
   private container: HTMLElement
+  /** 工具栏根 DOM 节点 */
   private toolbarEl: HTMLDivElement | null = null
+  /** 子菜单 DOM 节点（翻译语言列表） */
   private subMenuEl: HTMLDivElement | null = null
+  /** 工具栏配置 */
   private config: FloatingToolbarConfig
+  /** 事件回调集合 */
   private callbacks: FloatingToolbarCallbacks
+  /** 当前是否可见 */
   private isVisible = false
+  /** 延迟隐藏定时器句柄 */
   private hideTimeout: ReturnType<typeof setTimeout> | null = null
 
+  /**
+   * 创建悬浮工具栏实例
+   *
+   * @param container 工具栏挂载的容器元素
+   * @param config 工具栏配置，缺省字段会以默认值补全
+   * @param callbacks 工具栏事件回调集合
+   */
   constructor(
     container: HTMLElement,
     config: Partial<FloatingToolbarConfig>,

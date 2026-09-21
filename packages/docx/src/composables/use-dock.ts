@@ -4,7 +4,7 @@ import { aiStateStore } from '@/stores/ai-state'
 /**
  * 侧边栏停靠面板类型
  */
-type DockKey = 'search' | 'catalog' | 'section' | 'ai' | 'revision' | ''
+type DockKey = 'search' | 'toc' | 'section' | 'ai' | 'revision' | 'bookmark' | ''
 
 /**
  * 侧边栏停靠面板 composable
@@ -12,7 +12,9 @@ type DockKey = 'search' | 'catalog' | 'section' | 'ai' | 'revision' | ''
  * @returns 停靠面板状态与切换方法
  */
 export function useDock() {
-  const activeDock = ref<DockKey>('search')
+  /** 当前激活的停靠面板标识 */
+  const activeDock = ref<DockKey>('toc')
+  /** 侧边栏面板宽度（像素） */
   const sidebarPanelSize = ref(295)
 
   /** 关闭修订停靠面板（若当前处于修订面板） */

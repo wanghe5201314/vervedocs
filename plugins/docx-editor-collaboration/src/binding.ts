@@ -15,13 +15,24 @@ import type {
   CommentComponentBridge,
   EditorInterface,
 } from './types'
-import { subscribeEventBus } from './event-bus'
 
+
+/**
+ * Yjs 与编辑器双向绑定器
+ *
+ * 维护 Y.Doc 中正文与批注两个 Y.Array，监听编辑器内容变更并 diff 同步到 Yjs，
+ * 同时监听 Yjs 远端变更并回填到编辑器，使用 isApplyingRemote/isApplyingLocal 防回环。
+ */
 export class YjsBinding {
+  /** Yjs 文档实例 */
   private doc: Y.Doc
+  /** 编辑器接口 */
   private editor: EditorInterface
+  /** 正文元素 Y.Array */
   private yElements: Y.Array<Y.Map<unknown>>
+  /** 批注 Y.Array */
   private yComments: Y.Array<Y.Map<unknown>>
+  /** 批注组件桥接层（可选） */
   private commentBridge: CommentComponentBridge | null
 
   /** 是否正在把远程变更写入编辑器（防回环） */
@@ -36,11 +47,20 @@ export class YjsBinding {
 
   /** 编辑器事件回调引用 */
   private contentChangeHandler: (() => void) | null = null
+  /** 编辑器事件订阅句柄 */
   private contentChangeSubscription: { unsubscribe: () => void } | null = null
   /** Y.Array observe 回调引用 */
   private yContentObserver: ((event: Y.YArrayEvent<Y.Map<unknown>>, tx: Y.Transaction) => void) | null = null
+  /** 批注 Y.Array observe 回调引用 */
   private yCommentsObserver: ((event: Y.YArrayEvent<Y.Map<unknown>>, tx: Y.Transaction) => void) | null = null
 
+  /**
+   * 构造绑定器并立即建立双向同步
+   *
+   * @param doc Yjs 文档实例
+   * @param editor 编辑器接口
+   * @param commentBridge 批注组件桥接层（可选，不传则不同步批注）
+   */
   constructor(doc: Y.Doc, editor: EditorInterface, commentBridge: CommentComponentBridge | null = null) {
     this.doc = doc
     this.editor = editor
@@ -64,6 +84,9 @@ export class YjsBinding {
     }
   }
 
+  /**
+   * 销毁绑定器，解除所有监听与订阅
+   */
   destroy(): void {
     if (this.yContentObserver) {
       this.yElements.unobserveDeep(this.yContentObserver as any)
@@ -81,6 +104,9 @@ export class YjsBinding {
 
   // ---- Y.Doc → Editor ----
 
+  /**
+   * 绑定 Yjs 到编辑器方向，监听 Y.Array 远端变更
+   */
   private bindYjsToEditor(): void {
     this.yContentObserver = (_event, tx) => {
       // 忽略本地写入引起的变更
@@ -114,6 +140,11 @@ export class YjsBinding {
     }
   }
 
+  /**
+   * 将 Y.Doc 当前批注推送到桥接层
+   *
+   * 若未设置桥接层，仅刷新本地批注快照。
+   */
   private pushCommentsFromYDocToBridge(): void {
     if (!this.commentBridge) {
       this.lastCommentsSnapshot = this.readCommentsSnapshotFromYDoc()
@@ -123,7 +154,7 @@ export class YjsBinding {
     const comments = this.readCommentsSnapshotFromYDoc()
     this.isApplyingRemote = true
     try {
-      this.commentBridge.setComments(this.cloneSerializable(comments))
+      this.commentBridge.setAll(this.cloneSerializable(comments))
       this.commentBridge.render()
       this.lastCommentsSnapshot = this.cloneSerializable(comments)
     } finally {
@@ -133,16 +164,18 @@ export class YjsBinding {
 
   // ---- Editor → Y.Doc ----
 
+  /**
+   * 绑定编辑器到 Yjs 方向，监听编辑器内容变更事件
+   */
   private bindEditorToYjs(): void {
     this.contentChangeHandler = () => {
       if (this.isApplyingRemote) return
       this.pushEditorToYDoc()
     }
-    this.contentChangeSubscription = subscribeEventBus(
-      this.editor.eventBus,
-      'contentChange',
-      this.contentChangeHandler as any
+    const unsub = this.editor.listener.content.contentListener(
+      this.contentChangeHandler
     )
+    this.contentChangeSubscription = { unsubscribe: unsub }
   }
 
   /** 将编辑器当前内容全量同步到 Y.Doc */
@@ -164,6 +197,13 @@ export class YjsBinding {
     }
   }
 
+  /**
+   * 重新绑定批注组件桥接层
+   *
+   * 若 Y.Doc 已有批注则推送到桥接层，否则从桥接层同步到 Y.Doc。
+   *
+   * @param commentBridge 新的批注组件桥接层（可为 null 表示解绑）
+   */
   bindCommentBridge(commentBridge: CommentComponentBridge | null): void {
     this.commentBridge = commentBridge
     if (!this.commentBridge) {
@@ -178,10 +218,15 @@ export class YjsBinding {
     this.syncCommentsFromBridge()
   }
 
+  /**
+   * 从桥接层同步批注到 Y.Doc
+   *
+   * 读取桥接层当前批注，与上次快照 diff 后写入 Y.Array。
+   */
   syncCommentsFromBridge(): void {
     if (!this.commentBridge || this.isApplyingRemote) return
 
-    const current = this.sanitizeComments(this.commentBridge.getComments())
+    const current = this.sanitizeComments(this.commentBridge.getAll())
     const operations = compare(this.lastCommentsSnapshot, current)
     if (!operations.length) {
       this.lastCommentsSnapshot = this.cloneSerializable(current)
@@ -199,6 +244,15 @@ export class YjsBinding {
     }
   }
 
+  /**
+   * 将 fast-json-patch 操作序列应用到 Y.Array
+   *
+   * 区分顶层操作（增删替换整元素）与深层操作（标记为整元素替换）。
+   *
+   * @param yArray 目标 Y.Array
+   * @param operations JSON Patch 操作序列
+   * @param current 当前完整 JSON 数组
+   */
   private applyPatchToYArray(
     yArray: Y.Array<Y.Map<unknown>>,
     operations: Operation[],
@@ -227,10 +281,24 @@ export class YjsBinding {
     }
   }
 
+  /**
+   * 判断 JSON Patch 路径是否为顶层操作
+   *
+   * @param path JSON Patch 路径，例如 "/0" 或 "/0/key"
+   * @returns 是否为顶层（路径分段数 ≤ 2）
+   */
   private isTopLevelOperation(path: string): boolean {
     return path.split('/').length <= 2
   }
 
+  /**
+   * 应用顶层操作到 Y.Array
+   *
+   * @param yArray 目标 Y.Array
+   * @param index 顶层索引
+   * @param operation JSON Patch 操作
+   * @param current 当前完整 JSON 数组
+   */
   private applyTopLevelOperation(
     yArray: Y.Array<Y.Map<unknown>>,
     index: number,
@@ -258,6 +326,13 @@ export class YjsBinding {
       }
   }
 
+  /**
+   * 替换 Y.Array 指定索引处的元素
+   *
+   * @param yArray 目标 Y.Array
+   * @param index 要替换的索引
+   * @param yMap 新的 Y.Map 元素
+   */
   private replaceElementAtIndex(
     yArray: Y.Array<Y.Map<unknown>>,
     index: number,
@@ -269,6 +344,12 @@ export class YjsBinding {
     yArray.insert(index, [yMap])
   }
 
+  /**
+   * 从 JSON Patch 路径解析顶层索引
+   *
+   * @param path JSON Patch 路径，例如 "/3/key"
+   * @returns 顶层索引数字，非数字时返回 null
+   */
   private getTopLevelIndex(path: string): number | null {
     const pathSegment = path.split('/')[1]
     if (!pathSegment) return null
@@ -276,6 +357,15 @@ export class YjsBinding {
     return Number.isInteger(index) ? index : null
   }
 
+  /**
+   * 从 JSON Patch 操作中提取根元素值
+   *
+   * 优先使用操作自带的 value，其次回退到当前数组对应索引的值。
+   *
+   * @param operation JSON Patch 操作
+   * @param current 当前完整 JSON 数组
+   * @returns 根元素对象，无效时返回 null
+   */
   private getRootValueFromOperation(
     operation: Operation,
     current: Record<string, unknown>[]
@@ -294,14 +384,36 @@ export class YjsBinding {
   }
 
 
+  /**
+   * 深拷贝可序列化值
+   *
+   * 使用 JSON 序列化/反序列化实现，去除不可序列化字段。
+   *
+   * @param value 待拷贝的值
+   * @returns 深拷贝后的值
+   */
   private cloneSerializable<T>(value: T): T {
     return JSON.parse(JSON.stringify(value)) as T
   }
 
+  /**
+   * 判断值是否为普通对象（非数组、非 null）
+   *
+   * @param value 待判断的值
+   * @returns 是否为普通对象
+   */
   private isPlainObject(value: unknown): value is Record<string, unknown> {
     return Object.prototype.toString.call(value) === '[object Object]'
   }
 
+  /**
+   * 将 JSON 值递归转换为 Yjs 兼容值
+   *
+   * 数组转换为 Y.Array，对象转换为 Y.Map，原值保留。
+   *
+   * @param value 待转换的 JSON 值
+   * @returns Yjs 兼容值；undefined 保留为 undefined
+   */
   private jsonToYValue(value: unknown): unknown {
     if (value === undefined) {
       return undefined
@@ -333,17 +445,38 @@ export class YjsBinding {
     return yMap
   }
 
+  /**
+   * 从 Y.Doc 读取批注快照并清洗
+   *
+   * @returns 清洗后的批注数组
+   */
   private readCommentsSnapshotFromYDoc(): CollaborationComment[] {
     const comments = this.yComments.toJSON() as CollaborationComment[]
     return this.sanitizeComments(comments)
   }
 
+  /**
+   * 批量清洗批注列表
+   *
+   * 过滤掉缺少 id 的批注，并逐条规范化字段。
+   *
+   * @param comments 原始批注列表
+   * @returns 清洗后的批注列表
+   */
   private sanitizeComments(comments: CollaborationComment[]): CollaborationComment[] {
     return comments
       .map(comment => this.sanitizeComment(comment))
       .filter(comment => Boolean(comment.id))
   }
 
+  /**
+   * 规范化单条批注字段
+   *
+   * 将所有字段转换为字符串/默认值，递归清洗回复列表。
+   *
+   * @param comment 原始批注
+   * @returns 规范化后的批注
+   */
   private sanitizeComment(comment: CollaborationComment): CollaborationComment {
     const replies = Array.isArray(comment.replies)
       ? comment.replies

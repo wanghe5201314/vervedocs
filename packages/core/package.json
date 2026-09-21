@@ -1,7 +1,7 @@
 {
   "name": "@vervedoc/core",
-  "version": "3.0.11",
-  "description": "VerveDoc Core 核心编辑器库",
+  "version": "3.3.11",
+  "description": "VerveDoc Core 核心编辑器库（Canvas 2D 高性能实现）",
   "author": "wanghe",
   "license": "MIT",
   "type": "module",
@@ -33,10 +33,8 @@
     "package.json"
   ],
   "scripts": {
-    "dev": "vite",
     "clean": "node -e \"const fs = require('fs'); if(fs.existsSync('dist')) fs.rmSync('dist', {recursive: true})\"",
     "build": "pnpm run clean && tsc && vite build",
-    "preview": "vite preview",
     "type:check": "tsc --noEmit"
   },
   "devDependencies": {
@@ -54,14 +52,12 @@
     "node": ">=16.0.0"
   },
   "dependencies": {
-    "@vervedoc/docx-editor-commands": "workspace:^",
-    "@vervedoc/docx-editor-comment": "workspace:^",
-    "@vervedoc/docx-editor-history": "workspace:^",
-    "@vervedoc/docx-editor-keymap": "workspace:^",
     "@vervedoc/docx-editor-schema": "workspace:^",
     "@vervedoc/docx-editor-state": "workspace:^",
     "@vervedoc/docx-editor-transform": "workspace:^",
     "@vervedoc/docx-editor-view": "workspace:^",
-    "vanilla-picker": "^2.12.3"
+
+    "@vervedoc/docx-editor-commands": "workspace:^",
+    "@vervedoc/docx-editor-history": "workspace:^"
   }
 }

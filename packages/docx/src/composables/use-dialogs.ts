@@ -1,5 +1,4 @@
 import { ref } from 'vue'
-import type { DocumentMeta } from '@/types/document'
 
 /**
  * 对话框可见状态管理 composable
@@ -9,30 +8,42 @@ import type { DocumentMeta } from '@/types/document'
 export function useDialogs(options: {
   /** 执行编辑器命令 */
   executeCommand: (command: string, ...args: any[]) => void
-  /** 文档元数据 */
-  documentMeta: DocumentMeta
-  /** 触发元数据变更事件 */
-  emitMetaChange: () => void
 }) {
   const { executeCommand } = options
 
+  /** 快捷键对话框是否可见 */
   const shortcutsDialogVisible = ref(false)
+  /** 超链接对话框是否可见 */
   const hyperlinkDialogVisible = ref(false)
+  /** 书签对话框是否可见 */
   const bookmarkDialogVisible = ref(false)
+  /** 插入表格对话框是否可见 */
   const insertTableDialogVisible = ref(false)
+  /** 表格边框对话框是否可见 */
   const tableBordersDialogVisible = ref(false)
-  const chartDialogVisible = ref(false)
+
+  /** LaTeX 公式对话框是否可见 */
   const latexDialogVisible = ref(false)
+  /** 条形码对话框是否可见 */
   const barcodeDialogVisible = ref(false)
+  /** 二维码对话框是否可见 */
   const qrcodeDialogVisible = ref(false)
+  /** 签名对话框是否可见 */
   const signatureDialogVisible = ref(false)
+  /** 水印对话框是否可见 */
   const watermarkDialogVisible = ref(false)
+  /** 纸张大小对话框是否可见 */
   const paperSizeDialogVisible = ref(false)
-  const pageNumberDialogVisible = ref(false)
+
+  /** 日期对话框是否可见 */
   const dateDialogVisible = ref(false)
+  /** 段落对话框是否可见 */
   const paragraphDialogVisible = ref(false)
+  /** 目录对话框是否可见 */
   const tocDialogVisible = ref(false)
+  /** AI 设置对话框是否可见 */
   const aiSettingsDialogVisible = ref(false)
+  /** 版本历史对话框是否可见 */
   const versionHistoryDialogVisible = ref(false)
 
   /** 打开快捷键对话框 */
@@ -62,7 +73,7 @@ export function useDialogs(options: {
    * @param data 条形码图像数据
    */
   const handleBarcodeConfirm = (data: { imageDataUrl: string; width: number; height: number }) => {
-    executeCommand('image', {
+    executeCommand('barcode', {
       value: data.imageDataUrl,
       width: data.width,
       height: data.height
@@ -71,10 +82,14 @@ export function useDialogs(options: {
 
   /**
    * 处理二维码确认
-   * @param content 二维码内容
+   * @param data 二维码图像数据
    */
-  const handleQrcodeConfirm = (content: string) => {
-    executeCommand('qrcode', content)
+  const handleQrcodeConfirm = (data: { imageDataUrl: string; width: number; height: number }) => {
+    executeCommand('qrcode', {
+      value: data.imageDataUrl,
+      width: data.width,
+      height: data.height
+    })
   }
 
   /**
@@ -82,7 +97,7 @@ export function useDialogs(options: {
    * @param dataUrl 签名图像数据 URL
    */
   const handleSignatureConfirm = (dataUrl: string) => {
-    executeCommand('image', dataUrl)
+    executeCommand('signatureImage', dataUrl)
   }
 
   /**
@@ -102,14 +117,7 @@ export function useDialogs(options: {
   }
 
   /**
-   * 处理页码确认
-   * @param data 页码配置数据
-   */
-  const handlePageNumberConfirm = (data: any) => {
-    executeCommand('setPageNumber', data)
-  }
 
-  /**
    * 处理日期插入确认
    * @param data 日期格式与值
    */
@@ -126,19 +134,7 @@ export function useDialogs(options: {
   }
 
   /**
-   * 处理插入图表确认
-   * @param payload 图表配置数据
-   */
-  const handleInsertChartConfirm = (payload: any) => {
-    const p = payload && typeof payload === 'object' ? payload : {}
-    executeCommand('insertChartCore', {
-      chartType: p.chartType,
-      subtype: p.subtype,
-      tableData: p.tableData
-    })
-  }
 
-  /**
    * 处理插入表格确认
    * @param payload 表格行列与边框配置
    */
@@ -170,14 +166,14 @@ export function useDialogs(options: {
     bookmarkDialogVisible,
     insertTableDialogVisible,
     tableBordersDialogVisible,
-    chartDialogVisible,
+
     latexDialogVisible,
     barcodeDialogVisible,
     qrcodeDialogVisible,
     signatureDialogVisible,
     watermarkDialogVisible,
     paperSizeDialogVisible,
-    pageNumberDialogVisible,
+
     dateDialogVisible,
     paragraphDialogVisible,
     tocDialogVisible,
@@ -192,10 +188,10 @@ export function useDialogs(options: {
     handleSignatureConfirm,
     handleWatermarkConfirm,
     handlePaperSizeConfirm,
-    handlePageNumberConfirm,
+
     handleDateConfirm,
     handleTocConfirm,
-    handleInsertChartConfirm,
+
     handleInsertTableDialogConfirm,
     handleTableBordersConfirm
   }

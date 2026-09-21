@@ -8,7 +8,6 @@ export default defineConfig(() => {
   // @ts-ignore
   const playgroundDir = path.dirname(fileURLToPath(import.meta.url))
   const litePackageDir = path.resolve(playgroundDir, '../../packages/docx-lite')
-  const parserPackageDir = path.resolve(playgroundDir, '../../packages/docx-parser')
   const pkg = JSON.parse(
     readFileSync(path.resolve(litePackageDir, 'package.json'), 'utf8')
   ) as { version?: string }
@@ -25,10 +24,6 @@ export default defineConfig(() => {
           find: '@vervedoc/docx-lite',
           replacement: path.resolve(litePackageDir, 'src/editor/index.ts')
         },
-        {
-          find: '@vervedoc/docx-parser',
-          replacement: path.resolve(parserPackageDir, 'src/index.ts')
-        },
         { find: '@', replacement: path.resolve(litePackageDir, 'src') }
       ]
     },
@@ -40,7 +35,6 @@ export default defineConfig(() => {
         allow: [
           playgroundDir,
           litePackageDir,
-          parserPackageDir,
           path.resolve(playgroundDir, '../..')
         ]
       }

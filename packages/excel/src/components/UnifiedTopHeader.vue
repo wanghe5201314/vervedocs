@@ -2,16 +2,16 @@
   <div class="top-header">
     <div class="left-actions">
       <button class="quick-btn" :title="translate('common.import')" @click="emit('command', 'import')">
-        <VIcon name="file-excel-box" />
+        <VdIcon name="file-excel-box" />
       </button>
       <button class="quick-btn" :title="translate('common.save') + ' (Ctrl+S)'" @click="emit('command', 'save')">
-        <VIcon name="content-save-outline" />
+        <VdIcon name="content-save-outline" />
       </button>
       <button class="quick-btn" :title="translate('common.undo') + ' (Ctrl+Z)'" @click="emit('command', 'undo')">
-        <VIcon name="undo" />
+        <VdIcon name="undo" />
       </button>
       <button class="quick-btn" :title="translate('common.redo') + ' (Ctrl+Y)'" @click="emit('command', 'redo')">
-        <VIcon name="redo" />
+        <VdIcon name="redo" />
       </button>
     </div>
     <div class="center-title">
@@ -42,7 +42,7 @@
 
 <script setup lang="ts">
 import { EyeOutlined, CheckCircleOutlined, CloudOutlined } from '@ant-design/icons-vue'
-import { VIcon } from '@vervedoc/icons'
+import { VdIcon } from '@vervedoc/ui'
 
 interface CollabUser {
   userId: string

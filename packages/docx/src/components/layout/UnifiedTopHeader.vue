@@ -2,16 +2,16 @@
   <div class="top-header">
     <div class="left-actions">
       <button class="quick-btn" title="导入文档" @click="emit('command', 'import')">
-        <VIcon name="file-outline" />
+        <VdIcon name="file-outline" />
       </button>
       <button class="quick-btn" title="保存 (Ctrl+S)" @click="emit('command', 'save')">
-        <VIcon name="content-save-outline" />
+        <VdIcon name="content-save-outline" />
       </button>
       <button class="quick-btn" title="撤销 (Ctrl+Z)" @click="emit('command', 'undo')">
-        <VIcon name="undo" />
+        <VdIcon name="undo" />
       </button>
       <button class="quick-btn" title="重做 (Ctrl+Y)" @click="emit('command', 'redo')">
-        <VIcon name="redo" />
+        <VdIcon name="redo" />
       </button>
     </div>
     <div class="center-title">
@@ -44,7 +44,7 @@
 
 <script setup lang="ts">
 import { CheckCircleOutlined, CloudOutlined, EyeOutlined } from '@ant-design/icons-vue'
-import { VIcon } from '@vervedoc/icons'
+import { VdIcon } from '@vervedoc/ui'
 import { getAvatarText } from '@/utils'
 import type { CollabUser } from '@/types/collab'
 
@@ -72,8 +72,8 @@ withDefaults(defineProps<{
   align-items: center;
   justify-content: space-between;
   padding: 0 8px;
-  background: var(--app-ribbon-topbar-bg, var(--tabs-bg-color, #1f57b8));
-  color: var(--app-ribbon-topbar-text, #fff);
+  background: var(--vd-ribbon-topbar-bg, var(--tabs-bg-color, #1f57b8));
+  color: var(--vd-ribbon-topbar-text, #fff);
 }
 .left-actions,
 .right-actions {
@@ -100,14 +100,14 @@ withDefaults(defineProps<{
   white-space: nowrap;
   font-size: 12px;
   font-weight: 600;
-  color: var(--app-ribbon-topbar-text, #fff);
+  color: var(--vd-ribbon-topbar-text, #fff);
 }
 .doc-status {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  color: var(--app-ribbon-topbar-text-muted, rgba(255, 255, 255, 0.86));
+  color: var(--vd-ribbon-topbar-text-muted, rgba(255, 255, 255, 0.86));
   white-space: nowrap;
 }
 .status-icon {
@@ -122,11 +122,11 @@ withDefaults(defineProps<{
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--app-ribbon-topbar-text, #fff);
+  color: var(--vd-ribbon-topbar-text, #fff);
   cursor: pointer;
 }
 .quick-btn:hover {
-  background: var(--app-ribbon-topbar-hover, rgba(255, 255, 255, 0.16));
+  background: var(--vd-ribbon-topbar-hover, rgba(255, 255, 255, 0.16));
 }
 .quick-btn :deep(svg),
 .quick-btn :deep(i) {

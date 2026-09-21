@@ -12,6 +12,7 @@ const pkg = JSON.parse(
 ) as { version?: string }
 
 export default defineConfig({
+  base: './',
   plugins: [
     vue(),
     cssInjectedByJsPlugin()
@@ -24,7 +25,7 @@ export default defineConfig({
       { find: /^@vue\/runtime-core$/, replacement: path.resolve(__dirname, 'node_modules/@vue/runtime-core/dist/runtime-core.esm-browser.prod.js') },
       { find: /^@vue\/reactivity$/, replacement: path.resolve(__dirname, 'node_modules/@vue/reactivity/dist/reactivity.esm-browser.prod.js') },
       { find: /^@vue\/shared$/, replacement: path.resolve(__dirname, 'node_modules/@vue/shared/dist/shared.esm-bundler.js') },
-      { find: /^@vervedoc\/core$/, replacement: path.resolve(__dirname, '../core/dist/core.js') }
+      { find: /^@vervedoc\/core$/, replacement: path.resolve(__dirname, '../core/src/index.ts') }
     ]
   },
   define: {

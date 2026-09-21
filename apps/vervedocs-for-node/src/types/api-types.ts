@@ -59,7 +59,39 @@ export interface ExportOptions {
 export interface DocxElement {
   type: string
   value?: string
+  characterStyleId?: string
+  imageLayout?: ImageLayout
   [key: string]: unknown
+}
+
+export interface ImageGeometry {
+  namespace: string
+  name: string
+  attributes: Record<string, string>
+  text?: string
+  children: ImageGeometry[]
+}
+
+export interface ImageLayout {
+  anchored?: boolean
+  anchorAttributes?: Record<string, string>
+  positioning?: ImageGeometry[]
+  crop?: ImageGeometry
+  transform?: ImageGeometry
+}
+
+export interface DocxSection {
+  pageWidth?: number
+  pageHeight?: number
+  margins?: number[]
+  headerDistance?: number
+  footerDistance?: number
+  gutter?: number
+  paperDirection?: PaperDirection
+  breakType?: string
+  titlePage?: boolean
+  headers?: Record<string, string>
+  footers?: Record<string, string>
 }
 
 /** 批注元数据 */
@@ -67,7 +99,10 @@ export interface CommentMeta {
   id: string
   author?: string
   date?: string
-  content?: string
+  initials?: string
+  content: string
+  status?: number
+  replies?: CommentMeta[]
 }
 
 /**
@@ -78,6 +113,16 @@ export interface CommentMeta {
 export interface DocxParseResult {
   success: boolean
   elements?: DocxElement[]
+  main?: DocxElement[]
+  header?: DocxElement[]
+  footer?: DocxElement[]
+  sections?: DocxSection[]
+  headerFooterParts?: Record<string, DocxElement[]>
+  evenAndOddHeaders?: boolean
+  lastSectionType?: string
+  styles?: Record<string, unknown>
+  numbering?: Record<string, unknown>
+  theme?: Record<string, unknown>
   comments?: CommentMeta[]
   pageWidth?: number
   pageHeight?: number

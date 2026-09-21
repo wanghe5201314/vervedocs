@@ -377,14 +377,14 @@
   justify-content: center;
   flex: 1;
   min-height: 0;
-  padding: 20px;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
 }
 
 .docx-editor-lite-host .editor-container {
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+
   transform-origin: top center;
 }
 
@@ -547,6 +547,86 @@
 .docx-editor-lite-host .popup-panel.shortcuts-popup {
   max-width: 560px;
   max-height: 80vh;
+}
+
+.docx-editor-lite-host .popup-panel.catalog-popup {
+  max-width: 480px;
+  max-height: 80vh;
+}
+
+.docx-editor-lite-host .catalog-type-options {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.docx-editor-lite-host .catalog-type-option {
+  flex: 1;
+  padding: 8px 12px;
+  text-align: center;
+  cursor: pointer;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #5f6368;
+  transition: all 0.15s;
+}
+
+.docx-editor-lite-host .catalog-type-option input {
+  display: none;
+}
+
+.docx-editor-lite-host .catalog-type-option.active {
+  border-color: #1a73e8;
+  color: #1a73e8;
+  background: #e8f0fe;
+}
+
+.docx-editor-lite-host .catalog-preview {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 8px 12px;
+  border: 1px solid #e8eaed;
+  border-radius: 4px;
+  background: #f8f9fa;
+}
+
+.docx-editor-lite-host .catalog-preview-empty {
+  text-align: center;
+  color: #9aa0a6;
+  padding: 24px 0;
+  font-size: 13px;
+}
+
+.docx-editor-lite-host .catalog-preview-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid #e8eaed;
+  font-size: 13px;
+}
+
+.docx-editor-lite-host .catalog-preview-item:last-child {
+  border-bottom: none;
+}
+
+.docx-editor-lite-host .catalog-preview-item.level-1 { padding-left: 0; font-weight: 500; }
+.docx-editor-lite-host .catalog-preview-item.level-2 { padding-left: 16px; }
+.docx-editor-lite-host .catalog-preview-item.level-3 { padding-left: 32px; color: #5f6368; }
+
+.docx-editor-lite-host .catalog-preview-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.docx-editor-lite-host .catalog-preview-page {
+  flex-shrink: 0;
+  margin-left: 12px;
+  color: #9aa0a6;
+  font-size: 12px;
 }
 
 .docx-editor-lite-host .popup-title {
@@ -1088,7 +1168,7 @@
   pointer-events: none;
 }
 
-/* ==================== Mobile Catalog Drawer ==================== */
+/* ==================== Mobile Toc Drawer ==================== */
 
 .docx-editor-lite-host .mobile-catalog-overlay {
   position: fixed;
@@ -1144,8 +1224,7 @@
 /* ==================== Mobile Editor Wrapper ==================== */
 
 .docx-editor-lite-host .mobile-editor-wrapper {
-  padding: 12px !important;
-  overflow-x: hidden !important;
+  overflow: hidden !important;
 }
 
 /* ==================== Responsive Breakpoints ==================== */

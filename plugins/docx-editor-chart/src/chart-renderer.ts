@@ -1,50 +1,44 @@
 /**
  * 图表渲染工具
- * 使用 ECharts 将图表配置渲染为 DataURL 图片
+ * 使用 Chart.js 将图表配置渲染为 DataURL 图片
  */
-import echartsLib from './echarts'
+import Chart from './chart-lib'
 
 /**
  * 将图表配置渲染为 DataURL 图片
- * @param option ECharts 配置
+ * @param config Chart.js 配置（type + data + options）
  * @param width 宽度
  * @param height 高度
  * @param pixelRatio 像素比例
- * @param echartsInstance 可选的 echarts 实例（用于自定义版本）
+ * @returns 渲染后的 PNG DataURL 字符串
  */
 export const renderChartToDataUrl = (
-  option: any,
+  config: any,
   width: number,
   height: number,
   pixelRatio = 2,
-  echartsInstance?: any
+  chartInstance?: any
 ): string => {
-  const echarts = echartsInstance || echartsLib
+  const ChartCtor = chartInstance || Chart
 
-  const container = document.createElement('div')
-  container.style.position = 'fixed'
-  container.style.left = '-10000px'
-  container.style.top = '-10000px'
-  container.style.width = `${width}px`
-  container.style.height = `${height}px`
-  container.style.pointerEvents = 'none'
-  document.body.appendChild(container)
+  const canvas = document.createElement('canvas')
+  canvas.width = width * pixelRatio
+  canvas.height = height * pixelRatio
+  const ctx = canvas.getContext('2d')!
+  ctx.scale(pixelRatio, pixelRatio)
 
-  const chart = echarts.init(container, undefined, {
-    renderer: 'canvas',
-    width,
-    height
+  const chart = new ChartCtor(ctx, {
+    ...config,
+    options: {
+      ...config?.options,
+      responsive: false,
+      animation: false,
+      devicePixelRatio: pixelRatio
+    }
   })
 
-  chart.setOption({ ...(option || {}), animation: false }, true)
-
-  const dataUrl = chart.getDataURL({
-    type: 'png',
-    pixelRatio,
-    backgroundColor: '#ffffff'
-  })
-
-  chart.dispose()
-  container.remove()
+  const dataUrl = chart.toBase64Image('image/png', 1)
+  chart.destroy()
+  canvas.remove()
   return dataUrl
 }

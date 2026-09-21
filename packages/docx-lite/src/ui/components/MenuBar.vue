@@ -33,9 +33,6 @@
             <div class="dropdown-item" @click.stop="$emit('importDoc')">
               <span class="dropdown-item-inner"><span class="material-icons">folder_open</span>导入文档</span>
             </div>
-            <div class="dropdown-item" @click.stop="$emit('exportDoc')">
-              <span class="dropdown-item-inner"><span class="material-icons">file_download</span>导出文档</span>
-            </div>
             <div class="dropdown-separator"></div>
             <div class="dropdown-item" @click.stop="$emit('command', 'executePrint')">
               <span class="dropdown-item-inner"><span class="material-icons">print</span>打印</span>
@@ -70,8 +67,7 @@ defineEmits<{
   toggleDropdown: [name: string]
   save: []
   importDoc: []
-  exportDoc: []
   command: [command: string, ...args: any[]]
-  showPopup: [name: 'table' | 'link' | 'search' | 'shortcuts']
+  showPopup: [name: 'table' | 'link' | 'search' | 'shortcuts' | 'toc']
 }>()
 </script>

@@ -5,12 +5,15 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
-import DocxEditor, { ICatalogItem, IElement } from '@vervedoc/core'
+import DocxEditor, { IElement } from '@vervedoc/core'
+import { createCommentPlugin, createRevisionPlugin } from '@vervedoc/docx-editor-comment'
+import { createChartPlugin } from '@vervedoc/docx-editor-chart'
+import type { CommentPlugin } from '@vervedoc/docx-editor-comment'
 import { debounce } from '@/utils'
 import { editorStateStore } from '@/stores/editor-state'
 import { useEditorImport } from '@/composables/use-editor-import'
 import { useEditorMedia } from '@/composables/use-editor-media'
-import { useEditorChart } from '@/composables/use-editor-chart'
+
 import { useEditorHeaderFooter } from '@/composables/use-editor-header-footer'
 import { useEditorBreaks } from '@/composables/use-editor-breaks'
 import { useEditorTable } from '@/composables/use-editor-table'
@@ -22,11 +25,14 @@ import { useEditorBarcode } from '@/composables/use-editor-barcode'
 import { useEditorFormat } from '@/composables/use-editor-format'
 import { useEditorPage } from '@/composables/use-editor-page'
 
+/** 编辑器初始元素数据 */
 const data: IElement[] = []
 
+/** 编辑器初始化选项 */
 const options = {
   defaultFont: '微软雅黑',
   defaultSize: 14,
+  showRuler: true,
   marginIndicatorDisabled: false,
   marginIndicatorSize: 25,
   marginIndicatorColor: '#CCCCCC',
@@ -47,44 +53,31 @@ const options = {
 const emit = defineEmits(['command', 'ready', 'saved'])
 
 // 编辑器容器和实例
+/** 编辑器容器 DOM 引用 */
 const editorContainer = ref<HTMLDivElement | null>(null)
+/** 编辑器实例 */
 let editorInstance: any = null
+/** EventBus 订阅句柄集合，用于卸载时统一取消订阅 */
 const eventBusSubscriptions: Array<{ unsubscribe: () => void }> = []
-
-const refreshCatalog = async () => {
-  if (!editorInstance) return null
-  const catalog = await editorInstance.command.getCatalog()
-  editorInstance.listener.catalogChange?.(Array.isArray(catalog) ? catalog : [])
-  return catalog
-}
 
 const {
 
   importJsonFile: importJsonFileFn,
 } = useEditorImport({
-  emit: emit as (event: string, ...args: any[]) => void,
   getEditorInstance: () => editorInstance,
-  refreshCatalog,
 })
 
 const {
   image: imageFn,
-  audio: audioFn,
-  video: videoFn,
+
 } = useEditorMedia({
   getEditorInstance: () => editorInstance,
 })
 
 const {
-  insertChartCore: insertChartCoreFn,
-  updateChartCore: updateChartCoreFn,
-} = useEditorChart({
-  getEditorInstance: () => editorInstance,
-})
 
-const {
   header: headerFn, footer: footerFn, mainZone: mainZoneFn,
-  clearHeader: clearHeaderFn, clearFooter: clearFooterFn, setPageNumber: setPageNumberFn,
+  clearHeader: clearHeaderFn, clearFooter: clearFooterFn,
 } = useEditorHeaderFooter({ getEditorInstance: () => editorInstance })
 
 const {
@@ -103,11 +96,12 @@ const {
 const { searchAPI } = useEditorSearch({ getEditorInstance: () => editorInstance })
 
 const {
-  tocInsert: tocInsertFn, tocRemove: tocRemoveFn, locationCatalog: locationCatalogFn,
+  tocInsert: tocInsertFn, tocRemove: tocRemoveFn, locationToc: locationTocFn,
 } = useEditorToc({ getEditorInstance: () => editorInstance })
 
 const {
   addWatermark: addWatermarkFn, deleteWatermark: deleteWatermarkFn,
+  setSystemWatermark: setSystemWatermarkFn, deleteSystemWatermark: deleteSystemWatermarkFn,
 } = useEditorWatermark({ getEditorInstance: () => editorInstance })
 
 const { insertLatex: insertLatexFn } = useEditorLatex({ getEditorInstance: () => editorInstance })
@@ -125,16 +119,20 @@ const {
   list: listFn, lineHeight: lineHeightFn, firstLineIndent: firstLineIndentFn, getFirstLineIndent: getFirstLineIndentFn,
 } = useEditorFormat({ getEditorInstance: () => editorInstance })
 
+/**
+ * 应用选项补丁，合并 background、group、lineBreak 等嵌套选项后更新编辑器
+ * @param patch - 待合并的选项补丁
+ */
 const applyOptionsPatch = (patch: any) => {
   if (!editorInstance) return
   const currentOptions = editorInstance.command.getOptions?.()
-  editorInstance.command.executeUpdateOptions({
-    ...(currentOptions || {}),
-    ...(patch || {}),
-    background: { ...(currentOptions?.background || {}), ...(patch?.background || {}) },
-    group: { ...(currentOptions?.group || {}), ...(patch?.group || {}) },
-    lineBreak: { ...(currentOptions?.lineBreak || {}), ...(patch?.lineBreak || {}) }
-  })
+  const merged = { ...(patch || {}) }
+  for (const key of ['background', 'group', 'lineBreak']) {
+    if (Object.prototype.hasOwnProperty.call(merged, key)) {
+      merged[key] = { ...(currentOptions?.[key] || {}), ...(merged[key] || {}) }
+    }
+  }
+  editorInstance.command.executeUpdateOptions(merged)
 }
 
 const {
@@ -150,6 +148,13 @@ const {
   applyOptionsPatch,
 })
 
+/**
+ * 订阅 EventBus 事件，兼容 select 和 on/off 两种订阅模式
+ * @param eventBus - 事件总线对象
+ * @param event - 事件名称
+ * @param handler - 事件处理函数
+ * @returns 包含 unsubscribe 方法的订阅句柄
+ */
 const subscribeEventBus = (eventBus: any, event: string, handler: (...args: any[]) => void) => {
   if (!eventBus || typeof handler !== 'function') {
     return { unsubscribe: () => {} }
@@ -171,33 +176,23 @@ const subscribeEventBus = (eventBus: any, event: string, handler: (...args: any[
 }
 
 
-// 初始化编辑器
+/** 初始化编辑器：创建实例、挂载全局引用并设置事件监听 */
 const initEditor = async () => {
   if (editorContainer.value) {
     editorInstance = new DocxEditor(
       editorContainer.value,
       {
-        main: data as IElement[]
+        success: true,
+        elements: data
       },
       options
     )
 
-    // 注册图表插件
-    const { createChartPlugin } = await import('@vervedoc/docx-editor-chart')
-    const echarts = await import('echarts')
-    editorInstance.use(createChartPlugin({ echarts }))
+    // 注册可选功能插件（批注/修订/图表）
+    editorInstance.use(createCommentPlugin())
+    editorInstance.use(createRevisionPlugin())
+    editorInstance.use(createChartPlugin())
 
-    // 注册 AI 插件
-    const { createAIPlugin } = await import('@vervedoc/docx-editor-ai')
-    const aiEndpoint = import.meta.env.VITE_AI_API_ENDPOINT || '/api/ai'
-    editorInstance.use(createAIPlugin({
-      service: {
-        apiEndpoint: aiEndpoint,
-        streaming: import.meta.env.VITE_AI_STREAMING !== 'false',
-        timeout: Number(import.meta.env.VITE_AI_TIMEOUT) || 60000
-      },
-      floatingToolbar: false
-    }))
 
     // 保存实例到全局，供cypress使用
     ;(window as any).editor = editorInstance
@@ -207,7 +202,10 @@ const initEditor = async () => {
   }
 }
 
-// 全局mousedown检测：点击编辑器外部时立即设置inCanvas为false
+/**
+ * 全局 mousedown 检测：点击编辑器外部时立即设置 inCanvas 为 false
+ * @param e - 鼠标事件
+ */
 const handleGlobalMouseDown = (e: MouseEvent) => {
   const target = e.target as HTMLElement
   if (editorContainer.value && !editorContainer.value.contains(target)) {
@@ -215,22 +213,22 @@ const handleGlobalMouseDown = (e: MouseEvent) => {
   }
 }
 
-// 设置编辑器事件监听器
+/** 设置编辑器事件监听器：目录、内容、选区、页面、EventBus 等 */
 const setupEditorListeners = () => {
   if (!editorInstance) return
 
   const syncAbility = () => {
     if (!editorInstance?.command?.getIsReadonly) return
-    const { startIndex, endIndex } = editorInstance.command.getRange()
-    const focused = !!(~startIndex || ~endIndex)
+    const range = editorInstance.command.getRange()
     const ability = {
-      focused,
+      focused: !!range,
       readonly: editorInstance.command.getIsReadonly(),
       disabled: editorInstance.command.getIsDisabled(),
       canInput: editorInstance.command.getIsCanInput()
     }
     emit('command', 'editorAbilityChange', ability)
   }
+  editorInstance.listener.on('abilityChange', syncAbility)
 
   // 监听容器焦点事件，更新inCanvas状态
   if (editorContainer.value) {
@@ -248,29 +246,38 @@ const setupEditorListeners = () => {
     document.addEventListener('mousedown', handleGlobalMouseDown)
   }
 
-  // 目录变化
-  editorInstance.listener.catalogChange = (catalog: ICatalogItem[]) => {
-    emit('command', 'catalogChange', catalog)
-  }
+  const openTableProperties = () => emit('command', 'tablePropertiesDialog')
+  editorInstance.listener.on('requestTableProperties', openTableProperties)
+  eventBusSubscriptions.push({
+    unsubscribe: () => editorInstance?.listener.off('requestTableProperties', openTableProperties)
+  })
 
-  // 内容变化
-  editorInstance.listener.contentChange = debounce(async () => {
-    updateThumbnails()
-    await refreshCatalog()
+  // 目录变化
+  editorInstance.listener.toc.tocListener((catalog: any[]) => {
+    emit('command', 'tocChange', catalog)
+  })
+
+  // 缩略图变化
+  editorInstance.listener.thumbnail.thumbnailListener((images: string[]) => {
+    emit('command', 'thumbnailsChange', images)
+  })
+
+  // 内容变化（目录和缩略图已由核心 Worker + afterRender 自动推送，此处仅同步字数和状态）
+  editorInstance.listener.content.contentListener(debounce(async () => {
     const wordCount = await editorInstance.command.getWordCount()
     emit('command', 'editorStatus', { wordCount })
     emit('command', 'contentChange')
-  }, 1000)
+  }, 1000))
 
   // 选区样式变化 - 同步到状态存储实现工具栏回显
-  editorInstance.listener.rangeStyleChange = (rangeStyle: any) => {
+  editorInstance.listener.range.formatListener((rangeStyle: any) => {
     editorStateStore.syncFromEditor(rangeStyle)
     syncAbility()
 
     // 同步首行缩进状态
     const range = editorInstance.command.getRange()
     if (range) {
-      const elementList = editorInstance.command.getValue().data.main
+      const elementList = editorInstance.command.getValue()?.data?.main
       if (elementList && elementList.length > 0) {
         const { startIndex } = range
 
@@ -289,7 +296,7 @@ const setupEditorListeners = () => {
       }
     }
 
-    const rangeContext = editorInstance.command.getRangeContext?.()
+    const rangeContext = editorInstance.command.getRangeContext()
     if (rangeContext) {
       emit('command', 'editorStatus', {
         currentRow: rangeContext.startRowNo + 1,
@@ -298,30 +305,36 @@ const setupEditorListeners = () => {
     } else {
       emit('command', 'editorStatus', { currentRow: 0, currentCol: 0 })
     }
-  }
+  })
 
-  editorInstance.listener.pageSizeChange = (pageCount: number) => {
+  editorInstance.listener.range.positionListener(() => {
+    const rangeContext = editorInstance.command.getRangeContext()
+    if (rangeContext) {
+      emit('command', 'editorStatus', {
+        currentRow: rangeContext.startRowNo + 1,
+        currentCol: rangeContext.startColNo + 1
+      })
+    } else {
+      emit('command', 'editorStatus', { currentRow: 0, currentCol: 0 })
+    }
+  })
+
+  editorInstance.listener.page.pageCountListener((pageCount: number) => {
     emit('command', 'editorStatus', { totalPages: pageCount })
-  }
+  })
 
-  editorInstance.listener.intersectionPageNoChange = (pageNo: number) => {
+  editorInstance.listener.page.currentPageNoListener((pageNo: number) => {
     emit('command', 'editorStatus', { currentPage: pageNo + 1 })
-  }
-
-  editorInstance.listener.visiblePageNoListChange = (pageNoList: number[]) => {
-    emit('command', 'editorStatus', {
-      visiblePages: pageNoList.map(p => p + 1).join(',')
-    })
-  }
+  })
 
   // 页面缩放变化
-  editorInstance.listener.pageScaleChange = (scale: number) => {
+  editorInstance.listener.page.pageScaleListener((scale: number) => {
     emit('command', 'scaleChange', Math.round(scale * 100))
-  }
+  })
 
-  editorInstance.listener.saved = (result: any) => {
+  editorInstance.listener.content.savedListener((result: any) => {
     emit('saved', result)
-  }
+  })
 
   // 监听 EventBus 事件
   const eventBus = editorInstance.command.getEventBus?.() || editorInstance.eventBus
@@ -337,7 +350,7 @@ const setupEditorListeners = () => {
       subscribeEventBus(eventBus, 'imageMousedown', (payload: any) => {
         emit('command', 'imageMousedown', payload)
       }),
-      subscribeEventBus(eventBus, 'mousedown', (evt: MouseEvent) => {
+      subscribeEventBus(eventBus, 'editorMousedown', (evt: MouseEvent) => {
         emit('command', 'mousedown', evt)
       }),
       subscribeEventBus(eventBus, 'commentCreate', (payload: any) => {
@@ -349,13 +362,12 @@ const setupEditorListeners = () => {
     )
   }
 
-    // 初始加载
+    // 初始加载（缩略图和目录由核心 listener 自动推送，无需主动调用）
     setTimeout(async () => {
       syncAbility()
-      updateThumbnails()
       const wordCount = await editorInstance.command.getWordCount()
       emit('command', 'editorStatus', { wordCount })
-      const rangeContext = editorInstance.command.getRangeContext?.()
+      const rangeContext = editorInstance.command.getRangeContext()
       if (rangeContext) {
         emit('command', 'editorStatus', {
           currentRow: rangeContext.startRowNo + 1,
@@ -366,40 +378,24 @@ const setupEditorListeners = () => {
     }, 1000)
 }
 
-// 更新缩略图（防抖 + 延迟执行，避免阻塞 UI）
-let thumbnailTimer: ReturnType<typeof setTimeout> | null = null
-const updateThumbnails = async () => {
-  if (!editorInstance) return
-  if (thumbnailTimer) clearTimeout(thumbnailTimer)
-  thumbnailTimer = setTimeout(async () => {
-    try {
-      const images = await editorInstance.command.getImage()
-      emit('command', 'thumbnailsChange', images)
-    } catch {
-      // 忽略缩略图生成失败
-    }
-  }, 300)
-}
 
-// 刷新缩略图（从外部调用）
-const refreshThumbnails = () => {
-  updateThumbnails()
-}
-
-
-// 执行命令
+/**
+ * 执行编辑器命令，根据命令名映射到对应编辑器操作
+ * @param command - 命令名称
+ * @param args - 命令参数
+ * @returns 命令执行结果
+ */
 const executeCommand = (command: string, ...args: any[]) => {
   if (!editorInstance) return
 
   const commandMap: Record<string, Function> = {
     updateOptions: (patch: any) => applyOptionsPatch(patch),
+    setRulerVisible: (visible: boolean) => editorInstance.command.executeSetRulerVisible(visible),
     setZone: (zone: string) => editorInstance.command.executeSetZone(zone),
     setValue: (value: any, options?: any) => editorInstance.command.executeSetValue(value, options),
-    refreshCatalog: async () => refreshCatalog(),
     replaceRange: (range: any) => editorInstance.command.executeReplaceRange(range),
     insertElementList: (elements: any[]) => editorInstance.command.executeInsertElementList(elements),
-    insertChartCore: (data: any) => insertChartCoreFn(data),
-    updateChartCore: (id: string, patch: any) => updateChartCoreFn(id, patch),
+    requestInsertChart: () => editorInstance.dispatchCommand('requestInsertChart'),
     setGroup: () => editorInstance.command.executeSetGroup(),
     deleteGroup: (id: string) => editorInstance.command.executeDeleteGroup(id),
     locationGroup: (id: string) => editorInstance.command.executeLocationGroup(id),
@@ -473,11 +469,17 @@ const executeCommand = (command: string, ...args: any[]) => {
     tableBorderColor: tableBorderColorFn,
     tableBorderWidth: tableBorderWidthFn,
     tableBorderExternalWidth: tableBorderExternalWidthFn,
+    getTableBorders: () => editorInstance.command.getTableBorders(),
+    tableBorders: (patch: any) => editorInstance.command.executeSetTableBorders(patch),
+    getTableDialogContext: () => ({ range: structuredClone(editorInstance.command.getRange()), zone: editorInstance.command.getZone() }),
+    restoreTableDialogContext: (context: any) => {
+      editorInstance.command.executeSetZone(context.zone)
+      editorInstance.command.executeReplaceRange(context.range)
+    },
+    focusEditor: () => editorContainer.value?.querySelector('textarea')?.focus(),
 
-    // 图片/音频/视频
+    // 图片
     image: imageFn,
-    audio: audioFn,
-    video: videoFn,
 
 
     // 超链接
@@ -498,6 +500,8 @@ const executeCommand = (command: string, ...args: any[]) => {
     // 水印
     addWatermark: addWatermarkFn,
     deleteWatermark: deleteWatermarkFn,
+    setSystemWatermark: setSystemWatermarkFn,
+    deleteSystemWatermark: deleteSystemWatermarkFn,
 
     // LaTeX
     latex: () => {
@@ -528,7 +532,7 @@ const executeCommand = (command: string, ...args: any[]) => {
     // 打印
     print: () => editorInstance.command.executePrint(),
 
-    locationCatalog: locationCatalogFn,
+    locationToc: locationTocFn,
 
     pageJump: pageJumpFn,
 
@@ -547,17 +551,20 @@ const executeCommand = (command: string, ...args: any[]) => {
     setPaperMargin: setPaperMarginFn,
     setPaperBackground: setPaperBackgroundFn,
 
-    refreshThumbnails: () => refreshThumbnails(),
     insertBlankPageBefore: (direction?: string) => insertBlankPageBefore(direction),
 
     columns: columnsFn,
 
     // 模式切换
-    mode: (mode: string) => editorInstance.command.executeMode(mode),
+    mode: (mode: string) => editorInstance.command.executeSetMode(mode),
 
-    // 签名 - 现在由 App.vue 处理
+    // 签名 - 打开对话框由上层处理
     signature: () => {
       emit('command', 'signature')
+    },
+    // 签名确认后插入图片
+    signatureImage: (dataUrl: string) => {
+      editorInstance.command.executeInsertSignature(dataUrl)
     },
 
     // 条形码
@@ -580,8 +587,6 @@ const executeCommand = (command: string, ...args: any[]) => {
     clearHeader: clearHeaderFn,
     clearFooter: clearFooterFn,
 
-    // 设置页码
-    setPageNumber: setPageNumberFn,
 
     // 导入 JSON
     importJsonFile: importJsonFileFn,
@@ -595,9 +600,9 @@ const executeCommand = (command: string, ...args: any[]) => {
     },
 
     comment: () => {
-      const c = editorInstance.comment
-      c.addComment()
-      c.render()
+      const c = editorInstance.getPlugin('comment') as CommentPlugin | undefined
+      c?.add()
+      c?.render()
     }
   }
 
@@ -608,10 +613,7 @@ const executeCommand = (command: string, ...args: any[]) => {
       const mode = args[0]
       const ability = editorInstance?.command?.getIsReadonly
         ? {
-            focused: (() => {
-              const { startIndex, endIndex } = editorInstance.command.getRange()
-              return !!(~startIndex || ~endIndex)
-            })(),
+            focused: !!editorInstance.command.getRange(),
             readonly: editorInstance.command.getIsReadonly(),
             disabled: editorInstance.command.getIsDisabled(),
             canInput: editorInstance.command.getIsCanInput()
@@ -624,15 +626,12 @@ const executeCommand = (command: string, ...args: any[]) => {
   }
 }
 
-// 获取编辑器实例
+/**
+ * 获取编辑器实例
+ * @returns 当前编辑器实例
+ */
 const getEditorInstance = () => {
   return editorInstance
-}
-
-// 更新目录
-const updateCatalog = async () => {
-  if (!editorInstance) return
-  return refreshCatalog()
 }
 
 // 生命周期钩子
@@ -653,14 +652,17 @@ onBeforeUnmount(() => {
   }
 })
 
-// 在当前页面之前插入空白页
+/**
+ * 在当前页之前插入空白页，可选切换纸张方向
+ * @param direction - 纸张方向，'horizontal' 或 'vertical'
+ */
 const insertBlankPageBefore = (direction?: string) => {
   if (!editorInstance) return
 
   if (direction === 'horizontal') {
-    editorInstance.command.executePaperDirection('horizontal')
+    editorInstance.command.executeSetPaperDirection('horizontal')
   } else if (direction === 'vertical') {
-    editorInstance.command.executePaperDirection('vertical')
+    editorInstance.command.executeSetPaperDirection('vertical')
   }
 
   const range = editorInstance.command.getRange()
@@ -669,7 +671,7 @@ const insertBlankPageBefore = (direction?: string) => {
   const currentPageNo = range.pageNo || 0
 
   const result = editorInstance.command.getValue()
-  const mainData = result.data.main
+  const mainData = result?.data?.main
   if (!mainData) return
 
   let currentPage = 0
@@ -695,8 +697,6 @@ defineExpose({
   executeCommand,
   getEditorInstance,
   getSearchAPI: () => searchAPI,
-  updateCatalog,
-  refreshThumbnails,
   insertBlankPageBefore
 })
 </script>

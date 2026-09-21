@@ -10,11 +10,11 @@
           @toggle-dropdown="toggleDropdown"
           @save="handleSave"
           @import-doc="handleImportDoc"
-          @export-doc="handleExportDoc"
           @command="runCommand"
           @show-popup="showPopup"
         />
         <DesktopToolbar
+          :format-state="toolbarStyle"
           :zoom-text="zoomText"
           @command="runCommand"
           @font-change="handleFontChange"
@@ -34,30 +34,29 @@
         :more-menu-open="moreMenuOpen"
         :status-page-text="statusPageText"
         :status-words-text="statusWordsText"
-        @toggle-catalog="toggleCatalog()"
+        @toggle-toc="toggleToc()"
         @save="handleSave"
         @toggle-more="moreMenuOpen = !moreMenuOpen"
         @import-doc="handleImportDoc"
-        @export-doc="handleExportDoc"
         @command="runCommand"
         @show-popup="showPopup"
       />
 
       <div class="body-area">
-        <CatalogSidebar
+        <TocSidebar
           v-if="isDesktop"
-          :catalog-open="catalogOpen"
-          :flat-catalog="flatCatalog"
-          @toggle="toggleCatalog()"
-          @catalog-click="handleCatalogClick"
+          :toc-open="tocOpen"
+          :flat-toc="flatToc"
+          @toggle="toggleToc()"
+          @toc-click="handleTocClick"
         />
 
-        <MobileCatalogDrawer
+        <MobileTocDrawer
           v-if="isMobile"
-          :catalog-open="catalogOpen"
-          :flat-catalog="flatCatalog"
-          @toggle="toggleCatalog()"
-          @catalog-click="handleCatalogClick"
+          :toc-open="tocOpen"
+          :flat-toc="flatToc"
+          @toggle="toggleToc()"
+          @toc-click="handleTocClick"
         />
 
         <div class="editor-wrapper" :class="{ 'mobile-editor-wrapper': isMobile }">
@@ -67,7 +66,7 @@
 
       <StatusBar
         v-if="isDesktop"
-        :catalog-open="catalogOpen"
+        :toc-open="tocOpen"
         :status-words-text="statusWordsText"
         :status-page-text="statusPageText"
         :paper-direction-text="paperDirectionText"
@@ -76,7 +75,7 @@
         :paper-size-menu-open="paperSizeMenuOpen"
         :paper-sizes="PAPER_SIZES"
         :zoom-text="zoomText"
-        @catalog-toggle="(checked: boolean) => toggleCatalog(checked)"
+        @toc-toggle="(checked: boolean) => toggleToc(checked)"
         @toggle-paper-direction="togglePaperDirection"
         @toggle-paper-size-menu="paperSizeMenuOpen = !paperSizeMenuOpen"
         @set-paper-size="setPaperSize"
@@ -86,6 +85,7 @@
 
       <MobileBottomBar
         v-if="isMobile"
+        :format-state="toolbarStyle"
         :zoom-text="zoomText"
         @command="runCommand"
         @font-change="handleFontChange"
@@ -132,6 +132,18 @@
         </div>
       </div>
 
+      <div class="popup-panel" :class="{ show: activePopup === 'formula', 'mobile-popup': isMobile }">
+        <div class="popup-title">插入公式</div>
+        <div class="popup-row">
+          <label>LaTeX 公式</label>
+          <input v-model="formulaText" type="text" placeholder="例如：x^2 + y^2 = r^2" />
+        </div>
+        <div class="popup-actions">
+          <button class="popup-btn popup-btn-secondary" @click="closePopup">取消</button>
+          <button class="popup-btn popup-btn-primary" @click="confirmInsertFormula">插入</button>
+        </div>
+      </div>
+
       <div class="popup-panel" :class="{ show: activePopup === 'search', 'mobile-popup': isMobile }">
         <div class="popup-title">查找和替换</div>
         <div class="popup-row">
@@ -146,6 +158,41 @@
           <button class="popup-btn popup-btn-secondary" @click="doSearch">查找</button>
           <button class="popup-btn popup-btn-secondary" @click="doReplace">替换</button>
           <button class="popup-btn popup-btn-primary" @click="doReplaceAll">全部替换</button>
+        </div>
+      </div>
+
+      <div class="popup-panel catalog-popup" :class="{ show: activePopup === 'toc', 'mobile-popup': isMobile }">
+        <div class="popup-title">插入自动目录</div>
+        <div class="catalog-type-options">
+          <label class="catalog-type-option" :class="{ active: autoTocType === 1 }">
+            <input type="radio" v-model="autoTocType" :value="1" />
+            <span>仅一级标题</span>
+          </label>
+          <label class="catalog-type-option" :class="{ active: autoTocType === 2 }">
+            <input type="radio" v-model="autoTocType" :value="2" />
+            <span>一至二级标题</span>
+          </label>
+          <label class="catalog-type-option" :class="{ active: autoTocType === 3 }">
+            <input type="radio" v-model="autoTocType" :value="3" />
+            <span>一至三级标题</span>
+          </label>
+        </div>
+        <div class="catalog-preview">
+          <div v-if="autoTocLoading" class="catalog-preview-empty">加载中...</div>
+          <div v-else-if="!autoTocPreview.length" class="catalog-preview-empty">暂无标题内容</div>
+          <div
+            v-for="item in autoTocPreview"
+            :key="item.id"
+            class="catalog-preview-item"
+            :class="`level-${item.level}`"
+          >
+            <span class="catalog-preview-name">{{ item.name }}</span>
+            <span class="catalog-preview-page">第 {{ item.pageNo }} 页</span>
+          </div>
+        </div>
+        <div class="popup-actions">
+          <button class="popup-btn popup-btn-secondary" @click="closePopup">取消</button>
+          <button class="popup-btn popup-btn-primary" :disabled="!autoTocPreview.length" @click="confirmInsertToc">插入</button>
         </div>
       </div>
 
@@ -186,35 +233,30 @@
 </template>
 
 <script setup lang="ts">
-import type {IEditorData, IEditorOption, IElement} from '@vervedoc/core'
-import DocxEditor, {TitleLevel} from '@vervedoc/core'
-import {computed, onBeforeUnmount, onMounted, reactive, ref} from 'vue'
+import type {IDocxDocumentMeta, IEditorOption, IElement, IRangeStyle, TitleLevel} from '@vervedoc/core'
+import DocxEditor, {TITLE_LEVEL, PAPER_SIZE_LIST, DEFAULT_PAPER_SIZE, FONT_FAMILY_VALUE, LaTexParticle} from '@vervedoc/core'
+import {computed, onBeforeUnmount, onMounted, reactive, ref, watch} from 'vue'
 import type {ImportMode, LiteEditorShellExposed, SaveSnapshot, WordEditorOptions} from '../object/word-editor.types'
 import {useResponsive} from '../composables/useResponsive'
 import {useTouch} from '../composables/useTouch'
 import MenuBar from './components/MenuBar.vue'
 import DesktopToolbar from './components/DesktopToolbar.vue'
-import CatalogSidebar from './components/CatalogSidebar.vue'
+import TocSidebar from './components/TocSidebar.vue'
 import StatusBar from './components/StatusBar.vue'
 import MobileHeader from './components/MobileHeader.vue'
 import MobileBottomBar from './components/MobileBottomBar.vue'
-import MobileCatalogDrawer from './components/MobileCatalogDrawer.vue'
+import MobileTocDrawer from './components/MobileTocDrawer.vue'
 
 
-interface PaperSizePreset {
-  label: string
-  width: number
-  height: number
-}
 
-interface CatalogItem {
+interface TocItem {
   id?: string
   name?: string
   level?: string | number
-  subCatalog?: CatalogItem[]
+  subToc?: TocItem[]
 }
 
-interface FlatCatalogItem {
+interface FlatTocItem {
   id?: string
   name: string
   level: number
@@ -224,29 +266,20 @@ const props = defineProps<Omit<WordEditorOptions, 'container'>>()
 
 const { isMobile, isDesktop } = useResponsive()
 
-const PAPER_SIZES: PaperSizePreset[] = [
-  { label: 'A4 (21×29.7cm)', width: 794, height: 1123 },
-  { label: 'A3 (29.7×42cm)', width: 1190, height: 1684 },
-  { label: 'A5 (14.8×21cm)', width: 559, height: 794 },
-  { label: 'A6 (10.5×14.8cm)', width: 396, height: 559 },
-  { label: 'B4 (25×35.3cm)', width: 709, height: 1000 },
-  { label: 'B5 (17.6×25cm)', width: 498, height: 709 },
-  { label: 'Letter (21.6×27.9cm)', width: 612, height: 792 },
-  { label: 'Legal (21.6×35.6cm)', width: 612, height: 1008 }
-]
+const PAPER_SIZES = PAPER_SIZE_LIST
 
 const TITLE_LEVEL_MAP: Record<string, TitleLevel> = {
-  '1': TitleLevel.FIRST,
-  '2': TitleLevel.SECOND,
-  '3': TitleLevel.THIRD,
-  '4': TitleLevel.FOURTH,
-  '5': TitleLevel.FIFTH,
-  '6': TitleLevel.SIXTH
+  '1': TITLE_LEVEL.FIRST,
+  '2': TITLE_LEVEL.SECOND,
+  '3': TITLE_LEVEL.THIRD,
+  '4': TITLE_LEVEL.FOURTH,
+  '5': TITLE_LEVEL.FIFTH,
+  '6': TITLE_LEVEL.SIXTH
 }
 
-const normalizeData = (data?: IEditorData | IElement[]) => {
-  if (!data) return { main: [] }
-  return Array.isArray(data) ? { main: data } : data
+const normalizeData = (data?: IDocxDocumentMeta | IElement[]) => {
+  if (!data) return { success: true, elements: [] }
+  return Array.isArray(data) ? { success: true, elements: data } : data
 }
 
 const randomId = () =>
@@ -257,16 +290,35 @@ const randomId = () =>
 const shellRef = ref<HTMLDivElement | null>(null)
 const editorContainerRef = ref<HTMLDivElement | null>(null)
 const editor = ref<DocxEditor | null>(null)
-const catalogRefreshTimer = ref<number | null>(null)
+const rangeStyle = ref<Partial<IRangeStyle>>({})
+const formatUnsubscribers: Array<() => void> = []
+const toolbarStyle = computed(() => {
+  const style = rangeStyle.value
+  const font = style.font || props.options?.defaultFont || '微软雅黑'
+  return {
+    ...style,
+    font: FONT_FAMILY_VALUE[font] ?? font,
+    size: style.size || (props.options?.defaultSize ?? 14) * 72 / 96,
+    color: style.color || '#000000',
+    highlight: style.highlight || '#ffff00',
+    level: Object.keys(TITLE_LEVEL_MAP).find(key => TITLE_LEVEL_MAP[key] === style.level) || '',
+    rowFlex: style.rowFlex || 'left',
+    lineHeight: style.lineHeight || 1.5
+  }
+})
+const syncToolbarStyle = () => {
+  if (editor.value) rangeStyle.value = editor.value.command.getRangeStyle()
+}
+const tocRefreshTimer = ref<number | null>(null)
 const activeDropdown = ref<string | null>(null)
-const activePopup = ref<'table' | 'link' | 'search' | 'shortcuts' | null>(null)
-const catalogOpen = ref(false)
+const activePopup = ref<'table' | 'link' | 'search' | 'shortcuts' | 'toc' | 'formula' | null>(null)
+const tocOpen = ref(false)
 const paperDirection = ref<'vertical' | 'horizontal'>('vertical')
-const selectedPaperSizeIndex = ref(0)
+const selectedPaperSizeIndex = ref(PAPER_SIZE_LIST.findIndex(p => p.key === DEFAULT_PAPER_SIZE.key))
 const paperSizeMenuOpen = ref(false)
 const moreMenuOpen = ref(false)
 const zoomText = ref('100%')
-const statusPageText = ref('=共 1 页')
+const statusPageText = ref('共 1 页')
 const statusWordsText = ref('0 字')
 const saveIndicatorText = ref('')
 const saveIndicatorSaving = ref(false)
@@ -278,17 +330,33 @@ const linkText = ref('')
 const linkUrl = ref('')
 const searchText = ref('')
 const replaceText = ref('')
+const formulaText = ref('')
 const importModeResolver = ref<((mode: ImportMode) => void) | null>(null)
-const catalogItems = ref<CatalogItem[]>([])
+const tocItems = ref<TocItem[]>([])
+
+interface AutoTocItem {
+  id: string
+  level: number
+  name: string
+  pageNo: number
+}
+interface AutoTocResult {
+  toc1: AutoTocItem[]
+  toc2: AutoTocItem[]
+  toc3: AutoTocItem[]
+}
+const autoTocData = ref<AutoTocResult | null>(null)
+const autoTocType = ref<1 | 2 | 3>(1)
+const autoTocLoading = ref(false)
 
 useTouch(editorContainerRef, {
   minScale: 0.5,
   maxScale: 3,
   onSwipeLeft: () => {
-    if (isMobile.value) toggleCatalog(false)
+    if (isMobile.value) toggleToc(false)
   },
   onSwipeRight: () => {
-    if (isMobile.value) toggleCatalog(true)
+    if (isMobile.value) toggleToc(true)
   }
 })
 
@@ -301,8 +369,8 @@ const documentMeta = reactive<SaveSnapshot['meta']>({
 
 const selectedPaperSize = computed(() => PAPER_SIZES[selectedPaperSizeIndex.value] || PAPER_SIZES[0])
 const paperDirectionText = computed(() => (paperDirection.value === 'vertical' ? '纵向' : '横向'))
-const flatCatalog = computed<FlatCatalogItem[]>(() => {
-  const result: FlatCatalogItem[] = []
+const flatToc = computed<FlatTocItem[]>(() => {
+  const result: FlatTocItem[] = []
 
   const levelMap: Record<string, number> = {
     first: 1,
@@ -313,69 +381,83 @@ const flatCatalog = computed<FlatCatalogItem[]>(() => {
     sixth: 6
   }
 
-  const walk = (items: CatalogItem[]) => {
+  const walk = (items: TocItem[]) => {
     for (const item of items) {
       result.push({
         id: item.id,
         name: item.name || '',
         level: typeof item.level === 'number' ? item.level : levelMap[item.level || 'first'] || 1
       })
-      if (item.subCatalog?.length) {
-        walk(item.subCatalog)
+      if (item.subToc?.length) {
+        walk(item.subToc)
       }
     }
   }
 
-  walk(catalogItems.value)
+  walk(tocItems.value)
   return result
 })
 
+let scaleBeforeMobile: number | null = null
+
 const updateMobileScale = () => {
-  if (!isMobile.value || !editorContainerRef.value) return
-  const wrapper = editorContainerRef.value.parentElement
-  if (!wrapper) return
-  const availableWidth = wrapper.clientWidth - 24
-  const paperWidth = selectedPaperSize.value.width
+  if (!isMobile.value || !editorContainerRef.value || !editor.value) return
+  const availableWidth = editorContainerRef.value.clientWidth
+  const options = editor.value.command.getOptions()
+  const paperWidth = options.pageWidth ?? selectedPaperSize.value.width
+  if (availableWidth <= 0 || paperWidth <= 0) return
   const scale = Math.min(1, availableWidth / paperWidth)
-  editorContainerRef.value.style.transform = `scale(${scale})`
-  editorContainerRef.value.style.transformOrigin = 'top center'
-  const realHeight = editorContainerRef.value.getBoundingClientRect().height / scale
-  editorContainerRef.value.style.height = `${Math.round(realHeight * scale)}px`
+  scaleBeforeMobile ??= options.scale ?? 1
+  if (Math.abs((options.scale ?? 1) - scale) > 0.0001) {
+    editor.value.command.executeSetPageScale(scale)
+  }
 }
 
 const createEditor = () => {
   if (!editorContainerRef.value) return
   editor.value = new DocxEditor(editorContainerRef.value, normalizeData(props.data), {
-    width: selectedPaperSize.value.width,
-    height: selectedPaperSize.value.height,
-    margins: isMobile.value ? [48, 60, 48, 60] : [96, 120, 96, 120],
+    pageWidth: selectedPaperSize.value.width,
+    pageHeight: selectedPaperSize.value.height,
+    pageMargins: isMobile.value ? [48, 60, 48, 60] : [96, 120, 96, 120],
     defaultFont: '微软雅黑',
     defaultSize: 14,
     marginIndicatorDisabled: isMobile.value,
     ...(props.options as IEditorOption | undefined)
   })
 
-  editor.value.listener.contentChange = () => {
+  formatUnsubscribers.push(
+    editor.value.listener.range.formatListener(style => { rangeStyle.value = style }),
+    editor.value.listener.range.rangeListener(syncToolbarStyle)
+  )
+  syncToolbarStyle()
+
+  editor.value.listener.content.contentListener(() => {
+    syncToolbarStyle()
     void updateWordCount()
-    refreshCatalogLater()
+    refreshTocLater()
     props.onChange?.()
     if (isMobile.value) {
       requestAnimationFrame(() => updateMobileScale())
     }
-  }
+  })
 
-  editor.value.listener.pageSizeChange = (pageNo: number) => {
-    statusPageText.value = `共 ${pageNo} 页`
-    props.onPageChange?.(pageNo)
+  editor.value.listener.page.pageSizeListener((size: { width: number; height: number }) => {
+    statusPageText.value = `共 ${Math.round(size.height / 1123) || 1} 页`
+    props.onPageChange?.(Math.round(size.height / 1123) || 1)
     if (isMobile.value) {
       requestAnimationFrame(() => updateMobileScale())
     }
-  }
+  })
 
-  editor.value.listener.pageScaleChange = (scale: number) => {
+  editor.value.listener.page.pageScaleListener((scale: number) => {
     zoomText.value = `${Math.round(scale * 100)}%`
     props.onScaleChange?.(scale)
-  }
+  })
+
+  editor.value.listener.request.requestInsertImageListener(() => { insertImage() })
+  editor.value.listener.request.requestInsertHyperlinkListener(() => { showPopup('link') })
+  editor.value.listener.request.requestInsertFormulaListener(() => { showPopup('formula') })
+
 
   props.onReady?.(editor.value)
 }
@@ -389,23 +471,16 @@ const focusEditorAgent = () => {
 const runCommand = <T = any>(command: string, ...args: any[]): T | undefined => {
   if (!editor.value) return undefined
   try {
-    focusEditorAgent()
-    const fn = (editor.value.command as any)?.[command]
+    if (!command.startsWith('get')) focusEditorAgent()
+    const cmd = editor.value.command as any
+    const fn = cmd?.[command]
     if (typeof fn === 'function') {
-      return fn(...args) as T
+      const result = fn.call(cmd, ...args) as T
+      if (!command.startsWith('get')) syncToolbarStyle()
+      return result
     }
   } catch (error) {
     console.error(`执行失败: ${command}`, error)
-  }
-  return undefined
-}
-
-const runCommandWithFallback = (commands: string[], ...args: any[]) => {
-  for (const command of commands) {
-    const fn = (editor.value?.command as any)?.[command]
-    if (typeof fn === 'function') {
-      return runCommand(command, ...args)
-    }
   }
   return undefined
 }
@@ -422,9 +497,12 @@ const toggleDropdown = (name: string) => {
   activeDropdown.value = activeDropdown.value === name ? null : name
 }
 
-const showPopup = (name: 'table' | 'link' | 'search' | 'shortcuts') => {
+const showPopup = (name: 'table' | 'link' | 'search' | 'shortcuts' | 'toc' | 'formula') => {
   closeDropdowns()
   activePopup.value = name
+  if (name === 'toc') {
+    void loadAutoToc()
+  }
 }
 
 const closePopup = () => {
@@ -442,42 +520,65 @@ const updateWordCount = async () => {
   statusWordsText.value = `${count} 字`
 }
 
-const refreshCatalog = async () => {
-  if (!catalogOpen.value) return
-  const catalog = await Promise.resolve(runCommand<CatalogItem[]>('getCatalog'))
-  catalogItems.value = Array.isArray(catalog) ? catalog : []
+const refreshToc = async () => {
+  if (!tocOpen.value) return
+  const toc = await Promise.resolve(runCommand<TocItem[]>('getToc'))
+  tocItems.value = Array.isArray(toc) ? toc : []
 }
 
-const refreshCatalogLater = (delay = 1000) => {
-  if (catalogRefreshTimer.value) {
-    window.clearTimeout(catalogRefreshTimer.value)
+const loadAutoToc = async () => {
+  autoTocLoading.value = true
+  try {
+    const result = await Promise.resolve(runCommand<AutoTocResult>('getAutoToc'))
+    autoTocData.value = result || null
+  } catch {
+    autoTocData.value = null
   }
-  catalogRefreshTimer.value = window.setTimeout(() => {
-    void refreshCatalog()
+  autoTocLoading.value = false
+}
+
+const autoTocPreview = computed<AutoTocItem[]>(() => {
+  if (!autoTocData.value) return []
+  if (autoTocType.value === 1) return autoTocData.value.toc1
+  if (autoTocType.value === 2) return autoTocData.value.toc2
+  return autoTocData.value.toc3
+})
+
+const confirmInsertToc = () => {
+  runCommand('executeInsertAutoToc', autoTocType.value)
+  closePopup()
+}
+
+const refreshTocLater = (delay = 1000) => {
+  if (tocRefreshTimer.value) {
+    window.clearTimeout(tocRefreshTimer.value)
+  }
+  tocRefreshTimer.value = window.setTimeout(() => {
+    void refreshToc()
   }, delay)
 }
 
-const toggleCatalog = (force?: boolean) => {
-  catalogOpen.value = typeof force === 'boolean' ? force : !catalogOpen.value
-  if (catalogOpen.value) {
-    refreshCatalogLater(0)
+const toggleToc = (force?: boolean) => {
+  tocOpen.value = typeof force === 'boolean' ? force : !tocOpen.value
+  if (tocOpen.value) {
+    refreshTocLater(0)
   }
 }
 
 
-const handleCatalogClick = (id?: string) => {
+const handleTocClick = (id?: string) => {
   if (id) {
-    runCommand('executeLocationCatalog', id)
+    runCommand('executeLocationToc', id)
   }
   if (isMobile.value) {
-    toggleCatalog(false)
+    toggleToc(false)
   }
 }
 
 const applyPaperSize = () => {
   const width = paperDirection.value === 'horizontal' ? selectedPaperSize.value.height : selectedPaperSize.value.width
   const height = paperDirection.value === 'horizontal' ? selectedPaperSize.value.width : selectedPaperSize.value.height
-  runCommand('executePaperSize', width, height)
+  runCommand('executeSetPaperSize', width, height)
   if (isMobile.value) {
     requestAnimationFrame(() => updateMobileScale())
   }
@@ -485,7 +586,7 @@ const applyPaperSize = () => {
 
 const togglePaperDirection = () => {
   paperDirection.value = paperDirection.value === 'vertical' ? 'horizontal' : 'vertical'
-  runCommand('executePaperDirection', paperDirection.value)
+  runCommand('executeSetPaperDirection', paperDirection.value)
   applyPaperSize()
 }
 
@@ -504,7 +605,19 @@ const confirmInsertLink = () => {
   const url = linkUrl.value.trim()
   if (!url) return
   const text = linkText.value.trim() || url
-  runCommand('executeHyperlink', { type: 'hyperlink', value: text, url })
+  runCommand('executeHyperlink', { url, valueList: [{ type: 'text', value: text }] })
+  closePopup()
+}
+
+const confirmInsertFormula = () => {
+  const latex = formulaText.value.trim()
+  if (!latex) return
+  try {
+    const result = LaTexParticle.convertLaTextToSVG(latex)
+    runCommand('executeInsertLatex', { latex, svg: result.svg, width: result.width, height: result.height })
+  } catch {
+    // invalid latex, ignore
+  }
   closePopup()
 }
 
@@ -550,7 +663,7 @@ const insertImage = () => {
       image.onload = () => {
         const maxWidth = 400
         const scale = image.width > maxWidth ? maxWidth / image.width : 1
-        runCommand('executeImage', {
+        runCommand('executeInsertImage', {
           value,
           width: Math.round(image.width * scale),
           height: Math.round(image.height * scale)
@@ -630,15 +743,15 @@ const handleImportDoc = () => {
           }
 
           if (mode === 'overwrite') {
-            runCommand('executeSetValue', { main: result.elements })
+            runCommand('executeSetValue', { elements: result.elements })
           } else {
             const current = runCommand<any>('getValue')
-            const currentElements = current?.data?.main || current?.main || []
-            runCommand('executeSetValue', { main: [...currentElements, ...result.elements] })
+            const currentElements = current?.elements || []
+            runCommand('executeSetValue', { elements: [...currentElements, ...result.elements] })
           }
 
           await updateWordCount()
-          await refreshCatalog()
+          await refreshToc()
           handleSave()
         } catch (error) {
           console.error('导入失败:', error)
@@ -651,41 +764,6 @@ const handleImportDoc = () => {
   input.click()
 }
 
-const handleExportDoc = () => {
-  closeDropdowns()
-  if (!props.exportCallback) {
-    alert('未注入文档导出回调 exportCallback，无法导出 .docx 文件')
-    return
-  }
-  try {
-    const value = runCommand<any>('getValue')
-    const json = value?.data ?? value
-    props.exportCallback(json)
-      .then(result => {
-        if (!result.success || !result.data) {
-          alert(`导出失败: ${result.error || '未知错误'}`)
-          return
-        }
-        const blob = new Blob([result.data], {
-          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-        })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `${documentMeta.name || '文档'}.docx`
-        a.click()
-        URL.revokeObjectURL(url)
-      })
-      .catch(error => {
-        console.error('导出失败:', error)
-        alert(`导出失败: ${(error as Error)?.message || '未知错误'}`)
-      })
-  } catch (error) {
-    console.error('导出失败:', error)
-    alert(`导出失败: ${(error as Error)?.message || '未知错误'}`)
-  }
-}
-
 const resolveImportMode = (mode: ImportMode) => {
   const resolver = importModeResolver.value
   importModeResolver.value = null
@@ -693,27 +771,27 @@ const resolveImportMode = (mode: ImportMode) => {
 }
 
 const handleFontChange = (value: string) => {
-  runCommand('executeFont', value)
+  runCommand('executeSetFont', value)
 }
 
 const handleFontSizeChange = (value: number) => {
-  runCommand('executeSize', value)
+  runCommand('executeSetSize', value * 96 / 72)
 }
 
 const handleFontColorChange = (value: string) => {
-  runCommand('executeColor', value)
+  runCommand('executeSetColor', value)
 }
 
 const handleHighlightChange = (value: string) => {
-  runCommand('executeHighlight', value)
+  runCommand('executeSetHighlight', value)
 }
 
 const handleTitleLevelChange = (value: string) => {
-  runCommand('executeTitle', value ? TITLE_LEVEL_MAP[value] : null)
+  runCommand('executeSetTitle', value ? TITLE_LEVEL_MAP[value] : null)
 }
 
 const handleLineHeightChange = (value: number) => {
-  runCommandWithFallback(['executeLineHeight', 'executeRowMargin'], value)
+  runCommand('executeSetLineHeight', value, 'auto')
 }
 
 const handleGlobalMouseDown = (event: MouseEvent) => {
@@ -729,7 +807,7 @@ const handleGlobalKeyDown = (event: KeyboardEvent) => {
   if (!(target instanceof Node) || !shellRef.value?.contains(target)) return
 
   const ctrl = event.ctrlKey || event.metaKey
-  const shift = event.shiftKey
+
   const key = event.key.toLowerCase()
 
   if (ctrl && key === 's') {
@@ -757,48 +835,17 @@ const handleGlobalKeyDown = (event: KeyboardEvent) => {
     showPopup('link')
     return
   }
-  if (ctrl && !shift && key === 'z') {
-    event.preventDefault()
-    runCommand('executeUndo')
-    return
-  }
-  if ((ctrl && shift && key === 'z') || (ctrl && key === 'y')) {
-    event.preventDefault()
-    runCommand('executeRedo')
-    return
-  }
-  if (ctrl && key === 'b') {
-    event.preventDefault()
-    runCommand('executeBold')
-    return
-  }
-  if (ctrl && key === 'i') {
-    event.preventDefault()
-    runCommand('executeItalic')
-    return
-  }
-  if (ctrl && key === 'u') {
-    event.preventDefault()
-    runCommand('executeUnderline')
-    return
-  }
-  if (ctrl && key === '\\') {
-    event.preventDefault()
-    runCommand('executeFormat')
-    return
-  }
-  if (ctrl && key === 'enter') {
-    event.preventDefault()
-    runCommand('executePageBreak')
-  }
+
 }
 
 const destroyShell = () => {
-  if (catalogRefreshTimer.value) {
-    window.clearTimeout(catalogRefreshTimer.value)
-    catalogRefreshTimer.value = null
+  if (tocRefreshTimer.value) {
+    window.clearTimeout(tocRefreshTimer.value)
+    tocRefreshTimer.value = null
   }
   importModeResolver.value = null
+  formatUnsubscribers.splice(0).forEach(unsubscribe => unsubscribe())
+  rangeStyle.value = {}
   editor.value?.destroy()
   editor.value = null
 }
@@ -809,14 +856,23 @@ const setTitle = (title: string) => {
 
 let mobileResizeObserver: ResizeObserver | null = null
 
+watch(isMobile, mobile => {
+  if (mobile) {
+    updateMobileScale()
+  } else if (editor.value && scaleBeforeMobile !== null) {
+    editor.value.command.executeSetPageScale(scaleBeforeMobile)
+    scaleBeforeMobile = null
+  }
+}, { flush: 'post' })
+
 onMounted(() => {
   createEditor()
   void updateWordCount()
-  refreshCatalogLater(600)
+  refreshTocLater(600)
   document.addEventListener('mousedown', handleGlobalMouseDown)
   document.addEventListener('keydown', handleGlobalKeyDown)
 
-  if (isMobile.value && editorContainerRef.value) {
+  if (editorContainerRef.value) {
     requestAnimationFrame(() => updateMobileScale())
     mobileResizeObserver = new ResizeObserver(() => updateMobileScale())
     mobileResizeObserver.observe(editorContainerRef.value)
@@ -841,4 +897,5 @@ defineExpose<LiteEditorShellExposed>({
 })
 </script>
 
+<style src="@vervedoc/design/icons.css"></style>
 <style src="../object/word-editor.css"></style>

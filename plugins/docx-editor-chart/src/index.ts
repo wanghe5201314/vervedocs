@@ -1,40 +1,39 @@
 /**
  * DocxEditor 图表插件
- * 基于 ECharts 实现图表渲染功能
+ * 基于 Chart.js 实现图表渲染功能
+ *
+ * install 时通过宿主将 Chart.js 渲染器注入当前编辑器实例。
+ * 注册 requestInsertChart 命令，触发时自渲染纯 DOM 对话框，确认后调 host.executeInsertChart。
  */
 import type {
   IChartRenderer,
   IChartTableData,
   IChartDataRange,
-  PluginFunction
+  IChartConfig,
+  EditorPlugin
 } from '@vervedoc/docx-editor-schema'
+import type { PluginHost } from '@vervedoc/docx-editor-schema'
 import { renderChartToDataUrl } from './chart-renderer'
 import { extractTableData, generateChartOption } from './chart-data-extractor'
-import type { IChartConfig } from './chart-data-extractor'
+import { ChartDialog } from './chart-dialog'
 
-// 确保 ECharts 图表类型注册（导入时立即执行）
-import './chart-renderer'
+// 确保 Chart.js 控制器注册（导入时立即执行）
+import './chart-lib'
 
 /**
- * ECharts 图表渲染器实现
+ * Chart.js 图表渲染器实现
  */
-export class EchartsChartRenderer implements IChartRenderer {
-  private echarts: any
+export class ChartJsRenderer implements IChartRenderer {
+  private chart: any
 
-  constructor(echartsInstance?: any) {
-    this.echarts = echartsInstance
+  constructor(chartInstance?: any) {
+    this.chart = chartInstance
   }
 
-  /**
-   * 将图表配置渲染为 DataURL 图片
-   */
   renderToDataUrl(option: any, width: number, height: number, pixelRatio = 2): string {
-    return renderChartToDataUrl(option, width, height, pixelRatio, this.echarts)
+    return renderChartToDataUrl(option, width, height, pixelRatio, this.chart)
   }
 
-  /**
-   * 根据表格数据生成图表配置
-   */
   generateOption(
     chartType: string,
     tableData: IChartTableData,
@@ -44,38 +43,60 @@ export class EchartsChartRenderer implements IChartRenderer {
     return generateChartOption(chartType, tableData, config, subtype)
   }
 
-  /**
-   * 从表格元素提取数据
-   */
   extractTableData(tableElement: any, range?: IChartDataRange): IChartTableData {
     return extractTableData(tableElement, range)
   }
 }
 
 /**
+ * 图表插件接口（扩展 EditorPlugin，供宿主层通过 getPlugin 拿到渲染器实例）
+ */
+export interface ChartPlugin extends EditorPlugin {
+  getRenderer(): IChartRenderer | null
+  openDialog(): void
+}
+
+/**
  * 创建图表插件
  * @param options 插件选项
- * @returns 插件函数
+ * @returns 满足 EditorPlugin 契约的图表插件实例
  */
 export function createChartPlugin(
-  options?: { echarts?: any }
-): PluginFunction<void> {
-  return editor => {
-    const renderer = new EchartsChartRenderer(options?.echarts)
-    if (editor?.register?.registerChartRenderer) {
-      editor.register.registerChartRenderer(renderer)
-      return
-    }
-
-    // 兼容旧版插件接口，避免不同编辑器版本间直接崩溃
-    if (editor?.capabilities?.chart?.register) {
-      editor.capabilities.chart.register(renderer)
-      return
-    }
-
-    console.warn('[docx-editor-chart] chart renderer register API not found on editor instance')
+  options?: { chart?: any }
+): ChartPlugin {
+  let renderer: ChartJsRenderer | null = null
+  let host: PluginHost | null = null
+  const dialog = new ChartDialog()
+  let unsubscribeChartClick: (() => void) | null = null
+  return {
+    name: 'chart',
+    install: (h) => {
+      dialog.setHost(h)
+      renderer = new ChartJsRenderer(options?.chart)
+      host = h
+      h.setChartRenderer(renderer)
+      unsubscribeChartClick = h.getEventBus().on('chartClick', (data: any) => {
+        dialog.show({
+          chartId: data.chartId,
+          chartType: data.chartType,
+          subtype: data.subtype,
+          dataSource: data.dataSource,
+          config: data.config
+        })
+      })
+    },
+    commands: {
+      requestInsertChart: () => dialog.show()
+    },
+    destroy: () => {
+      unsubscribeChartClick?.()
+      host?.setChartRenderer(null)
+      host = null
+      dialog.hide()
+      renderer = null
+    },
+    getRenderer: () => renderer,
+    openDialog: () => dialog.show()
   }
 }
 
-// 导出类型
-export type { IChartRenderer, IChartTableData, IChartConfig, IChartDataRange }

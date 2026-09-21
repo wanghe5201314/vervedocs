@@ -2,6 +2,11 @@
  * DocxEditor AI 插件类型定义
  */
 
+import type { AIServiceConfig } from '@vervedoc/docx-editor-schema'
+
+// 重新导出迁移至 schema 的跨包共享类型，保持 ai 包 API 兼容
+export type { AIServiceConfig } from '@vervedoc/docx-editor-schema'
+
 /**
  * AI 操作类型
  */
@@ -30,13 +35,21 @@ export enum AIAction {
  * 翻译目标语言
  */
 export enum TranslateLanguage {
+  /** 中文 */
   CHINESE = 'zh',
+  /** 英文 */
   ENGLISH = 'en',
+  /** 日文 */
   JAPANESE = 'ja',
+  /** 韩文 */
   KOREAN = 'ko',
+  /** 法文 */
   FRENCH = 'fr',
+  /** 德文 */
   GERMAN = 'de',
+  /** 西班牙文 */
   SPANISH = 'es',
+  /** 俄文 */
   RUSSIAN = 'ru'
 }
 
@@ -86,20 +99,7 @@ export interface StreamCallbacks {
 }
 
 /**
- * AI 服务配置
- */
-export interface AIServiceConfig {
-  /** API 端点 */
-  apiEndpoint: string
-  /** 请求超时（毫秒） */
-  timeout?: number
-  /** 自定义请求头 */
-  headers?: Record<string, string>
-  /** 是否启用流式响应 */
-  streaming?: boolean
-}
 
-/**
  * AI 插件配置
  */
 export interface AIPluginConfig {
@@ -137,31 +137,56 @@ export interface CustomAction {
  * 国际化配置
  */
 export interface I18nConfig {
+  /** 润色操作文案 */
   polish: string
+  /** 翻译操作文案 */
   translate: string
+  /** 总结操作文案 */
   summarize: string
+  /** 续写操作文案 */
   continue: string
+  /** 扩展操作文案 */
   expand: string
+  /** 修正语法操作文案 */
   fixGrammar: string
+  /** 正式化操作文案 */
   formal: string
+  /** 轻松化操作文案 */
   casual: string
+  /** 自定义操作文案 */
   custom: string
+  /** 应用按钮文案 */
   apply: string
+  /** 取消按钮文案 */
   cancel: string
+  /** 重新生成按钮文案 */
   regenerate: string
+  /** 加载中文案 */
   loading: string
+  /** 错误文案 */
   error: string
+  /** 翻译目标语言前缀文案 */
   translateTo: string
+  /** 自定义指令输入框占位文案 */
   inputPrompt: string
   // 语言名称
+  /** 各翻译目标语言的显示名称 */
   languages: {
+    /** 中文显示名 */
     zh: string
+    /** 英文显示名 */
     en: string
+    /** 日文显示名 */
     ja: string
+    /** 韩文显示名 */
     ko: string
+    /** 法文显示名 */
     fr: string
+    /** 德文显示名 */
     de: string
+    /** 西班牙文显示名 */
     es: string
+    /** 俄文显示名 */
     ru: string
   }
 }
@@ -234,23 +259,41 @@ export const DEFAULT_I18N_EN: I18nConfig = {
  * 编辑器接口（与 DocxEditor 兼容）
  */
 export interface EditorInterface {
+  /** 编辑器命令对象，提供取值、选区、插入等命令 */
   command: {
+    /** 获取编辑器当前文档数据 */
     getValue(): { data: { main: unknown[] } }
+    /** 设置编辑器文档数据 */
     setValue(payload: { main?: unknown[] }): void
+    /** 获取当前选区起止索引，无选区时返回 null */
     getRange(): { startIndex: number; endIndex: number } | null
+    /** 设置选区范围 */
     executeSetRange(startIndex: number, endIndex: number): void
+    /** 获取选区文本内容 */
     getRangeText(): string
+    /** 在选区位置插入元素列表 */
     executeInsertElementList(elementList: unknown[]): void
+    /** 获取编辑器容器 DOM */
     getContainer(): HTMLDivElement
   }
+  /** 编辑器监听器（状态变更事件，与 Listener 类接口对齐） */
   listener: {
-    rangeStyleChange?: (rangeStyle: unknown) => void
+    /** 选区事件命名空间 */
+    range: {
+      /** 格式变化回调 */
+      formatListener(handler: (style: unknown) => void): () => void
+    }
   }
+  /** 编辑器事件总线，支持 select().subscribe() 与 on()/off() 两种用法 */
   eventBus: {
+    /** 选择事件并返回可订阅对象 */
     select(event: string): {
+      /** 订阅事件，返回包含 unsubscribe 的句柄 */
       subscribe(callback: (...args: unknown[]) => void): { unsubscribe: () => void }
     }
+    /** 注册事件监听（可选） */
     on?(event: string, callback: (...args: unknown[]) => void): void
+    /** 取消事件监听（可选） */
     off?(event: string, callback: (...args: unknown[]) => void): void
   }
 }

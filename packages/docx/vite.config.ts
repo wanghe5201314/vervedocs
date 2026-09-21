@@ -8,12 +8,12 @@ import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
 import * as path from 'path'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-// @ts-ignore
 const currentDir = path.dirname(fileURLToPath(import.meta.url))
 const name = 'docx'
 const pkg = JSON.parse(
   readFileSync(path.resolve(currentDir, 'package.json'), 'utf8')
 ) as { version?: string }
+let editorCss = ''
 
 const autoImportPlugins = [
   AutoImport({
@@ -43,11 +43,29 @@ export default defineConfig({
     vue({
       isProduction: true,
     }),
-    cssInjectedByJsPlugin(),
+    cssInjectedByJsPlugin({
+      preRenderCSSCode(css) {
+        editorCss = css
+        return css
+      },
+    }),
+    {
+      name: 'docx-export-stylesheet',
+      apply: 'build',
+      enforce: 'post',
+      buildStart() {
+        editorCss = ''
+      },
+      generateBundle() {
+        // Preserve the public stylesheet after the injection plugin consumes CSS assets.
+        if (editorCss) {
+          this.emitFile({ type: 'asset', fileName: 'docx.css', source: editorCss })
+        }
+      },
+    },
     dts({
       include: ['src/**/*.ts'],
       tsconfigPath: path.resolve(currentDir, 'tsconfig.json'),
-      // @ts-ignore
       outDir: 'dist',
       rollupTypes: false
     }),
@@ -78,50 +96,23 @@ export default defineConfig({
     rollupOptions: {
       external: [
         'vue',
-
-        '@mdi/js',
-        'echarts',
-        /^echarts\//,
         'qrcode',
-        'plyr',
-        'prismjs',
-        /^prismjs\//,
         '@vervedoc/docx-editor-collaboration',
         /^@vervedoc\/docx-editor-collaboration\//,
         /^@vervedoc\/docx-editor/,
         /^@vervedoc\/core/,
-        '@vervedoc/icons',
-        /^@vervedoc\/icons\//,
+        '@vervedoc/design',
+        /^@vervedoc\/design\//,
+        '@vervedoc/ui',
+        /^@vervedoc\/ui\//,
       ],
       output: {
         dir: 'dist',
         chunkFileNames: 'chunks/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash][extname]',
-        globals: {
-          vue: 'Vue',
-
-          '@mdi/js': 'mdiJs',
-          echarts: 'echarts',
-          qrcode: 'QRCode',
-          plyr: 'Plyr',
-          prismjs: 'Prism',
-          '@vervedoc/core': 'VerveDocCore',
-          '@vervedoc/docx-editor-schema': 'DocxEditorSchema',
-          '@vervedoc/docx-editor-state': 'DocxEditorState',
-          '@vervedoc/docx-editor-transform': 'DocxEditorTransform',
-          '@vervedoc/docx-editor-view': 'DocxEditorView',
-          '@vervedoc/docx-editor-history': 'DocxEditorHistory',
-          '@vervedoc/docx-editor-keymap': 'DocxEditorKeymap',
-          '@vervedoc/docx-editor-commands': 'DocxEditorCommands',
-          '@vervedoc/docx-editor-ai': 'DocxEditorAi',
-          '@vervedoc/docx-editor-chart': 'DocxEditorChart',
-          '@vervedoc/docx-editor-collaboration': 'DocxEditorCollaboration',
-          '@vervedoc/docx-editor-comment': 'DocxEditorComment',
-        },
         manualChunks(id) {
-          if (id.includes('/src/views/')) return 'editor-view'
+          if (id.includes('/src/app/')) return 'editor-view'
           if (id.includes('/src/components/')) return 'components'
-          if (id.includes('/src/ui/')) return 'ui'
           return undefined
         },
       },

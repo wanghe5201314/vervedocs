@@ -10,7 +10,7 @@ const tsconfigRootDir = dirname(fileURLToPath(import.meta.url))
 
 export default [
   {
-    ignores: ['node_modules', 'dist', 'site', 'src/assets/iconfont/*.js', 'scripts', 'src/auto-imports.d.ts', 'src/components.d.ts']
+    ignores: ['node_modules', 'dist', 'site', 'scripts', 'src/auto-imports.d.ts', 'src/components.d.ts']
   },
   js.configs.recommended,
   {
@@ -35,6 +35,7 @@ export default [
         RequestMode: 'readonly',
         RequestCredentials: 'readonly',
         TextEncoder: 'readonly',
+        structuredClone: 'readonly',
         localStorage: 'readonly',
         sessionStorage: 'readonly',
         console: 'readonly',
@@ -68,7 +69,6 @@ export default [
         HTMLDivElement: 'readonly',
         HTMLInputElement: 'readonly',
         HTMLCanvasElement: 'readonly',
-        CanvasRenderingContext2D: 'readonly',
         Location: 'readonly',
         URLSearchParams: 'readonly'
       }
@@ -121,6 +121,7 @@ export default [
         RequestMode: 'readonly',
         RequestCredentials: 'readonly',
         TextEncoder: 'readonly',
+        structuredClone: 'readonly',
         localStorage: 'readonly',
         sessionStorage: 'readonly',
         console: 'readonly',
@@ -154,7 +155,6 @@ export default [
         HTMLDivElement: 'readonly',
         HTMLInputElement: 'readonly',
         HTMLCanvasElement: 'readonly',
-        CanvasRenderingContext2D: 'readonly',
         Location: 'readonly',
         URLSearchParams: 'readonly'
       }

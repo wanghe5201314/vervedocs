@@ -47,6 +47,9 @@ export interface IAIState {
   }>
 }
 
+/**
+ * 默认 AI 操作状态
+ */
 const defaultOperationState: IAIOperationState = {
   loading: false,
   action: null,
@@ -58,6 +61,9 @@ const defaultOperationState: IAIOperationState = {
   targetLanguage: TranslateLanguage.ENGLISH
 }
 
+/**
+ * 默认 AI 状态
+ */
 const defaultState: IAIState = {
   visible: false,
   activeTab: 'writing',
@@ -68,7 +74,7 @@ const defaultState: IAIState = {
 
 /**
  * 创建 AI 状态存储
- * @returns AI 状态存储实例，包含只读 state 及一系列操作方法
+ * @returns {AIStateStore} AI 状态存储实例，包含只读 state 及一系列操作方法
  */
 function createAIStateStore() {
   const state = reactive<IAIState>({
@@ -80,7 +86,8 @@ function createAIStateStore() {
 
   /**
    * 设置侧边栏可见性
-   * @param visible 是否可见
+   * @param {boolean} visible 是否可见
+   * @returns {void} 无返回值
    */
   function setVisible(visible: boolean) {
     state.visible = visible
@@ -88,7 +95,8 @@ function createAIStateStore() {
 
   /**
    * 设置当前活动标签
-   * @param tab 标签类型
+   * @param {AITab} tab 标签类型
+   * @returns {void} 无返回值
    */
   function setActiveTab(tab: AITab) {
     state.activeTab = tab
@@ -96,8 +104,9 @@ function createAIStateStore() {
 
   /**
    * 开始一次 AI 操作，重置操作状态并打开结果抽屉
-   * @param action 操作类型
-   * @param inputText 输入文本
+   * @param {AIAction} action 操作类型
+   * @param {string} inputText 输入文本
+   * @returns {void} 无返回值
    */
   function startOperation(action: AIAction, inputText: string) {
     state.operation.loading = true
@@ -111,7 +120,8 @@ function createAIStateStore() {
 
   /**
    * 追加流式响应内容到当前操作
-   * @param chunk 流式响应片段
+   * @param {string} chunk 流式响应片段
+   * @returns {void} 无返回值
    */
   function appendStreamContent(chunk: string) {
     state.operation.streamContent += chunk
@@ -119,7 +129,8 @@ function createAIStateStore() {
 
   /**
    * 完成 AI 操作，记录结果并写入历史（最多保留 50 条）
-   * @param result 最终结果文本
+   * @param {string} result 最终结果文本
+   * @returns {void} 无返回值
    */
   function completeOperation(result: string) {
     state.operation.loading = false
@@ -143,7 +154,8 @@ function createAIStateStore() {
 
   /**
    * 标记当前操作失败并记录错误信息
-   * @param error 错误信息
+   * @param {string} error 错误信息
+   * @returns {void} 无返回值
    */
   function failOperation(error: string) {
     state.operation.loading = false
@@ -153,7 +165,8 @@ function createAIStateStore() {
 
   /**
    * 设置结果抽屉可见性
-   * @param visible 是否可见
+   * @param {boolean} visible 是否可见
+   * @returns {void} 无返回值
    */
   function setDrawerVisible(visible: boolean) {
     state.drawerVisible = visible
@@ -161,6 +174,7 @@ function createAIStateStore() {
 
   /**
    * 重置操作状态并关闭结果抽屉
+   * @returns {void} 无返回值
    */
   function resetOperation() {
     Object.assign(state.operation, defaultOperationState)
@@ -169,6 +183,7 @@ function createAIStateStore() {
 
   /**
    * 清空历史记录
+   * @returns {void} 无返回值
    */
   function clearHistory() {
     state.history.length = 0
@@ -176,6 +191,7 @@ function createAIStateStore() {
 
   /**
    * 重置整个 AI 状态到默认值
+   * @returns {void} 无返回值
    */
   function reset() {
     state.visible = false

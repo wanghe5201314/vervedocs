@@ -1,6 +1,6 @@
 # Docx Playground
 
-Word 编辑器演示。`.docx` 导入/导出与文档保存**不内置**，由宿主注入符合契约的回调。本地 JS 实现是独立包 `@vervedoc/docx-parser`，需单独安装。
+Word 编辑器演示。`.docx` 导入/导出与文档保存**不内置**，由宿主注入符合契约的回调。
 
 ## 契约
 
@@ -100,13 +100,6 @@ setDocumentApi(createDefaultDocumentApi())
 
 playground 默认通过配置传入演示文件：
 
-```ts
-// src/resolve-from-location.ts
-{
-  meta: { id: 'local', ... },
-  url: './test-output.json' // 文件位于 public/test-output.json
-}
-```
 
 ## 方式一：本地端 `@vervedoc/docx-parser`
 

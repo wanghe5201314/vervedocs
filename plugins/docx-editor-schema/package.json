@@ -1,6 +1,6 @@
 {
   "name": "@vervedoc/docx-editor-schema",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "DocxEditor 文档Schema层 - Schema、类型定义、常量、工具函数",
   "author": "wanghe",
   "license": "MIT",

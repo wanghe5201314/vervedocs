@@ -1,6 +1,6 @@
 {
   "name": "@vervedoc/docx-editor-commands",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "DocxEditor 控件扩展插件 - 文档控件交互",
   "author": "wanghe",
   "license": "MIT",
@@ -48,13 +48,10 @@
     "@vervedoc/docx-editor-schema": "workspace:^",
     "@vervedoc/docx-editor-state": "workspace:^",
     "@vervedoc/docx-editor-transform": "workspace:^",
-    "@vervedoc/docx-editor-view": "workspace:^",
-    "plyr": "^3.8.4",
-    "qrcode": "^1.5.4"
+    "@vervedoc/docx-editor-view": "workspace:^"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
-    "@types/qrcode": "^1.5.6",
     "eslint": "catalog:",
     "eslint-plugin-unused-imports": "catalog:",
     "typescript": "catalog:",

@@ -40,22 +40,6 @@ export interface SaveDocumentResult {
 }
 
 /**
- * 文档操作记录（用于操作历史/审计）
- */
-export type DocumentOperationRecord = {
-  /** 操作唯一标识 */
-  operationId: string
-  /** 操作用户 ID */
-  userId: string
-  /** 操作对应的文档版本号 */
-  revision: number
-  /** 操作时间戳（毫秒） */
-  timestamp: number
-  /** 本次操作涉及的组件数量 */
-  componentsCount: number
-}
-
-/**
  * 设置文档状态请求体
  */
 export interface SetStatusRequest {
@@ -153,24 +137,6 @@ let injectedApi: DocumentApi | null = null
  */
 export const setDocumentApi = (api: DocumentApi) => {
   injectedApi = api
-}
-
-/**
- * 默认文档 API 实例（未注入时使用本地 fallback）
- */
-export const documentApi: DocumentApi = {
-  /** 保存文档（已注入则委托注入实现，否则使用本地 fallback） */
-  async saveDocument(payload) {
-    if (injectedApi) return injectedApi.saveDocument(payload)
-    console.warn('[DocumentApi] 未注入，使用本地保存')
-    return { submittedAt: new Date().toISOString() }
-  },
-  /** 设置文档状态（已注入则委托注入实现，否则使用本地状态管理） */
-  async setStatus(payload) {
-    if (injectedApi) return injectedApi.setStatus(payload)
-    console.warn('[DocumentApi] 未注入，使用本地状态管理')
-    await localSetStatus(payload)
-  }
 }
 
 const DOC_LOCK_HASH_PREFIX = 'docx-editor:document:lockhash:'
@@ -369,157 +335,6 @@ export const createDefaultDocumentApi = (): DocumentApi => {
   return createHttpDocumentApi(getDocumentApiBaseUrl())
 }
 
-/**
- * 拉取文档内容
- * @param id 文档 ID
- * @returns 文档内容，本地文档或失败时返回 null
- */
-export const fetchDocumentContent = async (id: string) => {
-  const docId = String(id || '').trim()
-  if (!docId || docId === 'local') return null
-  const url = resolveEndpointUrl(getEndpointTemplate('documentContent'), { id: docId })
-  return await requestJson<any>(url, { method: 'GET' }).catch(() => null)
-}
-
-/**
- * 拉取文档详情信息
- * @param id 文档 ID
- * @returns 文档详情，本地文档或失败时返回 null
- */
-export const fetchDocumentInfo = async (id: string) => {
-  const docId = String(id || '').trim()
-  if (!docId || docId === 'local') return null
-  const url = resolveEndpointUrl(getEndpointTemplate('documentDetail'), { id: docId })
-  return await requestJson<any>(url, { method: 'GET' }).catch(() => null)
-}
-
-/**
- * 拉取文档操作记录列表
- * @param id 文档 ID
- * @param limit 最多返回的记录数（1-1000，默认 200）
- * @returns 操作记录数组，本地文档或失败时返回空数组
- */
-export const fetchDocumentOperations = async (id: string, limit = 200): Promise<DocumentOperationRecord[]> => {
-  const docId = String(id || '').trim()
-  if (!docId || docId === 'local') return []
-  const lim = Math.max(1, Math.min(1000, Math.floor(Number(limit) || 200)))
-  const base = getDocumentApiBaseUrl()
-  const url = base
-    ? `${base}/api/documents/${encodeURIComponent(docId)}/operations?limit=${lim}`
-    : `/api/documents/${encodeURIComponent(docId)}/operations?limit=${lim}`
-  const data = await requestJson<any>(url, { method: 'GET' })
-  return Array.isArray(data) ? (data as DocumentOperationRecord[]) : []
-}
-
-// ==================== 评论 API ====================
-
-/**
- * 拼接文档评论集合的接口地址
- * @param docId 文档 ID
- * @returns 评论集合接口 URL
- */
-const commentApiBase = (docId: string) => {
-  const base = getDocumentApiBaseUrl()
-  return base
-    ? `${base}/api/documents/${encodeURIComponent(docId)}/comments`
-    : `/api/documents/${encodeURIComponent(docId)}/comments`
-}
-
-/**
- * 拼接单条评论的接口地址
- * @param commentId 评论 ID
- * @returns 单条评论接口 URL
- */
-const commentApiById = (commentId: string | number) => {
-  const base = getDocumentApiBaseUrl()
-  return base
-    ? `${base}/api/comments/${encodeURIComponent(commentId)}`
-    : `/api/comments/${encodeURIComponent(commentId)}`
-}
-
-/**
- * 拉取文档评论列表
- * @param docId 文档 ID
- * @returns 评论数组，本地文档或失败时返回空数组
- */
-export const fetchDocumentComments = async (docId: string): Promise<any[]> => {
-  const id = String(docId || '').trim()
-  if (!id || id === 'local') return []
-  const data = await requestJson<any>(commentApiBase(id), { method: 'GET' }).catch(() => [])
-  return Array.isArray(data) ? data : []
-}
-
-/**
- * 创建文档评论
- * @param docId 文档 ID
- * @param payload 评论内容（含正文、定位信息等）
- * @returns 创建结果，本地文档返回 null
- */
-export const createDocumentComment = async (docId: string, payload: {
-  /** 评论正文 */
-  content: string
-  /** 评论分组 ID */
-  groupId?: string
-  /** 评论覆盖的选区文本 */
-  rangeText?: string
-  /** 选区起始索引 */
-  startIndex?: number
-  /** 选区结束索引 */
-  endIndex?: number
-}): Promise<any> => {
-  const id = String(docId || '').trim()
-  if (!id || id === 'local') return null
-  return requestJson(commentApiBase(id), {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  })
-}
-
-/**
- * 回复指定评论
- * @param commentId 评论 ID
- * @param content 回复正文
- * @returns 回复结果
- */
-export const replyDocumentComment = async (commentId: string | number, content: string): Promise<any> => {
-  return requestJson(`${commentApiById(commentId)}/reply`, {
-    method: 'POST',
-    body: JSON.stringify({ content })
-  })
-}
-
-/**
- * 更新指定评论内容
- * @param commentId 评论 ID
- * @param content 新的评论正文
- */
-export const updateDocumentComment = async (commentId: string | number, content: string): Promise<void> => {
-  await requestJson<void>(commentApiById(commentId), {
-    method: 'PUT',
-    body: JSON.stringify({ content })
-  })
-}
-
-/**
- * 删除指定评论
- * @param commentId 评论 ID
- */
-export const deleteDocumentComment = async (commentId: string | number): Promise<void> => {
-  await requestJson<void>(commentApiById(commentId), { method: 'DELETE' })
-}
-
-/**
- * 标记评论为已解决/未解决
- * @param commentId 评论 ID
- * @param resolved 是否已解决
- */
-export const resolveDocumentComment = async (commentId: string | number, resolved: boolean): Promise<void> => {
-  await requestJson<void>(`${commentApiById(commentId)}/resolve`, {
-    method: 'PUT',
-    body: JSON.stringify({ resolved })
-  })
-}
-
 // ==================== 版本历史 API ====================
 
 /**
@@ -544,18 +359,6 @@ export const fetchDocumentVersions = async (docId: string): Promise<any[]> => {
   if (!id || id === 'local') return []
   const data = await requestJson<any>(versionApiBase(id), { method: 'GET' }).catch(() => [])
   return Array.isArray(data) ? data : []
-}
-
-/**
- * 拉取指定版本的文档内容
- * @param docId 文档 ID
- * @param versionNum 版本号
- * @returns 版本内容，本地文档或失败时返回 null
- */
-export const fetchDocumentVersionContent = async (docId: string, versionNum: number): Promise<any> => {
-  const id = String(docId || '').trim()
-  if (!id || id === 'local') return null
-  return await requestJson<any>(`${versionApiBase(id)}/${versionNum}/content`, { method: 'GET' }).catch(() => null)
 }
 
 /**

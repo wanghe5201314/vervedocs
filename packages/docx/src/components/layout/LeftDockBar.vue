@@ -10,7 +10,7 @@
           aria-label="搜索"
           @click="emit('select', 'search')"
         >
-          <VIcon name="magnify" :size="18" />
+          <VdIcon name="magnify" :size="18" />
         </button>
       </a-tooltip>
 
@@ -19,11 +19,11 @@
         <button
           class="dock-btn"
           type="button"
-          :class="{ active: activeKey === 'catalog' }"
+          :class="{ active: activeKey === 'toc' }"
           aria-label="目录"
-          @click="emit('select', 'catalog')"
+          @click="emit('select', 'toc')"
         >
-          <VIcon name="table-of-contents" :size="18" />
+          <VdIcon name="table-of-contents" :size="18" />
         </button>
       </a-tooltip>
 
@@ -36,7 +36,20 @@
           aria-label="章节"
           @click="emit('select', 'section')"
         >
-          <VIcon name="format-section" :size="18" />
+          <VdIcon name="format-section" :size="18" />
+        </button>
+      </a-tooltip>
+
+      <a-tooltip placement="right" :mouseEnterDelay="0.3">
+        <template #title>书签</template>
+        <button
+          class="dock-btn"
+          type="button"
+          :class="{ active: activeKey === 'bookmark' }"
+          aria-label="书签"
+          @click="emit('select', 'bookmark')"
+        >
+          <VdIcon name="bookmark-outline" :size="18" />
         </button>
       </a-tooltip>
 
@@ -49,7 +62,7 @@
           aria-label="AI 助手"
           @click="emit('select', 'ai')"
         >
-          <VIcon name="robot-outline" :size="18" />
+          <VdIcon name="robot-outline" :size="18" />
         </button>
       </a-tooltip>
 
@@ -62,7 +75,7 @@
           aria-label="修订"
           @click="emit('select', 'revision')"
         >
-          <VIcon name="pencil-plus" :size="18" />
+          <VdIcon name="pencil-plus" :size="18" />
         </button>
       </a-tooltip>
 
@@ -71,9 +84,9 @@
 </template>
 
 <script setup lang="ts">
-import { VIcon } from '@vervedoc/icons'
+import { VdIcon } from '@vervedoc/ui'
 
-type DockKey = 'search' | 'catalog' | 'section' | 'ai' | 'revision' | ''
+type DockKey = 'search' | 'toc' | 'section' | 'ai' | 'revision' | 'bookmark' | ''
 
 defineProps<{
   activeKey: DockKey
@@ -104,9 +117,6 @@ const emit = defineEmits<{
   gap: 0;
 }
 
-.dock-spacer {
-  flex: 1;
-}
 
 .dock-btn {
   width: 36px;

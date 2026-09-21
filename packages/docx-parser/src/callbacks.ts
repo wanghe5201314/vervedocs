@@ -1,4 +1,3 @@
-import type { IEditorData, IElement } from '@vervedoc/docx-editor-schema'
 import type { DocxExportCallback, DocxImportCallback, IDocxExportOptions } from './contract'
 import type { IDocxParseOptions } from './parser/types'
 import { parseDocx } from './parser'
@@ -23,7 +22,7 @@ export function createDocxImportCallback(
 export function createDocxExportCallback(
   defaultOptions?: IDocxExportOptions
 ): DocxExportCallback {
-  return async (data: IEditorData | IElement[], options) => {
+  return async (data, options) => {
     return writeDocx(data, { ...defaultOptions, ...options })
   }
 }

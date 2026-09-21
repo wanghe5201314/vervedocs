@@ -12,6 +12,8 @@
   "dependencies": {
     "@vervedoc/docx": "workspace:^",
     "@vervedoc/docx-parser": "workspace:^",
+    "@vervedoc/design": "workspace:^",
+    "@vervedoc/ui": "workspace:^",
     "vue": "catalog:"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 <template>
   <div class="mobile-header">
-    <button class="mobile-header-btn" @click="$emit('toggleCatalog')">
+    <button class="mobile-header-btn" @click="$emit('toggleToc')">
       <span class="material-icons">menu</span>
     </button>
     <div class="mobile-header-center">
@@ -24,10 +24,6 @@
       <span class="material-icons">folder_open</span>
       <span>导入文档</span>
     </div>
-    <div class="mobile-more-item" @click="$emit('exportDoc')">
-      <span class="material-icons">file_download</span>
-      <span>导出文档</span>
-    </div>
     <div class="mobile-more-item" @click="$emit('command', 'executePrint')">
       <span class="material-icons">print</span>
       <span>打印</span>
@@ -50,11 +46,10 @@ defineProps<{
 }>()
 
 defineEmits<{
-  toggleCatalog: []
+  toggleToc: []
   save: []
   toggleMore: []
   importDoc: []
-  exportDoc: []
   command: [command: string, ...args: any[]]
   showPopup: [name: 'table' | 'link' | 'search' | 'shortcuts']
 }>()

@@ -25,9 +25,9 @@ new ExcelEditor({
   importCallback: createExcelImportCallback(),
   exportCallback: createExcelExportCallback(),
   // 协同编辑
-  // collaboration: {
-  //   serverUrl: 'ws://127.0.0.1:1234',
-  //   docId: 'test-excel-collab',
-  //   user: { userId, userName, color },
-  // },
+   collaboration: {
+   serverUrl: 'ws://127.0.0.1:1234',
+   docId: 'test-excel-collab',
+  user: { userId, userName, color },
+   },
 })

@@ -1,6 +1,6 @@
 {
   "name": "@vervedoc/docx-editor-keymap",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "DocxEditor 快捷键插件 - 键盘快捷键映射",
   "author": "wanghe",
   "license": "MIT",

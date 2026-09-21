@@ -6,8 +6,7 @@
     "moduleResolution": "bundler",
     "noEmit": true,
     "paths": {
-      "@vervedoc/docx-lite": ["../../packages/docx-lite/src/editor/index.ts"],
-      "@vervedoc/docx-parser": ["../../packages/docx-parser/src/index.ts"]
+      "@vervedoc/docx-lite": ["../../packages/docx-lite/src/editor/index.ts"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "vite.config.ts"],

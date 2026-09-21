@@ -1,0 +1,76 @@
+<div class="pw-panel-mask tp-mask">
+  <form class="pw-panel tp-panel" role="dialog" aria-modal="true" aria-labelledby="tp-title" novalidate>
+    <div class="pw-panel-title" id="tp-title">表格属性</div>
+    <div class="tp-tabs" role="tablist" aria-label="属性类别">
+      <button type="button" id="tp-table-tab" role="tab" aria-selected="true" aria-controls="tp-table-pane" data-tab="table">表格</button>
+      <button type="button" id="tp-cell-tab" role="tab" aria-selected="false" aria-controls="tp-cell-pane" data-tab="cell" tabindex="-1">单元格</button>
+    </div>
+    <div class="tp-body">
+      <section id="tp-table-pane" role="tabpanel" aria-labelledby="tp-table-tab" data-pane="table">
+        <p class="tp-hint">预设替换整个表格的边框组合，未选中的边将清除。</p>
+        <fieldset class="tp-group">
+          <legend>边框</legend>
+          <div class="tp-border-layout">
+            <div class="tp-settings">
+              <label class="tp-label" for="tp-type">预设</label>
+              <select id="tp-type" name="type" class="pw-ctrl"><option value="">保持原样</option><option value="all">全部边框</option><option value="outside">外侧边框</option><option value="none">无边框</option><option value="inside">内部边框</option><option value="inside-horizontal">内部横线</option><option value="inside-vertical">内部竖线</option><option value="top">上边框</option><option value="bottom">下边框</option><option value="left">左边框</option><option value="right">右边框</option></select>
+              <div class="tp-presets" role="group" aria-label="边框预设">
+                <button type="button" data-preset="all" aria-pressed="false"><span class="tp-border-icon" data-border="all" aria-hidden="true"></span>全部</button>
+                <button type="button" data-preset="outside" aria-pressed="false"><span class="tp-border-icon" data-border="outside" aria-hidden="true"></span>外侧</button>
+                <button type="button" data-preset="none" aria-pressed="false"><span class="tp-border-icon" data-border="none" aria-hidden="true"></span>无边框</button>
+                <button type="button" data-preset="inside" aria-pressed="false"><span class="tp-border-icon" data-border="inside" aria-hidden="true"></span>内部</button>
+                <button type="button" data-preset="inside-horizontal" aria-pressed="false"><span class="tp-border-icon" data-border="inside-horizontal" aria-hidden="true"></span>内部横线</button>
+                <button type="button" data-preset="inside-vertical" aria-pressed="false"><span class="tp-border-icon" data-border="inside-vertical" aria-hidden="true"></span>内部竖线</button>
+                <button type="button" data-preset="top" aria-pressed="false"><span class="tp-border-icon" data-border="top" aria-hidden="true"></span>上边框</button>
+                <button type="button" data-preset="bottom" aria-pressed="false"><span class="tp-border-icon" data-border="bottom" aria-hidden="true"></span>下边框</button>
+                <button type="button" data-preset="left" aria-pressed="false"><span class="tp-border-icon" data-border="left" aria-hidden="true"></span>左边框</button>
+                <button type="button" data-preset="right" aria-pressed="false"><span class="tp-border-icon" data-border="right" aria-hidden="true"></span>右边框</button>
+              </div>
+              <label class="tp-label" for="tp-color">颜色</label>
+              <div class="tp-color-field" data-empty="true">
+                <input id="tp-color" type="text" name="color" class="pw-ctrl" placeholder="保持原样" pattern="#[0-9a-fA-F]{6}" title="请输入 #RRGGBB 格式的颜色" aria-describedby="tp-color-help">
+                <input type="color" value="#000000" data-color-picker="color" aria-label="选择边框颜色（当前保持原样）" aria-describedby="tp-color-help">
+              </div>
+              <label class="tp-label" for="tp-width">内框宽度</label>
+              <div class="tp-with-unit"><input id="tp-width" name="width" class="pw-ctrl" type="number" min="0" step="any" placeholder="保持原样" aria-label="内框宽度（像素）"><span>px</span></div>
+              <label class="tp-label" for="tp-external-width">外框宽度</label>
+              <div class="tp-with-unit"><input id="tp-external-width" name="externalWidth" class="pw-ctrl" type="number" min="0" step="any" placeholder="保持原样" aria-label="外框宽度（像素）"><span>px</span></div>
+              <p id="tp-color-help" class="tp-field-help">颜色格式：#RRGGBB；留空保持原样。</p>
+            </div>
+            <div class="tp-preview-box">
+              <span class="tp-label">预览</span>
+              <div class="tp-preview-stage" aria-hidden="true"><div class="tp-border-icon tp-border-preview" data-preview data-border="all"><span></span><span></span><span></span><span></span></div></div>
+              <p class="tp-hint" data-preview-caption aria-live="polite">边框示意</p>
+            </div>
+          </div>
+        </fieldset>
+      </section>
+      <section id="tp-cell-pane" role="tabpanel" aria-labelledby="tp-cell-tab" data-pane="cell" hidden>
+        <p class="tp-hint">以下设置仅应用于当前单元格（右键所在格）。</p>
+        <fieldset class="tp-group">
+          <legend>底色</legend>
+          <div class="tp-cell-fill">
+            <label class="tp-label" for="tp-background">颜色</label>
+            <div class="tp-color-field" data-empty="true">
+              <input id="tp-background" type="text" name="backgroundColor" class="pw-ctrl" placeholder="无底色" pattern="#[0-9a-fA-F]{6}" title="请输入 #RRGGBB 格式的颜色，留空清除" aria-describedby="tp-background-help">
+              <input type="color" value="#000000" data-color-picker="backgroundColor" aria-label="选择单元格底色（当前无底色）" aria-describedby="tp-background-help">
+            </div>
+            <button type="button" data-clear-background>清除底色</button>
+          </div>
+          <p id="tp-background-help" class="tp-hint">颜色格式：#RRGGBB；留空表示无底色。</p>
+        </fieldset>
+        <fieldset class="tp-group">
+          <legend>垂直对齐</legend>
+          <div class="tp-cell-align">
+            <label class="tp-label" for="tp-vertical-align">对齐方式</label>
+            <select id="tp-vertical-align" name="verticalAlign" class="pw-ctrl"><option value="top">顶端对齐</option><option value="middle">居中对齐</option><option value="bottom">底端对齐</option></select>
+          </div>
+        </fieldset>
+      </section>
+    </div>
+    <div class="tp-actions">
+      <button type="submit" class="tp-primary">确定</button>
+      <button type="button" data-cancel>取消</button>
+    </div>
+  </form>
+</div>

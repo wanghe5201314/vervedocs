@@ -2,10 +2,10 @@
  * @vervedoc/docx-parser
  *
  * 本地 JS 实现的 DOCX 导入/导出，与 @vervedoc/core 钩子契约同构：
- * - DocxImportCallback: ArrayBuffer|File → IDocxParseResult
+ * - DocxImportCallback: ArrayBuffer|File → IDocxImportResult
  * - DocxExportCallback: IEditorData|IElement[] → IDocxExportResult
  *
- * 独立于 @vervedoc/docx / @vervedoc/docx-lite，可由宿主自行注入 WordEditor。
+ * 与其他实现平级，由宿主自行注入到 WordEditor。
  */
 
 export type {

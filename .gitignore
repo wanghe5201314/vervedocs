@@ -11,4 +11,3 @@ dist-ssr
 .temp
 cache
 *.tgz
-test-output.json

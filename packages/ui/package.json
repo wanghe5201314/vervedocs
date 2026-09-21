@@ -1,0 +1,67 @@
+{
+  "name": "@vervedoc/ui",
+  "version": "1.0.0",
+  "description": "VerveDoc shared UI primitives (VdIcon, Ribbon, etc.)",
+  "author": "wanghe",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/vervedoc-ui.js",
+    "module": "./dist/vervedoc-ui.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/vervedoc-ui.js"
+      }
+    }
+  },
+  "keywords": [
+    "vervedoc-ui",
+    "vue",
+    "ribbon"
+  ],
+  "files": [
+    "dist",
+    "src",
+    "package.json"
+  ],
+  "scripts": {
+    "clean": "node -e \"const fs = require('fs'); if(fs.existsSync('dist')) fs.rmSync('dist', {recursive: true})\"",
+    "lib": "pnpm run clean && vite build",
+    "build": "pnpm run lib",
+    "type:check": "vue-tsc --noEmit -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "@vervedoc/design": "workspace:^",
+    "ant-design-vue": "catalog:",
+    "vue": "catalog:"
+  },
+  "dependencies": {
+    "@vervedoc/design": "workspace:^"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "catalog:",
+    "ant-design-vue": "catalog:",
+    "sass": "^1.89.0",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-plugin-css-injected-by-js": "^2.4.0",
+    "vite-plugin-dts": "catalog:",
+    "vue": "catalog:",
+    "vue-tsc": "catalog:"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

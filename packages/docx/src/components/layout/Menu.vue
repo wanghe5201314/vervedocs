@@ -4,8 +4,8 @@
       :is-locked="isLocked"
       :document-stats="documentStats"
       :revision-count="revisionCount"
-      :catalog-visible="catalogVisible"
-      :ruler-visible="rulerVisible"
+      :toc-visible="tocVisible"
+
       :toolbar-visible="toolbarVisible"
       :bottom-nav-visible="bottomNavVisible"
       :show-collaboration-menu="showCollaborationMenu"
@@ -19,7 +19,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { DocumentMeta, DocumentStats } from '@/types/document'
-import GoogleDocsToolbar from '@/components/editor/toolbar/GoogleDocsToolbar.vue'
+import GoogleDocsToolbar from '@/components/toolbar/googleDocsToolbar.vue'
 
 const emit = defineEmits(['command'])
 
@@ -28,8 +28,8 @@ const props = defineProps<{
   documentMeta: DocumentMeta
   documentStats: DocumentStats
   revisionCount?: number
-  catalogVisible?: boolean
-  rulerVisible?: boolean
+  tocVisible?: boolean
+
   toolbarVisible?: boolean
   bottomNavVisible?: boolean
   showCollaborationMenu?: boolean
@@ -37,8 +37,14 @@ const props = defineProps<{
   selectionCollaborationEnabled?: boolean
 }>()
 
+/** 文档是否处于锁定/只读状态 */
 const isLocked = computed(() => props.documentMeta?.status === 'lock' || props.documentMeta?.status === 'view')
 
+/**
+ * 处理工具栏命令并向上转发
+ * @param command - 命令名称
+ * @param args - 命令参数
+ */
 const handleTabCommand = (command: string, ...args: any[]) => {
   emit('command', command, ...args)
 }

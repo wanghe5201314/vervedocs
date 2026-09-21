@@ -1,6 +1,6 @@
 import { Ref, nextTick } from 'vue'
 import { emitExternalEvent } from '@/composables/use-external-events'
-import type { IEditorCatalogApi } from '@/composables/use-editor-catalog'
+import type { IEditorTocNavApi } from '@/composables/use-editor-toc-nav'
 import type { IEditorCommentApi } from '@/composables/use-editor-comments'
 import type { IRevisionApi } from '@/composables/use-editor-revisions'
 import type { DocumentStats } from '@/types/document'
@@ -18,7 +18,7 @@ export function useEditorCommand(options: {
   /** 评论 API */
   commentAPI: IEditorCommentApi
   /** 目录 API */
-  catalogAPI: IEditorCatalogApi
+  tocNavAPI: IEditorTocNavApi
   /** 修订 API */
   revisionAPI: IRevisionApi
   /** 刷新批注/修订覆盖层 */
@@ -36,7 +36,7 @@ export function useEditorCommand(options: {
     footerRef,
     documentStats,
     commentAPI,
-    catalogAPI,
+    tocNavAPI,
     revisionAPI,
     refreshReviewOverlays,
     isSuppressSaveOnce,
@@ -45,13 +45,17 @@ export function useEditorCommand(options: {
     saveNow,
   } = options
 
+  /** 编辑器命令处理器映射表，键为命令名，值为参数数组处理函数 */
   const commandHandlers: Record<string, (args: any[]) => void | boolean> = {
-    catalogChange: args => {
-      void catalogAPI.sync(args[0] ?? [])
+    /** 同步目录变更，更新目录 API 数据 */
+    tocChange: args => {
+      void tocNavAPI.sync(args[0] ?? [])
     },
+    /** 同步缩略图变更，更新目录 API 缩略图列表 */
     thumbnailsChange: args => {
-      catalogAPI.setThumbnails(args[0] ?? [])
+      tocNavAPI.setThumbnails(args[0] ?? [])
     },
+    /** 处理编辑器状态变更，更新页脚状态与文档统计信息 */
     editorStatus: args => {
       const payload = (args[0] ?? {}) as Record<string, any>
       footerRef.value?.updateEditorStatus?.(payload)
@@ -68,9 +72,11 @@ export function useEditorCommand(options: {
         }
       }
     },
+    /** 处理编辑器能力变更，转发为外部 abilityChange 事件 */
     editorAbilityChange: args => {
       emitExternalEvent('abilityChange', args[0] ?? null)
     },
+    /** 处理内容变更：刷新覆盖层、同步评论与修订，并按需抑制保存 */
     contentChange: args => {
       emitExternalEvent('contentChange', args[0] ?? null)
       nextTick(() => refreshReviewOverlays())
@@ -84,6 +90,7 @@ export function useEditorCommand(options: {
       collab?.markPositionListDirty()
       collab?.refreshCursors()
     },
+    /** 处理评论加载完成事件，批量载入评论元数据 */
     commentsLoaded: args => {
       const metas: any[] = args[0] || []
       commentAPI.load(metas)

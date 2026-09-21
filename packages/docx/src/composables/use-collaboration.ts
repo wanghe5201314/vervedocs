@@ -5,31 +5,21 @@ import { emitExternalEvent } from '@/composables/use-external-events'
 import type { DocumentMeta } from '@/types/document'
 
 /**
- * 编辑器实例接口（协作所需的最小能力）
+ * 编辑器实例接口（协作所需的最小能力）。
+ *
+ * ⚠️ 仅暴露 core 公开的合法入口，避免协作层直接访问 `comment` / `revision` 内部对象
+ * 从而覆盖 core 装配的 `CommentHost`。
  */
 interface EditorInstance {
   command?: any
   listener?: any
-  comment?: any
-  revision?: any
   eventBus?: any
+  /** 获取已注册插件实例（批注/修订等可选功能） */
+  getPlugin?: <T>(name: string) => T | undefined
 }
 
 /**
- * 评论组件接口
- */
-interface CommentComponent {
-  /** 安装评论组件到编辑器命令上 */
-  install: (command: any, callbacks: any) => void
-  /** 获取所有评论 */
-  getComments: () => any[]
-  /** 设置评论列表 */
-  setComments: (comments: any[]) => void
-  /** 渲染评论 */
-  render: () => void
-}
 
-/**
  * 协作用户信息
  */
 interface CollabUser {
@@ -51,8 +41,6 @@ export function useCollaboration(options: {
   collaborationConfig: any
   /** 获取编辑器实例 */
   getEditorInstance: () => EditorInstance | null
-  /** 获取评论组件 */
-  getCommentComponent: () => CommentComponent | null
   /** 执行编辑器命令 */
   executeCommand: (command: string, ...args: any[]) => void
   /** 文档元数据 */
@@ -67,7 +55,6 @@ export function useCollaboration(options: {
   const {
     collaborationConfig,
     getEditorInstance,
-    getCommentComponent,
     executeCommand,
     documentMeta,
     editorRef,
@@ -84,15 +71,27 @@ export function useCollaboration(options: {
   const collabOffFns: (() => void)[] = []
 
   /**
-   * 安装评论组件回调，将评论操作与协作插件同步逻辑绑定
+   * 通过插件实例注入批注协作回调。
+   *
+   * 通过 `editor.getPlugin('comment')` 拿到 CommentPlugin 实例后调用 `setCallbacks`，
+   * 避免接触 core 内部装配的 PluginHost。
+   *
    * @param targetInstance 目标编辑器实例
    */
-  const installCommentCallbacks = (targetInstance: any) => {
-    if (!targetInstance?.command) return
-    const commentComp = getCommentComponent()
-    if (!commentComp) return
+  const installCommentCallbacks = (targetInstance: EditorInstance | null) => {
+    if (!targetInstance) return
+    const commentPlugin = targetInstance.getPlugin?.<{
+      setCallbacks(c: any): void
+      getAll(): any[]
+      setAll(c: any[]): void
+      render(): void
+    }>('comment')
+    if (!commentPlugin) {
+      console.warn('[useCollaboration] 未注册 comment 插件，协作回调本次不会安装。')
+      return
+    }
 
-    commentComp.install(targetInstance.command, {
+    commentPlugin.setCallbacks({
       onSave: () => { collabPlugin?.syncComments() },
       onDelete: () => { collabPlugin?.syncComments() },
       onReply: () => { collabPlugin?.syncComments() },
@@ -101,7 +100,7 @@ export function useCollaboration(options: {
       onRequestSave: () => { if (!isSuppressSaveOnce()) scheduleSave() }
     })
 
-    collabPlugin?.bindCommentComponent(commentComp)
+    collabPlugin?.bindCommentComponent(commentPlugin as any)
   }
 
   /**

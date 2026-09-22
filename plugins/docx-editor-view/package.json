@@ -1,6 +1,6 @@
 {
   "name": "@vervedoc/docx-editor-view",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "DocxEditor 视图层 - 渲染与绘制",
   "author": "wanghe",
   "license": "MIT",

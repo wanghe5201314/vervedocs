@@ -7,6 +7,7 @@
 
 import type { DocumentLayout, ParagraphBlock, BlockNode } from '../layout-types'
 import type { RangeManager } from '@vervedoc/docx-editor-state'
+import type { Command } from '@vervedoc/docx-editor-transform'
 import type { IPosition, IRangeStyle } from '@vervedoc/docx-editor-schema'
 import { TITLE_LEVEL, ROW_FLEX, comparePosition } from '@vervedoc/docx-editor-schema'
 import { ContextMenu, type MenuItem } from '../context-menu'
@@ -245,7 +246,7 @@ export class ParagraphWidget {
   /**
    * 在手柄下方弹出格式菜单
    *
-   * 第一行为正文和 H1-H4，第二行为五种对齐方式。
+   * 第一行为正文和 H1-H6，第二行为五种对齐方式。
    * 同时绑定滚动隐藏和点击外部关闭逻辑。
    */
   private showMenu(): void {
@@ -268,7 +269,7 @@ export class ParagraphWidget {
       }
     })
 
-    const addButton = (label: string, active: boolean, command: string, value: unknown) => {
+    const addButton = (label: string, active: boolean, command: keyof Command, value: unknown) => {
       const button = document.createElement('button')
       button.type = 'button'
       button.title = label
@@ -284,10 +285,10 @@ export class ParagraphWidget {
       return button
     }
 
-    const levels = [null, TITLE_LEVEL.FIRST, TITLE_LEVEL.SECOND, TITLE_LEVEL.THIRD, TITLE_LEVEL.FOURTH]
-    const labels = ['正文', '一级标题', '二级标题', '三级标题', '四级标题']
+    const levels = [null, TITLE_LEVEL.FIRST, TITLE_LEVEL.SECOND, TITLE_LEVEL.THIRD, TITLE_LEVEL.FOURTH, TITLE_LEVEL.FIFTH, TITLE_LEVEL.SIXTH]
+    const labels = ['正文', '一级标题', '二级标题', '三级标题', '四级标题', '五级标题', '六级标题']
     levels.forEach((level, index) => {
-      const button = addButton(labels[index], (style.level ?? null) === level, 'executeTitle', level)
+      const button = addButton(labels[index], (style.level ?? null) === level, 'executeSetTitle', level)
       button.className = 'ce-paragraph-handle-menu__heading'
       button.append(index === 0 ? 'T' : 'H')
       if (index > 0) {
@@ -305,7 +306,7 @@ export class ParagraphWidget {
       { label: '分散对齐', value: ROW_FLEX.DISTRIBUTE, path: 'M3 4V20M21 4V20M7 13H17M7 19H17' }
     ]
     for (const item of alignments) {
-      const button = addButton(item.label, alignment === item.value, 'executeRowFlex', item.value)
+      const button = addButton(item.label, alignment === item.value, 'executeSetRowFlex', item.value)
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
       svg.setAttribute('viewBox', '0 0 24 24')
       svg.setAttribute('aria-hidden', 'true')
@@ -367,7 +368,7 @@ export class ParagraphWidget {
     this.deps.focusInput()
 
     const icons = ContextMenu.getIcons()
-    const fire = (cmd: string, ...args: any[]) => {
+    const fire = (cmd: keyof Command | 'requestInsertHyperlink' | 'requestInsertComment', ...args: any[]) => {
       if (this.deps.canEdit()) this.deps.onCommand(cmd, ...args)
     }
 

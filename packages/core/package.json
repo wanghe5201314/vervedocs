@@ -1,6 +1,6 @@
 {
   "name": "@vervedoc/core",
-  "version": "3.3.11",
+  "version": "3.3.12",
   "description": "VerveDoc Core 核心编辑器库（Canvas 2D 高性能实现）",
   "author": "wanghe",
   "license": "MIT",

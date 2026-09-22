@@ -18,6 +18,16 @@ import {
 } from '@vervedoc/docx-editor-schema'
 import type { RangeManager, IRangeStyle, IEditorAbility, Listener } from '@vervedoc/docx-editor-state'
 
+/** Heading sizes in layout pixels, matching the units used by text runs. */
+const HEADING_SIZES: Record<ITitleElement['level'], number> = {
+  first: 26,
+  second: 24,
+  third: 22,
+  fourth: 20,
+  fifth: 18,
+  sixth: 16
+}
+
 // 重新导出迁移至 schema 的跨包共享类型，保持 transform 包 API 兼容
 export type { HistorySnapshot, IHistoryManager } from '@vervedoc/docx-editor-schema'
 
@@ -1063,17 +1073,35 @@ export class CommandAdapt {
     const replacements = new Map<IElement, IElement>()
     const isTerminator = (node?: IElement) =>
       node?.type === 'text' && /^[\u200B\uFEFF]+$/.test(node.value)
+    const options = this.draw.getOptions()
+    const textFormat = {
+      font: String(options.defaultFont ?? DEFAULT_EDITOR_OPTION.defaultFont),
+      size: level === null ? Number(options.defaultSize ?? DEFAULT_EDITOR_OPTION.defaultSize) : HEADING_SIZES[level],
+      bold: level !== null
+    }
+    const formatRuns = (elements: IElement[]) => {
+      const runs: IElement[] = []
+      walkTree(elements, element => {
+        if (element.type === 'text') runs.push(element)
+      })
+      this.formatElements(runs, element => {
+        Object.assign(element, textFormat)
+        delete element.paragraphStyleId
+      })
+    }
     let changed = false
     // Reverse document order keeps pending sibling indices valid after splicing.
     for (const [node, target] of [...targets].sort((a, b) => comparePath(b[1].path, a[1].path))) {
       const { parent, start, end } = target
       if (node.type === 'title') {
         const title = node as ITitleElement
-        if (title.level === level) continue
         if (level !== null) {
           title.level = level
+          delete title.paragraphStyleId
+          formatRuns(title.valueList)
         } else {
           const runs = title.valueList.length ? [...title.valueList] : [{ type: 'text', value: '' } as IElement]
+          formatRuns(runs)
           replacements.set(title, runs[0])
           const paragraphKeys = [
             'rowFlex', 'paragraphFirstLineIndent', 'paragraphIndentLeft', 'paragraphIndentRight',
@@ -1095,8 +1123,10 @@ export class CommandAdapt {
         }
       } else {
         if (level === null) continue
+        const runs = parent.slice(start, end)
+        formatRuns(runs)
         parent.splice(start, end - start, {
-          type: 'title', value: '', level, valueList: parent.slice(start, end)
+          type: 'title', value: '', level, valueList: runs
         })
       }
       changed = true

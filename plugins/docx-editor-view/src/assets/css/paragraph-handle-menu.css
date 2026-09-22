@@ -2,7 +2,7 @@
   position: fixed;
   z-index: 10000;
   display: grid;
-  grid-template-columns: repeat(5, 30px);
+  grid-template-columns: repeat(7, 30px);
   gap: 4px;
   padding: 6px;
   border: 1px solid #d9d9d9;
@@ -56,6 +56,10 @@
 .ce-paragraph-handle-menu__heading {
   font-size: 16px;
   font-weight: 600;
+}
+
+.ce-paragraph-handle-menu__heading + button:not(.ce-paragraph-handle-menu__heading) {
+  grid-column: 1;
 }
 
 .ce-paragraph-handle-menu__heading sub {

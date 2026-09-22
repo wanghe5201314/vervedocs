@@ -6,6 +6,7 @@
 
 import type { DocumentLayout } from '../layout-types'
 import type { RangeManager } from '@vervedoc/docx-editor-state'
+import type { Command } from '@vervedoc/docx-editor-transform'
 import type { IDocxDocumentMeta } from '@vervedoc/docx-editor-schema'
 import { getByPath, FONT_FAMILY_LIST, FONT_FAMILY_VALUE, FONT_FAMILY_LABEL, FONT_SIZE, FONT_SIZE_LIST } from '@vervedoc/docx-editor-schema'
 import { locateCaret } from '../caret-rect'
@@ -36,7 +37,7 @@ export interface SelectionToolbarWidgetDeps {
   /** 获取外层容器 DOM */
   getContainer: () => HTMLDivElement
   /** 触发编辑器命令的回调 */
-  onCommand: (cmd: string, ...args: any[]) => void
+  onCommand: (cmd: keyof Command, ...args: any[]) => void
   /** 查询是否抑制下一次工具栏显示 */
   isSuppressToolbar: () => boolean
   /** 消费（重置）抑制标志 */
@@ -80,12 +81,12 @@ export class SelectionToolbarWidget {
       fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif',
     } as CSSStyleDeclaration)
 
-    const fire = (cmd: string, ...args: any[]) => {
+    const fire = (cmd: keyof Command, ...args: any[]) => {
       if (this.deps.canEdit()) this.deps.onCommand?.(cmd, ...args)
     }
 
 
-    const mkBtn = (icon: string, cmd: string, args: any[] = [], title = ''): HTMLButtonElement => {
+    const mkBtn = (icon: string, cmd: keyof Command, args: any[] = [], title = ''): HTMLButtonElement => {
       const el = document.createElement('button')
       el.title = title
       el.dataset.cmd = cmd
@@ -126,7 +127,7 @@ export class SelectionToolbarWidget {
       fontSel.appendChild(opt)
     }
     fontSel.addEventListener('mousedown', (e) => e.stopPropagation())
-    fontSel.addEventListener('change', () => fire('executeFont', fontSel.value))
+    fontSel.addEventListener('change', () => fire('executeSetFont', fontSel.value))
     tb.appendChild(fontSel)
 
     // 字号下拉
@@ -143,16 +144,17 @@ export class SelectionToolbarWidget {
     }
     sizeSel.value = '14'
     sizeSel.addEventListener('mousedown', (e) => e.stopPropagation())
-    sizeSel.addEventListener('change', () => fire('executeSize', Number(sizeSel.value)))
+    // The selector uses points; the core stores font sizes in pixels.
+    sizeSel.addEventListener('change', () => fire('executeSetSize', Number(sizeSel.value) * 96 / 72))
     tb.appendChild(sizeSel)
 
     tb.appendChild(mkSep())
 
     // B I U S
-    tb.appendChild(mkBtn('format_bold', 'executeBold', [], '加粗'))
-    tb.appendChild(mkBtn('format_italic', 'executeItalic', [], '斜体'))
-    tb.appendChild(mkBtn('format_underlined', 'executeUnderline', [], '下划线'))
-    tb.appendChild(mkBtn('format_strikethrough', 'executeStrikeout', [], '删除线'))
+    tb.appendChild(mkBtn('format_bold', 'executeSetBold', [], '加粗'))
+    tb.appendChild(mkBtn('format_italic', 'executeSetItalic', [], '斜体'))
+    tb.appendChild(mkBtn('format_underlined', 'executeSetUnderline', [], '下划线'))
+    tb.appendChild(mkBtn('format_strikethrough', 'executeSetStrikeout', [], '删除线'))
 
     tb.appendChild(mkSep())
 
@@ -160,42 +162,42 @@ export class SelectionToolbarWidget {
     const colorBtn = document.createElement('input')
     colorBtn.type = 'color'
     colorBtn.value = '#000000'
-    colorBtn.dataset.cmd = 'executeColor'
+    colorBtn.dataset.cmd = 'executeSetColor'
     Object.assign(colorBtn.style, {
       width: '32px', height: '28px', border: '1px solid #ddd',
       borderRadius: '4px', cursor: 'pointer', padding: '0', background: 'transparent',
     } as CSSStyleDeclaration)
     colorBtn.title = '字体颜色'
     colorBtn.addEventListener('mousedown', (e) => e.stopPropagation())
-    colorBtn.addEventListener('input', () => fire('executeColor', colorBtn.value))
+    colorBtn.addEventListener('input', () => fire('executeSetColor', colorBtn.value))
     tb.appendChild(colorBtn)
 
     // 高亮
     const hlBtn = document.createElement('input')
     hlBtn.type = 'color'
     hlBtn.value = '#ffff00'
-    hlBtn.dataset.cmd = 'executeHighlight'
+    hlBtn.dataset.cmd = 'executeSetHighlight'
     Object.assign(hlBtn.style, {
       width: '32px', height: '28px', border: '1px solid #ddd',
       borderRadius: '4px', cursor: 'pointer', padding: '0', background: 'transparent',
     } as CSSStyleDeclaration)
     hlBtn.title = '高亮颜色'
     hlBtn.addEventListener('mousedown', (e) => e.stopPropagation())
-    hlBtn.addEventListener('input', () => fire('executeHighlight', hlBtn.value))
+    hlBtn.addEventListener('input', () => fire('executeSetHighlight', hlBtn.value))
     tb.appendChild(hlBtn)
 
     tb.appendChild(mkSep())
 
     // 对齐
-    tb.appendChild(mkBtn('format_align_left', 'executeRowFlex', ['left'], '左对齐'))
-    tb.appendChild(mkBtn('format_align_center', 'executeRowFlex', ['center'], '居中'))
-    tb.appendChild(mkBtn('format_align_right', 'executeRowFlex', ['right'], '右对齐'))
-    tb.appendChild(mkBtn('format_align_justify', 'executeRowFlex', ['justify'], '两端对齐'))
+    tb.appendChild(mkBtn('format_align_left', 'executeSetRowFlex', ['left'], '左对齐'))
+    tb.appendChild(mkBtn('format_align_center', 'executeSetRowFlex', ['center'], '居中'))
+    tb.appendChild(mkBtn('format_align_right', 'executeSetRowFlex', ['right'], '右对齐'))
+    tb.appendChild(mkBtn('format_align_justify', 'executeSetRowFlex', ['justify'], '两端对齐'))
 
     tb.appendChild(mkSep())
 
     // 清除格式
-    tb.appendChild(mkBtn('format_clear', 'executeFormat', [], '清除格式'))
+    tb.appendChild(mkBtn('format_clear', 'executeClearFormat', [], '清除格式'))
 
     this.deps.getContainer().appendChild(tb)
     this.toolbar = tb
@@ -225,9 +227,9 @@ export class SelectionToolbarWidget {
     if (!rect) { tb.style.display = 'none'; return }
     const pageOffsetX = this.deps.getPageOffsetX()
     const x = Math.round(rect.x + pageOffsetX)
-    const gap = Math.max(10, Math.round(rect.height * 0.5))
-    const y = Math.round(rect.y - this.deps.getScrollY()) - rect.height - gap
+    const gap = Math.max(16, Math.round(rect.height * 0.5))
     tb.style.display = 'flex'
+    const y = Math.round(rect.y - this.deps.getScrollY()) - tb.offsetHeight - gap
     tb.style.left = `${Math.max(4, Math.min(x, this.deps.getViewportWidth() - tb.offsetWidth - 4))}px`
     tb.style.top = `${Math.max(4, y)}px`
 
@@ -272,11 +274,11 @@ export class SelectionToolbarWidget {
       const btn = btns[i]
       const cmd = btn.dataset.cmd
       let active = false
-      if (cmd === 'executeBold') active = !!run.bold
-      else if (cmd === 'executeItalic') active = !!run.italic
-      else if (cmd === 'executeUnderline') active = !!run.underline
-      else if (cmd === 'executeStrikeout') active = !!run.strikeout
-      else if (cmd === 'executeRowFlex') {
+      if (cmd === 'executeSetBold') active = !!run.bold
+      else if (cmd === 'executeSetItalic') active = !!run.italic
+      else if (cmd === 'executeSetUnderline') active = !!run.underline
+      else if (cmd === 'executeSetStrikeout') active = !!run.strikeout
+      else if (cmd === 'executeSetRowFlex') {
         const args = JSON.parse(btn.dataset.args || '[]')
         active = String(run.rowFlex ?? 'left') === args[0]
       }
@@ -287,9 +289,9 @@ export class SelectionToolbarWidget {
     const colorInputs = tb.querySelectorAll<HTMLInputElement>('input[type=color][data-cmd]')
     for (let i = 0; i < colorInputs.length; i++) {
       const input = colorInputs[i]
-      if (input.dataset.cmd === 'executeColor') {
+      if (input.dataset.cmd === 'executeSetColor') {
         input.value = String(run.color ?? '#000000')
-      } else if (input.dataset.cmd === 'executeHighlight') {
+      } else if (input.dataset.cmd === 'executeSetHighlight') {
         input.value = String(run.highlight ?? '#ffff00')
       }
     }

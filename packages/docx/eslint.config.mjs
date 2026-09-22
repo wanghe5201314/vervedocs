@@ -68,6 +68,7 @@ export default [
         HTMLElement: 'readonly',
         HTMLDivElement: 'readonly',
         HTMLInputElement: 'readonly',
+        HTMLButtonElement: 'readonly',
         HTMLCanvasElement: 'readonly',
         Location: 'readonly',
         URLSearchParams: 'readonly'
@@ -154,6 +155,7 @@ export default [
         HTMLElement: 'readonly',
         HTMLDivElement: 'readonly',
         HTMLInputElement: 'readonly',
+        HTMLButtonElement: 'readonly',
         HTMLCanvasElement: 'readonly',
         Location: 'readonly',
         URLSearchParams: 'readonly'

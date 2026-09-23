@@ -4,6 +4,7 @@ import { useDialogConfirm } from '@vervedoc/ui'
 import { emitExternalEvent } from '@/composables/use-external-events'
 import type { DocumentMeta } from '@/types/document'
 import type { ReplaceDocumentPayload } from '@/composables/use-replace-document'
+import { t } from '@/i18n'
 
 /**
  * 文档操作 composable（重命名、新建、权限、反馈）
@@ -45,28 +46,28 @@ export function useDocumentActions(options: {
    */
   const openFeedback = () => {
     emitExternalEvent('statusChange', { command: 'feedback', args: [{ meta: { ...documentMeta } }] })
-    message.info('请在系统内提交反馈')
+    message.info(t('common.feedbackHint'))
   }
 
   /**
    * 重命名文档，弹出确认对话框并在确认后保存
    */
   const renameDoc = async () => {
-    const renameValue = ref(String(documentMeta.name || '').trim() || '新建文档')
+    const renameValue = ref(String(documentMeta.name || '').trim() || t('common.newDocument'))
     await confirm({
-      title: '重命名',
+      title: t('common.rename'),
       content: () => h('div', {}, [
         h('input', {
           autofocus: true,
-          'aria-label': '文档名称',
+          'aria-label': t('common.documentName'),
           value: renameValue.value,
           onInput: (e: Event) => { renameValue.value = (e.target as HTMLInputElement).value },
           style: 'width:100%;padding:4px 8px;border:1px solid #d9d9d9;border-radius:4px;',
-          placeholder: '新建文档'
+          placeholder: t('common.newDocument')
         })
       ]),
-      okText: '确定',
-      cancelText: '取消',
+      okText: t('common.ok'),
+      cancelText: t('common.cancel'),
       onOk: async () => {
         const next = String(renameValue.value || '').trim()
         if (!next) return false
@@ -87,7 +88,7 @@ export function useDocumentActions(options: {
     documentMeta.id = 'local'
     documentMeta.path = ''
     documentMeta.status = 'edit'
-    documentMeta.name = '新建文档'
+    documentMeta.name = t('common.newDocument')
     documentMeta.createdAt = ''
     documentMeta.submittedAt = ''
     emitMetaChange()

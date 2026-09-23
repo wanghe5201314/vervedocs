@@ -1,5 +1,6 @@
 import { nextTick } from 'vue'
 import type { IDocxDocumentMeta, IParagraphStyle, IListNumbering, IDocxTheme } from '@vervedoc/docx-editor-schema'
+import { t } from '@/i18n'
 
 /** 整文档替换载荷接口 */
 export interface ReplaceDocumentPayload extends Omit<Partial<IDocxDocumentMeta>, 'comments'> {
@@ -40,7 +41,7 @@ export async function replaceDocument(
 ): Promise<void> {
   const inst = deps.getEditorInstance()
   if (!inst?.command?.executeSetValue) {
-    throw new Error('编辑器未就绪，无法替换文档')
+    throw new Error(t('editor.editorNotReadyReplace'))
   }
 
   inst.command.executeSetValue({

@@ -1,22 +1,22 @@
 <template>
   <div class="ribbon-tab-panel">
     <!-- 校对 -->
-    <VdRibbonGroup title="校对">
-      <VdRibbonButton icon="spellcheck" text="拼写检查" title="拼写检查" size="large" @click="emit('command', 'spellcheck')" />
+    <VdRibbonGroup :title="t('ribbon.review.proofreading')">
+      <VdRibbonButton icon="spellcheck" :text="t('ribbon.review.spellcheck')" :title="t('ribbon.review.spellcheck')" size="large" @click="emit('command', 'spellcheck')" />
       <a-popover placement="bottom" :overlayStyle="{ width: '280px' }" trigger="click">
-        <VdRibbonButton icon="counter" text="字数统计" title="字数统计" size="large" />
+        <VdRibbonButton icon="counter" :text="t('ribbon.review.wordCountStats')" :title="t('ribbon.review.wordCountStats')" size="large" />
         <template #content>
           <VdCard size="small" class="ribbon-popover-card" :bordered="false" :bodyStyle="{ padding: '4px' }">
             <div class="wordcount-panel">
-              <div class="wc-header">字数统计</div>
+              <div class="wc-header">{{ t('ribbon.review.wordCountStats') }}</div>
               <div class="wc-grid">
-                <div class="wc-row"><span class="wc-label">字数</span><span class="wc-value">{{ documentStats?.wordCount || 0 }}</span></div>
-                <div class="wc-row"><span class="wc-label">字符（不含空格）</span><span class="wc-value">{{ documentStats?.charCount || 0 }}</span></div>
-                <div class="wc-row"><span class="wc-label">字符（含空格）</span><span class="wc-value">{{ documentStats?.charCountWithSpaces || 0 }}</span></div>
-                <div class="wc-row"><span class="wc-label">段落</span><span class="wc-value">{{ documentStats?.paragraphCount || 0 }}</span></div>
-                <div class="wc-row"><span class="wc-label">页数</span><span class="wc-value">{{ documentStats?.totalPages || 0 }}</span></div>
+                <div class="wc-row"><span class="wc-label">{{ t('ribbon.review.wordCount') }}</span><span class="wc-value">{{ documentStats?.wordCount || 0 }}</span></div>
+                <div class="wc-row"><span class="wc-label">{{ t('ribbon.review.charNoSpace') }}</span><span class="wc-value">{{ documentStats?.charCount || 0 }}</span></div>
+                <div class="wc-row"><span class="wc-label">{{ t('ribbon.review.charWithSpace') }}</span><span class="wc-value">{{ documentStats?.charCountWithSpaces || 0 }}</span></div>
+                <div class="wc-row"><span class="wc-label">{{ t('ribbon.review.paragraph') }}</span><span class="wc-value">{{ documentStats?.paragraphCount || 0 }}</span></div>
+                <div class="wc-row"><span class="wc-label">{{ t('ribbon.review.pages') }}</span><span class="wc-value">{{ documentStats?.totalPages || 0 }}</span></div>
               </div>
-              <div class="wc-tip">选中文本后查看可显示选中内容的统计</div>
+              <div class="wc-tip">{{ t('ribbon.review.selectTextHint') }}</div>
             </div>
           </VdCard>
         </template>
@@ -24,17 +24,17 @@
     </VdRibbonGroup>
 
     <!-- 批注 -->
-    <VdRibbonGroup title="批注">
-      <VdRibbonButton icon="comment-plus-outline" text="新建批注" title="新建批注 (Ctrl+Alt+M)" size="large" :disabled="!hasSelection" @click="emit('command', 'comment')" />
-      <VdRibbonButton icon="delete-outline" text="删除批注" title="删除当前批注" size="large" :disabled="!hasActiveCommentGroup" @click="emit('command', 'commentDeleteCurrent')" />
+    <VdRibbonGroup :title="t('ribbon.review.comment')">
+      <VdRibbonButton icon="comment-plus-outline" :text="t('ribbon.review.newComment')" :title="t('ribbon.review.newCommentShortcut')" size="large" :disabled="!hasSelection" @click="emit('command', 'comment')" />
+      <VdRibbonButton icon="delete-outline" :text="t('ribbon.review.deleteComment')" :title="t('ribbon.review.deleteCurrentComment')" size="large" :disabled="!hasActiveCommentGroup" @click="emit('command', 'commentDeleteCurrent')" />
     </VdRibbonGroup>
 
     <!-- 修订 -->
-    <VdRibbonGroup title="修订">
-      <VdRibbonButton icon="pencil-plus" text="修订模式" title="修订模式" size="large" :active="isTrackChanges" @click="emit('command', 'toggleTrackChanges')" />
+    <VdRibbonGroup :title="t('ribbon.review.revision')">
+      <VdRibbonButton icon="pencil-plus" :text="t('ribbon.review.revisionMode')" :title="t('ribbon.review.revisionMode')" size="large" :active="isTrackChanges" @click="emit('command', 'toggleTrackChanges')" />
       <div class="review-ribbon-actions">
         <a-dropdown :trigger="['click']">
-          <VdRibbonButton icon="eye-outline" text="显示标记" :title="currentRevisionDisplayModeLabel" size="large" has-arrow />
+          <VdRibbonButton icon="eye-outline" :text="t('ribbon.review.showMark')" :title="currentRevisionDisplayModeLabel" size="large" has-arrow />
           <template #overlay>
             <a-menu class="review-mode-menu" @click="({ key }: any) => emit('command', 'revisionDisplayMode', key)">
               <a-menu-item v-for="option in revisionDisplayModeOptions" :key="option.value">
@@ -47,23 +47,23 @@
         </a-dropdown>
       </div>
       <div class="review-revision-actions">
-        <VdRibbonButton icon="arrow-left" text="上一处修订" title="上一处修订" size="large" :disabled="!hasRevisions" @click="emit('command', 'previousRevision')" />
-        <VdRibbonButton icon="arrow-right" text="下一处修订" title="下一处修订" size="large" :disabled="!hasRevisions" @click="emit('command', 'nextRevision')" />
+        <VdRibbonButton icon="arrow-left" :text="t('ribbon.review.prevRevision')" :title="t('ribbon.review.prevRevision')" size="large" :disabled="!hasRevisions" @click="emit('command', 'previousRevision')" />
+        <VdRibbonButton icon="arrow-right" :text="t('ribbon.review.nextRevision')" :title="t('ribbon.review.nextRevision')" size="large" :disabled="!hasRevisions" @click="emit('command', 'nextRevision')" />
         <a-dropdown :trigger="['click']">
-          <VdRibbonButton icon="check" text="接受" title="接受修订" size="large" :disabled="!hasRevisions" has-arrow />
+          <VdRibbonButton icon="check" :text="t('ribbon.review.accept')" :title="t('ribbon.review.acceptRevision')" size="large" :disabled="!hasRevisions" has-arrow />
           <template #overlay>
             <a-menu @click="({ key }: any) => emit('command', key)">
-              <a-menu-item key="acceptRevisionCurrent">接受当前修订</a-menu-item>
-              <a-menu-item key="acceptAllRevisions">接受所有修订</a-menu-item>
+              <a-menu-item key="acceptRevisionCurrent">{{ t('ribbon.review.acceptCurrent') }}</a-menu-item>
+              <a-menu-item key="acceptAllRevisions">{{ t('ribbon.review.acceptAll') }}</a-menu-item>
             </a-menu>
           </template>
         </a-dropdown>
         <a-dropdown :trigger="['click']">
-          <VdRibbonButton icon="close" text="拒绝" title="拒绝修订" size="large" :disabled="!hasRevisions" has-arrow />
+          <VdRibbonButton icon="close" :text="t('ribbon.review.reject')" :title="t('ribbon.review.rejectRevision')" size="large" :disabled="!hasRevisions" has-arrow />
           <template #overlay>
             <a-menu @click="({ key }: any) => emit('command', key)">
-              <a-menu-item key="rejectRevisionCurrent">拒绝当前修订</a-menu-item>
-              <a-menu-item key="rejectAllRevisions">拒绝所有修订</a-menu-item>
+              <a-menu-item key="rejectRevisionCurrent">{{ t('ribbon.review.rejectCurrent') }}</a-menu-item>
+              <a-menu-item key="rejectAllRevisions">{{ t('ribbon.review.rejectAll') }}</a-menu-item>
             </a-menu>
           </template>
         </a-dropdown>
@@ -76,6 +76,8 @@
 <script setup lang="ts">
 import { VdRibbonButton, VdRibbonGroup, VdCard } from '@vervedoc/ui'
 import { computed } from 'vue'
+
+import { t } from '@/i18n'
 
 
 
@@ -101,24 +103,24 @@ const props = defineProps<{
 
 /** 修订显示模式选项 */
 const revisionDisplayModeOptions = [
-  { value: 'all', label: '显示所有批注和修订' },
-  { value: 'comments', label: '仅显示批注' },
-  { value: 'revisions', label: '仅显示修订' },
-  { value: 'none', label: '不显示标记' }
+  { value: 'all', label: t('ribbon.review.showAll') },
+  { value: 'comments', label: t('ribbon.review.showCommentOnly') },
+  { value: 'revisions', label: t('ribbon.review.showRevisionOnly') },
+  { value: 'none', label: t('ribbon.review.showNone') }
 ] as const
 
 /** 当前修订显示模式的中文标签 */
 const currentRevisionDisplayModeLabel = computed(() => {
   switch (props.revisionDisplayMode) {
     case 'comments':
-      return '仅批注'
+      return t('ribbon.review.labelCommentOnly')
     case 'revisions':
-      return '仅修订'
+      return t('ribbon.review.labelRevisionOnly')
     case 'none':
-      return '不显示'
+      return t('ribbon.review.labelNone')
     case 'all':
     default:
-      return '所有标记'
+      return t('ribbon.review.labelAll')
   }
 })
 

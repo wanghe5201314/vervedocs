@@ -1,8 +1,8 @@
 <template>
-  <VdDialog v-model:open="visible" title="插入LaTeX公式" width="800px" :maskClosable="false" class="app-dialog">
+  <VdDialog v-model:open="visible" :title="t('dialog.latex.title')" width="800px" :maskClosable="false" class="app-dialog">
     <div class="input-preview-row">
       <div class="input-section">
-        <div class="section-label">LaTeX 公式</div>
+        <div class="section-label">{{ t('dialog.latex.formula') }}</div>
         <a-textarea
           v-model:value="latexForm.content"
           :rows="4"
@@ -11,18 +11,18 @@
         />
       </div>
       <div class="preview-section">
-        <div class="section-label">预览</div>
+        <div class="section-label">{{ t('dialog.latex.preview') }}</div>
         <div class="latex-preview">
           <div v-if="previewError" class="preview-error">{{ previewError }}</div>
           <img v-else-if="previewSvg" :src="previewSvg" class="preview-image" alt="Preview" />
-          <div v-else class="preview-placeholder">公式预览</div>
+          <div v-else class="preview-placeholder">{{ t('dialog.latex.formulaPreview') }}</div>
         </div>
       </div>
     </div>
 
     <div class="latex-examples">
       <a-tabs v-model:activeKey="activeTab" class="formula-tabs" type="card">
-        <a-tab-pane tab="分数" key="fraction">
+        <a-tab-pane :tab="t('dialog.latex.tabFraction')" key="fraction">
           <div class="examples-grid">
             <div class="example-item" v-for="ex in fractionFormulas" :key="ex.latex" @click="fillExample(ex.latex)">
               <img v-if="ex.preview" :src="ex.preview" class="example-preview" />
@@ -30,7 +30,7 @@
             </div>
           </div>
         </a-tab-pane>
-        <a-tab-pane tab="上下标" key="script">
+        <a-tab-pane :tab="t('dialog.latex.tabScript')" key="script">
           <div class="examples-grid">
             <div class="example-item" v-for="ex in scriptFormulas" :key="ex.latex" @click="fillExample(ex.latex)">
               <img v-if="ex.preview" :src="ex.preview" class="example-preview" />
@@ -38,7 +38,7 @@
             </div>
           </div>
         </a-tab-pane>
-        <a-tab-pane tab="根式" key="radical">
+        <a-tab-pane :tab="t('dialog.latex.tabRadical')" key="radical">
           <div class="examples-grid">
             <div class="example-item" v-for="ex in radicalFormulas" :key="ex.latex" @click="fillExample(ex.latex)">
               <img v-if="ex.preview" :src="ex.preview" class="example-preview" />
@@ -46,7 +46,7 @@
             </div>
           </div>
         </a-tab-pane>
-        <a-tab-pane tab="积分" key="integral">
+        <a-tab-pane :tab="t('dialog.latex.tabIntegral')" key="integral">
           <div class="examples-grid">
             <div class="example-item" v-for="ex in integralFormulas" :key="ex.latex" @click="fillExample(ex.latex)">
               <img v-if="ex.preview" :src="ex.preview" class="example-preview" />
@@ -54,7 +54,7 @@
             </div>
           </div>
         </a-tab-pane>
-        <a-tab-pane tab="大型运算符" key="largeop">
+        <a-tab-pane :tab="t('dialog.latex.tabLargeOp')" key="largeop">
           <div class="examples-grid">
             <div class="example-item" v-for="ex in largeopFormulas" :key="ex.latex" @click="fillExample(ex.latex)">
               <img v-if="ex.preview" :src="ex.preview" class="example-preview" />
@@ -62,7 +62,7 @@
             </div>
           </div>
         </a-tab-pane>
-        <a-tab-pane tab="括号" key="bracket">
+        <a-tab-pane :tab="t('dialog.latex.tabBracket')" key="bracket">
           <div class="examples-grid">
             <div class="example-item" v-for="ex in bracketFormulas" :key="ex.latex" @click="fillExample(ex.latex)">
               <img v-if="ex.preview" :src="ex.preview" class="example-preview" />
@@ -70,7 +70,7 @@
             </div>
           </div>
         </a-tab-pane>
-        <a-tab-pane tab="函数" key="function">
+        <a-tab-pane :tab="t('dialog.latex.tabFunction')" key="function">
           <div class="examples-grid">
             <div class="example-item" v-for="ex in functionFormulas" :key="ex.latex" @click="fillExample(ex.latex)">
               <img v-if="ex.preview" :src="ex.preview" class="example-preview" />
@@ -78,7 +78,7 @@
             </div>
           </div>
         </a-tab-pane>
-        <a-tab-pane tab="极限对数" key="limit">
+        <a-tab-pane :tab="t('dialog.latex.tabLimit')" key="limit">
           <div class="examples-grid">
             <div class="example-item" v-for="ex in limitFormulas" :key="ex.latex" @click="fillExample(ex.latex)">
               <img v-if="ex.preview" :src="ex.preview" class="example-preview" />
@@ -86,7 +86,7 @@
             </div>
           </div>
         </a-tab-pane>
-        <a-tab-pane tab="矩阵" key="matrix">
+        <a-tab-pane :tab="t('dialog.latex.tabMatrix')" key="matrix">
           <div class="examples-grid">
             <div class="example-item" v-for="ex in matrixFormulas" :key="ex.latex" @click="fillExample(ex.latex)">
               <img v-if="ex.preview" :src="ex.preview" class="example-preview" />
@@ -94,7 +94,7 @@
             </div>
           </div>
         </a-tab-pane>
-        <a-tab-pane tab="希腊字母" key="greek">
+        <a-tab-pane :tab="t('dialog.latex.tabGreek')" key="greek">
           <div class="examples-grid greek-grid">
             <div class="example-item small" v-for="ex in greekFormulas" :key="ex.latex" @click="fillExample(ex.latex)">
               <img v-if="ex.preview" :src="ex.preview" class="example-preview small" />
@@ -105,8 +105,8 @@
       </a-tabs>
     </div>
     <template #footer>
-      <VdButton type="primary" icon="check" @click="confirmLatex" :disabled="!latexForm.content.trim()">确定</VdButton>
-      <VdButton icon="close" @click="visible = false">取消</VdButton>
+      <VdButton type="primary" icon="check" @click="confirmLatex" :disabled="!latexForm.content.trim()">{{ t('common.ok') }}</VdButton>
+      <VdButton icon="close" @click="visible = false">{{ t('common.cancel') }}</VdButton>
     </template>
   </VdDialog>
 </template>
@@ -115,6 +115,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { VdDialog, VdButton } from '@vervedoc/ui'
 import { LaTexParticle } from '@vervedoc/core'
+import { t } from '@/i18n'
 
 
 /** 公式示例结构 */
@@ -165,117 +166,125 @@ const generateFormulaPreview = (latex: string): string => {
   }
 }
 
+/**
+ * 为公式列表生成 SVG 预览
+ * @param formulas 公式列表（无 preview 字段）
+ * @returns 带 preview 字段的公式列表
+ */
+const withPreview = (formulas: Array<{ name: string; latex: string }>): FormulaExample[] =>
+  formulas.map(f => ({ ...f, preview: generateFormulaPreview(f.latex) }))
+
 /** 分数类公式示例 */
-const fractionFormulas = ref<FormulaExample[]>([
-  { name: '简单分数', latex: '\\frac{a}{b}' },
-  { name: '带系数分数', latex: '\\frac{x+1}{x-1}' },
-  { name: '嵌套分数', latex: '\\frac{1}{1+\\frac{1}{x}}' },
-  { name: '连分数', latex: '\\frac{1}{a+\\frac{1}{b+\\frac{1}{c}}}' },
-  { name: '偏导数', latex: '\\frac{\\partial f}{\\partial x}' },
-  { name: '求导', latex: '\\frac{dy}{dx}' },
-  { name: '二阶导数', latex: '\\frac{d^2y}{dx^2}' },
-  { name: '斜分数', latex: 'a/b' }
-])
+const fractionFormulas = computed<FormulaExample[]>(() => withPreview([
+  { name: t('dialog.latex.preset.simpleFraction'), latex: '\\frac{a}{b}' },
+  { name: t('dialog.latex.preset.fractionWithCoefficient'), latex: '\\frac{x+1}{x-1}' },
+  { name: t('dialog.latex.preset.nestedFraction'), latex: '\\frac{1}{1+\\frac{1}{x}}' },
+  { name: t('dialog.latex.preset.continuedFraction'), latex: '\\frac{1}{a+\\frac{1}{b+\\frac{1}{c}}}' },
+  { name: t('dialog.latex.preset.partialDerivative'), latex: '\\frac{\\partial f}{\\partial x}' },
+  { name: t('dialog.latex.preset.derivative'), latex: '\\frac{dy}{dx}' },
+  { name: t('dialog.latex.preset.secondDerivative'), latex: '\\frac{d^2y}{dx^2}' },
+  { name: t('dialog.latex.preset.slashFraction'), latex: 'a/b' }
+]))
 
 /** 上下标类公式示例 */
-const scriptFormulas = ref<FormulaExample[]>([
-  { name: '上标', latex: 'x^2' },
-  { name: '下标', latex: 'x_i' },
-  { name: '上下标', latex: 'x_i^2' },
-  { name: '多级上标', latex: 'e^{x^2}' },
-  { name: '指数', latex: 'e^{i\\pi}+1=0' },
-  { name: '化学下标', latex: 'H_2O' },
-  { name: '向量下标', latex: 'a_{ij}' },
-  { name: '求和下标', latex: '\\sum_{i=1}^{n}' }
-])
+const scriptFormulas = computed<FormulaExample[]>(() => withPreview([
+  { name: t('dialog.latex.preset.superscript'), latex: 'x^2' },
+  { name: t('dialog.latex.preset.subscript'), latex: 'x_i' },
+  { name: t('dialog.latex.preset.subSuperscript'), latex: 'x_i^2' },
+  { name: t('dialog.latex.preset.multiLevelSuperscript'), latex: 'e^{x^2}' },
+  { name: t('dialog.latex.preset.exponential'), latex: 'e^{i\\pi}+1=0' },
+  { name: t('dialog.latex.preset.chemicalSubscript'), latex: 'H_2O' },
+  { name: t('dialog.latex.preset.vectorSubscript'), latex: 'a_{ij}' },
+  { name: t('dialog.latex.preset.summationSubscript'), latex: '\\sum_{i=1}^{n}' }
+]))
 
 /** 根式类公式示例 */
-const radicalFormulas = ref<FormulaExample[]>([
-  { name: '平方根', latex: '\\sqrt{x}' },
-  { name: '带系数根', latex: '\\sqrt{a^2+b^2}' },
-  { name: '立方根', latex: '\\sqrt[3]{x}' },
-  { name: 'n次根', latex: '\\sqrt[n]{x}' },
-  { name: '嵌套根式', latex: '\\sqrt{1+\\sqrt{x}}' },
-  { name: '求根公式', latex: 'x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}' },
-  { name: '复杂根式', latex: '\\sqrt{\\frac{a}{b}}' },
-  { name: '根式分数', latex: '\\frac{1}{\\sqrt{2}}' }
-])
+const radicalFormulas = computed<FormulaExample[]>(() => withPreview([
+  { name: t('dialog.latex.preset.squareRoot'), latex: '\\sqrt{x}' },
+  { name: t('dialog.latex.preset.radicalWithCoefficient'), latex: '\\sqrt{a^2+b^2}' },
+  { name: t('dialog.latex.preset.cubeRoot'), latex: '\\sqrt[3]{x}' },
+  { name: t('dialog.latex.preset.nthRoot'), latex: '\\sqrt[n]{x}' },
+  { name: t('dialog.latex.preset.nestedRadical'), latex: '\\sqrt{1+\\sqrt{x}}' },
+  { name: t('dialog.latex.preset.rootFormula'), latex: 'x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}' },
+  { name: t('dialog.latex.preset.complexRadical'), latex: '\\sqrt{\\frac{a}{b}}' },
+  { name: t('dialog.latex.preset.radicalFraction'), latex: '\\frac{1}{\\sqrt{2}}' }
+]))
 
 /** 积分类公式示例 */
-const integralFormulas = ref<FormulaExample[]>([
-  { name: '不定积分', latex: '\\int f(x)dx' },
-  { name: '定积分', latex: '\\int_{a}^{b}f(x)dx' },
-  { name: '二重积分', latex: '\\int\\int f(x,y)dxdy' },
-  { name: '三重积分', latex: '\\int\\int\\int f dV' },
-  { name: '曲线积分', latex: '\\oint_C f ds' },
-  { name: '曲面积分', latex: '\\oint\\oint_S f dS' },
-  { name: '积分示例', latex: '\\int_0^{\\infty}e^{-x^2}dx' },
-  { name: '分部积分', latex: '\\int u dv=uv-\\int v du' }
-])
+const integralFormulas = computed<FormulaExample[]>(() => withPreview([
+  { name: t('dialog.latex.preset.indefiniteIntegral'), latex: '\\int f(x)dx' },
+  { name: t('dialog.latex.preset.definiteIntegral'), latex: '\\int_{a}^{b}f(x)dx' },
+  { name: t('dialog.latex.preset.doubleIntegral'), latex: '\\int\\int f(x,y)dxdy' },
+  { name: t('dialog.latex.preset.tripleIntegral'), latex: '\\int\\int\\int f dV' },
+  { name: t('dialog.latex.preset.lineIntegral'), latex: '\\oint_C f ds' },
+  { name: t('dialog.latex.preset.surfaceIntegral'), latex: '\\oint\\oint_S f dS' },
+  { name: t('dialog.latex.preset.integralExample'), latex: '\\int_0^{\\infty}e^{-x^2}dx' },
+  { name: t('dialog.latex.preset.integrationByParts'), latex: '\\int u dv=uv-\\int v du' }
+]))
 
 /** 大型运算符类公式示例 */
-const largeopFormulas = ref<FormulaExample[]>([
-  { name: '求和', latex: '\\sum_{i=1}^{n}a_i' },
-  { name: '连乘', latex: '\\prod_{i=1}^{n}a_i' },
-  { name: '并集', latex: '\\bigcup_{i=1}^{n}A_i' },
-  { name: '交集', latex: '\\bigcap_{i=1}^{n}A_i' },
-  { name: '极限求和', latex: '\\sum_{n=0}^{\\infty}' },
-  { name: '双重求和', latex: '\\sum_{i}\\sum_{j}a_{ij}' },
-  { name: '级数', latex: '\\sum_{n=1}^{\\infty}\\frac{1}{n^2}' },
-  { name: '余积', latex: '\\coprod_{i=1}^{n}' }
-])
+const largeopFormulas = computed<FormulaExample[]>(() => withPreview([
+  { name: t('dialog.latex.preset.summation'), latex: '\\sum_{i=1}^{n}a_i' },
+  { name: t('dialog.latex.preset.product'), latex: '\\prod_{i=1}^{n}a_i' },
+  { name: t('dialog.latex.preset.union'), latex: '\\bigcup_{i=1}^{n}A_i' },
+  { name: t('dialog.latex.preset.intersection'), latex: '\\bigcap_{i=1}^{n}A_i' },
+  { name: t('dialog.latex.preset.limitSum'), latex: '\\sum_{n=0}^{\\infty}' },
+  { name: t('dialog.latex.preset.doubleSum'), latex: '\\sum_{i}\\sum_{j}a_{ij}' },
+  { name: t('dialog.latex.preset.series'), latex: '\\sum_{n=1}^{\\infty}\\frac{1}{n^2}' },
+  { name: t('dialog.latex.preset.coproduct'), latex: '\\coprod_{i=1}^{n}' }
+]))
 
 /** 括号类公式示例 */
-const bracketFormulas = ref<FormulaExample[]>([
-  { name: '小括号', latex: '(a+b)' },
-  { name: '中括号', latex: '[a+b]' },
-  { name: '大括号', latex: '\\{a+b\\}' },
-  { name: '尖括号', latex: '\\langle a,b \\rangle' },
-  { name: '绝对值', latex: '|x|' },
-  { name: '范数', latex: '\\|x\\|' },
-  { name: '向下取整', latex: '\\lfloor x \\rfloor' },
-  { name: '向上取整', latex: '\\lceil x \\rceil' }
-])
+const bracketFormulas = computed<FormulaExample[]>(() => withPreview([
+  { name: t('dialog.latex.preset.parentheses'), latex: '(a+b)' },
+  { name: t('dialog.latex.preset.brackets'), latex: '[a+b]' },
+  { name: t('dialog.latex.preset.braces'), latex: '\\{a+b\\}' },
+  { name: t('dialog.latex.preset.angleBrackets'), latex: '\\langle a,b \\rangle' },
+  { name: t('dialog.latex.preset.absoluteValue'), latex: '|x|' },
+  { name: t('dialog.latex.preset.norm'), latex: '\\|x\\|' },
+  { name: t('dialog.latex.preset.floor'), latex: '\\lfloor x \\rfloor' },
+  { name: t('dialog.latex.preset.ceil'), latex: '\\lceil x \\rceil' }
+]))
 
 /** 函数类公式示例 */
-const functionFormulas = ref<FormulaExample[]>([
-  { name: '正弦', latex: '\\sin\\theta' },
-  { name: '余弦', latex: '\\cos\\theta' },
-  { name: '正切', latex: '\\tan\\theta' },
-  { name: '反正弦', latex: '\\arcsin x' },
-  { name: '反余弦', latex: '\\arccos x' },
-  { name: '反正切', latex: '\\arctan x' },
-  { name: '双曲正弦', latex: '\\sinh x' },
-  { name: '双曲余弦', latex: '\\cosh x' },
-  { name: '指数函数', latex: '\\exp(x)' },
-  { name: '最大值', latex: '\\max(a,b)' },
-  { name: '最小值', latex: '\\min(a,b)' },
-  { name: '模运算', latex: 'a \\mod b' }
-])
+const functionFormulas = computed<FormulaExample[]>(() => withPreview([
+  { name: t('dialog.latex.preset.sine'), latex: '\\sin\\theta' },
+  { name: t('dialog.latex.preset.cosine'), latex: '\\cos\\theta' },
+  { name: t('dialog.latex.preset.tangent'), latex: '\\tan\\theta' },
+  { name: t('dialog.latex.preset.arcsine'), latex: '\\arcsin x' },
+  { name: t('dialog.latex.preset.arccosine'), latex: '\\arccos x' },
+  { name: t('dialog.latex.preset.arctangent'), latex: '\\arctan x' },
+  { name: t('dialog.latex.preset.hyperbolicSine'), latex: '\\sinh x' },
+  { name: t('dialog.latex.preset.hyperbolicCosine'), latex: '\\cosh x' },
+  { name: t('dialog.latex.preset.exponentialFunction'), latex: '\\exp(x)' },
+  { name: t('dialog.latex.preset.maximum'), latex: '\\max(a,b)' },
+  { name: t('dialog.latex.preset.minimum'), latex: '\\min(a,b)' },
+  { name: t('dialog.latex.preset.modulo'), latex: 'a \\mod b' }
+]))
 
 /** 极限对数类公式示例 */
-const limitFormulas = ref<FormulaExample[]>([
-  { name: '极限', latex: '\\lim_{x\\to\\infty}' },
-  { name: '趋近于0', latex: '\\lim_{x\\to 0}' },
-  { name: '极限定义', latex: '\\lim_{n\\to\\infty}a_n=L' },
-  { name: '自然对数', latex: '\\ln x' },
-  { name: '常用对数', latex: '\\lg x' },
-  { name: '对数', latex: '\\log_a x' },
-  { name: '换底公式', latex: '\\log_a b=\\frac{\\ln b}{\\ln a}' },
-  { name: '导数极限', latex: '\\lim_{h\\to 0}\\frac{f(x+h)-f(x)}{h}' }
-])
+const limitFormulas = computed<FormulaExample[]>(() => withPreview([
+  { name: t('dialog.latex.preset.limit'), latex: '\\lim_{x\\to\\infty}' },
+  { name: t('dialog.latex.preset.limitToZero'), latex: '\\lim_{x\\to 0}' },
+  { name: t('dialog.latex.preset.limitDefinition'), latex: '\\lim_{n\\to\\infty}a_n=L' },
+  { name: t('dialog.latex.preset.naturalLog'), latex: '\\ln x' },
+  { name: t('dialog.latex.preset.commonLog'), latex: '\\lg x' },
+  { name: t('dialog.latex.preset.logarithm'), latex: '\\log_a x' },
+  { name: t('dialog.latex.preset.changeOfBase'), latex: '\\log_a b=\\frac{\\ln b}{\\ln a}' },
+  { name: t('dialog.latex.preset.derivativeLimit'), latex: '\\lim_{h\\to 0}\\frac{f(x+h)-f(x)}{h}' }
+]))
 
 /** 矩阵类公式示例 */
-const matrixFormulas = ref<FormulaExample[]>([
-  { name: '2×2矩阵', latex: '\\begin{pmatrix}a&b\\\\c&d\\end{pmatrix}' },
-  { name: '方括号矩阵', latex: '\\begin{bmatrix}a&b\\\\c&d\\end{bmatrix}' },
-  { name: '行列式', latex: '\\begin{vmatrix}a&b\\\\c&d\\end{vmatrix}' },
-  { name: '3×3矩阵', latex: '\\begin{pmatrix}a&b&c\\\\d&e&f\\\\g&h&i\\end{pmatrix}' },
-  { name: '单位矩阵', latex: '\\begin{pmatrix}1&0\\\\0&1\\end{pmatrix}' },
-  { name: '增广矩阵', latex: '\\begin{pmatrix}a&b&|&c\\\\d&e&|&f\\end{pmatrix}' },
-  { name: '列向量', latex: '\\begin{pmatrix}x\\\\y\\\\z\\end{pmatrix}' },
-  { name: '行向量', latex: '\\begin{pmatrix}x&y&z\\end{pmatrix}' }
-])
+const matrixFormulas = computed<FormulaExample[]>(() => withPreview([
+  { name: t('dialog.latex.preset.matrix2x2'), latex: '\\begin{pmatrix}a&b\\\\c&d\\end{pmatrix}' },
+  { name: t('dialog.latex.preset.bracketMatrix'), latex: '\\begin{bmatrix}a&b\\\\c&d\\end{bmatrix}' },
+  { name: t('dialog.latex.preset.determinant'), latex: '\\begin{vmatrix}a&b\\\\c&d\\end{vmatrix}' },
+  { name: t('dialog.latex.preset.matrix3x3'), latex: '\\begin{pmatrix}a&b&c\\\\d&e&f\\\\g&h&i\\end{pmatrix}' },
+  { name: t('dialog.latex.preset.identityMatrix'), latex: '\\begin{pmatrix}1&0\\\\0&1\\end{pmatrix}' },
+  { name: t('dialog.latex.preset.augmentedMatrix'), latex: '\\begin{pmatrix}a&b&|&c\\\\d&e&|&f\\end{pmatrix}' },
+  { name: t('dialog.latex.preset.columnVector'), latex: '\\begin{pmatrix}x\\\\y\\\\z\\end{pmatrix}' },
+  { name: t('dialog.latex.preset.rowVector'), latex: '\\begin{pmatrix}x&y&z\\end{pmatrix}' }
+]))
 
 /** 希腊字母公式示例 */
 const greekFormulas = ref<FormulaExample[]>([
@@ -313,17 +322,10 @@ const greekFormulas = ref<FormulaExample[]>([
   { name: 'Ω', latex: '\\Omega' }
 ])
 
-/** 初始化所有公式示例的预览图 */
+/** 初始化希腊字母公式示例的预览图（其他公式示例的预览由 computed 内部生成） */
 const initPreviews = () => {
-  const allFormulas = [
-    fractionFormulas, scriptFormulas, radicalFormulas, integralFormulas,
-    largeopFormulas, bracketFormulas, functionFormulas, limitFormulas,
-    matrixFormulas, greekFormulas
-  ]
-  allFormulas.forEach(formulas => {
-    formulas.value.forEach(f => {
-      f.preview = generateFormulaPreview(f.latex)
-    })
+  greekFormulas.value.forEach(f => {
+    f.preview = generateFormulaPreview(f.latex)
   })
 }
 
@@ -363,10 +365,10 @@ const handlePreview = () => {
         previewSvg.value = svg.svg
         previewError.value = ''
       } else {
-        previewError.value = '无法解析LaTeX公式'
+        previewError.value = t('message.latexParseFailed')
       }
     } catch (error: any) {
-      previewError.value = '公式解析错误：' + (error.message || '请检查语法')
+      previewError.value = t('message.latexParseError') + (error.message || t('message.latexCheckSyntax'))
       previewSvg.value = ''
     }
   }, 300)

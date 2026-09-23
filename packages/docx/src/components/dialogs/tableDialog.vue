@@ -3,22 +3,22 @@
     <template #title>
       <div class="custom-dialog-header">
         <AppstoreOutlined class="title-icon" />
-        <span>插入表格</span>
+        <span>{{ t('dialog.table.title') }}</span>
       </div>
     </template>
     <div class="insert-table-body">
       <div class="setting-section">
         <div class="group-title">
-          <span>表格尺寸</span>
+          <span>{{ t('dialog.table.size') }}</span>
           <div class="line"></div>
         </div>
         <div class="table-size-container">
           <div class="size-item">
-            <div class="size-label">列数(C):</div>
+            <div class="size-label">{{ t('dialog.table.columns') }}</div>
             <a-input-number v-model:value="insertTableForm.cols" :min="1" :max="50" style="width: 150px;" />
           </div>
           <div class="size-item">
-            <div class="size-label">行数(R):</div>
+            <div class="size-label">{{ t('dialog.table.rows') }}</div>
             <a-input-number v-model:value="insertTableForm.rows" :min="1" :max="100" style="width: 150px;" />
           </div>
         </div>
@@ -28,7 +28,7 @@
 
       <div class="setting-section">
         <div class="group-title">
-          <span>边框设置</span>
+          <span>{{ t('dialog.table.borderSettings') }}</span>
           <div class="line"></div>
         </div>
         <div class="border-setting-content">
@@ -39,7 +39,7 @@
               @click="selectedOption = 'none'"
             >
               <FileOutlined class="option-icon" />
-              <span>无(N)</span>
+              <span>{{ t('dialog.table.none') }}</span>
             </div>
             <div
               class="option-item"
@@ -47,7 +47,7 @@
               @click="selectedOption = 'box'"
             >
               <BorderOutlined class="option-icon" />
-              <span>方框(X)</span>
+              <span>{{ t('dialog.table.box') }}</span>
             </div>
             <div
               class="option-item"
@@ -55,7 +55,7 @@
               @click="selectedOption = 'all'"
             >
               <AppstoreOutlined class="option-icon" />
-              <span>全部(A)</span>
+              <span>{{ t('dialog.table.all') }}</span>
             </div>
             <div
               class="option-item"
@@ -63,7 +63,7 @@
               @click="selectedOption = 'grid'"
             >
               <AppstoreOutlined class="option-icon" />
-              <span>网格(D)</span>
+              <span>{{ t('dialog.table.grid') }}</span>
             </div>
             <div
               class="option-item"
@@ -71,13 +71,13 @@
               @click="selectedOption = 'custom'"
             >
               <EditOutlined class="option-icon" />
-              <span>自定义(U)</span>
+              <span>{{ t('dialog.table.custom') }}</span>
             </div>
           </div>
 
           <div class="right-panel">
             <div class="setting-group">
-              <div class="setting-label">线型(V):</div>
+              <div class="setting-label">{{ t('dialog.table.lineStyle') }}</div>
               <div class="line-type-list">
                 <div
                   class="line-type-item"
@@ -125,7 +125,7 @@
             </div>
 
             <div class="setting-group">
-              <div class="setting-label">颜色(C):</div>
+              <div class="setting-label">{{ t('dialog.table.color') }}</div>
               <div class="color-selector">
                 <input
                   type="color"
@@ -137,7 +137,7 @@
             </div>
 
             <div class="setting-group">
-              <div class="setting-label">宽度(W):</div>
+              <div class="setting-label">{{ t('dialog.table.width') }}</div>
               <div class="width-selector">
                 <a-slider
                   v-model:value="lineWidth"
@@ -146,7 +146,7 @@
                   :step="0.1"
                   class="width-slider"
                 />
-                <div class="width-value">{{ lineWidth }} 磅</div>
+                <div class="width-value">{{ lineWidth }} {{ t('dialog.table.widthUnit') }}</div>
               </div>
             </div>
           </div>
@@ -155,8 +155,8 @@
     </div>
     <template #footer>
       <div class="dialog-footer">
-        <VdButton type="primary" icon="check" @click="confirmInsertTable">确定</VdButton>
-        <VdButton icon="close" @click="visible = false">取消</VdButton>
+        <VdButton type="primary" icon="check" @click="confirmInsertTable">{{ t('common.ok') }}</VdButton>
+        <VdButton icon="close" @click="visible = false">{{ t('common.cancel') }}</VdButton>
       </div>
     </template>
   </VdDialog>
@@ -166,6 +166,7 @@
 import { ref, computed } from 'vue'
 import { VdDialog, VdButton } from '@vervedoc/ui'
 import { AppstoreOutlined, FileOutlined, BorderOutlined, EditOutlined } from '@ant-design/icons-vue'
+import { t } from '@/i18n'
 
 /** 组件 props 定义 */
 const props = defineProps<{

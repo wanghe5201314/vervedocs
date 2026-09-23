@@ -1,32 +1,32 @@
 <template>
   <Teleport to="body">
-    <div v-if="open" class="file-screen" role="dialog" aria-modal="true" aria-label="文件">
+    <div v-if="open" class="file-screen" role="dialog" aria-modal="true" :aria-label="t('ribbon.file.label')">
       <aside class="file-sidebar">
-        <button ref="firstFocusable" class="file-back" type="button" @click="close"><span aria-hidden="true">‹</span>返回</button>
-        <nav class="file-nav" aria-label="文件操作">
+        <button ref="firstFocusable" class="file-back" type="button" @click="close"><span aria-hidden="true">‹</span>{{ t('ribbon.file.back') }}</button>
+        <nav class="file-nav" :aria-label="t('ribbon.file.fileOperations')">
           <button v-for="item in mainItems" :key="item.key" class="file-nav-item" :class="{ 'is-disabled': item.key === 'import' && isImporting }" type="button" :disabled="item.key === 'import' && isImporting" @click="run(item.key)">
             <span class="file-nav-label"><VdIcon :name="item.icon" />{{ item.label }}</span><span v-if="item.shortcut" class="file-shortcut">{{ item.shortcut }}</span>
           </button>
         </nav>
         <div class="file-sidebar-bottom">
           <button class="file-nav-item" type="button" @click="run('info')">
-            <span class="file-nav-label"><VdIcon name="information-outline" />信息</span>
+            <span class="file-nav-label"><VdIcon name="information-outline" />{{ t('ribbon.file.info') }}</span>
           </button>
         </div>
       </aside>
 
       <main ref="panel" class="file-content" tabindex="-1" @keydown.esc="close">
         <section v-if="activePage === 'export'" class="file-page">
-          <h1>下载为</h1>
-          <p class="file-lead">选择文件格式下载文档</p>
-          <div class="format-grid" aria-label="下载格式">
-            <button v-for="format in formats" :key="format.name" class="format-button" :class="{ 'is-available': format.available }" type="button" :disabled="!format.available" :aria-disabled="!format.available" :title="format.available ? `下载为 ${format.name}` : `${format.name} 暂不支持`" @click="format.available && run('export', format.value)">
+          <h1>{{ t('ribbon.file.downloadAs') }}</h1>
+          <p class="file-lead">{{ t('ribbon.file.downloadHint') }}</p>
+          <div class="format-grid" :aria-label="t('ribbon.file.downloadFormat')">
+            <button v-for="format in formats" :key="format.name" class="format-button" :class="{ 'is-available': format.available }" type="button" :disabled="!format.available" :aria-disabled="!format.available" :title="format.available ? t('ribbon.file.downloadAsName', { name: format.name }) : `${format.name} ${t('common.notSupported')}`" @click="format.available && run('export', format.value)">
               <span class="format-icon" :style="{ '--format-color': format.color }"><svg viewBox="0 0 70 91" aria-hidden="true"><path d="M1 1h46l22 22v67H1z" fill="currentColor"/><path d="M47 1v22h22" fill="none" stroke="#fff" stroke-width="2" opacity=".35"/><path v-if="format.kind === 'word'" d="M12 42l5 25 7-18 7 18 6-25M38 42h18" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path v-else-if="format.kind === 'pdf'" d="M13 60h42M18 42h25c5 0 8 3 8 7s-3 7-8 7H18zM22 42v18" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><path v-else-if="format.kind === 'bird'" d="M16 58c8-18 17-21 27-18l11 7-9 2 5 10-12-5-8 7zM45 39l4-5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path v-else-if="format.kind === 'book'" d="M13 42c8-4 15-4 22 1v20c-7-5-14-5-22-1zm44 0c-8-4-15-4-22 1v20c7-5 14-5 22-1z" fill="none" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"/><path v-else-if="format.kind === 'code'" d="M27 43l-10 10 10 10m16-20l10 10-10 10M39 39l-8 28" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path v-else-if="format.kind === 'image'" d="M12 67l14-16 9 9 8-11 15 18zM23 43a4 4 0 1 0 0 .1" fill="none" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"/><path v-else d="M15 43h40M15 52h40M15 61h28" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg><span>{{ format.name }}</span></span>
             </button>
           </div>
-          <p class="format-note">目前仅支持下载为 Word，PDF 暂不支持。</p>
+          <p class="format-note">{{ t('ribbon.file.pdfNotSupported') }}</p>
         </section>
-        <section v-else-if="activePage === 'info'" class="file-page info-page"><h1>信息</h1><div class="info-list"><div><span>文档名称</span><strong>{{ documentName || '未命名文档' }}</strong></div><div><span>页数</span><strong>{{ documentStats?.totalPages ?? '—' }}</strong></div><div><span>字数</span><strong>{{ documentStats?.wordCount ?? '—' }}</strong></div><div><span>段落</span><strong>{{ documentStats?.paragraphCount ?? '—' }}</strong></div><div><span>字符数</span><strong>{{ documentStats?.charCount ?? '—' }}</strong></div></div></section>
+        <section v-else-if="activePage === 'info'" class="file-page info-page"><h1>{{ t('ribbon.file.info') }}</h1><div class="info-list"><div><span>{{ t('ribbon.file.docName') }}</span><strong>{{ documentName || t('common.unnamedDocument') }}</strong></div><div><span>{{ t('ribbon.file.pages') }}</span><strong>{{ documentStats?.totalPages ?? '—' }}</strong></div><div><span>{{ t('ribbon.file.wordCount') }}</span><strong>{{ documentStats?.wordCount ?? '—' }}</strong></div><div><span>{{ t('ribbon.file.paragraphs') }}</span><strong>{{ documentStats?.paragraphCount ?? '—' }}</strong></div><div><span>{{ t('ribbon.file.charCount') }}</span><strong>{{ documentStats?.charCount ?? '—' }}</strong></div></div></section>
         <section v-else class="file-page"><h1>{{ pageTitle }}</h1><p class="file-message">{{ pageMessage }}</p></section>
       </main>
     </div>
@@ -36,6 +36,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { VdIcon } from '@vervedoc/ui'
+import { t } from '@/i18n'
 
 const props = withDefaults(defineProps<{
   isImporting?: boolean
@@ -48,23 +49,23 @@ const activePage = ref('export')
 const firstFocusable = ref<HTMLButtonElement>()
 const panel = ref<HTMLElement>()
 const mainItems = [
-  { key: 'new', label: '新建', icon: 'file-plus-outline' },
-  { key: 'import', label: '导入', icon: 'file-import-outline', shortcut: 'Ctrl+Alt+O' },
-  { key: 'save', label: '保存', icon: 'content-save-outline', shortcut: 'Ctrl+S' },
-  { key: 'export', label: '下载为', icon: 'download-outline' },
-  { key: 'print', label: '打印', icon: 'printer-outline', shortcut: 'Ctrl+P' },
-  { key: 'protectDoc', label: '保护', icon: 'shield-lock-outline' }
+  { key: 'new', label: t('ribbon.file.newItem'), icon: 'file-plus-outline' },
+  { key: 'import', label: t('ribbon.file.importItem'), icon: 'file-import-outline', shortcut: 'Ctrl+Alt+O' },
+  { key: 'save', label: t('ribbon.file.saveItem'), icon: 'content-save-outline', shortcut: 'Ctrl+S' },
+  { key: 'export', label: t('ribbon.file.downloadItem'), icon: 'download-outline' },
+  { key: 'print', label: t('ribbon.file.printItem'), icon: 'printer-outline', shortcut: 'Ctrl+P' },
+  { key: 'protectDoc', label: t('ribbon.file.protectItem'), icon: 'shield-lock-outline' }
 ]
 const formats = [
   { name: 'Word', value: 'docx', color: '#23477f', kind: 'word', available: true },
   { name: 'PDF', value: 'pdf', color: '#bb493a', kind: 'pdf', available: false }
 ]
-const pageTitle = computed(() => activePage.value === 'protect' ? '保护' : '文件')
-const pageMessage = computed(() => activePage.value === 'protect' ? '文档保护设置已准备好。' : '')
+const pageTitle = computed(() => activePage.value === 'protect' ? t('ribbon.file.protectItem') : t('ribbon.file.label'))
+const pageMessage = computed(() => activePage.value === 'protect' ? t('ribbon.file.protectHint') : '')
 const close = () => emit('close')
 const run = async (key: string, ...args: any[]) => {
   if (key === 'import' && props.isImporting) return
-  if (key === 'export') {
+  if (key === 'export' && args.length === 0) {
     activePage.value = 'export'
     return
   }

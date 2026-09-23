@@ -2,6 +2,7 @@ import { computed, reactive } from 'vue'
 import type { DocumentMeta, DocumentStats } from '@/types/document'
 import type { InitialDocument } from '@/types/document'
 import { emitExternalEvent } from '@/composables/use-external-events'
+import { t } from '@/i18n'
 
 /**
  * 文档元数据 composable
@@ -24,7 +25,7 @@ export function useDocumentMeta(options: {
     id: String(initialDocument?.meta?.id || 'local'),
     path: String((initialDocument?.meta as any)?.path || ''),
     status: ((initialDocument?.meta as any)?.status || 'edit') as DocumentMeta['status'],
-    name: String((initialDocument?.meta as any)?.name || initialDocument?.meta?.fileName || '新建文档'),
+    name: String((initialDocument?.meta as any)?.name || initialDocument?.meta?.fileName || t('common.newDocument')),
     createdAt: String((initialDocument?.meta as any)?.createdAt || ''),
     submittedAt: String((initialDocument?.meta as any)?.submittedAt || '')
   })
@@ -42,7 +43,7 @@ export function useDocumentMeta(options: {
   /** 头部显示的标题文本，文档名为空时回退为“新建文档” */
   const headerTitle = computed(() => {
     const name = String(documentMeta.name || '').trim()
-    return name || '新建文档'
+    return name || t('common.newDocument')
   })
   /** 头部显示的最后保存时间（仅时分），无效时返回空字符串 */
   const headerLastSaveTime = computed(() => {
@@ -68,7 +69,7 @@ export function useDocumentMeta(options: {
     if (patch.path !== undefined) documentMeta.path = String(patch.path || '')
     if (patch.status !== undefined) documentMeta.status = patch.status as DocumentMeta['status']
     const nextName = (patch as any).name ?? (patch as any).fileName
-    if (nextName !== undefined) documentMeta.name = String(nextName || '新建文档')
+    if (nextName !== undefined) documentMeta.name = String(nextName || t('common.newDocument'))
     if (patch.createdAt !== undefined) documentMeta.createdAt = String(patch.createdAt || '')
     if (patch.submittedAt !== undefined) documentMeta.submittedAt = String(patch.submittedAt || '')
     emitMetaChange()

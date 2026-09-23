@@ -1,25 +1,25 @@
 <template>
-  <VdDialog v-model:open="visible" title="书签" width="520px" :maskClosable="false" class="app-dialog">
+  <VdDialog v-model:open="visible" :title="t('dialog.bookmark.title')" width="520px" :maskClosable="false" class="app-dialog">
     <div class="bookmark-body">
       <div class="bookmark-left">
         <a-form :model="form">
-          <a-form-item label="书签名">
+          <a-form-item :label="t('dialog.bookmark.name')">
             <a-input size="small"
               v-model:value="form.name"
-              placeholder="字母、数字、下划线或中文"
+              :placeholder="t('dialog.bookmark.placeholder')"
               @keydown.enter.prevent="handleAdd"
             />
           </a-form-item>
         </a-form>
         <div v-if="hasSelectionRange" class="bookmark-tip">
-          将按当前选中内容创建范围书签
+          {{ t('dialog.bookmark.rangeHint') }}
         </div>
         <div v-if="hasSelectionRange && selectionPreview" class="bookmark-selection-preview">
           {{ selectionPreview }}
         </div>
         <div v-if="nameError" class="bookmark-error">{{ nameError }}</div>
 
-        <div class="bookmark-list-title">书签</div>
+        <div class="bookmark-list-title">{{ t('dialog.bookmark.listTitle') }}</div>
         <div style="overflow-y:auto;height:220px" class="bookmark-list">
           <div
             v-for="item in bookmarks"
@@ -31,18 +31,18 @@
           >
             <div class="bookmark-item-name">{{ item.name }}</div>
             <div class="bookmark-item-meta">
-              {{ item.collapsed ? '位置书签' : '范围书签' }}
+              {{ item.collapsed ? t('dialog.bookmark.positionBookmark') : t('dialog.bookmark.rangeBookmark') }}
             </div>
           </div>
-          <div v-if="!bookmarks.length" class="bookmark-empty">当前文档没有可见书签</div>
+          <div v-if="!bookmarks.length" class="bookmark-empty">{{ t('dialog.bookmark.noBookmarks') }}</div>
         </div>
       </div>
 
       <div class="bookmark-actions">
-        <VdButton type="primary" size="small" :disabled="!canAdd" @click="handleAdd">添加</VdButton>
-        <VdButton :disabled="!selectedName" size="small" @click="handleDelete">删除</VdButton>
-        <VdButton :disabled="!selectedName" size="small" @click="handleGoto">转到</VdButton>
-        <VdButton size="small" @click="visible = false">关闭</VdButton>
+        <VdButton type="primary" size="small" :disabled="!canAdd" @click="handleAdd">{{ t('dialog.bookmark.add') }}</VdButton>
+        <VdButton :disabled="!selectedName" size="small" @click="handleDelete">{{ t('dialog.bookmark.delete') }}</VdButton>
+        <VdButton :disabled="!selectedName" size="small" @click="handleGoto">{{ t('dialog.bookmark.goto') }}</VdButton>
+        <VdButton size="small" @click="visible = false">{{ t('dialog.bookmark.close') }}</VdButton>
       </div>
     </div>
   </VdDialog>
@@ -52,6 +52,7 @@
 import {computed, ref, watch} from 'vue'
 import { VdDialog, VdButton } from '@vervedoc/ui'
 import type { IBookmarkApi } from '@/composables/use-bookmarks'
+import { t } from '@/i18n'
 
 /** 组件 props 定义 */
 const props = defineProps<{
@@ -145,11 +146,11 @@ watch(
       return
     }
     if (!BOOKMARK_NAME_REG.test(name)) {
-      nameError.value = '仅支持中文、字母、数字和下划线'
+      nameError.value = t('message.bookmarkNameInvalid')
       return
     }
     if (bookmarks.value.some(item => item.name === name)) {
-      nameError.value = '该书签名称已存在'
+      nameError.value = t('message.bookmarkNameExists')
       return
     }
     nameError.value = ''

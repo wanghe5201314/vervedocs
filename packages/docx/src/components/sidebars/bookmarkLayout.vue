@@ -3,9 +3,9 @@
     <div class="sidebar-header">
       <div class="sidebar-title-wrap">
         <VdIcon name="bookmark-outline" :size="16" />
-        <span class="sidebar-title">书签</span>
+        <span class="sidebar-title">{{ t('sidebar.bookmark.title') }}</span>
       </div>
-      <div class="sidebar-close" @click="emit('close')" title="关闭">
+      <div class="sidebar-close" @click="emit('close')" :title="t('common.close')">
         <CloseOutlined />
       </div>
     </div>
@@ -16,7 +16,7 @@
           v-model:value="form.name"
           size="small"
           allow-clear
-          placeholder="书签名"
+          :placeholder="t('sidebar.bookmark.placeholder')"
           :status="nameError ? 'error' : ''"
           @keydown.enter.prevent="handleAdd"
         />
@@ -26,12 +26,12 @@
           :disabled="!canAdd"
           @click="handleAdd"
         >
-          添加
+          {{ t('sidebar.bookmark.add') }}
         </VdButton>
       </div>
 
       <div v-if="hasSelectionRange" class="bookmark-tip">
-        将按当前选中内容创建范围书签
+        {{ t('sidebar.bookmark.rangeHint') }}
       </div>
       <div v-if="hasSelectionRange && selectionPreview" class="bookmark-selection-preview" :title="selectionPreview">
         {{ selectionPreview }}
@@ -39,7 +39,7 @@
       <div v-if="nameError" class="bookmark-error">{{ nameError }}</div>
 
       <div class="bookmark-list-header">
-        <span>书签列表</span>
+        <span>{{ t('sidebar.bookmark.listTitle') }}</span>
         <span class="bookmark-count">{{ bookmarks.length }}</span>
       </div>
 
@@ -57,12 +57,12 @@
             <span class="bookmark-item-name" :title="item.name">{{ item.name }}</span>
           </div>
           <div class="bookmark-item-meta">
-            <span>{{ item.collapsed ? '位置' : '范围' }}</span>
+            <span>{{ item.collapsed ? t('sidebar.bookmark.position') : t('sidebar.bookmark.range') }}</span>
             <div class="bookmark-item-actions">
               <button
                 type="button"
                 class="bookmark-item-locate"
-                title="跳转到该书签"
+                :title="t('sidebar.bookmark.jumpHint')"
                 @click.stop="handleLocate(item.name)"
               >
                 <RightOutlined />
@@ -70,7 +70,7 @@
               <button
                 type="button"
                 class="bookmark-item-delete"
-                title="删除该书签"
+                :title="t('sidebar.bookmark.deleteHint')"
                 @click.stop="handleDelete(item.name)"
               >
                 <DeleteOutlined />
@@ -79,7 +79,7 @@
           </div>
         </div>
         <div v-if="!bookmarks.length" class="bookmark-empty">
-          <a-empty :image="false" description="暂无书签" />
+          <a-empty :image="false" :description="t('sidebar.bookmark.noBookmarks')" />
         </div>
       </div>
     </div>
@@ -91,6 +91,7 @@ import { computed, ref, watch } from 'vue'
 import { CloseOutlined, RightOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import { VdIcon, VdButton } from '@vervedoc/ui'
 import type { IBookmarkApi } from '@/composables/use-bookmarks'
+import { t } from '@/i18n'
 
 const props = defineProps<{
   bookmarkAPI: IBookmarkApi
@@ -141,11 +142,11 @@ watch(
       return
     }
     if (!BOOKMARK_NAME_REG.test(name)) {
-      nameError.value = '仅支持中文、字母、数字和下划线'
+      nameError.value = t('message.bookmarkNameInvalid')
       return
     }
     if (bookmarks.value.some(item => item.name === name)) {
-      nameError.value = '该书签名称已存在'
+      nameError.value = t('message.bookmarkNameExists')
       return
     }
     nameError.value = ''

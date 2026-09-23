@@ -1,5 +1,5 @@
 <template>
-  <VdDialog v-model:open="visible" title="自定义大小" width="480px" :maskClosable="false" class="app-dialog">
+  <VdDialog v-model:open="visible" :title="t('dialog.paperSize.title')" width="480px" :maskClosable="false" class="app-dialog">
     <div class="paper-size-body">
       <div class="ps-form-item">
         <a-select v-model:value="selectedPaperPreset" style="width: 100%;" @change="handlePaperPresetChange">
@@ -13,7 +13,7 @@
       </div>
       <div class="ps-size-row">
         <div class="ps-size-item">
-          <span class="ps-label">宽度(W):</span>
+          <span class="ps-label">{{ t('dialog.paperSize.width') }}</span>
           <a-input-number
             v-model:value="customPaperSizeForm.width"
             :min="1"
@@ -23,10 +23,10 @@
             :size="'small'"
             style="width: 100px;"
           />
-          <span class="ps-unit">厘米</span>
+          <span class="ps-unit">{{ t('dialog.paperSize.unit') }}</span>
         </div>
         <div class="ps-size-item">
-          <span class="ps-label">高度(E):</span>
+          <span class="ps-label">{{ t('dialog.paperSize.height') }}</span>
           <a-input-number
             v-model:value="customPaperSizeForm.height"
             :min="1"
@@ -36,13 +36,13 @@
             :size="'small'"
             style="width: 100px;"
           />
-          <span class="ps-unit">厘米</span>
+          <span class="ps-unit">{{ t('dialog.paperSize.unit') }}</span>
         </div>
       </div>
     </div>
     <template #footer>
-      <VdButton type="primary" icon="check" @click="confirmCustomPaperSize">确定</VdButton>
-      <VdButton icon="close" @click="visible = false">取消</VdButton>
+      <VdButton type="primary" icon="check" @click="confirmCustomPaperSize">{{ t('common.ok') }}</VdButton>
+      <VdButton icon="close" @click="visible = false">{{ t('common.cancel') }}</VdButton>
     </template>
   </VdDialog>
 </template>
@@ -50,6 +50,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { VdDialog, VdButton } from '@vervedoc/ui'
+import { t } from '@/i18n'
 
 import { PAPER_SIZE_LIST } from '@vervedoc/core'
 

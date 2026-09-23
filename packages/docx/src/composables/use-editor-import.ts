@@ -1,6 +1,7 @@
 import { nextTick } from 'vue'
 import { adjustFloatImagePositions } from '@vervedoc/core'
 import { replaceDocument } from '@/composables/use-replace-document'
+import { t } from '@/i18n'
 
 /**
  * 编辑器实例接口（导入所需的最小能力）
@@ -39,17 +40,17 @@ export function useEditorImport(options: {
     const onProgress: ((progress: number, status: string) => void) | undefined = payload?.onProgress
     const onComplete: ((success: boolean, message?: string) => void) | undefined = payload?.onComplete
     if (!url) {
-      onComplete?.(false, '缺少 url，无法加载 JSON 文档')
+      onComplete?.(false, t('editor.missingUrl'))
       return
     }
     try {
-      onProgress?.(10, '正在请求文档...')
+      onProgress?.(10, t('editor.requesting'))
       const resp = await fetch(url, { cache: 'no-store' })
       if (!resp.ok) {
-        onComplete?.(false, `请求失败: ${resp.status}`)
+        onComplete?.(false, `${t('editor.requestFailed')}: ${resp.status}`)
         return
       }
-      onProgress?.(30, '正在解析数据...')
+      onProgress?.(30, t('editor.parsing'))
       const json = await resp.json()
       // 只认扁平文档 JSON（根数组 / elements / main），HTTP { data } 信封由 importCallback 拆包
       const main = Array.isArray(json) ? json
@@ -57,17 +58,17 @@ export function useEditorImport(options: {
         : Array.isArray(json?.main) ? json.main
         : null
       if (!Array.isArray(main) || main.length === 0) {
-        onComplete?.(false, '数据为空或格式不正确')
+        onComplete?.(false, t('editor.dataInvalid'))
         return
       }
       const comments = Array.isArray(json?.comments) ? json.comments : []
       const header = Array.isArray(json?.header) ? json.header : []
       const footer = Array.isArray(json?.footer) ? json.footer : []
 
-      onProgress?.(60, '正在渲染内容...')
+      onProgress?.(60, t('editor.rendering'))
       const inst = getEditorInstance()
       if (!inst) {
-        onComplete?.(false, '编辑器未就绪')
+        onComplete?.(false, t('editor.editorNotReady'))
         return
       }
       const editorOptions = inst.command.getOptions?.()
@@ -79,11 +80,11 @@ export function useEditorImport(options: {
         { ...(Array.isArray(json) ? {} : json), main, header, footer, comments }
       )
 
-      onProgress?.(100, '加载完成!')
+      onProgress?.(100, t('editor.loadComplete'))
       onComplete?.(true)
       await nextTick()
     } catch (e) {
-      const msg = e instanceof Error ? e.message : '加载失败'
+      const msg = e instanceof Error ? e.message : t('editor.loadFailed')
       onComplete?.(false, msg)
     }
   }

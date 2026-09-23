@@ -1,11 +1,11 @@
 <template>
-  <VdDialog v-model:open="visible" title="二维码生成" width="630px" :maskClosable="false" class="app-dialog">
+  <VdDialog v-model:open="visible" :title="t('dialog.qrcode.title')" width="630px" :maskClosable="false" class="app-dialog">
     <a-form :model="qrcodeForm" :label-col="{ style: { width: '80px' } }">
-      <a-form-item label="输入">
+      <a-form-item :label="t('dialog.qrcode.input')">
         <a-textarea
           v-model:value="qrcodeForm.content"
           :rows="3"
-          placeholder="请输入二维码内容"
+          :placeholder="t('dialog.qrcode.placeholder')"
           :maxlength="200"
           show-word-limit
         />
@@ -15,15 +15,15 @@
       <div class="advanced-btn-wrapper">
         <a-dropdown :trigger="['click']">
           <VdButton type="link">
-            高级设置 <VdIcon name="expand-more" />
+            {{ t('dialog.qrcode.advancedSettings') }} <VdIcon name="expand-more" />
           </VdButton>
           <template #overlay>
             <VdCard style="min-width: 300px">
               <a-form :label-col="{ style: { width: '80px' } }" size="small">
-                <a-form-item label="背景颜色">
+                <a-form-item :label="t('dialog.qrcode.backgroundColor')">
                   <input type="color" :value="qrcodeStyle.lightColor" @change.stop="(e: Event) => qrcodeStyle.lightColor = (e.target as HTMLInputElement).value" @click.stop style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
                 </a-form-item>
-                <a-form-item label="二维码颜色">
+                <a-form-item :label="t('dialog.qrcode.qrcodeColor')">
                   <input type="color" :value="qrcodeStyle.darkColor" @change.stop="(e: Event) => qrcodeStyle.darkColor = (e.target as HTMLInputElement).value" @click.stop style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
                 </a-form-item>
               </a-form>
@@ -32,17 +32,17 @@
         </a-dropdown>
       </div>
       <div class="preview-container">
-        <div v-if="previewLoading" class="qrcode-placeholder">生成中...</div>
+        <div v-if="previewLoading" class="qrcode-placeholder">{{ t('dialog.qrcode.generating') }}</div>
         <img v-else-if="previewDataUrl" class="qrcode-image" :src="previewDataUrl" alt="qrcode" />
         <div v-else class="qrcode-placeholder">
           <div v-if="previewError" class="qrcode-error">{{ previewError }}</div>
-          <div v-else class="qrcode-empty">请输入内容生成预览</div>
+          <div v-else class="qrcode-empty">{{ t('dialog.qrcode.inputHint') }}</div>
         </div>
       </div>
     </div>
     <template #footer>
-      <VdButton type="primary" icon="check" :disabled="!canConfirm" @click="confirmQrcode">确定</VdButton>
-      <VdButton icon="close" @click="visible = false">取消</VdButton>
+      <VdButton type="primary" icon="check" :disabled="!canConfirm" @click="confirmQrcode">{{ t('common.ok') }}</VdButton>
+      <VdButton icon="close" @click="visible = false">{{ t('common.cancel') }}</VdButton>
     </template>
   </VdDialog>
 </template>
@@ -52,6 +52,7 @@ import { ref, computed, watch } from 'vue'
 import { VdCard, VdDialog, VdButton, VdIcon } from '@vervedoc/ui'
 import QRCode from 'qrcode'
 import { debounce } from '@/utils'
+import { t } from '@/i18n'
 
 /** 组件 props 定义 */
 const props = defineProps<{
@@ -113,7 +114,7 @@ const buildPreview = async (content: string) => {
       color: { dark: qrcodeStyle.value.darkColor, light: qrcodeStyle.value.lightColor }
     })
   } catch {
-    previewError.value = '二维码生成失败，请检查内容或缩短长度'
+    previewError.value = t('message.qrcodeFailed')
   } finally {
     previewLoading.value = false
   }

@@ -1,3 +1,5 @@
+import { t } from '@/i18n'
+
 /**
  * 文档状态：edit=可编辑，lock=已锁定（需密码解锁），view=只读查看
  */
@@ -160,7 +162,7 @@ const toHex = (buf: ArrayBuffer) => {
  */
 const sha256 = async (text: string) => {
   const subtle = globalThis.crypto?.subtle
-  if (!subtle) throw new Error('当前环境不支持密码保护')
+  if (!subtle) throw new Error(t('message.passwordProtectUnsupported'))
   const data = new TextEncoder().encode(text)
   const hash = await subtle.digest('SHA-256', data)
   return toHex(hash)
@@ -182,7 +184,7 @@ const localSetStatus = async (payload: SetStatusRequest) => {
   const key = getLockHashKey(id)
 
   if (payload.status === 'lock') {
-    if (!payload.password) throw new Error('请输入保护密码')
+    if (!payload.password) throw new Error(t('message.enterProtectPassword'))
     const hash = await sha256(payload.password)
     localStorage.setItem(key, hash)
     return
@@ -191,9 +193,9 @@ const localSetStatus = async (payload: SetStatusRequest) => {
   if (payload.status === 'edit') {
     const existed = localStorage.getItem(key)
     if (existed) {
-      if (!payload.password) throw new Error('请输入解锁密码')
+      if (!payload.password) throw new Error(t('message.enterUnlockPassword'))
       const hash = await sha256(payload.password)
-      if (hash !== existed) throw new Error('密码错误')
+      if (hash !== existed) throw new Error(t('message.passwordError'))
       localStorage.removeItem(key)
     }
     return
@@ -252,10 +254,10 @@ const requestJson = async <T>(url: string, init: RequestInit): Promise<T> => {
   if (data && typeof data === 'object' && 'success' in data && 'code' in data) {
     const wrapped = data as WrappedResponse<T>
     if (wrapped.success) return wrapped.data as T
-    throw new Error(String(wrapped.message || '请求失败'))
+    throw new Error(String(wrapped.message || t('message.requestFailed')))
   }
   if (!resp.ok) {
-    let message = `请求失败(${resp.status})`
+    let message = t('message.requestFailedWithStatus', { status: resp.status })
     if (data && typeof data === 'object' && 'message' in data) {
       message = String((data as any).message || message)
     }
@@ -308,7 +310,7 @@ export const createHttpDocumentApi = (baseUrl: string): DocumentApi => {
     /** 保存文档内容到远端 */
     async saveDocument(payload) {
       const id = String(payload?.meta?.id || '').trim()
-      if (!id) throw new Error('文档ID为空')
+      if (!id) throw new Error(t('message.docIdEmpty'))
       if (id === 'local') return { submittedAt: new Date().toISOString() }
       const template = getEndpointTemplate('documentContent')
       const url = template

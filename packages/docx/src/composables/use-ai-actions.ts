@@ -2,6 +2,7 @@ import { message } from 'ant-design-vue'
 import { executeAIRequest } from '@/composables/use-ai'
 import { aiStateStore } from '@/stores/ai-state'
 import { AIAction } from '@vervedoc/docx-editor-ai'
+import { t } from '@/i18n'
 
 /**
  * 编辑器实例接口（AI 操作所需的最小能力）
@@ -55,7 +56,7 @@ export function useAIActions(options: {
     if (action === 'quickAction') {
       const text = getText().trim()
       if (!text) {
-        message.warning('请先选中文本')
+        message.warning(t('editor.selectTextFirst'))
         return
       }
       void executeAIRequest({ action: payload.action, text })
@@ -65,7 +66,7 @@ export function useAIActions(options: {
     if (action === 'translate') {
       const text = getText().trim()
       if (!text) {
-        message.warning('请先选中文本')
+        message.warning(t('editor.selectTextFirst'))
         return
       }
       void executeAIRequest({ action: AIAction.TRANSLATE, text, targetLanguage: payload?.targetLanguage })
@@ -75,7 +76,7 @@ export function useAIActions(options: {
     if (action === 'custom') {
       const text = getText().trim()
       if (!text) {
-        message.warning('请先选中文本')
+        message.warning(t('editor.selectTextFirst'))
         return
       }
       void executeAIRequest({ action: AIAction.CUSTOM, text, customPrompt: payload?.prompt })
@@ -85,7 +86,7 @@ export function useAIActions(options: {
     if (action === 'continue') {
       const text = getText().trim() || getFullText().trim()
       if (!text) {
-        message.warning('文档为空，无法续写')
+        message.warning(t('editor.documentEmptyCannotContinue'))
         return
       }
       void executeAIRequest({ action: AIAction.CONTINUE, text: text.slice(-500) })
@@ -95,7 +96,7 @@ export function useAIActions(options: {
     if (action === 'layoutSuggestion' || action === 'docAnalysis' || action === 'docSummarize') {
       const text = getFullText().trim()
       if (!text) {
-        message.warning('文档为空')
+        message.warning(t('editor.documentEmpty'))
         return
       }
       const aiAction = action === 'docSummarize' ? AIAction.SUMMARIZE : AIAction.CUSTOM
@@ -123,7 +124,7 @@ export function useAIActions(options: {
     }
 
     if (action === 'imageAlt') {
-      message.info('图片描述生成功能即将推出')
+      message.info(t('editor.imageDescriptionComingSoon'))
       return
     }
   }

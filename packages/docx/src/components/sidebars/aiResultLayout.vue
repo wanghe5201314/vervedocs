@@ -3,10 +3,10 @@
     <div class="sidebar-header">
       <div class="sidebar-title">
         <ThunderboltOutlined />
-        <span>AI 结果</span>
+        <span>{{ t('sidebar.aiResult.title') }}</span>
         <a-tag v-if="actionLabel">{{ actionLabel }}</a-tag>
       </div>
-      <div class="sidebar-close" @click="close" title="关闭">
+      <div class="sidebar-close" @click="close" :title="t('common.close')">
         <CloseOutlined />
       </div>
     </div>
@@ -16,13 +16,13 @@
       <template v-if="aiState.operation.loading">
         <div class="stream-status">
           <LoadingOutlined :spin="true" />
-          <span>AI 正在生成中...</span>
+          <span>{{ t('sidebar.aiResult.generating') }}</span>
         </div>
         <div v-if="aiState.operation.streamContent" class="stream-content">
           {{ aiState.operation.streamContent }}
           <span class="cursor-blink">|</span>
         </div>
-        <div v-else class="stream-placeholder">等待响应...</div>
+        <div v-else class="stream-placeholder">{{ t('sidebar.aiResult.waiting') }}</div>
       </template>
 
       <!-- 错误 -->
@@ -31,7 +31,7 @@
         <div class="action-bar">
           <VdButton size="small" @click="handleRegenerate">
             <ReloadOutlined />
-            重新生成
+            {{ t('sidebar.aiResult.regenerate') }}
           </VdButton>
         </div>
       </template>
@@ -42,22 +42,22 @@
         <div class="action-bar">
           <VdButton size="small" type="primary" @click="handleApply">
             <CheckOutlined />
-            应用
+            {{ t('sidebar.aiResult.apply') }}
           </VdButton>
           <VdButton size="small" @click="handleCopy">
             <CopyOutlined />
-            复制
+            {{ t('common.copy') }}
           </VdButton>
           <VdButton size="small" @click="handleRegenerate">
             <ReloadOutlined />
-            重新生成
+            {{ t('sidebar.aiResult.regenerate') }}
           </VdButton>
         </div>
       </template>
 
       <!-- 空状态 -->
       <template v-else>
-        <a-empty description="暂无结果" />
+        <a-empty :description="t('sidebar.aiResult.noResult')" />
       </template>
     </div>
   </div>
@@ -70,6 +70,7 @@ import { CloseOutlined, ThunderboltOutlined, LoadingOutlined, CheckOutlined, Cop
 import { message } from 'ant-design-vue'
 import { AIAction } from '@vervedoc/docx-editor-ai'
 import { aiStateStore } from '@/stores/ai-state'
+import { t } from '@/i18n'
 
 const emit = defineEmits<{
   (e: 'apply', result: string): void
@@ -82,15 +83,15 @@ const aiState = aiStateStore.state
 
 /** AI 动作到中文标签的映射 */
 const ACTION_LABELS: Record<string, string> = {
-  [AIAction.POLISH]: '润色',
-  [AIAction.TRANSLATE]: '翻译',
-  [AIAction.SUMMARIZE]: '总结',
+  [AIAction.POLISH]: t('sidebar.ai.actionPolish'),
+  [AIAction.TRANSLATE]: t('sidebar.ai.translate'),
+  [AIAction.SUMMARIZE]: t('sidebar.ai.actionSummarize'),
   [AIAction.CONTINUE]: '续写',
-  [AIAction.EXPAND]: '扩展',
-  [AIAction.FIX_GRAMMAR]: '修正语法',
-  [AIAction.FORMAL]: '正式化',
-  [AIAction.CASUAL]: '轻松化',
-  [AIAction.CUSTOM]: '自定义'
+  [AIAction.EXPAND]: t('sidebar.ai.actionExpand'),
+  [AIAction.FIX_GRAMMAR]: t('sidebar.ai.actionFixGrammar'),
+  [AIAction.FORMAL]: t('sidebar.ai.actionFormalize'),
+  [AIAction.CASUAL]: t('sidebar.ai.actionRelax'),
+  [AIAction.CUSTOM]: t('common.custom')
 }
 
 /** 当前 AI 动作的中文标签 */
@@ -116,9 +117,9 @@ const handleCopy = async () => {
   if (!aiState.operation.result) return
   try {
     await navigator.clipboard.writeText(aiState.operation.result)
-    message.success('已复制到剪贴板')
+    message.success(t('message.copySuccess'))
   } catch {
-    message.error('复制失败')
+    message.error(t('message.copyFailed'))
   }
 }
 

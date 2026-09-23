@@ -3,16 +3,16 @@
     <div class="footer-left">
 
       <a-tooltip placement="top">
-        <template #title><span style="font-size: 11px">显示/隐藏目录</span></template>
+        <template #title><span style="font-size: 11px">{{ t('footer.toggleTocTooltip') }}</span></template>
         <div class="footer-item">
-          <a-checkbox v-model:checked="tocVisible" @change="handleToggleToc">显示导航窗格</a-checkbox>
+          <a-checkbox v-model:checked="tocVisible" @change="handleToggleToc">{{ t('footer.tocPane') }}</a-checkbox>
         </div>
       </a-tooltip>
       <div class="footer-divider"></div>
 
       <!-- 纸张方向 -->
       <a-tooltip placement="top">
-        <template #title><span style="font-size: 11px">切换纸张方向</span></template>
+        <template #title><span style="font-size: 11px">{{ t('footer.paperDirectionTooltip') }}</span></template>
         <div class="footer-item" @click="handleTogglePaperDirection">
           <VdIcon name="page-layout-header-footer" />
           {{ selectedPaperDirectionName }}
@@ -42,38 +42,59 @@
     </div>
 
 
-    <div class="footer-center" role="status">修订模式：{{ isTrackChanges ? '开' : '关' }}</div>
+    <div class="footer-center" role="status">{{ t('footer.trackChanges') }}{{ isTrackChanges ? t('footer.trackChangesOn') : t('footer.trackChangesOff') }}</div>
 
     <div class="footer-right">
       <div class="footer-info">
-        <span>页面：<span class="page-no">{{ currentPage }}</span>/<span class="page-size">{{ totalPages }}</span></span>
-        <span>字数：<span class="word-count">{{ wordCount }}</span></span>
-        <span>行：<span class="row-no">{{ currentRow }}</span></span>
-        <span>列：<span class="col-no">{{ currentCol }}</span></span>
+        <span>{{ t('footer.pageLabel') }}<span class="page-no">{{ currentPage }}</span>/<span class="page-size">{{ totalPages }}</span></span>
+        <span>{{ t('footer.wordCountLabel') }}<span class="word-count">{{ wordCount }}</span></span>
+        <span>{{ t('footer.rowLabel') }}<span class="row-no">{{ currentRow }}</span></span>
+        <span>{{ t('footer.colLabel') }}<span class="col-no">{{ currentCol }}</span></span>
       </div>
       <div class="footer-divider"></div>
       <div class="scale-controls">
         <a-tooltip placement="top">
-          <template #title>缩小 (Ctrl+-)</template>
+          <template #title>{{ t('footer.zoomOut') }}</template>
           <div class="page-scale-minus" @click="handleScaleMinus"><i class="icon-zoom-out"></i></div>
         </a-tooltip>
         <a-tooltip placement="top">
-          <template #title>显示比例 (点击可复原 Ctrl+0)</template>
+          <template #title>{{ t('footer.zoomRecovery') }}</template>
           <span class="page-scale-percentage" @click="handleScaleRecovery">
             {{ scalePercentage }}%
           </span>
         </a-tooltip>
         <a-tooltip placement="top">
-          <template #title>放大 (Ctrl+=)</template>
+          <template #title>{{ t('footer.zoomIn') }}</template>
           <div class="page-scale-add" @click="handleScaleAdd"><i class="icon-zoom-in"></i></div>
         </a-tooltip>
       </div>
       <a-tooltip placement="top">
-        <template #title>全屏显示</template>
+        <template #title>{{ t('footer.fullscreen') }}</template>
         <div class="footer-item" @click="handleToggleFullscreen">
           <i class="icon-fullscreen-small"></i>
         </div>
       </a-tooltip>
+      <div class="footer-divider"></div>
+      <!-- 语言切换 -->
+      <div class="footer-item">
+        <a-dropdown :trigger="['click']">
+          <span class="dropdown-link">
+            <VdIcon name="translate" />
+            {{ currentLanguageName }}
+          </span>
+          <template #overlay>
+            <a-menu class="language-dropdown" @click="({ key }: any) => handleLanguageSelect(key as string)">
+              <a-menu-item
+                v-for="lang in languageList"
+                :key="lang.code"
+                :disabled="currentLanguage === lang.code"
+              >
+                {{ lang.name }}
+              </a-menu-item>
+            </a-menu>
+          </template>
+        </a-dropdown>
+      </div>
     </div>
   </div>
 </template>
@@ -85,6 +106,7 @@ import { PAPER_SIZE_LIST, PaperDirection } from '@vervedoc/core'
 
 import type { DocumentMeta } from '@/types/document'
 import { VdIcon } from '@vervedoc/ui'
+import { t, setLocale, getLocale } from '@/i18n'
 
 const props = defineProps<{
   documentMeta: DocumentMeta
@@ -102,7 +124,7 @@ const tocVisible = ref(true)
 const selectedPaperDirection = ref<typeof PaperDirection[keyof typeof PaperDirection]>(PaperDirection.VERTICAL)
 /** 选中纸张方向的中文名称 */
 const selectedPaperDirectionName = computed(() => {
-  return selectedPaperDirection.value === PaperDirection.VERTICAL ? '纵向' : '横向'
+  return selectedPaperDirection.value === PaperDirection.VERTICAL ? t('footer.vertical') : t('footer.horizontal')
 })
 
 /** 选中纸张大小的名称 */
@@ -116,7 +138,7 @@ const selectedPaperSize = ref('794*1123')
 /** 纸张大小选项列表 */
 const paperSizeList = [
   ...PAPER_SIZE_LIST.map(p => ({ size: `${p.width}*${p.height}`, name: p.label })),
-  { size: 'custom', name: '其他页面大小...' }
+  { size: 'custom', name: t('footer.otherPaperSize') }
 ]
 
 /** 可见页码范围 */
@@ -132,9 +154,25 @@ const currentRow = ref(0)
 /** 当前列号 */
 const currentCol = ref(0)
 /** 当前编辑器模式文本 */
-const currentMode = ref(props.documentMeta?.status === 'view' ? '只读模式' : '常规模式')
+const currentMode = ref(props.documentMeta?.status === 'view' ? t('common.readonlyMode') : t('common.normalMode'))
 /** 缩放百分比 */
 const scalePercentage = ref(100)
+
+/** 支持的语言列表 */
+const languageList = [
+  { code: 'zhCN', name: t('footer.languageZhCN') },
+  { code: 'zhTW', name: t('footer.languageZhTW') },
+  { code: 'jaJP', name: t('footer.languageJaJP') },
+  { code: 'koKR', name: t('footer.languageKoKR') },
+  { code: 'enUS', name: t('footer.languageEnUS') }
+]
+/** 当前语言代码 */
+const currentLanguage = ref(getLocale())
+/** 当前语言显示名称 */
+const currentLanguageName = computed(() => {
+  const lang = languageList.find(l => l.code === currentLanguage.value)
+  return lang ? lang.name : t('footer.languageZhCN')
+})
 
 
 /** 处理目录可见性切换 */
@@ -188,6 +226,16 @@ const handleScaleAdd = () => {
 /** 处理缩放恢复 */
 const handleScaleRecovery = () => {
   emit('command', 'pageScaleRecovery')
+}
+
+/**
+ * 处理语言切换
+ * @param code - 语言代码
+ */
+const handleLanguageSelect = (code: string) => {
+  currentLanguage.value = code as 'zhCN' | 'zhTW' | 'jaJP' | 'koKR' | 'enUS'
+  setLocale(code as 'zhCN' | 'zhTW' | 'jaJP' | 'koKR' | 'enUS')
+  emit('command', 'languageChange', code)
 }
 
 // 更新编辑器状态

@@ -1,9 +1,9 @@
 <template>
-  <VdDialog v-model:open="visible" title="插入签名" width="580px" :maskClosable="false" class="app-dialog" @afterOpenChange="(open: boolean) => { if (open) initSignatureCanvas() }">
+  <VdDialog v-model:open="visible" :title="t('dialog.signature.title')" width="580px" :maskClosable="false" class="app-dialog" @afterOpenChange="(open: boolean) => { if (open) initSignatureCanvas() }">
     <div class="signature-content">
       <div class="signature-operation">
-        <VdButton type="link" icon="undo" @click="signatureUndo" :disabled="signatureUndoStack.length <= 1">撤销</VdButton>
-        <VdButton type="link" icon="delete-outline" @click="signatureClear">清空</VdButton>
+        <VdButton type="link" icon="undo" @click="signatureUndo" :disabled="signatureUndoStack.length <= 1">{{ t('dialog.signature.undo') }}</VdButton>
+        <VdButton type="link" icon="delete-outline" @click="signatureClear">{{ t('dialog.signature.clear') }}</VdButton>
       </div>
       <div class="signature-canvas-wrapper">
         <canvas
@@ -16,11 +16,11 @@
           @mouseleave="signatureStopDraw"
         ></canvas>
       </div>
-      <span style="color: red;font-size: 12px">说明：签名仅用于本系统，不具备法律效力.</span>
+      <span style="color: red;font-size: 12px">{{ t('dialog.signature.hint') }}</span>
     </div>
     <template #footer>
-      <VdButton type="primary" icon="check" @click="confirmSignature">确定</VdButton>
-      <VdButton icon="close" @click="visible = false">取消</VdButton>
+      <VdButton type="primary" icon="check" @click="confirmSignature">{{ t('common.ok') }}</VdButton>
+      <VdButton icon="close" @click="visible = false">{{ t('common.cancel') }}</VdButton>
     </template>
   </VdDialog>
 </template>
@@ -28,6 +28,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick } from 'vue'
 import { VdDialog, VdButton } from '@vervedoc/ui'
+import { t } from '@/i18n'
 
 
 /** 组件 props 定义 */

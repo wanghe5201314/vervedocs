@@ -1,23 +1,23 @@
 <template>
   <VdDialog
     v-model:open="visible"
-    title="AI 设置"
+    :title="t('dialog.aiSettings.title')"
     width="480px"
     :maskClosable="false"
     @cancel="handleClose"
   >
     <a-form :model="form" :label-col="{ style: { width: '100px' } }">
-      <a-form-item label="API 端点">
+      <a-form-item :label="t('dialog.aiSettings.apiEndpoint')">
         <a-input
           v-model:value="form.apiEndpoint"
           placeholder="/api/ai"
         />
       </a-form-item>
-      <a-form-item label="流式响应">
+      <a-form-item :label="t('dialog.aiSettings.streamResponse')">
         <a-switch v-model:checked="form.streaming" />
-        <span class="form-hint">启用后可实时查看 AI 生成内容</span>
+        <span class="form-hint">{{ t('dialog.aiSettings.streamHint') }}</span>
       </a-form-item>
-      <a-form-item label="超时时间">
+      <a-form-item :label="t('dialog.aiSettings.timeout')">
         <a-input-number
           v-model:value="form.timeout"
           :min="5000"
@@ -25,21 +25,21 @@
           :step="5000"
           style="width: 160px"
         />
-        <span class="form-hint">毫秒</span>
+        <span class="form-hint">{{ t('dialog.aiSettings.timeoutUnit') }}</span>
       </a-form-item>
-      <a-form-item label="自定义请求头">
+      <a-form-item :label="t('dialog.aiSettings.customHeaders')">
         <a-textarea
           v-model:value="form.customHeaders"
           :rows="3"
           placeholder='{"Authorization": "Bearer xxx"}'
         />
-        <span class="form-hint">JSON 格式的自定义 HTTP 请求头</span>
+        <span class="form-hint">{{ t('dialog.aiSettings.headersPlaceholder') }}</span>
       </a-form-item>
     </a-form>
     <template #footer>
       <div class="dialog-footer">
-        <VdButton @click="handleClose">取消</VdButton>
-        <VdButton type="primary" @click="handleSave">保存</VdButton>
+        <VdButton @click="handleClose">{{ t('common.cancel') }}</VdButton>
+        <VdButton type="primary" @click="handleSave">{{ t('common.save') }}</VdButton>
       </div>
     </template>
   </VdDialog>
@@ -50,6 +50,7 @@ import { reactive, watch } from 'vue'
 import { VdDialog, VdButton } from '@vervedoc/ui'
 import { message } from 'ant-design-vue'
 import { updateAIServiceConfig } from '@/composables/use-ai'
+import { t } from '@/i18n'
 
 /** 弹窗可见性，双向绑定 model */
 const visible = defineModel<boolean>({ default: false })
@@ -86,7 +87,7 @@ const handleSave = () => {
     try {
       headers = JSON.parse(form.customHeaders)
     } catch {
-      message.error('自定义请求头格式错误，请输入合法的 JSON')
+      message.error(t('message.invalidHeaders'))
       return
     }
   }
@@ -98,7 +99,7 @@ const handleSave = () => {
     headers
   })
 
-  message.success('AI 设置已保存')
+  message.success(t('message.aiSettingsSaved'))
   visible.value = false
 }
 

@@ -1,19 +1,19 @@
 <template>
   <VdDialog
     :open="visible"
-    :title="mode === 'protect' ? '保护文档' : '解密文档'"
+    :title="mode === 'protect' ? t('passwordCard.protectTitle') : t('passwordCard.decryptTitle')"
     :z-index="10000"
     @cancel="handleCancel"
   >
     <a-input-password
       v-model:value="password"
-      :placeholder="mode === 'protect' ? '请输入保护密码' : '请输入密码以解密文档'"
+      :placeholder="mode === 'protect' ? t('passwordCard.protectPlaceholder') : t('passwordCard.decryptPlaceholder')"
       @press-enter="handleOk"
     />
     <div v-if="error" class="password-error">{{ error }}</div>
     <template #footer>
-      <VdButton @click="handleCancel">取消</VdButton>
-      <VdButton type="primary" :loading="loading" @click="handleOk">确认</VdButton>
+      <VdButton @click="handleCancel">{{ t('common.cancel') }}</VdButton>
+      <VdButton type="primary" :loading="loading" @click="handleOk">{{ t('common.confirm') }}</VdButton>
     </template>
   </VdDialog>
 </template>
@@ -21,6 +21,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { VdDialog, VdButton } from '@vervedoc/ui'
+import { t } from '@/i18n'
 
 const props = defineProps<{
   visible: boolean

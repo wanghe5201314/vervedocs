@@ -1,39 +1,39 @@
 <template>
   <div class="ribbon-tab-panel">
     <!-- 页面 -->
-    <VdRibbonGroup title="页面">
-      <VdRibbonButton icon="file-document-outline" text="空白页" title="插入空白页" size="large" @click="emit('command', 'insertBlankPageBefore')" />
+    <VdRibbonGroup :title="t('ribbon.insert.page')">
+      <VdRibbonButton icon="file-document-outline" :text="t('ribbon.insert.blankPage')" :title="t('ribbon.insert.insertBlankPage')" size="large" @click="emit('command', 'insertBlankPageBefore')" />
       <a-dropdown :trigger="['click']">
-        <VdRibbonButton icon="format-page-break" text="分页" title="分页" size="large" has-arrow />
+        <VdRibbonButton icon="format-page-break" :text="t('ribbon.insert.pageBreak')" :title="t('ribbon.insert.pageBreak')" size="large" has-arrow />
         <template #overlay>
           <a-menu @click="({ key }: any) => emit('command', key)">
-            <a-menu-item key="pageBreak"><span class="mi"><VdIcon name="format-page-break" /><span>分页符</span></span></a-menu-item>
-            <a-menu-item key="lineBreak"><span class="mi"><VdIcon name="separator-line-break" /><span>换行符</span></span></a-menu-item>
+            <a-menu-item key="pageBreak"><span class="mi"><VdIcon name="format-page-break" /><span>{{ t('ribbon.insert.pageBreakSymbol') }}</span></span></a-menu-item>
+            <a-menu-item key="lineBreak"><span class="mi"><VdIcon name="separator-line-break" /><span>{{ t('ribbon.insert.lineBreakSymbol') }}</span></span></a-menu-item>
             <a-menu-divider />
-            <a-menu-item key="sectionBreakNextPage"><span class="mi"><VdIcon name="file-document-outline" /><span>下一页分节符</span></span></a-menu-item>
-            <a-menu-item key="sectionBreakContinuous"><span class="mi"><VdIcon name="format-section" /><span>连续分节符</span></span></a-menu-item>
-            <a-menu-item key="sectionBreakEvenPage"><span class="mi"><VdIcon name="numeric-2-box-outline" /><span>偶数页分节符</span></span></a-menu-item>
-            <a-menu-item key="sectionBreakOddPage"><span class="mi"><VdIcon name="numeric-1-box-outline" /><span>奇数页分节符</span></span></a-menu-item>
+            <a-menu-item key="sectionBreakNextPage"><span class="mi"><VdIcon name="file-document-outline" /><span>{{ t('ribbon.insert.nextPageSectionBreak') }}</span></span></a-menu-item>
+            <a-menu-item key="sectionBreakContinuous"><span class="mi"><VdIcon name="format-section" /><span>{{ t('ribbon.insert.continuousSectionBreak') }}</span></span></a-menu-item>
+            <a-menu-item key="sectionBreakEvenPage"><span class="mi"><VdIcon name="numeric-2-box-outline" /><span>{{ t('ribbon.insert.evenPageSectionBreak') }}</span></span></a-menu-item>
+            <a-menu-item key="sectionBreakOddPage"><span class="mi"><VdIcon name="numeric-1-box-outline" /><span>{{ t('ribbon.insert.oddPageSectionBreak') }}</span></span></a-menu-item>
           </a-menu>
         </template>
       </a-dropdown>
     </VdRibbonGroup>
 
     <!-- 表格 -->
-    <VdRibbonGroup title="表格">
+    <VdRibbonGroup :title="t('ribbon.insert.table')">
       <a-popover placement="bottom" :overlayStyle="{ width: '260px' }" trigger="click" v-model:open="tablePopoverVisible">
-        <VdRibbonButton icon="table" text="表格" title="插入表格" size="large" has-arrow />
+        <VdRibbonButton icon="table" :text="t('ribbon.insert.table')" :title="t('ribbon.insert.insertTable')" size="large" has-arrow />
         <template #content>
           <VdCard size="small" class="ribbon-popover-card" :bordered="false" :bodyStyle="{ padding: '8px' }">
             <div class="table-selector">
-              <div class="table-title">插入表格</div>
+              <div class="table-title">{{ t('ribbon.insert.insertTable') }}</div>
               <div class="table-grid" @mouseleave="hoverCell = { r: -1, c: -1 }">
                 <div v-for="r in 10" :key="r" class="tgrid-row">
                   <div v-for="c in 10" :key="c" class="tgrid-cell" :class="{ selected: r <= hoverCell.r + 1 && c <= hoverCell.c + 1 }" @mouseover="hoverCell = { r: r - 1, c: c - 1 }" @click="handleInsertTable(r, c)"></div>
                 </div>
               </div>
-              <div class="table-info">{{ hoverCell.r >= 0 ? `${hoverCell.r + 1} × ${hoverCell.c + 1}` : '选择大小' }}</div>
-              <button class="table-more-btn" @click="handleOpenInsertTableDialog">更多选项...</button>
+              <div class="table-info">{{ hoverCell.r >= 0 ? `${hoverCell.r + 1} × ${hoverCell.c + 1}` : t('common.selectSize') }}</div>
+              <button class="table-more-btn" @click="handleOpenInsertTableDialog">{{ t('ribbon.insert.moreOptions') }}</button>
             </div>
           </VdCard>
         </template>
@@ -41,21 +41,21 @@
     </VdRibbonGroup>
 
     <!-- 插图 -->
-    <VdRibbonGroup title="插图">
-      <VdRibbonButton icon="image-outline" text="图片" title="插入图片" size="large" @click="emit('command', 'image')" />
+    <VdRibbonGroup :title="t('ribbon.insert.illustration')">
+      <VdRibbonButton icon="image-outline" :text="t('ribbon.insert.image')" :title="t('ribbon.insert.insertImage')" size="large" @click="emit('command', 'image')" />
 
-      <VdRibbonButton icon="stacked_bar_chart" text="图表" title="插入图表" size="large" @click="emit('command', 'insertChart')" />
+      <VdRibbonButton icon="stacked_bar_chart" :text="t('ribbon.insert.chart')" :title="t('ribbon.insert.insertChart')" size="large" @click="emit('command', 'insertChart')" />
     </VdRibbonGroup>
 
     <!-- 链接 -->
-    <VdRibbonGroup title="链接">
-      <VdRibbonButton icon="link-variant" text="超链接" title="插入超链接 (Ctrl+K)" size="large" @click="emit('command', 'hyperlink')" />
+    <VdRibbonGroup :title="t('ribbon.insert.link')">
+      <VdRibbonButton icon="link-variant" :text="t('ribbon.insert.hyperlink')" :title="t('ribbon.insert.insertHyperlink')" size="large" @click="emit('command', 'hyperlink')" />
       <a-dropdown :trigger="['click']">
-        <VdRibbonButton icon="functions" text="公式" title="公式" size="large" has-arrow />
+        <VdRibbonButton icon="functions" :text="t('ribbon.insert.formula')" :title="t('ribbon.insert.formula')" size="large" has-arrow />
         <template #overlay>
           <a-menu @click="({ key }: any) => handleFormulaMenuClick(String(key))">
             <a-menu-item key="latex">
-              <span class="mi"><VdIcon name="functions" /><span>插入LaTeX公式</span></span>
+              <span class="mi"><VdIcon name="functions" /><span>{{ t('ribbon.insert.insertLatex') }}</span></span>
             </a-menu-item>
             <a-sub-menu v-for="cat in FORMULA_CATEGORIES" :key="'formula-' + cat.name">
               <template #title>
@@ -74,10 +74,10 @@
     </VdRibbonGroup>
 
     <!-- 分隔符 -->
-    <VdRibbonGroup title="分隔符">
+    <VdRibbonGroup :title="t('ribbon.insert.separator')">
 
       <a-popover placement="bottom" :overlayStyle="{ width: '220px' }" trigger="click" v-model:open="separatorPopoverVisible">
-        <VdRibbonButton icon="separator-horizontal-line" text="分割线" title="分割线" size="large" has-arrow />
+        <VdRibbonButton icon="separator-horizontal-line" :text="t('ribbon.insert.splitLine')" :title="t('ribbon.insert.splitLine')" size="large" has-arrow />
         <template #content>
           <VdCard size="small" class="ribbon-popover-card" :bordered="false" :bodyStyle="{ padding: '8px' }">
             <div class="separator-list">
@@ -92,21 +92,22 @@
 
 
     <!-- 符号 -->
-    <VdRibbonGroup title="符号">
-      <VdRibbonButton icon="calendar-clock" text="日期和时间" title="日期和时间" size="large" @click="emit('command', 'insertDate')" />
-      <VdRibbonButton icon="barcode" text="条形码" title="条形码" size="large" @click="emit('command', 'barcode')" />
-      <VdRibbonButton icon="qrcode" text="二维码" title="二维码" size="large" @click="emit('command', 'qrcode')" />
-      <VdRibbonButton icon="draw" text="电子签名" title="电子签名" size="large" @click="emit('command', 'signature')" />
+    <VdRibbonGroup :title="t('ribbon.insert.symbol')">
+      <VdRibbonButton icon="calendar-clock" :text="t('ribbon.insert.dateAndTime')" :title="t('ribbon.insert.dateAndTime')" size="large" @click="emit('command', 'insertDate')" />
+      <VdRibbonButton icon="barcode" :text="t('ribbon.insert.barcode')" :title="t('ribbon.insert.barcode')" size="large" @click="emit('command', 'barcode')" />
+      <VdRibbonButton icon="qrcode" :text="t('ribbon.insert.qrcode')" :title="t('ribbon.insert.qrcode')" size="large" @click="emit('command', 'qrcode')" />
+      <VdRibbonButton icon="draw" :text="t('ribbon.insert.signature')" :title="t('ribbon.insert.signature')" size="large" @click="emit('command', 'signature')" />
     </VdRibbonGroup>
   </div>
 </template>
 
 <script setup lang="ts">
 import { VdRibbonButton, VdRibbonGroup, VdIcon, VdCard } from '@vervedoc/ui'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 import { SEPARATOR_STYLES } from '@vervedoc/core'
-import { FORMULA_CATEGORIES } from '@/config/constants'
+import { getFormulaCategories } from '@/config/constants'
+import { t } from '@/i18n'
 
 
 
@@ -117,6 +118,8 @@ const emit = defineEmits<{
 defineProps<{
   hasSelection?: boolean
 }>()
+
+const FORMULA_CATEGORIES = computed(() => getFormulaCategories())
 
 /** 表格插入弹窗可见状态 */
 const tablePopoverVisible = ref(false)

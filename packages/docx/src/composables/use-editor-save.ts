@@ -2,6 +2,7 @@ import { Ref } from 'vue'
 import { emitExternalEvent } from '@/composables/use-external-events'
 
 import type { DocumentMeta } from '@/types/document'
+import { t } from '@/i18n'
 
 /**
  * 编辑器实例接口（保存所需的最小能力）
@@ -105,7 +106,7 @@ export function useEditorSave(options: {
         args: [{ silent: !!saveOptions?.silent, snapshot: saveSnapshot }]
       })
     } catch (e) {
-      const msg = e instanceof Error ? e.message : '保存失败'
+      const msg = e instanceof Error ? e.message : t('editor.saveFailed')
       emitExternalEvent('statusChange', { command: 'saveError', args: [msg] })
     } finally {
       saving = false

@@ -1,16 +1,16 @@
 <template>
   <div class="top-header">
     <div class="left-actions">
-      <button class="quick-btn" title="导入文档" @click="emit('command', 'import')">
+      <button class="quick-btn" :title="t('topHeader.import')" @click="emit('command', 'import')">
         <VdIcon name="file-outline" />
       </button>
-      <button class="quick-btn" title="保存 (Ctrl+S)" @click="emit('command', 'save')">
+      <button class="quick-btn" :title="t('topHeader.save')" @click="emit('command', 'save')">
         <VdIcon name="content-save-outline" />
       </button>
-      <button class="quick-btn" title="撤销 (Ctrl+Z)" @click="emit('command', 'undo')">
+      <button class="quick-btn" :title="t('topHeader.undo')" @click="emit('command', 'undo')">
         <VdIcon name="undo" />
       </button>
-      <button class="quick-btn" title="重做 (Ctrl+Y)" @click="emit('command', 'redo')">
+      <button class="quick-btn" :title="t('topHeader.redo')" @click="emit('command', 'redo')">
         <VdIcon name="redo" />
       </button>
     </div>
@@ -19,12 +19,12 @@
       <div class="doc-status">
         <template v-if="isViewMode">
           <EyeOutlined class="status-icon" />
-          <span>只读模式</span>
+          <span>{{ t('topHeader.readonlyMode') }}</span>
         </template>
         <template v-else>
           <CheckCircleOutlined v-if="lastSaveTime" class="status-icon" />
           <CloudOutlined v-else class="status-icon" />
-          <span>{{ lastSaveTime ? `已保存 ${lastSaveTime}` : '自动保存中' }}</span>
+          <span>{{ lastSaveTime ? t('topHeader.saved', { time: lastSaveTime }) : t('topHeader.saving') }}</span>
         </template>
       </div>
     </div>
@@ -47,6 +47,7 @@ import { CheckCircleOutlined, CloudOutlined, EyeOutlined } from '@ant-design/ico
 import { VdIcon } from '@vervedoc/ui'
 import { getAvatarText } from '@/utils'
 import type { CollabUser } from '@/types/collab'
+import { t } from '@/i18n'
 
 const emit = defineEmits<{
   (e: 'command', command: string): void

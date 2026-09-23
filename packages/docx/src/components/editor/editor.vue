@@ -24,13 +24,14 @@ import { useEditorLatex } from '@/composables/use-editor-latex'
 import { useEditorBarcode } from '@/composables/use-editor-barcode'
 import { useEditorFormat } from '@/composables/use-editor-format'
 import { useEditorPage } from '@/composables/use-editor-page'
+import { t } from '@/i18n'
 
 /** 编辑器初始元素数据 */
 const data: IElement[] = []
 
 /** 编辑器初始化选项 */
 const options = {
-  defaultFont: '微软雅黑',
+  defaultFont: t('editor.defaultFont'),
   defaultSize: 14,
   showRuler: true,
   marginIndicatorDisabled: false,

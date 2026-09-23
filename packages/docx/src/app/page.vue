@@ -134,7 +134,7 @@
     />
     <TableBordersDialog
       v-model="tablePropertiesDialogVisible"
-      title="表格属性"
+      :title="t('common.tableProperties')"
       :editor="{ executeCommand }"
     />
 
@@ -184,19 +184,20 @@
     <div v-if="!isContentVisible" class="editor-protect-overlay">
       <div class="protect-overlay-content">
         <span class="material-symbols-outlined" style="font-size: 48px">lock</span>
-        <p>文档已保护，请解除保护后查看</p>
+        <p>{{ t('editor.protectedHint') }}</p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { inject, provide, onBeforeUnmount, ref, nextTick, watch, type Ref } from 'vue'
+import { inject, provide, onBeforeUnmount, ref, nextTick, watch, computed, type Ref } from 'vue'
 import { message } from 'ant-design-vue'
 import type { InitialDocument } from '@/types/document'
 import type { DocxImportCallback, DocxExportCallback } from '@vervedoc/core'
 import { toDocxExportDocument } from '@vervedoc/docx-editor-schema'
 import type { IEditorSearchApi } from '@/composables/use-editor-search'
+import { t } from '@/i18n'
 import {
   emitExternalEvent,
   externalApi,
@@ -265,38 +266,38 @@ import { useEditorCommand } from '@/composables/use-editor-command'
 import { replaceDocument } from '@/composables/use-replace-document'
 import { deriveDocumentNameFromPath } from '@/utils'
 
-/** 注入的初始文档对象 */
+/** 注入的初始文档对�?*/
 const initialDocument = inject<InitialDocument | null>(
   'docx-editor-ui:initDocument',
   null
 )
-/** 注入的协同配置 */
+/** 注入的协同配�?*/
 const collaborationConfig = inject<CollaborationOptions | null>(
   'docx-editor-ui:collaboration',
   null
 )
-/** 注入的文档导入回调 */
+/** 注入的文档导入回�?*/
 const importCallback = inject<DocxImportCallback | undefined>(
   'docx-editor-ui:importCallback',
   undefined
 )
-/** 注入的文档导出回调 */
+/** 注入的文档导出回�?*/
 const exportCallback = inject<DocxExportCallback | undefined>(
   'docx-editor-ui:exportCallback',
   undefined
 )
 
-/** 文档内容是否可见（受保护时为 false） */
+/** 文档内容是否可见（受保护时为 false�?*/
 const isContentVisible = ref(true)
-/** 首次解锁前不挂载；挂载后隐藏时保留文档、历史和协同连接。 */
+/** 首次解锁前不挂载；挂载后隐藏时保留文档、历史和协同连接�?*/
 const hasEditorMounted = ref(false)
-/** 文档保护密码的 SHA-256 哈希值 */
+/** 文档保护密码�?SHA-256 哈希�?*/
 const protectPasswordHash = ref<string | null>(null)
 /** 密码弹窗是否可见 */
 const passwordModalVisible = ref(false)
-/** 密码弹窗模式：protect 为设置保护，unprotect 为解除保护 */
+/** 密码弹窗模式：protect 为设置保护，unprotect 为解除保�?*/
 const passwordModalMode = ref<'protect' | 'unprotect'>('protect')
-/** 密码弹窗加载状态 */
+/** 密码弹窗加载状�?*/
 const passwordModalLoading = ref(false)
 /** 密码弹窗错误信息 */
 const passwordError = ref('')
@@ -305,9 +306,9 @@ const passwordError = ref('')
 const PROTECT_HASH_KEY = 'docx-editor:protect-hash'
 
 /**
- * 计算文本的 SHA-256 哈希值
+ * 计算文本�?SHA-256 哈希�?
  * @param text - 待哈希的文本
- * @returns 十六进制字符串形式的哈希值
+ * @returns 十六进制字符串形式的哈希�?
  */
 const sha256 = async (text: string): Promise<string> => {
   const data = new TextEncoder().encode(text)
@@ -317,7 +318,7 @@ const sha256 = async (text: string): Promise<string> => {
     .join('')
 }
 
-/** 从 localStorage 读取已存储的保护密码哈希 */
+/** �?localStorage 读取已存储的保护密码哈希 */
 const storedHash = localStorage.getItem(PROTECT_HASH_KEY)
 if (storedHash) {
   protectPasswordHash.value = storedHash
@@ -328,12 +329,12 @@ if (storedHash) {
 
 /** 编辑器应用根节点引用 */
 const editorAppRef = ref<HTMLElement | null>(null)
-/** 编辑器区域节点引用 */
+/** 编辑器区域节点引�?*/
 const editorAreaRef = ref<HTMLElement | null>(null)
 
-/** 编辑器组件实例引用 */
+/** 编辑器组件实例引�?*/
 const editorRef = ref<any>(null)
-/** 底部栏组件实例引用 */
+/** 底部栏组件实例引�?*/
 const footerRef = ref<any>(null)
 
 /** 文档元信息、统计、标题等状态及操作方法 */
@@ -348,28 +349,28 @@ const {
   setMeta
 } = useDocumentMeta({ initialDocument })
 
-/** 应用忙碌状态：idle 空闲、loading 加载中、saving 保存中 */
+/** 应用忙碌状态：idle 空闲、loading 加载中、saving 保存�?*/
 const busyState = ref<'idle' | 'loading' | 'saving'>('idle')
 let fileOperationPending = false
 const fileOperationLoading = ref('')
-const loadingPoems = [
-  '功崇惟志，业广惟勤。 —— 《尚书·周官》',
-  '锲而不舍，金石可镂。 —— 《荀子·劝学》',
-  '满招损，谦受益。 —— 《尚书·大禹谟》',
-  '功崇惟志，业广惟勤。 —— 《尚书·周官》',
-  '千里之行，始于足下。 —— 《老子·第六十四章》',
-  '合抱之木，生于毫末。 —— 《老子·第六十四章》',
-  '生于忧患，死于安乐。 —— 《孟子·告子下》',
-  '天将降大任于是人也，必先苦其心志。 —— 《孟子·告子下》',
-  '三军可夺帅也，匹夫不可夺志也。 —— 《论语·子罕》',
-]
+const loadingPoems = computed(() => [
+  t('editor.poem1'),
+  t('editor.poem2'),
+  t('editor.poem3'),
+  t('editor.poem4'),
+  t('editor.poem5'),
+  t('editor.poem6'),
+  t('editor.poem7'),
+  t('editor.poem8'),
+  t('editor.poem9')
+])
 const loadingPoemIndex = ref(0)
 
 watch(fileOperationLoading, (loading, _previous, onCleanup) => {
   if (!loading) return
   loadingPoemIndex.value = 0
   const timer = setInterval(() => {
-    loadingPoemIndex.value = (loadingPoemIndex.value + 1) % loadingPoems.length
+    loadingPoemIndex.value = (loadingPoemIndex.value + 1) % loadingPoems.value.length
   }, 2000)
   onCleanup(() => clearInterval(timer))
 }, { flush: 'sync' })
@@ -377,7 +378,7 @@ watch(fileOperationLoading, (loading, _previous, onCleanup) => {
 
 /** 应用是否就绪 */
 const isAppReady = ref(false)
-/** 当内容不可见时立即标记应用就绪 */
+/** 当内容不可见时立即标记应用就�?*/
 watch(
   isContentVisible,
   visible => {
@@ -387,24 +388,24 @@ watch(
 )
 
 /**
- * 获取编辑器实例
- * @returns 编辑器实例，若不可用则返回 null
+ * 获取编辑器实�?
+ * @returns 编辑器实例，若不可用则返�?null
  */
 const getEditorInstance = () => editorRef.value?.getEditorInstance?.() ?? null
 /**
- * 提供自动目录数据获取函数，供引用选项卡"自动目录"子菜单悬浮预览使用
+ * 提供自动目录数据获取函数，供引用选项�?自动目录"子菜单悬浮预览使�?
  */
 provide('docx-editor:getAutoToc', () => {
   const instance = getEditorInstance()
   return instance?.command?.getAutoToc?.() ?? null
 })
 /**
- * 获取批注组件实例（供内部 composable 使用，需要写操作能力）
+ * 获取批注组件实例（供内部 composable 使用，需要写操作能力�?
  * @returns 批注组件实例，若不可用则返回 null
  */
 const getCommentComponent = () => getEditorInstance()?.getPlugin?.('comment') ?? null
 /**
- * 刷新批注与修订覆盖层，在下一帧同步渲染并同步 API 状态
+ * 刷新批注与修订覆盖层，在下一帧同步渲染并同步 API 状�?
  */
 const refreshReviewOverlays = () => {
   nextTick(() =>
@@ -425,7 +426,7 @@ const refreshReviewOverlays = () => {
  * 执行编辑器命令，转发至内部编辑器实例
  * @param command - 命令名称
  * @param args - 命令参数
- * @returns 编辑器命令执行结果
+ * @returns 编辑器命令执行结�?
  */
 const executeCommand = (command: string, ...args: any[]) => {
   const fn = editorRef.value?.executeCommand
@@ -440,7 +441,7 @@ const getSearchAPI = (): IEditorSearchApi | null => {
   return editorRef.value?.getSearchAPI?.() ?? null
 }
 
-/** 搜索 API 对象，代理内部搜索 API 并提供默认空结果 */
+/** 搜索 API 对象，代理内部搜�?API 并提供默认空结果 */
 const searchAPI: IEditorSearchApi = {
   search(keyword) {
     return getSearchAPI()?.search(keyword) ?? { count: 0 }
@@ -462,11 +463,11 @@ const searchAPI: IEditorSearchApi = {
   }
 }
 
-/** 一次性抑制保存标志，用于内容替换后避免触发自动保存 */
+/** 一次性抑制保存标志，用于内容替换后避免触发自动保�?*/
 let suppressSaveOnce = false
 /**
- * 设置一次性抑制保存标志
- * @param value - 是否抑制下一次保存
+ * 设置一次性抑制保存标�?
+ * @param value - 是否抑制下一次保�?
  */
 const setSuppressSaveOnce = (value: boolean) => {
   suppressSaveOnce = value
@@ -539,9 +540,9 @@ const { commentAPI } = useEditorComments({
   getActiveGroupId: () => editorStateStore.state.groupIds?.[0] || ''
 })
 
-/** 工具栏是否可见 */
+/** 工具栏是否可�?*/
 const toolbarVisible = ref(true)
-/** 底部导航栏是否可见 */
+/** 底部导航栏是否可�?*/
 const bottomNavVisible = ref(true)
 
 /** 是否启用修订跟踪模式 */
@@ -564,7 +565,7 @@ watch(() => tocNavAPI.visible.value, (visible) => {
 
 /**
  * 处理左侧停靠栏选择，目录或章节时打开目录面板，其余走基础处理
- * @param key - 停靠栏键值
+ * @param key - 停靠栏键�?
  */
 const handleDockSelect = (key: 'search' | 'toc' | 'section' | 'ai' | 'revision' | 'bookmark') => {
   if (key === 'toc' || key === 'section') {
@@ -577,7 +578,7 @@ const handleDockSelect = (key: 'search' | 'toc' | 'section' | 'ai' | 'revision' 
   baseHandleDockSelect(key)
 }
 
-/** 对外暴露的书签 API，代理编辑器书签命令 */
+/** 对外暴露的书�?API，代理编辑器书签命令 */
 const externalBookmarkAPI: ExternalBookmarkApi = {
   getState(): BookmarkState {
     bookmarkAPI.refresh()
@@ -599,7 +600,7 @@ const externalBookmarkAPI: ExternalBookmarkApi = {
   }
 }
 
-/** 对外暴露的修订 API，代理修订列表操作 */
+/** 对外暴露的修�?API，代理修订列表操�?*/
 const externalRevisionAPI: ExternalRevisionApi = {
   getState(): RevisionState {
     revisionAPI.sync()
@@ -637,7 +638,7 @@ const externalRevisionAPI: ExternalRevisionApi = {
   }
 }
 
-/** 对外暴露的批注 API，代理批注创建、删除、定位等操作 */
+/** 对外暴露的批�?API，代理批注创建、删除、定位等操作 */
 const externalCommentAPI: ExternalCommentApi = {
   getState() {
     return commentAPI.getState()
@@ -659,7 +660,7 @@ const externalCommentAPI: ExternalCommentApi = {
   }
 }
 
-/** 对外暴露的目录 API，代理目录列表、缩略图、定位等操作 */
+/** 对外暴露的目�?API，代理目录列表、缩略图、定位等操作 */
 const externalTocAPI: ExternalTocApi = {
   getState() {
     const state = tocNavAPI.getState()
@@ -695,9 +696,9 @@ const externalTocAPI: ExternalTocApi = {
 }
 
 /**
- * 整文档替换封装（docx 导入 / JSON url / content 初始加载共用）
- * - 默认清空页眉页脚，避免与旧文档杂糅
- * - 重置批注并 render，同步修订 UI 与目录
+ * 整文档替换封装（docx 导入 / JSON url / content 初始加载共用�?
+ * - 默认清空页眉页脚，避免与旧文档杂�?
+ * - 重置批注�?render，同步修�?UI 与目�?
  */
 const applyDocumentReplace = async (payload: {
   main: any[]
@@ -714,13 +715,13 @@ const applyDocumentReplace = async (payload: {
   )
 }
 
-/** AI 状态对象 */
+/** AI 状态对�?*/
 const aiState = aiStateStore.state
 
-/** 文档是否已加载完成标志 */
+/** 文档是否已加载完成标�?*/
 let loaded = false
 
-/** 编辑器保存相关方法 */
+/** 编辑器保存相关方�?*/
 const { getSnapshot, saveNow, scheduleSave } = useEditorSave({
   getEditorInstance,
   getCommentComponent,
@@ -748,7 +749,7 @@ const {
   scheduleSave
 })
 
-/** 文档操作方法：重命名、新建、权限、反馈 */
+/** 文档操作方法：重命名、新建、权限、反�?*/
 const { renameDoc, newDoc, openAccessPermission, openFeedback } =
   useDocumentActions({
     documentMeta,
@@ -759,7 +760,7 @@ const { renameDoc, newDoc, openAccessPermission, openFeedback } =
     applyDocumentReplace
   })
 
-/** 注册对外暴露的 API 对象 */
+/** 注册对外暴露�?API 对象 */
 externalApi.document = {
   getMeta: () => ({ ...documentMeta }),
   setMeta,
@@ -773,9 +774,9 @@ externalApi.comment = externalCommentAPI
 externalApi.toc = externalTocAPI
 
 /**
- * 规范化文档内容结构，支持数组、含 main 的对象、含 data.main 的对象等多种形态
+ * 规范化文档内容结构，支持数组、含 main 的对象、含 data.main 的对象等多种形�?
  * @param content - 原始内容
- * @returns 规范化后的包含 main、header、footer 字段的内容对象
+ * @returns 规范化后的包�?main、header、footer 字段的内容对�?
  */
 const normalizeContent = (content: any): any => {
   if (Array.isArray(content)) return { main: content, header: [], footer: [] }
@@ -798,7 +799,7 @@ const normalizeContent = (content: any): any => {
 
 /**
  * 编辑器就绪回调：标记应用就绪、安装修订与批注覆盖层、加载初始内容、初始化协同
- * @param args - 编辑器就绪事件参数
+ * @param args - 编辑器就绪事件参�?
  */
 const handleReady = (...args: any[]) => {
   hasEditorMounted.value = true
@@ -833,7 +834,7 @@ const handleReady = (...args: any[]) => {
   refreshReviewOverlays()
   void tocNavAPI.sync()
 
-  // 初始内容优先级：content → url → 空文档（由宿主决定，不内置默认文件）
+  // 初始内容优先级：content �?url �?空文档（由宿主决定，不内置默认文件）
   const content = (initialDocument as any)?.content
   const sourceUrl = String((initialDocument as any)?.url || '').trim()
 
@@ -859,7 +860,7 @@ const handleReady = (...args: any[]) => {
             }
           }
         } else {
-          console.warn(`[Editor] 初始文档加载失败: ${sourceUrl}`, message || '')
+          console.warn(`[Editor] ${t('editor.initialLoadFail')}: ${sourceUrl}`, message || '')
         }
         nextTick(() => initCollaboration())
       }
@@ -899,7 +900,7 @@ const handleReady = (...args: any[]) => {
   })()
 }
 
-/** 组件卸载前清理协同资源 */
+/** 组件卸载前清理协同资�?*/
 onBeforeUnmount(() => {
   cleanupCollaboration()
 })
@@ -932,7 +933,7 @@ const handleEditorCommand = (command: string, ...args: any[]) => {
 
 }
 
-/** 对话框命令到可见状态引用的映射表 */
+/** 对话框命令到可见状态引用的映射�?*/
 const dialogCommands: Record<string, Ref<boolean>> = {
   hyperlink: hyperlinkDialogVisible,
   bookmark: bookmarkDialogVisible,
@@ -953,15 +954,15 @@ const dialogCommands: Record<string, Ref<boolean>> = {
 
 /** 暂不支持功能的提示信息映射表 */
 const infoMessages: Record<string, string> = {
-  exportPdf: '暂不支持导出 PDF',
-  exportHtml: '暂不支持导出 HTML',
-  footnote: '暂不支持脚注',
-  spellcheck: '暂不支持拼写检查',
-  compare: '暂不支持比较文档',
-  separatorDialog: '分割线颜色暂未接入'
+  exportPdf: t('editor.notSupportPdf'),
+  exportHtml: t('editor.notSupportHtml'),
+  footnote: t('editor.notSupportFootnote'),
+  spellcheck: t('editor.notSupportSpellcheck'),
+  compare: t('editor.notSupportCompare'),
+  separatorDialog: t('editor.splitLineColor')
 }
 
-/** AI 命令到 AI 动作配置的映射表 */
+/** AI 命令�?AI 动作配置的映射表 */
 const aiCommands: Record<
   string,
   { action: string; payload?: any; tab?: AITab }
@@ -980,11 +981,11 @@ const aiCommands: Record<
   aiLayout: { action: 'layoutSuggestion', tab: 'layout' }
 }
 
-/** 处理文档导入：弹出文件选择框，调用导入回调并替换文档内容 */
+/** 处理文档导入：弹出文件选择框，调用导入回调并替换文档内�?*/
 const handleImportDoc = () => {
   if (fileOperationPending) return
   if (!importCallback) {
-    message.warning('未配置导入回调，导入功能不可用')
+    message.warning(t('editor.importNoCallback'))
     return
   }
   const input = document.createElement('input')
@@ -995,13 +996,13 @@ const handleImportDoc = () => {
     if (!file || fileOperationPending) return
     fileOperationPending = true
     try {
-      fileOperationLoading.value = '正在导入文档...'
+      fileOperationLoading.value = t('editor.importing')
       busyState.value = 'loading'
       await nextTick()
       const arrayBuffer = await file.arrayBuffer()
       const result = await importCallback(arrayBuffer)
       if (!result.success || !result.elements?.length) {
-        message.error(`文档解析失败: ${result.error || '未知错误'}`)
+        message.error(`${t('editor.parseFailed')}: ${result.error || t('editor.unknownError')}`)
         return
       }
       suppressSaveOnce = true
@@ -1015,7 +1016,7 @@ const handleImportDoc = () => {
         emitMetaChange()
       }
     } catch (e) {
-      message.error(`导入失败: ${(e as Error)?.message || '未知错误'}`)
+      message.error(`${t('editor.importFailed')}: ${(e as Error)?.message || t('editor.unknownError')}`)
     } finally {
       fileOperationLoading.value = ''
       fileOperationPending = false
@@ -1025,24 +1026,24 @@ const handleImportDoc = () => {
   input.click()
 }
 
-/** 处理文档导出：获取编辑器内容并调用导出回调，触发浏览器下载 */
+/** 处理文档导出：获取编辑器内容并调用导出回调，触发浏览器下�?*/
 const handleExportDoc = async () => {
   if (fileOperationPending) return
   if (!exportCallback) {
-    message.warning('未配置导出回调，导出功能不可用')
+    message.warning(t('editor.exportNoCallback'))
     return
   }
   const instance = getEditorInstance()
   if (!instance) return
   fileOperationPending = true
   try {
-    fileOperationLoading.value = '正在导出文档...'
+    fileOperationLoading.value = t('editor.exporting')
     await nextTick()
     const value = instance.command?.getValue?.()
     if (!value) return
     const result = await exportCallback(toDocxExportDocument(value))
     if (!result.success || !result.data) {
-      message.error(`导出失败: ${result.error || '未知错误'}`)
+      message.error(`${t('editor.exportFailed')}: ${result.error || t('editor.unknownError')}`)
       return
     }
     const blob = new Blob([result.data], {
@@ -1052,30 +1053,30 @@ const handleExportDoc = async () => {
     try {
       const a = document.createElement('a')
       a.href = url
-      a.download = `${documentMeta.name || '文档'}.docx`
+      a.download = `${documentMeta.name || t('common.fileName')}.docx`
       a.click()
     } finally {
       URL.revokeObjectURL(url)
     }
   } catch (e) {
-    message.error(`导出失败: ${(e as Error)?.message || '未知错误'}`)
+    message.error(`${t('editor.exportFailed')}: ${(e as Error)?.message || t('editor.unknownError')}`)
   } finally {
     fileOperationLoading.value = ''
     fileOperationPending = false
   }
 }
 
-/** 处理文档保护：隐藏内容并弹出保护密码输入框 */
+/** 处理文档保护：隐藏内容并弹出保护密码输入�?*/
 const handleProtectDoc = () => {
   passwordModalMode.value = 'protect'
   isContentVisible.value = false
   passwordModalVisible.value = true
 }
 
-/** 处理解除文档保护：弹出密码输入框以验证 */
+/** 处理解除文档保护：弹出密码输入框以验�?*/
 const handleUnprotectDoc = () => {
   if (!protectPasswordHash.value) {
-    message.warning('文档未受保护')
+    message.warning(t('editor.notProtected'))
     return
   }
   passwordModalMode.value = 'unprotect'
@@ -1084,7 +1085,7 @@ const handleUnprotectDoc = () => {
 
 /**
  * 处理密码确认：设置保护或验证密码解除保护
- * @param password - 用户输入的密码
+ * @param password - 用户输入的密�?
  */
 const handlePasswordConfirm = async (password: string) => {
   passwordModalLoading.value = true
@@ -1102,7 +1103,7 @@ const handlePasswordConfirm = async (password: string) => {
         localStorage.removeItem(PROTECT_HASH_KEY)
         passwordModalVisible.value = false
       } else {
-        passwordError.value = '密码不正确'
+        passwordError.value = t('editor.passwordIncorrect')
       }
     }
   } finally {
@@ -1177,7 +1178,7 @@ const handleCommand = (command: string, ...args: any[]) => {
       try {
         return executeCommand('print')
       } catch (error) {
-        message.error(`打印失败: ${(error as Error)?.message || '未知错误'}`)
+        message.error(`${t('editor.printFailed')}: ${(error as Error)?.message || t('editor.unknownError')}`)
         return
       }
     case 'preview':
@@ -1258,7 +1259,7 @@ const handleCommand = (command: string, ...args: any[]) => {
       isTrackChanges.value = !!args[0]
       executeCommand('updateOptions', {
         trackChanges: isTrackChanges.value,
-        revisionAuthor: collaborationConfig?.user?.userName || '当前用户'
+        revisionAuthor: collaborationConfig?.user?.userName || t('common.currentUser')
       })
       return
     }

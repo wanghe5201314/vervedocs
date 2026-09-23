@@ -1,19 +1,19 @@
 <template>
-  <VdDialog v-model:open="visible" title="版本历史" width="640px" :maskClosable="false" class="app-dialog">
+  <VdDialog v-model:open="visible" :title="t('dialog.versionHistory.title')" width="640px" :maskClosable="false" class="app-dialog">
     <div class="version-wrap">
       <div class="version-header">
         <VdButton type="primary" size="small" @click="handleCreateVersion" :loading="creating">
-          创建版本快照
+          {{ t('dialog.versionHistory.createSnapshot') }}
         </VdButton>
       </div>
 
       <div v-if="loading" class="version-loading">
         <LoadingOutlined :size="24" />
-        <span>加载版本历史...</span>
+        <span>{{ t('dialog.versionHistory.loading') }}</span>
       </div>
 
       <div v-else-if="versions.length === 0" class="version-empty">
-        <span>暂无版本记录</span>
+        <span>{{ t('dialog.versionHistory.noRecords') }}</span>
       </div>
 
       <div v-else class="version-list">
@@ -37,20 +37,20 @@
                   />
                 </span>
                 <span v-else class="name-text" @dblclick="handleNameEdit(version)">
-                  {{ version.name || (version.isAutoSave ? '自动保存' : `版本 ${version.versionNumber}`) }}
+                  {{ version.name || (version.isAutoSave ? t('dialog.versionHistory.autoSave') : t('dialog.versionHistory.versionN', { n: version.versionNumber })) }}
                 </span>
-                <span v-if="version.isAutoSave" class="auto-tag">自动</span>
+                <span v-if="version.isAutoSave" class="auto-tag">{{ t('dialog.versionHistory.auto') }}</span>
               </div>
               <div class="version-meta">
-                <span class="version-creator">{{ version.creatorName || '未知用户' }}</span>
+                <span class="version-creator">{{ version.creatorName || t('common.unknownUser') }}</span>
                 <span class="version-time">{{ formatTime(version.createdAt) }}</span>
                 <span v-if="version.changeSummary" class="version-summary">{{ version.changeSummary }}</span>
               </div>
             </div>
           </div>
           <div class="version-actions">
-            <VdButton size="small" type="link" @click="handlePreview(version)">预览</VdButton>
-            <VdButton size="small" type="link" @click="handleRestore(version)">恢复</VdButton>
+            <VdButton size="small" type="link" @click="handlePreview(version)">{{ t('dialog.versionHistory.preview') }}</VdButton>
+            <VdButton size="small" type="link" @click="handleRestore(version)">{{ t('dialog.versionHistory.restore') }}</VdButton>
           </div>
         </div>
       </div>
@@ -70,6 +70,7 @@ import {
   nameDocumentVersion,
   restoreDocumentVersion
 } from '@/api/document.api'
+import { t } from '@/i18n'
 
 const confirm = useDialogConfirm()
 
@@ -130,10 +131,10 @@ const handleCreateVersion = async () => {
   creating.value = true
   try {
     await createDocumentVersion(props.docId)
-    message.success('版本快照已创建')
+    message.success(t('message.versionCreated'))
     await loadVersions()
   } catch (e) {
-    const msg = e instanceof Error ? e.message : '创建版本失败'
+    const msg = e instanceof Error ? e.message : t('message.createVersionFailed')
     message.error(msg)
   } finally {
     creating.value = false
@@ -163,7 +164,7 @@ const handleNameSave = async (version: IVersion) => {
     await nameDocumentVersion(version.id, name)
     version.name = name
   } catch (e) {
-    const msg = e instanceof Error ? e.message : '重命名失败'
+    const msg = e instanceof Error ? e.message : t('message.renameFailed')
     message.error(msg)
   }
 }
@@ -186,19 +187,19 @@ const handleRestore = async (version: IVersion) => {
   if (!props.docId) return
   try {
     const accepted = await confirm({
-      content: `确定要恢复到"${version.name || '版本 ' + version.versionNumber}"吗？当前内容将自动保存为新版本。`,
-      title: '恢复版本',
-      okText: '确定恢复',
-      cancelText: '取消'
+      content: t('dialog.versionHistory.restoreConfirm', { name: version.name || t('dialog.versionHistory.versionN', { n: version.versionNumber }) }),
+      title: t('dialog.versionHistory.restoreTitle'),
+      okText: t('dialog.versionHistory.confirmRestore'),
+      cancelText: t('common.cancel')
     })
     if (!accepted) return
     const content = await restoreDocumentVersion(props.docId, version.versionNumber)
-    message.success('版本已恢复')
+    message.success(t('message.versionRestored'))
     emit('restore', content)
     await loadVersions()
   } catch (e) {
     if (e === 'cancel' || (e as any)?.toString?.()?.includes('cancel')) return
-    const msg = e instanceof Error ? e.message : '恢复失败'
+    const msg = e instanceof Error ? e.message : t('message.restoreFailed')
     message.error(msg)
   }
 }

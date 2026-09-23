@@ -11,11 +11,11 @@
       :pinned="toolbarVisible !== false"
       :button-defaults="{ variant: 'flat' }"
     >
-      <VdRibbonTabItem item-key="file" mode="action" title="文件" @activate="openFilePanel" />
+      <VdRibbonTabItem item-key="file" mode="action" :title="t('menuBar.file')" @activate="openFilePanel" />
 
       <VdRibbonTabItem
         item-key="home"
-        title="开始"
+        :title="t('menuBar.home')"
         :button-defaults="{ size: 'compact', iconSize: 16, iconWeight: 350, iconOpticalSize: 20 }"
       >
         <HomeTab
@@ -51,11 +51,11 @@
         />
       </VdRibbonTabItem>
 
-      <VdRibbonTabItem item-key="insert" title="插入">
+      <VdRibbonTabItem item-key="insert" :title="t('menuBar.insert')">
         <InsertTab :has-selection="hasSelection" @command="handleCommand" />
       </VdRibbonTabItem>
 
-      <VdRibbonTabItem item-key="layout" title="页面">
+      <VdRibbonTabItem item-key="layout" :title="t('menuBar.layout')">
         <LayoutTab
           :selected-bg-color="selectedBgColor"
           :current-paper-size-name="currentPaperSizeName"
@@ -63,11 +63,11 @@
         />
       </VdRibbonTabItem>
 
-      <VdRibbonTabItem item-key="reference" title="引用">
+      <VdRibbonTabItem item-key="reference" :title="t('menuBar.reference')">
         <ReferenceTab @command="handleCommand" />
       </VdRibbonTabItem>
 
-      <VdRibbonTabItem item-key="review" title="审阅">
+      <VdRibbonTabItem item-key="review" :title="t('menuBar.review')">
         <ReviewTab
           :has-selection="hasSelection"
           :has-active-comment-group="hasActiveCommentGroup"
@@ -79,7 +79,7 @@
         />
       </VdRibbonTabItem>
 
-      <VdRibbonTabItem item-key="view" title="视图">
+      <VdRibbonTabItem item-key="view" :title="t('menuBar.view')">
         <ViewTab
           :zoom-percent="zoomPercent"
           :current-editor-mode="currentEditorMode"
@@ -96,7 +96,7 @@
       <VdRibbonTabItem
         v-if="showCollaborationMenu"
         item-key="collaboration"
-        title="协同"
+        :title="t('menuBar.collaboration')"
       >
         <CollaborationTab
           :cursor-collaboration-enabled="cursorCollaborationEnabled"
@@ -105,7 +105,7 @@
         />
       </VdRibbonTabItem>
 
-      <VdRibbonTabItem item-key="help" title="帮助">
+      <VdRibbonTabItem item-key="help" :title="t('menuBar.help')">
         <HelpTab @command="handleCommand" />
       </VdRibbonTabItem>
     </VdRibbonTab>
@@ -134,6 +134,7 @@ import ReviewTab from '@/components/ribbon/reviewTab.vue'
 import ViewTab from '@/components/ribbon/viewTab.vue'
 import CollaborationTab from '@/components/ribbon/collaborationTab.vue'
 import HelpTab from '@/components/ribbon/helpTab.vue'
+import { t } from '@/i18n'
 
 const emit = defineEmits(['command'])
 
@@ -331,7 +332,7 @@ const handleCharacterScale = (value: number) => {
 }
 /** 处理自定义字符缩放：弹出输入框并校验范围 */
 const handleCustomCharacterScale = () => {
-  const input = window.prompt('请输入字符缩放百分比（33-200）', `${currentCharacterScale.value}`)
+  const input = window.prompt(t('menuBar.charScalePrompt'), `${currentCharacterScale.value}`)
   if (input === null) return
   const value = Math.round(Number(input))
   if (!Number.isFinite(value) || value < 33 || value > 200) return

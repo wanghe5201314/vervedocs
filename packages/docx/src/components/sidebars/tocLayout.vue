@@ -4,9 +4,9 @@
       <div class="catalog-title">
         <MenuFoldOutlined v-if="activeTab === 'toc'" />
         <FolderOutlined v-else />
-        <span>{{ activeTab === 'toc' ? '目录' : '章节' }}</span>
+        <span>{{ activeTab === 'toc' ? t('sidebar.toc.toc') : t('sidebar.toc.section') }}</span>
       </div>
-      <div class="catalog-close" @click="toggleVisibility" title="关闭">
+      <div class="catalog-close" @click="toggleVisibility" :title="t('common.close')">
         <CloseOutlined />
       </div>
     </div>
@@ -16,7 +16,7 @@
         <VdTree
           :nodes="treeNodes"
           :selected-key="selectedKey"
-          empty-text="暂无目录数据"
+          :empty-text="t('sidebar.toc.noData')"
           @select="handleNodeSelect"
         />
       </div>
@@ -24,7 +24,7 @@
         <div class="section-container">
           <div class="section-header">
             <CaretDownOutlined class="arrow-icon" />
-            <span class="section-title">第 1 节：未命名</span>
+            <span class="section-title">{{ t('sidebar.toc.sectionN', { n: 1 }) }}</span>
             <MoreOutlined class="more-icon" />
           </div>
           <div class="page-list">
@@ -48,6 +48,7 @@ import { VdTree, buildTreeFromFlat, type VdTreeNode } from '@vervedoc/ui'
 import { TITLE_LEVEL } from '@vervedoc/core'
 import type { TitleLevel, IAutoTocItem } from '@vervedoc/core'
 import type { IEditorTocNavApi } from '@/composables/use-editor-toc-nav'
+import { t } from '@/i18n'
 
 const props = defineProps<{
   tocNavAPI: IEditorTocNavApi

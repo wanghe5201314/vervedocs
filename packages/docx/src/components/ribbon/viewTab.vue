@@ -1,9 +1,9 @@
 <template>
   <div class="ribbon-tab-panel">
     <!-- 视图模式 -->
-    <VdRibbonGroup title="视图模式">
+    <VdRibbonGroup :title="t('ribbon.view.viewMode')">
       <a-dropdown :trigger="['click']">
-        <VdRibbonButton :icon="currentModeIcon" text="编辑模式" title="编辑模式" size="large" has-arrow :disabled="isModeLocked" />
+        <VdRibbonButton :icon="currentModeIcon" :text="t('ribbon.view.editMode')" :title="t('ribbon.view.editMode')" size="large" has-arrow :disabled="isModeLocked" />
         <template #overlay>
           <a-menu @click="({ key }: any) => handleModeSelect(key)">
             <a-menu-item v-for="mode in EDITOR_MODE_LIST" :key="mode.value" :disabled="isModeLocked" :title="mode.title">
@@ -18,11 +18,11 @@
     </VdRibbonGroup>
 
     <!-- 缩放 -->
-    <VdRibbonGroup title="页面缩放">
+    <VdRibbonGroup :title="t('ribbon.view.pageZoom')">
       <div class="view-zoom-layout">
         <div class="view-zoom-select-wrap">
           <a-dropdown :trigger="['click']">
-            <button class="view-zoom-select" type="button" title="缩放">
+            <button class="view-zoom-select" type="button" :title="t('ribbon.view.zoom')">
               <span>{{ zoomPercent }}%</span>
               <VdIcon name="chevron-down" />
             </button>
@@ -34,78 +34,78 @@
               </a-menu>
             </template>
           </a-dropdown>
-          <div class="view-zoom-caption">缩放</div>
+          <div class="view-zoom-caption">{{ t('ribbon.view.zoom') }}</div>
         </div>
         <div class="view-zoom-actions">
-          <VdRibbonButton icon="fit-to-page-outline" text="适合页面" title="适合页面" @click="emit('command', 'fitPage')" />
-          <VdRibbonButton icon="arrow-expand-horizontal" text="适应宽度" title="适应宽度" @click="emit('command', 'fitWidth')" />
+          <VdRibbonButton icon="fit-to-page-outline" :text="t('ribbon.view.fitPage')" :title="t('ribbon.view.fitPage')" @click="emit('command', 'fitPage')" />
+          <VdRibbonButton icon="arrow-expand-horizontal" :text="t('ribbon.view.fitWidth')" :title="t('ribbon.view.fitWidth')" @click="emit('command', 'fitWidth')" />
         </div>
       </div>
     </VdRibbonGroup>
 
     <!-- 显示 -->
-    <VdRibbonGroup title="显示">
+    <VdRibbonGroup :title="t('ribbon.view.show')">
       <div class="view-toggle-grid">
         <button
           class="view-check-btn"
           :class="{ active: showToolbar }"
           type="button"
-          title="始终显示工具栏"
+          :title="t('ribbon.view.alwaysShowToolbar')"
           @click="handleCommand('toggleToolbar')"
         >
           <span class="view-check-box">
             <VdIcon v-if="showToolbar" name="check" />
           </span>
-          <span class="view-check-label">始终显示工具栏</span>
+          <span class="view-check-label">{{ t('ribbon.view.alwaysShowToolbar') }}</span>
         </button>
         <button
           class="view-check-btn"
           :class="{ active: showBottomNav }"
           type="button"
-          title="状态栏"
+          :title="t('ribbon.view.statusBar')"
           @click="handleCommand('toggleBottomNav')"
         >
           <span class="view-check-box">
             <VdIcon v-if="showBottomNav" name="check" />
           </span>
-          <span class="view-check-label">状态栏</span>
+          <span class="view-check-label">{{ t('ribbon.view.statusBar') }}</span>
         </button>
         <button
           class="view-check-btn"
           :class="{ active: tocVisible }"
           type="button"
-          title="左面板"
+          :title="t('ribbon.view.leftPanel')"
           @click="handleCommand('toggleToc')"
         >
           <span class="view-check-box">
             <VdIcon v-if="tocVisible" name="check" />
           </span>
-          <span class="view-check-label">左面板</span>
+          <span class="view-check-label">{{ t('ribbon.view.leftPanel') }}</span>
         </button>
         <button
           class="view-check-btn"
           :class="{ active: showRuler }"
           type="button"
-          title="标尺"
+          :title="t('ribbon.view.ruler')"
           @click="handleCommand('toggleRuler')"
         >
           <span class="view-check-box">
             <VdIcon v-if="showRuler" name="check" />
           </span>
-          <span class="view-check-label">标尺</span>
+          <span class="view-check-label">{{ t('ribbon.view.ruler') }}</span>
         </button>
         <button
           class="view-check-btn"
 
           :class="{ active: eyeCareEnabled }"
           type="button"
-          title="护眼模式"
+          :title="t('ribbon.view.eyeCareMode')"
           @click="handleCommand('toggleEyeCare')"
         >
           <span class="view-check-box">
             <VdIcon v-if="eyeCareEnabled" name="check" />
           </span>
-          <span class="view-check-label">护眼模式</span>
+          <span class="view-check-label">{{ t('ribbon.view.eyeCareMode') }}</span>
         </button>
       </div>
     </VdRibbonGroup>
@@ -116,7 +116,8 @@
 import { VdRibbonButton, VdRibbonGroup, VdIcon } from '@vervedoc/ui'
 import { computed } from 'vue'
 
-import { EDITOR_MODE_LIST, ZOOM_LEVELS } from '@/config/constants'
+import { getEditorModeList, ZOOM_LEVELS } from '@/config/constants'
+import { t } from '@/i18n'
 
 
 
@@ -136,11 +137,13 @@ const props = defineProps<{
   eyeCareEnabled?: boolean
 }>()
 
+const EDITOR_MODE_LIST = computed(() => getEditorModeList())
+
 /** 缩放百分比，默认 100 */
 const zoomPercent = computed(() => props.zoomPercent ?? 100)
 /** 当前编辑器模式对应的图标名称 */
 const currentModeIcon = computed(() => {
-  const mode = EDITOR_MODE_LIST.find(m => m.value === props.currentEditorMode)
+  const mode = EDITOR_MODE_LIST.value.find(m => m.value === props.currentEditorMode)
   return mode?.icon || 'pencil'
 })
 

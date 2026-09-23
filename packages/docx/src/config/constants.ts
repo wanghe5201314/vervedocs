@@ -2,6 +2,8 @@
  * UI 基础常量
  * ============================================================ */
 
+import { t } from '@/i18n'
+
 /**
  * UI 字体族字符串，包含中文及西文回退字体
  */
@@ -21,10 +23,10 @@ export const UI_EL_SIZE = 'small' as const
 /**
  * 编辑器模式列表，含模式值、显示文本、图标与描述
  */
-export const EDITOR_MODE_LIST = [
-  { value: 'edit', label: '常规模式', icon: 'cursor-default', title: '常规编辑模式，可自由编辑文档内容' },
-  { value: 'readonly', label: '只读模式', icon: 'eye-outline', title: '只读模式，仅可查看文档不可编辑' },
-  { value: 'form', label: '表单模式', icon: 'form-select', title: '表单模式，仅可编辑表单域' }
+export const getEditorModeList = () => [
+  { value: 'edit', label: t('constants.editorMode.edit'), icon: 'cursor-default', title: t('constants.editorMode.editTitle') },
+  { value: 'readonly', label: t('constants.editorMode.readonly'), icon: 'eye-outline', title: t('constants.editorMode.readonlyTitle') },
+  { value: 'form', label: t('constants.editorMode.form'), icon: 'form-select', title: t('constants.editorMode.formTitle') }
 ]
 
 /**
@@ -35,11 +37,11 @@ export const CHARACTER_SCALE_OPTIONS = [200, 150, 100, 90, 80, 66, 50, 33]
 /**
  * 首行缩进可选项列表，含显示标签与字符数
  */
-export const FIRST_LINE_INDENT_OPTIONS = [
-  { label: '无缩进', value: 0 },
-  { label: '2字符', value: 2 },
-  { label: '3字符', value: 3 },
-  { label: '4字符', value: 4 }
+export const getFirstLineIndentOptions = () => [
+  { label: t('constants.indent.none'), value: 0 },
+  { label: t('constants.indent.two'), value: 2 },
+  { label: t('constants.indent.three'), value: 3 },
+  { label: t('constants.indent.four'), value: 4 }
 ]
 
 /**
@@ -79,40 +81,40 @@ export const BG_COLOR_PALETTE = [
 /**
  * 水印预设列表，含名称与水印选项
  */
-export const WATERMARK_PRESETS = [
-  { name: '保密', options: { data: '保密', color: '#AEB5C0', opacity: 0.3, size: 120, font: 'Microsoft YaHei', repeat: false } },
-  { name: '严禁复制', options: { data: '严禁复制', color: '#AEB5C0', opacity: 0.3, size: 120, font: 'Microsoft YaHei', repeat: false } },
-  { name: '原件', options: { data: '原件', color: '#AEB5C0', opacity: 0.3, size: 120, font: 'Microsoft YaHei', repeat: false } },
-  { name: '样本', options: { data: '样本', color: '#AEB5C0', opacity: 0.3, size: 120, font: 'Microsoft YaHei', repeat: false } },
-  { name: '绝密', options: { data: '绝密', color: '#AEB5C0', opacity: 0.3, size: 120, font: 'Microsoft YaHei', repeat: false } },
-  { name: '紧急', options: { data: '紧急', color: '#AEB5C0', opacity: 0.3, size: 120, font: 'Microsoft YaHei', repeat: false } }
+export const getWatermarkPresets = () => [
+  { name: t('constants.watermark.confidential'), options: { data: t('constants.watermark.confidential'), color: '#AEB5C0', opacity: 0.3, size: 120, font: 'Microsoft YaHei', repeat: false } },
+  { name: t('constants.watermark.noCopy'), options: { data: t('constants.watermark.noCopy'), color: '#AEB5C0', opacity: 0.3, size: 120, font: 'Microsoft YaHei', repeat: false } },
+  { name: t('constants.watermark.original'), options: { data: t('constants.watermark.original'), color: '#AEB5C0', opacity: 0.3, size: 120, font: 'Microsoft YaHei', repeat: false } },
+  { name: t('constants.watermark.sample'), options: { data: t('constants.watermark.sample'), color: '#AEB5C0', opacity: 0.3, size: 120, font: 'Microsoft YaHei', repeat: false } },
+  { name: t('constants.watermark.topSecret'), options: { data: t('constants.watermark.topSecret'), color: '#AEB5C0', opacity: 0.3, size: 120, font: 'Microsoft YaHei', repeat: false } },
+  { name: t('constants.watermark.urgent'), options: { data: t('constants.watermark.urgent'), color: '#AEB5C0', opacity: 0.3, size: 120, font: 'Microsoft YaHei', repeat: false } }
 ]
 
 /**
  * 公式分类列表，含分类名、图标及该分类下的公式集合
  */
-export const FORMULA_CATEGORIES = [
+export const getFormulaCategories = () => [
   {
-    name: '数学公式', icon: 'functions',
+    name: t('constants.formula.math'), icon: 'functions',
     formulas: [
-      { name: '二次公式', latex: 'x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}', preview: 'x = (-b ± √(b²-4ac)) / 2a' },
-      { name: '勾股定理', latex: 'a^2+b^2=c^2', preview: 'a² + b² = c²' },
-      { name: '圆的周长', latex: 'C=2\\pi r', preview: 'C = 2πr' }
+      { name: t('constants.formula.quadratic'), latex: 'x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}', preview: 'x = (-b ± √(b²-4ac)) / 2a' },
+      { name: t('constants.formula.pythagorean'), latex: 'a^2+b^2=c^2', preview: 'a² + b² = c²' },
+      { name: t('constants.formula.circumference'), latex: 'C=2\\pi r', preview: 'C = 2πr' }
     ]
   },
   {
-    name: '物理公式', icon: 'bolt',
+    name: t('constants.formula.physics'), icon: 'bolt',
     formulas: [
-      { name: '质能方程', latex: 'E=mc^2', preview: 'E = mc²' },
-      { name: '牛顿第二定律', latex: 'F=ma', preview: 'F = ma' },
-      { name: '动能公式', latex: 'E_k=\\frac{1}{2}mv^2', preview: 'Eₖ = ½mv²' }
+      { name: t('constants.formula.massEnergy'), latex: 'E=mc^2', preview: 'E = mc²' },
+      { name: t('constants.formula.newtonSecond'), latex: 'F=ma', preview: 'F = ma' },
+      { name: t('constants.formula.kineticEnergy'), latex: 'E_k=\\frac{1}{2}mv^2', preview: 'Eₖ = ½mv²' }
     ]
   },
   {
-    name: '化学公式', icon: 'science',
+    name: t('constants.formula.chemistry'), icon: 'science',
     formulas: [
-      { name: '理想气体方程', latex: 'PV=nRT', preview: 'PV = nRT' },
-      { name: '水的电离', latex: 'H_2O\\rightleftharpoons H^++OH^-', preview: 'H₂O ⇌ H⁺ + OH⁻' }
+      { name: t('constants.formula.idealGas'), latex: 'PV=nRT', preview: 'PV = nRT' },
+      { name: t('constants.formula.waterDissociation'), latex: 'H_2O\\rightleftharpoons H^++OH^-', preview: 'H₂O ⇌ H⁺ + OH⁻' }
     ]
   }
 ]

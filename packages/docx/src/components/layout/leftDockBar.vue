@@ -2,12 +2,12 @@
   <div class="left-dock" editor-component="left-dock">
     <div class="dock-group">
       <a-tooltip placement="right" :mouseEnterDelay="0.3">
-        <template #title>搜索</template>
+        <template #title>{{ t('leftDock.search') }}</template>
         <button
           class="dock-btn"
           type="button"
           :class="{ active: activeKey === 'search' }"
-          aria-label="搜索"
+          :aria-label="t('leftDock.search')"
           @click="emit('select', 'search')"
         >
           <VdIcon name="magnify" :size="18" />
@@ -15,12 +15,12 @@
       </a-tooltip>
 
       <a-tooltip placement="right" :mouseEnterDelay="0.3">
-        <template #title>目录</template>
+        <template #title>{{ t('leftDock.toc') }}</template>
         <button
           class="dock-btn"
           type="button"
           :class="{ active: activeKey === 'toc' }"
-          aria-label="目录"
+          :aria-label="t('leftDock.toc')"
           @click="emit('select', 'toc')"
         >
           <VdIcon name="table-of-contents" :size="18" />
@@ -28,12 +28,12 @@
       </a-tooltip>
 
       <a-tooltip placement="right" :mouseEnterDelay="0.3">
-        <template #title>章节</template>
+        <template #title>{{ t('leftDock.section') }}</template>
         <button
           class="dock-btn"
           type="button"
           :class="{ active: activeKey === 'section' }"
-          aria-label="章节"
+          :aria-label="t('leftDock.section')"
           @click="emit('select', 'section')"
         >
           <VdIcon name="format-section" :size="18" />
@@ -41,12 +41,12 @@
       </a-tooltip>
 
       <a-tooltip placement="right" :mouseEnterDelay="0.3">
-        <template #title>书签</template>
+        <template #title>{{ t('leftDock.bookmark') }}</template>
         <button
           class="dock-btn"
           type="button"
           :class="{ active: activeKey === 'bookmark' }"
-          aria-label="书签"
+          :aria-label="t('leftDock.bookmark')"
           @click="emit('select', 'bookmark')"
         >
           <VdIcon name="bookmark-outline" :size="18" />
@@ -54,12 +54,12 @@
       </a-tooltip>
 
       <a-tooltip placement="right" :mouseEnterDelay="0.3">
-        <template #title>AI 助手</template>
+        <template #title>{{ t('leftDock.ai') }}</template>
         <button
           class="dock-btn"
           type="button"
           :class="{ active: activeKey === 'ai' }"
-          aria-label="AI 助手"
+          :aria-label="t('leftDock.ai')"
           @click="emit('select', 'ai')"
         >
           <VdIcon name="robot-outline" :size="18" />
@@ -67,12 +67,12 @@
       </a-tooltip>
 
       <a-tooltip placement="right" :mouseEnterDelay="0.3">
-        <template #title>修订</template>
+        <template #title>{{ t('leftDock.revision') }}</template>
         <button
           class="dock-btn"
           type="button"
           :class="{ active: activeKey === 'revision' }"
-          aria-label="修订"
+          :aria-label="t('leftDock.revision')"
           @click="emit('select', 'revision')"
         >
           <VdIcon name="pencil-plus" :size="18" />
@@ -85,6 +85,7 @@
 
 <script setup lang="ts">
 import { VdIcon } from '@vervedoc/ui'
+import { t } from '@/i18n'
 
 type DockKey = 'search' | 'toc' | 'section' | 'ai' | 'revision' | 'bookmark' | ''
 

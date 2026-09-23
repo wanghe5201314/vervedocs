@@ -4,15 +4,15 @@
       <div class="sidebar-title-wrap">
         <div class="sidebar-title-row">
           <VdIcon name="pencil-plus" class="sidebar-title-icon" />
-          <span class="sidebar-title">修订记录</span>
+          <span class="sidebar-title">{{ t('sidebar.revision.title') }}</span>
         </div>
         <div class="header-stats">
-          <span class="status-pill">{{ reviewItems.length }} 条记录</span>
-          <span class="status-pill review-comment">{{ comments.length }} 批注</span>
-          <span class="status-pill review-revision">{{ revisions.length }} 审阅</span>
+          <span class="status-pill">{{ reviewItems.length }} {{ t('sidebar.revision.records') }}</span>
+          <span class="status-pill review-comment">{{ comments.length }} {{ t('sidebar.revision.comment') }}</span>
+          <span class="status-pill review-revision">{{ revisions.length }} {{ t('sidebar.revision.review') }}</span>
         </div>
       </div>
-      <div class="sidebar-close" @click="emit('close')" title="关闭">
+      <div class="sidebar-close" @click="emit('close')" :title="t('common.close')">
         <VdIcon name="close" />
       </div>
     </div>
@@ -34,7 +34,7 @@
             <div class="revision-item-top">
               <div class="revision-author-group">
                 <span class="rev-author-dot" :style="{ backgroundColor: getItemColor(item) }"></span>
-                <span class="rev-author">{{ item.author || '未知用户' }}</span>
+                <span class="rev-author">{{ item.author || t('common.unknownUser') }}</span>
               </div>
               <span class="rev-time">{{ formatTime(item.date) }}</span>
             </div>
@@ -57,17 +57,17 @@
                 <template v-if="item.kind === 'revision'">
                   <button class="action-btn accept" type="button" @click.stop="props.revisionAPI.accept(item.id)">
                     <VdIcon name="check" />
-                    接受
+                    {{ t('sidebar.revision.accept') }}
                   </button>
                   <button class="action-btn reject" type="button" @click.stop="props.revisionAPI.reject(item.id)">
                     <VdIcon name="close" />
-                    拒绝
+                    {{ t('sidebar.revision.reject') }}
                   </button>
                 </template>
                 <template v-else>
                   <button class="action-btn review-comment" type="button" @click.stop="props.commentAPI.remove(item.id)">
                     <VdIcon name="delete-outline" />
-                    删除
+                    {{ t('sidebar.revision.delete') }}
                   </button>
                 </template>
               </div>
@@ -79,7 +79,7 @@
       <div v-else class="empty-state">
         <a-empty
           :image="false"
-          description="暂无修订记录"
+          :description="t('sidebar.revision.noRecords')"
         />
       </div>
     </div>
@@ -92,6 +92,7 @@ import { computed } from 'vue'
 import type { IEditorCommentApi } from '@/composables/use-editor-comments'
 import type { IRevisionApi } from '@/composables/use-editor-revisions'
 import type { RevisionItem } from '@/composables/use-editor-revisions'
+import { t } from '@/i18n'
 
 const props = defineProps<{
   revisionAPI: IRevisionApi
@@ -115,9 +116,9 @@ const activeCommentGroupId = computed(() => props.commentAPI.activeGroupId.value
 const AUTHOR_COLORS = ['#1890FF', '#52C41A', '#FAAD14', '#FF4D4F', '#8C8C8C', '#13C2C2', '#722ED1']
 /** 修订类型到中文标签的映射 */
 const revisionTypeLabelMap = {
-  insert: '插入',
-  delete: '删除',
-  format: '格式'
+  insert: t('sidebar.revision.typeInsert'),
+  delete: t('sidebar.revision.typeDelete'),
+  format: t('sidebar.revision.typeFormat')
 } as const
 type ReviewFeedItem =
   | {
@@ -169,7 +170,7 @@ const reviewItems = computed<ReviewFeedItem[]>(() => {
     content: getReviewContent(item.content),
     rangeText: getReviewContent(item.rangeText),
     chipClass: item.status === 2 ? 'review-resolved' : 'review-comment',
-    chipLabel: item.status === 2 ? '已解决批注' : '批注',
+    chipLabel: item.status === 2 ? t('sidebar.revision.resolvedComment') : t('sidebar.revision.commentLabel'),
     sortTime: getSortTime(item.createdDate)
   }))
 
@@ -208,7 +209,7 @@ const getReviewContent = (content: string): string => {
  * @returns 占位文本
  */
 const getEmptyText = (item: ReviewFeedItem): string => {
-  return item.kind === 'comment' ? '未填写批注内容' : '无审阅内容'
+  return item.kind === 'comment' ? t('editor.noCommentContent') : t('editor.noReviewContent')
 }
 
 /**

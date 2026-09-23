@@ -1,11 +1,11 @@
 <template>
-  <VdDialog v-model:open="visible" title="插入超链接" width="550px" :maskClosable="false" class="app-dialog">
+  <VdDialog v-model:open="visible" :title="t('dialog.hyperlink.title')" width="550px" :maskClosable="false" class="app-dialog">
     <a-form :model="hyperlinkForm" :label-col="{ style: { width: '80px' } }">
-      <a-form-item label="超链接文字">
-        <a-input v-model:value="hyperlinkForm.text" placeholder="请输入链接显示文字" />
+      <a-form-item :label="t('dialog.hyperlink.text')">
+        <a-input v-model:value="hyperlinkForm.text" :placeholder="t('dialog.hyperlink.textPlaceholder')" />
       </a-form-item>
-      <a-form-item label="超链接地址">
-        <a-input v-model:value="hyperlinkForm.urlBody" placeholder="请输入链接地址">
+      <a-form-item :label="t('dialog.hyperlink.address')">
+        <a-input v-model:value="hyperlinkForm.urlBody" :placeholder="t('dialog.hyperlink.addressPlaceholder')">
           <template #addonBefore>
             <a-select v-model:value="hyperlinkForm.protocol" style="width: 100px">
               <a-select-option label="http://" value="http://" />
@@ -19,8 +19,8 @@
       </a-form-item>
     </a-form>
     <template #footer>
-      <VdButton type="primary" icon="check" @click="confirmHyperlink">确定</VdButton>
-      <VdButton icon="close" @click="visible = false">取消</VdButton>
+      <VdButton type="primary" icon="check" @click="confirmHyperlink">{{ t('common.ok') }}</VdButton>
+      <VdButton icon="close" @click="visible = false">{{ t('common.cancel') }}</VdButton>
     </template>
   </VdDialog>
 </template>
@@ -28,6 +28,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { VdDialog, VdButton } from '@vervedoc/ui'
+import { t } from '@/i18n'
 
 
 /** 组件 props 定义 */

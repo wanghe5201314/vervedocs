@@ -2,90 +2,90 @@
   <VdDialog
     v-model:open="visible"
     class="app-dialog"
-    title="段落与符号"
+    :title="t('dialog.paragraph.title')"
     width="720px"
     :maskClosable="false"
     :destroyOnClose="true"
     @afterOpenChange="(open: boolean) => { if (open) handleOpen() }"
   >
     <a-tabs v-model:activeKey="activeTab" type="card">
-      <a-tab-pane tab="段落" key="paragraph">
+      <a-tab-pane :tab="t('dialog.paragraph.paragraphTab')" key="paragraph">
         <VdCard :bordered="true" class="dialog-card">
           <template #title>
-            <span>缩进</span>
+            <span>{{ t('dialog.paragraph.indent') }}</span>
           </template>
           <div class="dialog-grid-2">
             <div class="dialog-field">
-              <div class="dialog-label">首行缩进（字符）</div>
+              <div class="dialog-label">{{ t('dialog.paragraph.firstLineIndent') }}</div>
               <a-input-number v-model:value="indentChars" :size="UI_EL_SIZE" :min="0" :max="10" :step="1" style="width: 100%" />
             </div>
             <div class="dialog-field">
-              <div class="dialog-label">快捷</div>
+              <div class="dialog-label">{{ t('dialog.paragraph.quick') }}</div>
               <div class="dialog-row">
-                <VdButton :size="UI_EL_SIZE" @click="indentChars = 0">无</VdButton>
-                <VdButton :size="UI_EL_SIZE" @click="indentChars = 2">2 字符</VdButton>
-                <VdButton :size="UI_EL_SIZE" @click="indentChars = 4">4 字符</VdButton>
+                <VdButton :size="UI_EL_SIZE" @click="indentChars = 0">{{ t('dialog.paragraph.noIndent') }}</VdButton>
+                <VdButton :size="UI_EL_SIZE" @click="indentChars = 2">{{ t('dialog.paragraph.indent2') }}</VdButton>
+                <VdButton :size="UI_EL_SIZE" @click="indentChars = 4">{{ t('dialog.paragraph.indent4') }}</VdButton>
               </div>
             </div>
           </div>
-          <div class="dialog-tip">当前缩进为插入全角空格实现（与工具栏一致）。</div>
+          <div class="dialog-tip">{{ t('dialog.paragraph.indentHint') }}</div>
         </VdCard>
 
         <VdCard :bordered="true" class="dialog-card" style="margin-top: 12px">
-          <template #title>段落</template>
+          <template #title>{{ t('dialog.paragraph.paragraphTab') }}</template>
           <div class="dialog-grid-2">
             <div class="dialog-field">
-              <div class="dialog-label">行距</div>
+              <div class="dialog-label">{{ t('dialog.paragraph.lineSpacing') }}</div>
               <a-select v-model:value="lineHeightValue" :size="UI_EL_SIZE" style="width: 100%">
                 <a-select-option v-for="v in LINE_HEIGHT_OPTIONS" :key="v.value" :label="v.label" :value="v.value" />
               </a-select>
             </div>
             <div class="dialog-field">
-              <div class="dialog-label">段间距</div>
+              <div class="dialog-label">{{ t('dialog.paragraph.paragraphSpacing') }}</div>
               <a-input-number v-model:value="rowMarginValue" :size="UI_EL_SIZE" :min="0" :max="10" :step="0.5" style="width: 100%" />
             </div>
           </div>
         </VdCard>
 
         <VdCard :bordered="true" class="dialog-card" style="margin-top: 12px">
-          <template #title>文字样式</template>
+          <template #title>{{ t('dialog.paragraph.textStyle') }}</template>
           <div class="dialog-row">
-            <a-checkbox :checked="boldActive" :size="UI_EL_SIZE" @change="toggleBold">加粗</a-checkbox>
-            <a-checkbox :checked="italicActive" :size="UI_EL_SIZE" @change="toggleItalic">斜体</a-checkbox>
-            <a-checkbox :checked="underlineActive" :size="UI_EL_SIZE" @change="toggleUnderline">下划线</a-checkbox>
-            <a-checkbox :checked="strikeoutActive" :size="UI_EL_SIZE" @change="toggleStrikeout">删除线</a-checkbox>
+            <a-checkbox :checked="boldActive" :size="UI_EL_SIZE" @change="toggleBold">{{ t('dialog.paragraph.bold') }}</a-checkbox>
+            <a-checkbox :checked="italicActive" :size="UI_EL_SIZE" @change="toggleItalic">{{ t('dialog.paragraph.italic') }}</a-checkbox>
+            <a-checkbox :checked="underlineActive" :size="UI_EL_SIZE" @change="toggleUnderline">{{ t('dialog.paragraph.underline') }}</a-checkbox>
+            <a-checkbox :checked="strikeoutActive" :size="UI_EL_SIZE" @change="toggleStrikeout">{{ t('dialog.paragraph.strikethrough') }}</a-checkbox>
           </div>
         </VdCard>
       </a-tab-pane>
 
-      <a-tab-pane tab="项目符号与编号" key="symbol">
+      <a-tab-pane :tab="t('dialog.paragraph.listTitle')" key="symbol">
         <VdCard :bordered="true" class="dialog-card">
-          <template #title>项目符号与编号</template>
+          <template #title>{{ t('dialog.paragraph.listLabel') }}</template>
           <div class="dialog-grid-2">
             <div class="dialog-field">
-              <div class="dialog-label">项目符号</div>
-                <a-select v-model:value="bulletStyleValue" :size="UI_EL_SIZE" allowClear style="width: 100%" placeholder="选择项目符号">
+              <div class="dialog-label">{{ t('dialog.paragraph.bullet') }}</div>
+                <a-select v-model:value="bulletStyleValue" :size="UI_EL_SIZE" allowClear style="width: 100%" :placeholder="t('dialog.paragraph.bulletPlaceholder')">
                   <a-select-option v-for="o in bulletOptions" :key="o.value" :label="o.label" :value="o.value" />
                 </a-select>
             </div>
             <div class="dialog-field">
-              <div class="dialog-label">编号</div>
-                <a-select v-model:value="numberStyleValue" :size="UI_EL_SIZE" allowClear style="width: 100%" placeholder="选择编号样式">
+              <div class="dialog-label">{{ t('dialog.paragraph.numbering') }}</div>
+                <a-select v-model:value="numberStyleValue" :size="UI_EL_SIZE" allowClear style="width: 100%" :placeholder="t('dialog.paragraph.numberingPlaceholder')">
                   <a-select-option v-for="o in numberOptions" :key="o.value" :label="o.label" :value="o.value" />
                 </a-select>
             </div>
           </div>
           <div class="dialog-row" style="margin-top: 10px">
-              <VdButton :size="UI_EL_SIZE" @click="handleClearList">清除列表</VdButton>
-              <div class="dialog-tip">项目符号与编号互斥，选择其一将覆盖另一种。</div>
+              <VdButton :size="UI_EL_SIZE" @click="handleClearList">{{ t('dialog.paragraph.clearList') }}</VdButton>
+              <div class="dialog-tip">{{ t('dialog.paragraph.listHint') }}</div>
           </div>
         </VdCard>
       </a-tab-pane>
     </a-tabs>
 
     <template #footer>
-      <VdButton @click="visible = false">取消</VdButton>
-      <VdButton type="primary" @click="handleApply">确定</VdButton>
+      <VdButton @click="visible = false">{{ t('common.cancel') }}</VdButton>
+      <VdButton type="primary" @click="handleApply">{{ t('common.ok') }}</VdButton>
     </template>
   </VdDialog>
 </template>
@@ -95,6 +95,7 @@ import { computed, ref, watch } from 'vue'
 import { VdCard, VdDialog, VdButton } from '@vervedoc/ui'
 import { editorStateStore } from '@/stores/editor-state'
 import { UI_EL_SIZE } from '@/config/constants'
+import { t } from '@/i18n'
 
 /** 每个缩进字符对应的像素数 */
 const INDENT_PX_PER_CHAR = 14
@@ -143,17 +144,17 @@ const strikeoutActive = computed(() => !!editorStateStore.state.strikeout)
 
 /** 项目符号选项列表 */
 const bulletOptions = [
-  { label: '● 实心圆点', value: 'disc' },
-  { label: '○ 空心圆点', value: 'circle' },
-  { label: '■ 方块', value: 'square' },
-  { label: '✔ 打勾', value: 'check' }
+  { label: t('dialog.paragraph.bulletSolidCircle'), value: 'disc' },
+  { label: t('dialog.paragraph.bulletHollowCircle'), value: 'circle' },
+  { label: t('dialog.paragraph.bulletSquare'), value: 'square' },
+  { label: t('dialog.paragraph.bulletCheck'), value: 'check' }
 ]
 
 /** 编号样式选项列表 */
 const numberOptions = [
   { label: '1. 2. 3.', value: 'decimal-dot' },
   { label: '1) 2) 3)', value: 'decimal-bracket' },
-  { label: '一、二、三、', value: 'chinese' },
+  { label: t('dialog.paragraph.numberingChinese'), value: 'chinese' },
   { label: 'A. B. C.', value: 'upper-alpha' }
 ]
 

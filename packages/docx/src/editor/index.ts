@@ -42,3 +42,16 @@ export type {
   CollaborationOptions,
   DocxEditorUiInitialDocument
 } from './types'
+
+// 导出 i18n 国际化 API
+export {
+  t,
+  setLocale,
+  getLocale,
+  initLocale,
+  setOverrides,
+  registerLangMap,
+  currentLocale,
+  antLocale
+} from '../i18n'
+export type { DocxLocale, DocxMessages } from '../i18n'

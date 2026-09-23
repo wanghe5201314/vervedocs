@@ -1,11 +1,12 @@
 import { createApp, defineComponent, h, reactive, type App, type ComponentPublicInstance } from 'vue'
 import 'ant-design-vue/dist/reset.css'
-import zhCN from 'ant-design-vue/es/locale/zh_CN'
+
 import { ConfigProvider } from 'ant-design-vue'
 import '@/styles/index.css'
 import '@vervedoc/design/styles.css'
 
 import WordEditorComponent from '@/app/shell.vue'
+import { initLocale, type DocxLocale } from '@/i18n'
 import type { CollaborationOptions, DocxEditorUiInitialDocument } from '@/editor/types'
 import type { ExternalEditorApi } from '@/composables/use-external-events'
 import type {
@@ -61,6 +62,8 @@ export interface Options {
   onMetaChange?: (payload: any) => void
   /** 编辑器状态变更时触发（如保存中、协同状态等） */
   onStatusChange?: (payload: any) => void
+  /** 初始语言代码，默认 zhCN；用户手动切换后以 localStorage 持久化偏好为准 */
+  locale?: DocxLocale
 }
 
 /**
@@ -97,6 +100,7 @@ export class WordEditor {
    * @param options 编辑器配置项
    */
   constructor(private options: Options) {
+    initLocale(options.locale)
     const host = resolveTarget(options.container)
     this.state = reactive({
       initialDocument: options.initialDocument,
@@ -116,7 +120,7 @@ export class WordEditor {
       onStatusChange: (payload: any) => this.options.onStatusChange?.(payload)
     }))
     this.app = createApp(root)
-    this.app.use(ConfigProvider, { locale: zhCN, componentSize: 'small', theme: { components: { Input: { borderRadius: 0 }, Button: { borderRadius: 0 } } } })
+    this.app.use(ConfigProvider, { componentSize: 'small', theme: { components: { Input: { borderRadius: 0 }, Button: { borderRadius: 0 } } } })
     this.app.mount(host)
   }
 

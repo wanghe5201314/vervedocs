@@ -1,28 +1,28 @@
 <template>
-  <div class="home-ribbon" role="toolbar" aria-label="开始" @mousedown="preserveToolbarFocus">
-    <div class="home-group home-clipboard" role="group" aria-label="剪贴板">
-      <VdRibbonButton icon="content-copy" title="复制 (Ctrl+C)" :disabled="!hasSelection" @click="emit('command', 'copy')" />
-      <VdRibbonButton icon="content-cut" title="剪切 (Ctrl+X)" :disabled="!hasSelection" @click="emit('command', 'cut')" />
+  <div class="home-ribbon" role="toolbar" :aria-label="t('ribbon.home.label')" @mousedown="preserveToolbarFocus">
+    <div class="home-group home-clipboard" role="group" :aria-label="t('ribbon.home.clipboard')">
+      <VdRibbonButton icon="content-copy" :title="t('ribbon.home.copy')" :disabled="!hasSelection" @click="emit('command', 'copy')" />
+      <VdRibbonButton icon="content-cut" :title="t('ribbon.home.cut')" :disabled="!hasSelection" @click="emit('command', 'cut')" />
       <a-dropdown :trigger="['contextmenu']">
-        <VdRibbonButton icon="content-paste" title="粘贴 (Ctrl+V)，右键选择粘贴方式" @click="emit('command', 'paste')" />
+        <VdRibbonButton icon="content-paste" :title="t('ribbon.home.paste')" @click="emit('command', 'paste')" />
         <template #overlay>
           <a-menu @click="({ key }: any) => emit('command', String(key))">
-            <a-menu-item key="paste">粘贴</a-menu-item>
-            <a-menu-item key="pasteNoFormat">无格式粘贴</a-menu-item>
+            <a-menu-item key="paste">{{ t('ribbon.home.pasteBtn') }}</a-menu-item>
+            <a-menu-item key="pasteNoFormat">{{ t('ribbon.home.pasteNoFormat') }}</a-menu-item>
           </a-menu>
         </template>
       </a-dropdown>
-      <VdRibbonButton icon="format-paint" title="格式刷" :active="isPainter" @click="emit('command', 'painter')" />
+      <VdRibbonButton icon="format-paint" :title="t('ribbon.home.formatBrush')" :active="isPainter" @click="emit('command', 'painter')" />
     </div>
 
-    <div class="home-group home-font" role="group" aria-label="字体">
+    <div class="home-group home-font" role="group" :aria-label="t('ribbon.home.font')">
       <div class="home-row home-font-top">
         <a-select
           class="home-font-select"
           :value="currentFont"
           :options="fontOptions"
           size="small"
-          aria-label="字体"
+          :aria-label="t('ribbon.home.font')"
           show-search
           option-filter-prop="label"
           :dropdown-match-select-width="180"
@@ -36,41 +36,41 @@
           :value="currentSize"
           :options="sizeOptions"
           size="small"
-          aria-label="字号（磅）"
+          :aria-label="t('ribbon.home.fontSize')"
           :dropdown-match-select-width="90"
           @change="(value: any) => emit('size', Number(value))"
         >
           <template #suffixIcon><span class="home-chevron" /></template>
         </a-select>
-        <VdRibbonButton icon="text_increase" title="增大字号" :width="19" @click="emit('command', 'sizeAdd')" />
-        <VdRibbonButton icon="text_decrease" title="减小字号" :width="19" @click="emit('command', 'sizeMinus')" />
+        <VdRibbonButton icon="text_increase" :title="t('ribbon.home.fontSizeIncrease')" :width="19" @click="emit('command', 'sizeAdd')" />
+        <VdRibbonButton icon="text_decrease" :title="t('ribbon.home.fontSizeDecrease')" :width="19" @click="emit('command', 'sizeMinus')" />
         <a-dropdown :trigger="['click']">
-          <VdRibbonButton icon="format-letter-case" title="字体选项" has-arrow />
+          <VdRibbonButton icon="format-letter-case" :title="t('ribbon.home.fontOptions')" has-arrow />
           <template #overlay>
             <a-menu>
-              <a-menu-item disabled>更改大小写（暂未支持）</a-menu-item>
-              <a-sub-menu key="scale" title="字符缩放">
+              <a-menu-item disabled>{{ t('ribbon.home.changeCase') }}</a-menu-item>
+              <a-sub-menu key="scale" :title="t('ribbon.home.charScale')">
                 <a-menu-item v-for="scale in CHARACTER_SCALE_OPTIONS" :key="scale" @click="emit('characterScale', scale)">
                   <span class="scale-check">{{ currentCharacterScale === scale ? '✓' : '' }}</span>{{ scale }}%
                 </a-menu-item>
                 <a-menu-divider />
-                <a-menu-item key="custom" @click="emit('command', 'characterScaleCustom')">自定义缩放...</a-menu-item>
+                <a-menu-item key="custom" @click="emit('command', 'characterScaleCustom')">{{ t('ribbon.home.customScale') }}</a-menu-item>
               </a-sub-menu>
             </a-menu>
           </template>
         </a-dropdown>
       </div>
       <div class="home-row home-font-bottom">
-        <VdRibbonButton icon="format-bold" title="加粗 (Ctrl+B)" :active="isBold" @click="emit('command', 'bold')" />
-        <VdRibbonButton icon="format-italic" title="斜体 (Ctrl+I)" :active="isItalic" @click="emit('command', 'italic')" />
-        <VdRibbonButton icon="format-underline" title="下划线 (Ctrl+U)" :active="isUnderline" @click="emit('command', 'underline')" />
-        <VdRibbonButton icon="format-strikethrough" title="删除线" :active="isStrikeout" @click="emit('command', 'strikeout')" />
-        <VdRibbonButton icon="format-superscript" title="上标" @click="emit('command', 'superscript')" />
-        <VdRibbonButton icon="format-subscript" title="下标" @click="emit('command', 'subscript')" />
+        <VdRibbonButton icon="format-bold" :title="t('ribbon.home.bold')" :active="isBold" @click="emit('command', 'bold')" />
+        <VdRibbonButton icon="format-italic" :title="t('ribbon.home.italic')" :active="isItalic" @click="emit('command', 'italic')" />
+        <VdRibbonButton icon="format-underline" :title="t('ribbon.home.underline')" :active="isUnderline" @click="emit('command', 'underline')" />
+        <VdRibbonButton icon="format-strikethrough" :title="t('ribbon.home.strikethrough')" :active="isStrikeout" @click="emit('command', 'strikeout')" />
+        <VdRibbonButton icon="format-superscript" :title="t('ribbon.home.superscript')" @click="emit('command', 'superscript')" />
+        <VdRibbonButton icon="format-subscript" :title="t('ribbon.home.subscript')" @click="emit('command', 'subscript')" />
         <a-popover v-for="kind in colorKinds" :key="kind" trigger="click" placement="bottomLeft">
           <VdRibbonButton
             :icon="kind === 'highlight' ? 'ink_highlighter' : 'format_color_text'"
-            :title="kind === 'highlight' ? '文本高亮颜色' : '字体颜色'"
+            :title="kind === 'highlight' ? t('ribbon.home.textHighlightColor') : t('ribbon.home.fontColor')"
             :color-bar="kind === 'highlight' ? highlightColor : fontColor"
             has-arrow
           />
@@ -92,11 +92,11 @@
               <label class="color-custom">
                 <input
                   type="color"
-                  :aria-label="kind === 'highlight' ? '自定义高亮颜色' : '自定义字体颜色'"
+                  :aria-label="kind === 'highlight' ? t('ribbon.home.customHighlightColor') : t('ribbon.home.customFontColor')"
                   :value="kind === 'highlight' ? highlightColor : fontColor"
                   @input="applyColor(kind, ($event.target as HTMLInputElement).value)"
                 />
-                <span class="custom-label">更多颜色</span>
+                <span class="custom-label">{{ t('common.moreColors') }}</span>
               </label>
             </div>
           </template>
@@ -104,20 +104,20 @@
       </div>
     </div>
 
-    <div class="home-group home-paragraph" role="group" aria-label="段落">
+    <div class="home-group home-paragraph" role="group" :aria-label="t('ribbon.home.paragraph')">
       <div class="home-row home-paragraph-top">
         <a-popover v-for="kind in listKinds" :key="kind" trigger="click" placement="bottomLeft">
           <VdRibbonButton
             :icon="kind === 'bullet' ? 'format-list-bulleted' : 'format-list-numbered'"
-            :title="kind === 'bullet' ? '项目符号' : '编号'"
+            :title="kind === 'bullet' ? t('ribbon.home.bulletList') : t('ribbon.home.numberList')"
             :active="listType === (kind === 'bullet' ? 'ul' : 'ol')"
             has-arrow
           />
           <template #content>
             <div class="list-panel home-list-panel">
-              <div class="list-panel-title">{{ kind === 'bullet' ? '项目符号' : '编号' }}</div>
+              <div class="list-panel-title">{{ kind === 'bullet' ? t('ribbon.home.bulletList') : t('ribbon.home.numberList') }}</div>
               <div class="list-grid">
-                <button type="button" class="list-cell list-cell-none" @mousedown.prevent @click="applyList(kind, null)">无</button>
+                <button type="button" class="list-cell list-cell-none" @mousedown.prevent @click="applyList(kind, null)">{{ t('ribbon.home.none') }}</button>
                 <button
                   v-for="item in listOptions[kind]"
                   :key="item.style"
@@ -138,11 +138,11 @@
           </template>
         </a-popover>
         <a-dropdown :trigger="['click']">
-          <VdRibbonButton icon="format_list_numbered_rtl" title="多级列表与缩进" has-arrow />
+          <VdRibbonButton icon="format_list_numbered_rtl" :title="t('ribbon.home.multilevelList')" has-arrow />
           <template #overlay>
             <a-menu>
-              <a-menu-item disabled>多级列表（暂未支持）</a-menu-item>
-              <a-sub-menu key="firstLine" title="首行缩进">
+              <a-menu-item disabled>{{ t('ribbon.home.multilevelListNotSupported') }}</a-menu-item>
+              <a-sub-menu key="firstLine" :title="t('ribbon.home.firstLineIndent')">
                 <a-menu-item
                   v-for="option in FIRST_LINE_INDENT_OPTIONS"
                   :key="option.value"
@@ -152,10 +152,10 @@
             </a-menu>
           </template>
         </a-dropdown>
-        <VdRibbonButton icon="format-indent-decrease" title="减少缩进" @click="emit('command', 'indentStep', 'sub')" />
-        <VdRibbonButton icon="format-indent-increase" title="增加缩进" @click="emit('command', 'indentStep', 'add')" />
+        <VdRibbonButton icon="format-indent-decrease" :title="t('ribbon.home.decreaseIndent')" @click="emit('command', 'indentStep', 'sub')" />
+        <VdRibbonButton icon="format-indent-increase" :title="t('ribbon.home.increaseIndent')" @click="emit('command', 'indentStep', 'add')" />
         <a-dropdown :trigger="['click']">
-          <VdRibbonButton icon="format-line-spacing" title="行距" has-arrow />
+          <VdRibbonButton icon="format-line-spacing" :title="t('ribbon.home.lineSpacing')" has-arrow />
           <template #overlay>
             <a-menu @click="({ key }: any) => emit('lineHeight', Number(key))">
               <a-menu-item v-for="option in LINE_HEIGHT_OPTIONS" :key="option.value">{{ option.label }}</a-menu-item>
@@ -173,46 +173,46 @@
           @click="emit('rowFlex', alignment.value)"
         />
         <a-dropdown :trigger="['click']">
-          <VdRibbonButton icon="format_paragraph" title="显示或隐藏编辑标记" :active="showLineBreak" has-arrow />
+          <VdRibbonButton icon="format_paragraph" :title="t('ribbon.home.showEditMarks')" :active="showLineBreak" has-arrow />
           <template #overlay>
             <a-menu>
-              <a-menu-item @click="emit('command', 'toggleLineBreak')">{{ showLineBreak ? '隐藏' : '显示' }}编辑标记</a-menu-item>
+              <a-menu-item @click="emit('command', 'toggleLineBreak')">{{ showLineBreak ? t('ribbon.home.hideEditMarks') : t('ribbon.home.showEditMarksLabel') }}{{ t('ribbon.home.editMarks') }}</a-menu-item>
             </a-menu>
           </template>
         </a-dropdown>
-        <VdRibbonButton icon="format-color-fill" title="段落底纹（暂未支持）" has-arrow disabled />
+        <VdRibbonButton icon="format-color-fill" :title="t('ribbon.home.paragraphShading')" has-arrow disabled />
       </div>
     </div>
 
-    <div class="home-group home-editing" role="group" aria-label="格式与编辑">
-      <VdRibbonButton icon="format-clear" title="清除格式 (Ctrl+\)" @click="emit('command', 'format')" />
+    <div class="home-group home-editing" role="group" :aria-label="t('ribbon.home.formatAndEdit')">
+      <VdRibbonButton icon="format-clear" :title="t('ribbon.home.clearFormat')" @click="emit('command', 'format')" />
       <a-dropdown :trigger="['click']">
-        <VdRibbonButton icon="border_all" :title="inTable ? '表格边框' : '边框（请先选中表格）'" :disabled="!inTable" has-arrow />
+        <VdRibbonButton icon="border_all" :title="inTable ? t('ribbon.home.tableBorders') : t('ribbon.home.bordersSelectTableFirst')" :disabled="!inTable" has-arrow />
         <template #overlay>
           <a-menu @click="({ key }: any) => emit('command', 'tableBorderType', String(key))">
-            <a-menu-item key="all">所有边框</a-menu-item>
-            <a-menu-item key="external">外侧边框</a-menu-item>
-            <a-menu-item key="none">无边框</a-menu-item>
+            <a-menu-item key="all">{{ t('ribbon.home.allBorders') }}</a-menu-item>
+            <a-menu-item key="external">{{ t('ribbon.home.outsideBorders') }}</a-menu-item>
+            <a-menu-item key="none">{{ t('ribbon.home.noBorders') }}</a-menu-item>
           </a-menu>
         </template>
       </a-dropdown>
       <a-dropdown :trigger="['click']">
-        <VdRibbonButton icon="select-all" title="选择与编辑" />
+        <VdRibbonButton icon="select-all" :title="t('ribbon.home.selectAndEdit')" />
         <template #overlay>
           <a-menu @click="({ key }: any) => emit('command', String(key))">
-            <a-menu-item key="selectAll">全选 <span class="home-shortcut">Ctrl+A</span></a-menu-item>
-            <a-menu-item key="openSearchPanel">查找 <span class="home-shortcut">Ctrl+F</span></a-menu-item>
-            <a-menu-item key="delete" :disabled="!hasSelection">删除</a-menu-item>
+            <a-menu-item key="selectAll">{{ t('ribbon.home.selectAll') }} <span class="home-shortcut">Ctrl+A</span></a-menu-item>
+            <a-menu-item key="openSearchPanel">{{ t('ribbon.home.find') }} <span class="home-shortcut">Ctrl+F</span></a-menu-item>
+            <a-menu-item key="delete" :disabled="!hasSelection">{{ t('ribbon.home.delete') }}</a-menu-item>
             <a-menu-divider />
-            <a-menu-item key="pasteNoFormat">无格式粘贴</a-menu-item>
-            <a-menu-item key="undo" :disabled="!canUndo">撤销 <span class="home-shortcut">Ctrl+Z</span></a-menu-item>
-            <a-menu-item key="redo" :disabled="!canRedo">重做 <span class="home-shortcut">Ctrl+Y</span></a-menu-item>
+            <a-menu-item key="pasteNoFormat">{{ t('ribbon.home.pasteNoFormat') }}</a-menu-item>
+            <a-menu-item key="undo" :disabled="!canUndo">{{ t('ribbon.home.undo') }} <span class="home-shortcut">Ctrl+Z</span></a-menu-item>
+            <a-menu-item key="redo" :disabled="!canRedo">{{ t('ribbon.home.redo') }} <span class="home-shortcut">Ctrl+Y</span></a-menu-item>
           </a-menu>
         </template>
       </a-dropdown>
     </div>
 
-    <div class="home-styles" role="group" aria-label="样式">
+    <div class="home-styles" role="group" :aria-label="t('ribbon.home.styles')">
       <div ref="styleStrip" class="home-styles-strip" @wheel="scrollStyles">
         <button
           v-for="style in styles"
@@ -228,11 +228,11 @@
         >{{ style.label }}</button>
       </div>
       <a-popover v-model:open="stylesOpen" trigger="click" placement="bottomRight">
-        <button type="button" class="home-styles-more" title="展开样式库" aria-label="展开样式库" :aria-expanded="stylesOpen" @mousedown.prevent>
+        <button type="button" class="home-styles-more" :title="t('common.expandLibrary')" :aria-label="t('common.expandLibrary')" :aria-expanded="stylesOpen" @mousedown.prevent>
           <span class="home-chevron" />
         </button>
         <template #content>
-          <div class="home-style-gallery" role="group" aria-label="全部样式">
+          <div class="home-style-gallery" role="group" :aria-label="t('common.allStyles')">
             <button
               v-for="style in styles"
               :key="style.id"
@@ -257,14 +257,17 @@ import {
   EDITOR_FONT_OPTIONS, EDITOR_SIZE_OPTIONS,
   BULLET_STYLES, NUMBER_STYLES, LINE_HEIGHT_OPTIONS
 } from '@vervedoc/core'
-import { COLOR_PALETTE, CHARACTER_SCALE_OPTIONS, FIRST_LINE_INDENT_OPTIONS } from '@/config/constants'
+import { COLOR_PALETTE, CHARACTER_SCALE_OPTIONS, getFirstLineIndentOptions } from '@/config/constants'
 import { VdRibbonButton } from '@vervedoc/ui'
+import { t } from '@/i18n'
 
 const INDENT_PX_PER_CHAR = 14
 const colorKinds = ['highlight', 'fontColor'] as const
 const listKinds = ['bullet', 'number'] as const
 const styleStrip = ref<HTMLElement | null>(null)
 const stylesOpen = ref(false)
+
+const FIRST_LINE_INDENT_OPTIONS = computed(() => getFirstLineIndentOptions())
 
 const props = defineProps<{
   currentFont: string
@@ -319,10 +322,10 @@ const listOptions = {
   number: NUMBER_STYLES
 }
 const alignments = [
-  { value: 'left', icon: 'format-align-left', label: '左对齐' },
-  { value: 'center', icon: 'format-align-center', label: '居中' },
-  { value: 'right', icon: 'format-align-right', label: '右对齐' },
-  { value: 'alignment', icon: 'format-align-justify', label: '两端对齐' }
+  { value: 'left', icon: 'format-align-left', label: t('ribbon.home.alignLeft') },
+  { value: 'center', icon: 'format-align-center', label: t('ribbon.home.alignCenter') },
+  { value: 'right', icon: 'format-align-right', label: t('ribbon.home.alignRight') },
+  { value: 'alignment', icon: 'format-align-justify', label: t('ribbon.home.alignJustify') }
 ]
 
 interface GalleryStyle {
@@ -333,10 +336,10 @@ interface GalleryStyle {
 }
 
 const styles: GalleryStyle[] = [
-  { id: 'normal', label: '正文', level: null, preview: 'home-style-normal' },
+  { id: 'normal', label: t('ribbon.home.normalStyle'), level: null, preview: 'home-style-normal' },
   ...['first', 'second', 'third', 'fourth', 'fifth', 'sixth']
     .map((level, index) => ({
-      id: level, label: `标题${index + 1}`, level, preview: `home-style-heading-${index + 1}`
+      id: level, label: t('ribbon.home.headingStyle', { n: index + 1 }), level, preview: `home-style-heading-${index + 1}`
     }))
 ]
 const selectedStyle = computed(() =>

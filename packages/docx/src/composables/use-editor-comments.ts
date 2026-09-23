@@ -1,5 +1,6 @@
 import { ref, type Ref } from 'vue'
 import type { IComment } from '@vervedoc/core'
+import { t } from '@/i18n'
 
 /**
  * 编辑器批注状态快照
@@ -108,7 +109,7 @@ export function useEditorComments(options: {
    * @param {string} [userName='当前用户'] 批注作者名称
    * @returns {IComment | null} 创建的批注对象，失败时返回 null
    */
-  function create(userName: string = '当前用户'): IComment | null {
+  function create(userName: string = t('common.currentUser')): IComment | null {
     const comment = getCommentComponent()?.add?.(userName) ?? null
     sync(comment?.groupId)
     render()

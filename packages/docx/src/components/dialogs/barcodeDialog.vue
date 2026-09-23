@@ -1,7 +1,7 @@
 <template>
-  <VdDialog v-model:open="visible" title="条形码生成" width="630px" :maskClosable="false" class="app-dialog">
+  <VdDialog v-model:open="visible" :title="t('dialog.barcode.title')" width="630px" :maskClosable="false" class="app-dialog">
     <a-form :model="barcodeForm" :label-col="{ style: { width: '80px' } }">
-      <a-form-item label="编码">
+      <a-form-item :label="t('dialog.barcode.encoding')">
         <div style="display: flex; align-items: center; justify-content: space-between;width: 100%">
           <div style="display: flex; align-items: center; gap: 10px;">
             <a-select v-model:value="barcodeForm.type" style="width: 180px;">
@@ -18,34 +18,34 @@
               <a-select-option value="pharmacode" label="Pharmacode"/>
               <a-select-option value="codabar" label="Codabar"/>
             </a-select>
-            <span style="color: #999; font-size: 12px;">应用领域: {{ applicationField }}</span>
+            <span style="color: #999; font-size: 12px;">{{ t('dialog.barcode.application') }} {{ applicationField }}</span>
           </div>
 
           <a-dropdown :trigger="['click']" placement="bottomRight">
             <VdButton type="link">
-              高级设置
+              {{ t('dialog.barcode.advancedSettings') }}
               <VdIcon name="expand-more" />
             </VdButton>
             <template #overlay>
               <VdCard style="min-width: 260px">
                 <a-form :label-col="{ style: { width: '80px' } }" size="small">
-                  <a-form-item label="条形码颜色">
+                  <a-form-item :label="t('dialog.barcode.barcodeColor')">
                     <input type="color" :value="barcodeStyle.lineColor" @change.stop="(e: Event) => barcodeStyle.lineColor = (e.target as HTMLInputElement).value" @click.stop style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
                   </a-form-item>
-                  <a-form-item label="背景颜色">
+                  <a-form-item :label="t('dialog.barcode.backgroundColor')">
                     <input type="color" :value="barcodeStyle.background" @change.stop="(e: Event) => barcodeStyle.background = (e.target as HTMLInputElement).value" @click.stop style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
                   </a-form-item>
-                  <a-form-item label="文字颜色">
+                  <a-form-item :label="t('dialog.barcode.textColor')">
                     <input type="color" :value="barcodeStyle.textColor" @change.stop="(e: Event) => barcodeStyle.textColor = (e.target as HTMLInputElement).value" @click.stop style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
                   </a-form-item>
-                  <a-form-item label="文字位置">
+                  <a-form-item :label="t('dialog.barcode.textPosition')">
                     <a-select v-model:value="barcodeStyle.textPosition">
-                      <a-select-option value="bottom" label="下方"/>
-                      <a-select-option value="top" label="上方"/>
-                      <a-select-option value="none" label="隐藏"/>
+                      <a-select-option value="bottom" :label="t('dialog.barcode.positionBottom')"/>
+                      <a-select-option value="top" :label="t('dialog.barcode.positionTop')"/>
+                      <a-select-option value="none" :label="t('dialog.barcode.positionHidden')"/>
                     </a-select>
                   </a-form-item>
-                  <a-form-item label="文字大小">
+                  <a-form-item :label="t('dialog.barcode.textSize')">
                     <a-slider v-model:value="barcodeStyle.fontSize" :min="10" :max="24" :step="1"/>
                   </a-form-item>
                 </a-form>
@@ -54,12 +54,12 @@
           </a-dropdown>
         </div>
       </a-form-item>
-      <a-form-item label="输入">
+      <a-form-item :label="t('dialog.barcode.input')">
         <div class="input-wrapper">
           <a-textarea
             v-model:value="barcodeForm.content"
             :rows="3"
-            placeholder="输入支持: 数字、大小写字母、普通符号以及控制符"
+            :placeholder="t('dialog.barcode.placeholder')"
             :maxlength="200"
           />
         </div>
@@ -73,8 +73,8 @@
       </div>
     </div>
     <template #footer>
-      <VdButton type="primary" icon="check" :disabled="!canConfirm" @click="confirmBarcode">确定</VdButton>
-      <VdButton icon="close" @click="visible = false">取消</VdButton>
+      <VdButton type="primary" icon="check" :disabled="!canConfirm" @click="confirmBarcode">{{ t('common.ok') }}</VdButton>
+      <VdButton icon="close" @click="visible = false">{{ t('common.cancel') }}</VdButton>
     </template>
   </VdDialog>
 </template>
@@ -83,6 +83,7 @@
 import {computed, nextTick, ref, watch} from 'vue'
 import { VdCard, VdDialog, VdButton, VdIcon } from '@vervedoc/ui'
 import JsBarcode from 'jsbarcode'
+import { t } from '@/i18n'
 
 /** 组件 props 定义 */
 const props = defineProps<{
@@ -125,20 +126,20 @@ const barcodeStyle = ref({
 })
 
 /** 条形码类型对应的应用领域映射 */
-const applicationFieldMap: Record<string, string> = {
-  code128: '物流业、仓储业、医疗业',
-  code39: '工业、国防、汽车制造',
-  code93: '物流、仓储、制造业',
-  ean13: '零售业、商品流通',
-  ean8: '零售业、小包装商品',
-  upc: '北美零售业',
-  upce: '北美零售业、小商品',
-  itf14: '物流包装、仓储运输',
-  itf: '仓储、物流、批发',
-  msi: '仓储、货架管理',
-  pharmacode: '医药行业',
-  codabar: '图书馆、血库、快递'
-}
+const applicationFieldMap = computed<Record<string, string>>(() => ({
+  code128: t('dialog.barcode.appField.code128'),
+  code39: t('dialog.barcode.appField.code39'),
+  code93: t('dialog.barcode.appField.code93'),
+  ean13: t('dialog.barcode.appField.ean13'),
+  ean8: t('dialog.barcode.appField.ean8'),
+  upc: t('dialog.barcode.appField.upc'),
+  upce: t('dialog.barcode.appField.upce'),
+  itf14: t('dialog.barcode.appField.itf14'),
+  itf: t('dialog.barcode.appField.itf'),
+  msi: t('dialog.barcode.appField.msi'),
+  pharmacode: t('dialog.barcode.appField.pharmacode'),
+  codabar: t('dialog.barcode.appField.codabar')
+}))
 
 /** 条形码类型对应的 JsBarcode 格式名映射 */
 const barcodeFormatMap: Record<string, string> = {
@@ -158,7 +159,7 @@ const barcodeFormatMap: Record<string, string> = {
 
 /** 当前类型对应的应用领域 */
 const applicationField = computed(() => {
-  return applicationFieldMap[barcodeForm.value.type] || '通用'
+  return applicationFieldMap.value[barcodeForm.value.type] || t('dialog.barcode.general')
 })
 
 /** 是否可以确认生成（内容非空且无错误） */
@@ -194,12 +195,12 @@ const generateBarcode = () => {
       font: 'monospace',
       valid: (valid: boolean) => {
         if (!valid) {
-          barcodeError.value = '输入内容不符合该编码格式要求'
+          barcodeError.value = t('message.barcodeInvalid')
         }
       }
     })
   } catch (error) {
-    barcodeError.value = '条形码生成失败，请检查输入内容'
+    barcodeError.value = t('message.barcodeFailed')
     console.error('Barcode generation error:', error)
   }
 }

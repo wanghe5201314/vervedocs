@@ -1,38 +1,38 @@
 <template>
-  <VdDialog v-model:open="visible" :title="title || '表格边框'" width="520px" :maskClosable="false" class="app-dialog" :destroyOnClose="true" @afterOpenChange="handleOpenChange">
+  <VdDialog v-model:open="visible" :title="title || t('dialog.tableBorders.title')" width="520px" :maskClosable="false" class="app-dialog" :destroyOnClose="true" @afterOpenChange="handleOpenChange">
     <div ref="dialogContent" tabindex="-1">
     <VdCard :bordered="true" class="dialog-card">
-      <template #title>边框设置</template>
-      <div class="dialog-tip">应用于当前表格。空白表示混合值或不适用，未修改的属性保持原样。</div>
+      <template #title>{{ t('dialog.tableBorders.borderSettings') }}</template>
+      <div class="dialog-tip">{{ t('dialog.tableBorders.applyHint') }}</div>
       <div class="dialog-grid-2">
         <div class="dialog-field">
-          <div class="dialog-label">边框类型</div>
-          <a-select v-model:value="form.type" placeholder="混合" style="width: 100%">
-            <a-select-option value="all" label="全部" />
-            <a-select-option value="outside" label="外边框" />
-            <a-select-option value="none" label="无边框" />
+          <div class="dialog-label">{{ t('dialog.tableBorders.borderType') }}</div>
+          <a-select v-model:value="form.type" :placeholder="t('dialog.tableBorders.borderTypePlaceholder')" style="width: 100%">
+            <a-select-option value="all" :label="t('dialog.tableBorders.all')" />
+            <a-select-option value="outside" :label="t('dialog.tableBorders.outer')" />
+            <a-select-option value="none" :label="t('dialog.tableBorders.none')" />
           </a-select>
         </div>
         <div class="dialog-field">
-          <div class="dialog-label">颜色<span v-if="!form.color">（混合/无）</span></div>
+          <div class="dialog-label">{{ t('dialog.tableBorders.color') }}<span v-if="!form.color">{{ t('dialog.tableBorders.colorMixed') }}</span></div>
           <input type="color" :value="form.color || '#000000'" @change="(e: Event) => form.color = (e.target as HTMLInputElement).value" style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
         </div>
       </div>
       <div class="dialog-grid-2" style="margin-top: 12px">
         <div class="dialog-field">
-          <div class="dialog-label">内部线宽（px）</div>
+          <div class="dialog-label">{{ t('dialog.tableBorders.innerWidth') }}</div>
           <a-input-number v-model:value="form.width" :min="0" :max="20" :step="0.5" style="width: 100%" />
         </div>
         <div class="dialog-field">
-          <div class="dialog-label">外框线宽（px）</div>
+          <div class="dialog-label">{{ t('dialog.tableBorders.outerWidth') }}</div>
           <a-input-number v-model:value="form.externalWidth" :min="0" :max="20" :step="0.5" style="width: 100%" />
         </div>
       </div>
     </VdCard>
     </div>
     <template #footer>
-      <VdButton @click="visible = false">取消</VdButton>
-      <VdButton type="primary" @click="handleConfirm">确定</VdButton>
+      <VdButton @click="visible = false">{{ t('common.cancel') }}</VdButton>
+      <VdButton type="primary" @click="handleConfirm">{{ t('common.ok') }}</VdButton>
     </template>
   </VdDialog>
 </template>
@@ -40,6 +40,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { VdCard, VdDialog, VdButton } from '@vervedoc/ui'
+import { t } from '@/i18n'
 
 type TableBorders = { type?: string; color?: string; width?: number; externalWidth?: number }
 const props = defineProps<{

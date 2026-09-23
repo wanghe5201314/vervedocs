@@ -1,26 +1,26 @@
 <template>
   <div class="ribbon-tab-panel">
     <!-- 页面设置 -->
-    <VdRibbonGroup title="页面设置">
+    <VdRibbonGroup :title="t('ribbon.layout.pageSetup')">
       <a-dropdown :trigger="['click']">
-        <VdRibbonButton icon="layout-paper-direction" text="纸张方向" title="纸张方向" size="large" has-arrow />
+        <VdRibbonButton icon="layout-paper-direction" :text="t('ribbon.layout.paperDirection')" :title="t('ribbon.layout.paperDirection')" size="large" has-arrow />
         <template #overlay>
           <VdCard size="small" :bordered="false" class="ribbon-overlay-card" :bodyStyle="{ padding: '0' }">
             <div class="direction-panel">
               <div class="direction-item" @click="emit('command', 'paperDirection', PaperDirection.VERTICAL)">
                 <div class="direction-icon vertical-icon"></div>
-                <span>纵向</span>
+                <span>{{ t('ribbon.layout.vertical') }}</span>
               </div>
               <div class="direction-item" @click="emit('command', 'paperDirection', PaperDirection.HORIZONTAL)">
                 <div class="direction-icon horizontal-icon"></div>
-                <span>横向</span>
+                <span>{{ t('ribbon.layout.horizontal') }}</span>
               </div>
             </div>
           </VdCard>
         </template>
       </a-dropdown>
       <a-dropdown :trigger="['click']">
-        <VdRibbonButton icon="layout-paper-size" text="纸张大小" title="纸张大小" size="large" has-arrow />
+        <VdRibbonButton icon="layout-paper-size" :text="t('ribbon.layout.paperSize')" :title="t('ribbon.layout.paperSize')" size="large" has-arrow />
         <template #overlay>
           <VdCard size="small" :bordered="false" class="ribbon-overlay-card" :bodyStyle="{ padding: '0' }">
             <div class="size-panel">
@@ -36,7 +36,7 @@
         </template>
       </a-dropdown>
       <a-dropdown :trigger="['click']" overlayClassName="gdocs-menu-popper gdocs-margin-popper">
-        <VdRibbonButton icon="aspect_ratio" text="页边距" title="页边距" size="large" has-arrow />
+        <VdRibbonButton icon="aspect_ratio" :text="t('ribbon.layout.pageMargin')" :title="t('ribbon.layout.pageMargin')" size="large" has-arrow />
         <template #overlay>
           <VdCard size="small" :bordered="false" class="ribbon-overlay-card" :bodyStyle="{ padding: '0' }">
             <div class="margin-presets">
@@ -44,8 +44,8 @@
                 <div class="page-icon"><div class="page-content" :style="preset.style"></div></div>
                 <div class="preset-info">
                   <div class="preset-name">{{ preset.name }}</div>
-                  <div class="preset-dimensions"><span class="margin-pair">上{{ (preset.margins[0] / 37.8).toFixed(1) }}厘米</span><span class="margin-pair">下{{ (preset.margins[2] / 37.8).toFixed(1) }}厘米</span></div>
-                  <div class="preset-dimensions"><span class="margin-pair">左{{ (preset.margins[3] / 37.8).toFixed(1) }}厘米</span><span class="margin-pair">右{{ (preset.margins[1] / 37.8).toFixed(1) }}厘米</span></div>
+                  <div class="preset-dimensions"><span class="margin-pair">{{ t('ribbon.layout.top') }}{{ (preset.margins[0] / 37.8).toFixed(1) }}{{ t('ribbon.layout.cm') }}</span><span class="margin-pair">{{ t('ribbon.layout.bottom') }}{{ (preset.margins[2] / 37.8).toFixed(1) }}{{ t('ribbon.layout.cm') }}</span></div>
+                  <div class="preset-dimensions"><span class="margin-pair">{{ t('ribbon.layout.left') }}{{ (preset.margins[3] / 37.8).toFixed(1) }}{{ t('ribbon.layout.cm') }}</span><span class="margin-pair">{{ t('ribbon.layout.right') }}{{ (preset.margins[1] / 37.8).toFixed(1) }}{{ t('ribbon.layout.cm') }}</span></div>
                 </div>
               </div>
             </div>
@@ -53,16 +53,16 @@
         </template>
       </a-dropdown>
       <a-dropdown :trigger="['click']">
-        <VdRibbonButton icon="layout-page-color" text="页面颜色" title="页面颜色" size="large" has-arrow />
+        <VdRibbonButton icon="layout-page-color" :text="t('ribbon.layout.pageColor')" :title="t('ribbon.layout.pageColor')" size="large" has-arrow />
         <template #overlay>
           <VdCard size="small" :bordered="false" class="ribbon-overlay-card" :bodyStyle="{ padding: '0' }">
             <div class="bg-menu">
               <div class="bg-item" @click="emit('command', 'setPaperBackground', '#FFFFFF')">
                 <span class="bg-check"><VdIcon v-if="selectedBgColor === '#FFFFFF'" name="check" /></span>
-                <span class="bg-item-text">无填充</span>
+                <span class="bg-item-text">{{ t('ribbon.layout.noFill') }}</span>
               </div>
               <div class="bg-divider"></div>
-              <div class="bg-section-title">主题颜色</div>
+              <div class="bg-section-title">{{ t('ribbon.layout.themeColor') }}</div>
               <div class="bg-grid">
                 <button v-for="c in BG_COLOR_PALETTE" :key="c" class="bg-color" :class="{ selected: selectedBgColor === c }" :style="{ backgroundColor: c }" @click="emit('command', 'setPaperBackground', c)"></button>
               </div>
@@ -73,29 +73,29 @@
     </VdRibbonGroup>
 
     <!-- 分栏 -->
-    <VdRibbonGroup title="分栏">
-      <VdRibbonButton icon="layout-column-one" text="一栏" title="一栏" size="large" @click="emit('command', 'columns', 1)" />
-      <VdRibbonButton icon="layout-column-two" text="两栏" title="两栏" size="large" @click="emit('command', 'columns', 2)" />
-      <VdRibbonButton icon="layout-column-three" text="三栏" title="三栏" size="large" @click="emit('command', 'columns', 3)" />
+    <VdRibbonGroup :title="t('ribbon.layout.columns')">
+      <VdRibbonButton icon="layout-column-one" :text="t('ribbon.layout.oneColumn')" :title="t('ribbon.layout.oneColumn')" size="large" @click="emit('command', 'columns', 1)" />
+      <VdRibbonButton icon="layout-column-two" :text="t('ribbon.layout.twoColumns')" :title="t('ribbon.layout.twoColumns')" size="large" @click="emit('command', 'columns', 2)" />
+      <VdRibbonButton icon="layout-column-three" :text="t('ribbon.layout.threeColumns')" :title="t('ribbon.layout.threeColumns')" size="large" @click="emit('command', 'columns', 3)" />
     </VdRibbonGroup>
 
 
     <!-- 水印 -->
-    <VdRibbonGroup title="水印">
+    <VdRibbonGroup :title="t('ribbon.layout.watermark')">
       <a-dropdown :trigger="['click']">
-        <VdRibbonButton icon="watermark" text="水印" title="水印" size="large" has-arrow />
+        <VdRibbonButton icon="watermark" :text="t('ribbon.layout.watermark')" :title="t('ribbon.layout.watermark')" size="large" has-arrow />
         <template #overlay>
           <VdCard size="small" class="watermark-card">
-            <div class="dropdown-card-title">水印</div>
+            <div class="dropdown-card-title">{{ t('ribbon.layout.watermark') }}</div>
             <div class="wm-section">
-              <div class="wm-section-title">自定义水印</div>
+              <div class="wm-section-title">{{ t('ribbon.layout.customWatermark') }}</div>
               <button class="wm-custom-add" @click="emit('command', 'addWatermark')">
                 <VdIcon name="plus" />
-                <span>点击添加</span>
+                <span>{{ t('ribbon.layout.clickToAdd') }}</span>
               </button>
             </div>
             <div class="wm-section">
-              <div class="wm-section-title">预设水印</div>
+              <div class="wm-section-title">{{ t('ribbon.layout.presetWatermark') }}</div>
               <div class="wm-preset-grid">
                 <div class="wm-preset-item" v-for="preset in WATERMARK_PRESETS" :key="preset.name" @click="emit('command', 'addWatermark', preset.options)">
                   <div class="wm-preset-preview">
@@ -107,7 +107,7 @@
             </div>
             <div class="dropdown-card-footer">
               <button class="dropdown-footer-btn" @click="emit('command', 'deleteWatermark')">
-                <span class="mi"><VdIcon name="delete-outline" /><span>删除水印</span></span>
+                <span class="mi"><VdIcon name="delete-outline" /><span>{{ t('ribbon.layout.deleteWatermark') }}</span></span>
               </button>
             </div>
           </VdCard>
@@ -119,19 +119,23 @@
 
 <script setup lang="ts">
 import { VdRibbonButton, VdRibbonGroup, VdIcon, VdCard } from '@vervedoc/ui'
+import { computed } from 'vue'
 
 import { PaperDirection, PAPER_SIZE_LIST, MARGIN_PRESETS } from '@vervedoc/core'
-import { BG_COLOR_PALETTE, WATERMARK_PRESETS } from '@/config/constants'
+import { BG_COLOR_PALETTE, getWatermarkPresets } from '@/config/constants'
+import { t } from '@/i18n'
 
 
+
+const WATERMARK_PRESETS = computed(() => getWatermarkPresets())
 
 /** 纸张大小选项列表，附带显示用的厘米尺寸 */
 const paperSizes = PAPER_SIZE_LIST.map(p => ({
   name: p.label.split(' ')[0],
   width: p.width,
   height: p.height,
-  displayWidth: `${(p.width * 25.4 / 96).toFixed(1)}厘米`,
-  displayHeight: `${(p.height * 25.4 / 96).toFixed(1)}厘米`
+  displayWidth: `${(p.width * 25.4 / 96).toFixed(1)}${t('ribbon.layout.cm')}`,
+  displayHeight: `${(p.height * 25.4 / 96).toFixed(1)}${t('ribbon.layout.cm')}`
 }))
 
 const emit = defineEmits<{

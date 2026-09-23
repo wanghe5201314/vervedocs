@@ -3,9 +3,9 @@
     <div class="sidebar-header">
       <div class="sidebar-title-wrap">
         <RobotOutlined class="sidebar-title-icon" />
-        <span class="sidebar-title">AI 助手</span>
+        <span class="sidebar-title">{{ t('sidebar.ai.title') }}</span>
       </div>
-      <div class="sidebar-close" @click="close" title="关闭">
+      <div class="sidebar-close" @click="close" :title="t('common.close')">
         <CloseOutlined />
       </div>
     </div>
@@ -13,23 +13,23 @@
     <div class="sidebar-content">
       <section class="overview-card">
         <div class="overview-main">
-          <div class="overview-heading">当前上下文</div>
+          <div class="overview-heading">{{ t('sidebar.ai.context') }}</div>
           <div class="overview-description">
-            {{ hasSelection ? '已检测到选区，可直接对选中文本执行改写、翻译和总结。' : '未选中文本，可先框选内容，或使用全文分析、续写能力。' }}
+            {{ hasSelection ? t('sidebar.ai.contextSelected') : t('sidebar.ai.contextNotSelected') }}
           </div>
         </div>
         <div class="overview-stats">
           <span class="status-pill" :class="{ active: hasSelection }">
-            {{ hasSelection ? '已选中文本' : '未选中文本' }}
+            {{ hasSelection ? t('sidebar.ai.selectedText') : t('sidebar.ai.notSelectedText') }}
           </span>
           <span class="status-pill" :class="{ loading: aiState.operation.loading }">
-            {{ aiState.operation.loading ? '生成中' : '就绪' }}
+            {{ aiState.operation.loading ? t('sidebar.ai.generating') : t('sidebar.ai.ready') }}
           </span>
-          <span class="status-pill">{{ recentHistory.length }} 条记录</span>
+          <span class="status-pill">{{ recentHistory.length }} {{ t('sidebar.ai.records') }}</span>
         </div>
       </section>
 
-      <div class="tab-nav" role="tablist" aria-label="AI 助手功能分组">
+      <div class="tab-nav" role="tablist" :aria-label="t('sidebar.ai.featureGroup')">
         <button
           v-for="tab in tabOptions"
           :key="tab.key"
@@ -46,8 +46,8 @@
       <div class="tab-panel">
         <template v-if="activeTab === 'writing'">
           <section class="panel-card">
-            <div class="section-title">快捷写作</div>
-            <div class="section-desc">围绕当前选中的文本快速执行常用改写动作。</div>
+            <div class="section-title">{{ t('sidebar.ai.quickWrite') }}</div>
+            <div class="section-desc">{{ t('sidebar.ai.quickWriteDesc') }}</div>
             <div class="action-tile-grid">
               <button
                 v-for="action in quickActions"
@@ -69,14 +69,14 @@
           </section>
 
           <section class="panel-card">
-            <div class="section-title">翻译</div>
-            <div class="section-desc">对当前选中内容进行目标语言翻译。</div>
+            <div class="section-title">{{ t('sidebar.ai.translate') }}</div>
+            <div class="section-desc">{{ t('sidebar.ai.translateDesc') }}</div>
             <div class="translate-row">
               <a-select
                 v-model:value="targetLanguage"
                 size="small"
                 class="translate-select"
-                placeholder="目标语言"
+                :placeholder="t('sidebar.ai.translatePlaceholder')"
               >
                 <a-select-option
                   v-for="lang in languages"
@@ -92,19 +92,19 @@
                 :disabled="!hasSelection || aiState.operation.loading"
                 @click="handleTranslate"
               >
-                翻译
+                {{ t('sidebar.ai.translate') }}
               </VdButton>
             </div>
           </section>
 
           <section class="panel-card">
-            <div class="section-title">自定义指令</div>
-            <div class="section-desc">告诉 AI 你想要的改写目标、风格或输出形式。</div>
+            <div class="section-title">{{ t('sidebar.ai.customInstruction') }}</div>
+            <div class="section-desc">{{ t('sidebar.ai.customInstructionDesc') }}</div>
             <a-textarea
               v-model:value="customPrompt"
               :rows="4"
               :maxlength="120"
-              placeholder="例如：将文本改写为会议纪要风格，并保留关键结论。"
+              :placeholder="t('sidebar.ai.customInstructionPlaceholder')"
             />
             <div class="custom-footer">
               <span class="input-count">{{ customPrompt.trim().length }}/120</span>
@@ -114,14 +114,14 @@
                 :disabled="!hasSelection || !customPrompt.trim() || aiState.operation.loading"
                 @click="handleCustomAction"
               >
-                执行指令
+                {{ t('sidebar.ai.executeInstruction') }}
               </VdButton>
             </div>
           </section>
 
           <section class="panel-card">
-            <div class="section-title">AI 续写</div>
-            <div class="section-desc">从当前光标上下文继续生成后续内容，适合起草段落或补全文本。</div>
+            <div class="section-title">{{ t('sidebar.ai.aiContinue') }}</div>
+            <div class="section-desc">{{ t('sidebar.ai.aiContinueDesc') }}</div>
             <button
               class="primary-action"
               type="button"
@@ -129,16 +129,16 @@
               @click="handleContinueWriting"
             >
               <VdIcon name="pen-plus" />
-              <span>从光标处续写</span>
+              <span>{{ t('sidebar.ai.continueFromCursor') }}</span>
             </button>
           </section>
         </template>
 
         <template v-else-if="activeTab === 'layout'">
           <section class="panel-card feature-card">
-            <div class="section-title">智能排版建议</div>
+            <div class="section-title">{{ t('sidebar.ai.layoutSuggest') }}</div>
             <div class="section-desc">
-              面向整篇文档分析标题层级、段落结构、分栏与空白节奏，帮助你更快整理版式。
+              {{ t('sidebar.ai.layoutSuggestDesc') }}
             </div>
             <button
               class="primary-action"
@@ -147,15 +147,15 @@
               @click="handleLayoutSuggestion"
             >
               <VdIcon name="auto-fix" />
-              <span>获取排版建议</span>
+              <span>{{ t('sidebar.ai.getLayoutSuggest') }}</span>
             </button>
           </section>
         </template>
 
         <template v-else-if="activeTab === 'analysis'">
           <section class="panel-card feature-card">
-            <div class="section-title">文档分析</div>
-            <div class="section-desc">从内容质量、结构完整性和表达风格几个维度对全文做综合分析。</div>
+            <div class="section-title">{{ t('sidebar.ai.docAnalysis') }}</div>
+            <div class="section-desc">{{ t('sidebar.ai.docAnalysisDesc') }}</div>
             <button
               class="primary-action"
               type="button"
@@ -163,13 +163,13 @@
               @click="handleDocAnalysis"
             >
               <VdIcon name="file-search-outline" />
-              <span>开始分析</span>
+              <span>{{ t('sidebar.ai.startAnalysis') }}</span>
             </button>
           </section>
 
           <section class="panel-card feature-card">
-            <div class="section-title">全文总结</div>
-            <div class="section-desc">快速生成摘要、重点信息或一段可复用的内容概览。</div>
+            <div class="section-title">{{ t('sidebar.ai.summary') }}</div>
+            <div class="section-desc">{{ t('sidebar.ai.summaryDesc') }}</div>
             <button
               class="secondary-action"
               type="button"
@@ -177,18 +177,18 @@
               @click="handleDocSummarize"
             >
               <VdIcon name="text-box-check-outline" />
-              <span>生成摘要</span>
+              <span>{{ t('sidebar.ai.generateSummary') }}</span>
             </button>
           </section>
         </template>
 
         <template v-else>
           <section class="panel-card feature-card">
-            <div class="section-title">图片描述生成</div>
-            <div class="section-desc">为文档图片生成可读的说明文字，便于无障碍阅读与图文整理。</div>
+            <div class="section-title">{{ t('sidebar.ai.imageDesc') }}</div>
+            <div class="section-desc">{{ t('sidebar.ai.imageDescDesc') }}</div>
             <div class="beta-row">
               <span class="beta-badge">Beta</span>
-              <span class="beta-text">当前为预留能力入口</span>
+              <span class="beta-text">{{ t('sidebar.ai.imageDescReserved') }}</span>
             </div>
             <button
               class="secondary-action"
@@ -197,15 +197,15 @@
               @click="handleImageAlt"
             >
               <VdIcon name="image-text" />
-              <span>生成图片描述</span>
+              <span>{{ t('sidebar.ai.generateImageDesc') }}</span>
             </button>
           </section>
         </template>
 
         <section class="history-card">
           <div class="history-header">
-            <span class="section-title">最近记录</span>
-            <span class="history-count">{{ recentHistory.length }} 条</span>
+            <span class="section-title">{{ t('sidebar.ai.recentRecords') }}</span>
+            <span class="history-count">{{ recentHistory.length }} {{ t('sidebar.ai.recordsCount') }}</span>
           </div>
           <div v-if="recentHistory.length" class="history-list">
             <div
@@ -223,7 +223,7 @@
           <a-empty
             v-else
             :image="false"
-            description="还没有 AI 处理记录"
+            :description="t('sidebar.ai.noRecords')"
           />
         </section>
       </div>
@@ -239,6 +239,7 @@ import { AIAction, TranslateLanguage } from '@vervedoc/docx-editor-ai'
 import { aiStateStore } from '@/stores/ai-state'
 import { editorStateStore } from '@/stores/editor-state'
 import type { AITab } from '@/stores/ai-state'
+import { t } from '@/i18n'
 
 const emit = defineEmits<{
   (e: 'command', command: string, ...args: any[]): void
@@ -268,45 +269,45 @@ const recentHistory = computed(() => aiState.history.slice(0, 4))
 
 /** AI 标签页选项配置 */
 const tabOptions: Array<{ key: AITab; label: string; desc: string }> = [
-  { key: 'writing', label: '写作', desc: '改写润色' },
-  { key: 'layout', label: '排版', desc: '结构建议' },
-  { key: 'analysis', label: '分析', desc: '总结洞察' },
-  { key: 'media', label: '多媒体', desc: '图片描述' }
+  { key: 'writing', label: t('sidebar.ai.tabWrite'), desc: t('sidebar.ai.tabWriteDesc') },
+  { key: 'layout', label: t('sidebar.ai.tabLayout'), desc: t('sidebar.ai.tabLayoutDesc') },
+  { key: 'analysis', label: t('sidebar.ai.tabAnalysis'), desc: t('sidebar.ai.tabAnalysisDesc') },
+  { key: 'media', label: t('sidebar.ai.tabMultimedia'), desc: t('sidebar.ai.tabMultimediaDesc') }
 ]
 
 /** 快捷写作动作配置 */
 const quickActions = [
-  { label: '润色', value: AIAction.POLISH, icon: 'mdi-auto-fix', desc: '提升表达质量' },
-  { label: '扩展', value: AIAction.EXPAND, icon: 'mdi-arrow-expand-all', desc: '补充细节内容' },
-  { label: '总结', value: AIAction.SUMMARIZE, icon: 'mdi-text-box-check-outline', desc: '提炼关键信息' },
-  { label: '修正语法', value: AIAction.FIX_GRAMMAR, icon: 'mdi-spellcheck', desc: '修复语病和拼写' },
-  { label: '正式化', value: AIAction.FORMAL, icon: 'mdi-format-letter-case', desc: '调整为正式语气' },
-  { label: '轻松化', value: AIAction.CASUAL, icon: 'mdi-emoticon-outline', desc: '降低语气强度' }
+  { label: t('sidebar.ai.actionPolish'), value: AIAction.POLISH, icon: 'mdi-auto-fix', desc: t('sidebar.ai.actionPolishDesc') },
+  { label: t('sidebar.ai.actionExpand'), value: AIAction.EXPAND, icon: 'mdi-arrow-expand-all', desc: t('sidebar.ai.actionExpandDesc') },
+  { label: t('sidebar.ai.actionSummarize'), value: AIAction.SUMMARIZE, icon: 'mdi-text-box-check-outline', desc: t('sidebar.ai.actionSummarizeDesc') },
+  { label: t('sidebar.ai.actionFixGrammar'), value: AIAction.FIX_GRAMMAR, icon: 'mdi-spellcheck', desc: t('sidebar.ai.actionFixGrammarDesc') },
+  { label: t('sidebar.ai.actionFormalize'), value: AIAction.FORMAL, icon: 'mdi-format-letter-case', desc: t('sidebar.ai.actionFormalizeDesc') },
+  { label: t('sidebar.ai.actionRelax'), value: AIAction.CASUAL, icon: 'mdi-emoticon-outline', desc: t('sidebar.ai.actionRelaxDesc') }
 ]
 
 /** 翻译目标语言选项 */
 const languages = [
-  { label: '英文', value: TranslateLanguage.ENGLISH },
-  { label: '中文', value: TranslateLanguage.CHINESE },
-  { label: '日文', value: TranslateLanguage.JAPANESE },
-  { label: '韩文', value: TranslateLanguage.KOREAN },
-  { label: '法文', value: TranslateLanguage.FRENCH },
-  { label: '德文', value: TranslateLanguage.GERMAN },
-  { label: '西班牙文', value: TranslateLanguage.SPANISH },
-  { label: '俄文', value: TranslateLanguage.RUSSIAN }
+  { label: t('sidebar.ai.langEn'), value: TranslateLanguage.ENGLISH },
+  { label: t('sidebar.ai.langZh'), value: TranslateLanguage.CHINESE },
+  { label: t('sidebar.ai.langJa'), value: TranslateLanguage.JAPANESE },
+  { label: t('sidebar.ai.langKo'), value: TranslateLanguage.KOREAN },
+  { label: t('sidebar.ai.langFr'), value: TranslateLanguage.FRENCH },
+  { label: t('sidebar.ai.langDe'), value: TranslateLanguage.GERMAN },
+  { label: t('sidebar.ai.langEs'), value: TranslateLanguage.SPANISH },
+  { label: t('sidebar.ai.langRu'), value: TranslateLanguage.RUSSIAN }
 ]
 
 /** AI 动作到中文标签的映射 */
 const ACTION_LABELS: Partial<Record<AIAction, string>> = {
-  [AIAction.POLISH]: '润色',
-  [AIAction.TRANSLATE]: '翻译',
-  [AIAction.SUMMARIZE]: '总结',
-  [AIAction.CONTINUE]: '续写',
-  [AIAction.EXPAND]: '扩展',
-  [AIAction.FIX_GRAMMAR]: '修正语法',
-  [AIAction.FORMAL]: '正式化',
-  [AIAction.CASUAL]: '轻松化',
-  [AIAction.CUSTOM]: '自定义'
+  [AIAction.POLISH]: t('sidebar.ai.actionPolish'),
+  [AIAction.TRANSLATE]: t('sidebar.ai.translate'),
+  [AIAction.SUMMARIZE]: t('sidebar.ai.actionSummarize'),
+  [AIAction.CONTINUE]: t('sidebar.ai.actionContinue'),
+  [AIAction.EXPAND]: t('sidebar.ai.actionExpand'),
+  [AIAction.FIX_GRAMMAR]: t('sidebar.ai.actionFixGrammar'),
+  [AIAction.FORMAL]: t('sidebar.ai.actionFormalize'),
+  [AIAction.CASUAL]: t('sidebar.ai.actionRelax'),
+  [AIAction.CUSTOM]: t('common.custom')
 }
 
 /**

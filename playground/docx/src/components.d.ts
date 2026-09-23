@@ -15,6 +15,7 @@ declare module 'vue' {
     AAvatar: typeof import('ant-design-vue/es')['Avatar']
     AAvatarGroup: typeof import('ant-design-vue/es')['AvatarGroup']
     ACheckbox: typeof import('ant-design-vue/es')['Checkbox']
+    AConfigProvider: typeof import('ant-design-vue/es')['ConfigProvider']
     ADivider: typeof import('ant-design-vue/es')['Divider']
     ADropdown: typeof import('ant-design-vue/es')['Dropdown']
     AEmpty: typeof import('ant-design-vue/es')['Empty']

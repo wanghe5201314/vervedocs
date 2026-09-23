@@ -1,5 +1,7 @@
 <template>
-  <Editor ref="editorViewRef" />
+  <a-config-provider :locale="antLocale" :component-size="'small'">
+    <Editor ref="editorViewRef" />
+  </a-config-provider>
 </template>
 
 <script setup lang="ts">
@@ -8,6 +10,7 @@ import Editor from '@/app/page.vue'
 import { applyUiConstants } from '@/config/helpers'
 import { uiThemeStore } from '@/stores/ui-theme'
 import { externalApi, onExternalEvent, type ExternalEventName } from '@/composables/use-external-events'
+import { antLocale, t } from '@/i18n'
 import type { CollaborationOptions, DocxEditorUiInitialDocument } from '@/editor/types'
 import type { DocxImportCallback, DocxExportCallback } from '@vervedoc/core'
 
@@ -56,7 +59,7 @@ const normalizeCollaborationOptions = (input?: CollaborationOptions | null, fall
   const docId = String(source.docId || '').trim() || String(fallbackDocId || '').trim() || 'local'
   const user = (source.user || {}) as any
   const userId = String(user.userId || '').trim() || `user-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-  const userName = String(user.userName || '').trim() || '当前用户'
+  const userName = String(user.userName || '').trim() || t('common.currentUser')
   const color = String(user.color || '').trim() || `hsl(${Math.floor(Math.random() * 360)}, 70%, 55%)`
   return {
     ...source,

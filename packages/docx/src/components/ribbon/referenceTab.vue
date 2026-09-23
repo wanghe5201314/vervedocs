@@ -1,13 +1,13 @@
 <template>
   <div class="ribbon-tab-panel">
     <!-- 目录 -->
-    <VdRibbonGroup title="目录">
+    <VdRibbonGroup :title="t('ribbon.reference.toc')">
       <a-dropdown
         v-model:open="dropdownOpen"
         :trigger="['click']"
         overlay-class-name="gdocs-toc-submenu-popper"
       >
-        <VdRibbonButton icon="table-of-contents" text="自动目录" title="插入自动目录" size="large" has-arrow />
+        <VdRibbonButton icon="table-of-contents" :text="t('ribbon.reference.autoToc')" :title="t('ribbon.reference.insertAutoToc')" size="large" has-arrow />
         <template #overlay>
           <div class="toc-submenu-panel">
             <div class="toc-submenu-list">
@@ -24,7 +24,7 @@
               </div>
             </div>
             <div class="toc-preview-panel">
-              <div class="toc-preview-title">目录</div>
+              <div class="toc-preview-title">{{ t('ribbon.reference.toc') }}</div>
               <div class="toc-preview-list">
                 <template v-if="currentPreview.length">
                   <div
@@ -38,19 +38,19 @@
                     <span class="toc-preview-page">{{ item.pageNo }}</span>
                   </div>
                 </template>
-                <div v-else class="toc-preview-empty">暂无目录数据</div>
+                <div v-else class="toc-preview-empty">{{ t('ribbon.reference.noTocData') }}</div>
               </div>
             </div>
           </div>
         </template>
       </a-dropdown>
-      <VdRibbonButton icon="delete-outline" text="删除目录" title="删除目录" size="large" @click="emit('command', 'tocRemove')" />
+      <VdRibbonButton icon="delete-outline" :text="t('ribbon.reference.deleteToc')" :title="t('ribbon.reference.deleteToc')" size="large" @click="emit('command', 'tocRemove')" />
     </VdRibbonGroup>
 
     <!-- 书签与脚注 -->
-    <VdRibbonGroup title="书签与脚注">
-      <VdRibbonButton icon="bookmark-outline" text="书签" title="书签" size="large" @click="emit('command', 'bookmark')" />
-      <VdRibbonButton icon="format-annotation-plus" text="脚注" title="脚注" size="large" @click="emit('command', 'footnote')" />
+    <VdRibbonGroup :title="t('ribbon.reference.bookmarkAndFootnote')">
+      <VdRibbonButton icon="bookmark-outline" :text="t('ribbon.reference.bookmark')" :title="t('ribbon.reference.bookmark')" size="large" @click="emit('command', 'bookmark')" />
+      <VdRibbonButton icon="format-annotation-plus" :text="t('ribbon.reference.footnote')" :title="t('ribbon.reference.footnote')" size="large" @click="emit('command', 'footnote')" />
     </VdRibbonGroup>
   </div>
 </template>
@@ -60,6 +60,7 @@ import { VdRibbonButton, VdRibbonGroup, VdIcon } from '@vervedoc/ui'
 import { ref, computed, inject, watch } from 'vue'
 
 import type { IAutoTocItem } from '@vervedoc/core'
+import { t } from '@/i18n'
 
 
 
@@ -76,9 +77,9 @@ const emit = defineEmits<{
 const getAutoToc = inject<() => IAutoTocResult | null>('docx-editor:getAutoToc', () => null)
 
 const tocOptions = [
-  { type: 1 as const, label: '自动目录 1' },
-  { type: 2 as const, label: '自动目录 2' },
-  { type: 3 as const, label: '自动目录 3' }
+  { type: 1 as const, label: t('ribbon.reference.autoToc1') },
+  { type: 2 as const, label: t('ribbon.reference.autoToc2') },
+  { type: 3 as const, label: t('ribbon.reference.autoToc3') }
 ]
 
 const dropdownOpen = ref(false)

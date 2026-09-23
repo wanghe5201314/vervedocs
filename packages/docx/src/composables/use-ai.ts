@@ -7,6 +7,7 @@ import { AIAction, AIService, TranslateLanguage, buildPrompt } from '@vervedoc/d
 import type { AIServiceConfig } from '@vervedoc/docx-editor-ai'
 import { aiStateStore } from '@/stores/ai-state'
 import { getAuthToken } from '@/api/document.api'
+import { t } from '@/i18n'
 
 /** AI 服务实例（单例，首次调用时按环境变量配置创建） */
 let aiService: AIService | null = null
@@ -80,13 +81,13 @@ async function fetchSSEStream(
 
     if (!response.ok) {
       const errorText = await response.text()
-      onError(new Error(`请求失败: ${response.status} ${errorText}`))
+      onError(new Error(`${t('editor.requestFailed')}: ${response.status} ${errorText}`))
       return
     }
 
     const reader = response.body?.getReader()
     if (!reader) {
-      onError(new Error('无法读取响应流'))
+      onError(new Error(t('editor.cannotReadStream')))
       return
     }
 
@@ -141,9 +142,9 @@ async function fetchSSEStream(
     }
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      onError(new Error('请求已取消'))
+      onError(new Error(t('editor.requestCanceled')))
     } else {
-      onError(error instanceof Error ? error : new Error('未知错误'))
+      onError(error instanceof Error ? error : new Error(t('editor.unknownError')))
     }
   }
 }
@@ -192,7 +193,7 @@ export async function executeAIRequest(params: AIRequestParams): Promise<void> {
     if (response.success && response.result) {
       aiStateStore.completeOperation(response.result)
     } else {
-      aiStateStore.failOperation(response.error || '未知错误')
+      aiStateStore.failOperation(response.error || t('editor.unknownError'))
     }
   }
 }

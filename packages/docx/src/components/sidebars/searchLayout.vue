@@ -3,18 +3,18 @@
     <div class="sidebar-header">
       <div class="sidebar-title-wrap">
         <SearchOutlined class="sidebar-title-icon" />
-        <span class="sidebar-title">查找和替换</span>
+        <span class="sidebar-title">{{ t('sidebar.search.title') }}</span>
       </div>
-      <div class="sidebar-close" @click="emit('close')" title="关闭">
+      <div class="sidebar-close" @click="emit('close')" :title="t('common.close')">
         <CloseOutlined />
       </div>
     </div>
     <div class="sidebar-content">
-      <a-input v-model:value="searchText" allow-clear placeholder="输入要查找的内容回车后开始搜索" size="small" @keyup.enter="runSearch" />
-      <a-input v-model:value="replaceText" allow-clear placeholder="替换为" size="small" @keyup.enter="replaceCurrent" />
+      <a-input v-model:value="searchText" allow-clear :placeholder="t('sidebar.search.findPlaceholder')" size="small" @keyup.enter="runSearch" />
+      <a-input v-model:value="replaceText" allow-clear :placeholder="t('sidebar.search.replacePlaceholder')" size="small" @keyup.enter="replaceCurrent" />
       <div class="result-toolbar">
         <div class="result-summary">
-          搜索结果：
+          {{ t('sidebar.search.resultLabel') }}
           <span class="result-count">{{ currentDisplay }}/{{ matchCount }}</span>
         </div>
         <div class="navigate-actions">
@@ -30,16 +30,16 @@
       <div class="actions">
         <VdButton :disabled="!canReplaceCurrent" @click="replaceCurrent" size="small">
           <VdIcon name="find-replace" />
-          替换
+          {{ t('sidebar.search.replace') }}
         </VdButton>
         <VdButton :disabled="!canReplaceAll" @click="replaceAll" size="small">
           <VdIcon name="check-all" />
-          全部替换
+          {{ t('sidebar.search.replaceAll') }}
         </VdButton>
       </div>
 
       <div v-if="matchCount" class="match-list-wrap">
-        <div class="match-list-header">共 {{ matchCount }} 处匹配</div>
+        <div class="match-list-header">{{ t('sidebar.search.matchCount', { count: matchCount }) }}</div>
         <div class="match-list">
           <template v-for="(item, idx) in matches" :key="item.index">
             <div class="match-item" :class="{ active: item.index === activeIndex }" @click="selectMatch(item.index)">
@@ -52,7 +52,7 @@
         </div>
       </div>
       <div v-else class="empty-state">
-        <a-empty :image="false" :description="searchText ? '没有找到匹配内容' : '请输入关键词开始搜索'" />
+        <a-empty :image="false" :description="searchText ? t('sidebar.search.noMatch') : t('sidebar.search.inputHint')" />
       </div>
     </div>
   </div>
@@ -63,6 +63,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { CloseOutlined, DownOutlined, SearchOutlined, UpOutlined } from '@ant-design/icons-vue'
 import { VdIcon, VdButton } from '@vervedoc/ui'
 import type { IEditorSearchApi, ISearchMatch } from '@/composables/use-editor-search'
+import { t } from '@/i18n'
 
 const props = defineProps<{
   searchAPI: IEditorSearchApi

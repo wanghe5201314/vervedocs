@@ -1,8 +1,8 @@
 <template>
-  <VdDialog v-model:open="visible" title="日期和时间" width="500px" :maskClosable="false" class="app-dialog">
+  <VdDialog v-model:open="visible" :title="t('dialog.date.title')" width="500px" :maskClosable="false" class="app-dialog">
     <div class="date-body">
       <div class="date-left">
-        <div class="form-label">可用格式(A):</div>
+        <div class="form-label">{{ t('dialog.date.availableFormats') }}</div>
         <div style="overflow-y:auto;height:200px">
           <div
             v-for="f in dateFormats"
@@ -16,21 +16,21 @@
         </div>
       </div>
       <div class="date-right">
-        <div class="form-label">语言(国家/地区)(L):</div>
+        <div class="form-label">{{ t('dialog.date.language') }}</div>
         <a-select v-model:value="dateLanguage" style="width: 100%; margin-top: 8px;">
-          <a-select-option label="中文(中国)" value="zh-CN" />
+          <a-select-option :label="t('dialog.date.chineseChina')" value="zh-CN" />
         </a-select>
         <div style="margin-top: 20px;">
-          <a-checkbox>使用全角字符(W)</a-checkbox>
+          <a-checkbox>{{ t('dialog.date.fullWidth') }}</a-checkbox>
         </div>
         <div style="margin-top: 10px;">
-          <a-checkbox>自动更新(U)</a-checkbox>
+          <a-checkbox>{{ t('dialog.date.autoUpdate') }}</a-checkbox>
         </div>
       </div>
     </div>
     <template #footer>
-      <VdButton type="primary" icon="check" @click="confirmDate">确定</VdButton>
-      <VdButton icon="close" @click="visible = false">取消</VdButton>
+      <VdButton type="primary" icon="check" @click="confirmDate">{{ t('common.ok') }}</VdButton>
+      <VdButton icon="close" @click="visible = false">{{ t('common.cancel') }}</VdButton>
     </template>
   </VdDialog>
 </template>
@@ -38,6 +38,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { VdDialog, VdButton } from '@vervedoc/ui'
+import { t } from '@/i18n'
 
 
 /** 组件 props 定义 */
@@ -60,15 +61,15 @@ const visible = computed({
 /** 可用的日期格式列表 */
 const dateFormats = [
   'yyyy-MM-dd',
-  'yyyy年MM月dd日',
-  'yyyy年MM月dd日星期E',
+  t('dialog.date.format1'),
+  t('dialog.date.format2'),
   'yyyy/MM/dd',
   'yy.MM.dd',
-  'yyyy年MM月',
-  'HH时mm分ss秒',
-  'HH时mm分',
+  t('dialog.date.format3'),
+  t('dialog.date.format4'),
+  t('dialog.date.format5'),
   'HH:mm:ss',
-  '下午h时mm分'
+  t('dialog.date.format6')
 ]
 /** 当前选中的日期格式 */
 const selectedDateFormat = ref(dateFormats[0])
@@ -78,7 +79,7 @@ const dateLanguage = ref('zh-CN')
 /** 确认日期，根据格式生成当前时间字符串并触发 confirm 事件 */
 const confirmDate = () => {
   const now = new Date()
-  const weekDays = ['日', '一', '二', '三', '四', '五', '六']
+  const weekDays = [t('dialog.date.weekSun'), t('dialog.date.weekMon'), t('dialog.date.weekTue'), t('dialog.date.weekWed'), t('dialog.date.weekThu'), t('dialog.date.weekFri'), t('dialog.date.weekSat')]
   const year = now.getFullYear().toString()
   const yy = year.slice(-2)
   let value = selectedDateFormat.value

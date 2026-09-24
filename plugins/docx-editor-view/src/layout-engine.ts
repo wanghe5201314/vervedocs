@@ -876,7 +876,7 @@ export class LayoutEngine {
         return {
           type: 'text', value: text,
           font: base.font, size: base.size, bold: base.bold, italic: base.italic,
-          color: tocEntry ? base.color : '#0563C1', underline: tocEntry ? base.underline : true,
+          color: tocEntry ? base.color : '#0000FF', underline: tocEntry ? base.underline : true,
           extension: rawRun.extension
         } as unknown as IElement
       }

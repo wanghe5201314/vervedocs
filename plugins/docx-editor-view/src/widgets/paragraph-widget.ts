@@ -13,6 +13,7 @@ import { TITLE_LEVEL, ROW_FLEX, comparePosition } from '@vervedoc/docx-editor-sc
 import { ContextMenu, type MenuItem } from '../context-menu'
 import { ParagraphLayoutWidget } from './layout/paragraph-layout-widget'
 import { FontLayoutWidget } from './layout/font-layout-widget'
+import { HyperlinkWidget } from './layout/hyperlink-widget'
 import { positionHandle } from './handle-position'
 import { viewTranslate, type ViewTranslate } from '../view-i18n'
 import '../assets/css/paragraph-handle-menu.css'
@@ -63,6 +64,7 @@ export class ParagraphWidget {
   private panel = new ParagraphLayoutWidget()
   /** 字体设置弹出面板 */
   private fontPanel = new FontLayoutWidget()
+  private hyperlinkPanel = new HyperlinkWidget()
 
   /**
    * 构造 ParagraphWidget 实例
@@ -75,6 +77,7 @@ export class ParagraphWidget {
     }
     this.panel.setDeps({ onCommand, translate: deps.translate })
     this.fontPanel.setDeps({ onCommand, translate: deps.translate })
+    this.hyperlinkPanel.setTranslate(deps.translate)
   }
 
   refreshTranslations(): void {
@@ -85,6 +88,7 @@ export class ParagraphWidget {
     }
     this.panel.refreshTranslations()
     this.fontPanel.refreshTranslations()
+    this.hyperlinkPanel.refreshTranslations()
   }
 
   /**
@@ -387,7 +391,7 @@ export class ParagraphWidget {
     this.deps.focusInput()
 
     const icons = ContextMenu.getIcons()
-    const fire = (cmd: keyof Command | 'requestInsertHyperlink' | 'requestInsertComment', ...args: any[]) => {
+    const fire = (cmd: keyof Command | 'requestInsertComment', ...args: any[]) => {
       if (this.deps.canEdit()) this.deps.onCommand(cmd, ...args)
     }
 
@@ -399,7 +403,28 @@ export class ParagraphWidget {
       { label: this.t('view.paragraph.fontSettings'), icon: 'format_size', onClick: () => { if (this.deps.canEdit()) this.fontPanel.show() } },
       { label: this.t('view.paragraph.advancedSettings'), icon: 'subject', onClick: () => { if (this.deps.canEdit()) this.panel.show() } },
       { label: '---' },
-      { label: this.t('view.paragraph.link'), icon: icons.link, shortcut: 'Ctrl+K', onClick: () => fire('requestInsertHyperlink') },
+      { label: this.t('view.paragraph.link'), icon: icons.link, shortcut: 'Ctrl+K', onClick: () => {
+        if (!this.deps.canEdit()) return
+        const range = this.deps.getRange()
+        const savedRange = range?.getRange()
+        if (!range || !savedRange) {
+          this.hyperlinkPanel.show('', () => false)
+          return
+        }
+        const snapshot = {
+          anchor: { path: savedRange.anchor.path.slice(), offset: savedRange.anchor.offset },
+          focus: { path: savedRange.focus.path.slice(), offset: savedRange.focus.offset }
+        }
+        const text = this.deps.onCommand('executeExtractSelectionText') as string || ''
+        this.hyperlinkPanel.show(text, (value, url) => {
+          if (!this.deps.canEdit()) return false
+          range.setRange({
+            anchor: { ...snapshot.anchor, path: snapshot.anchor.path.slice() },
+            focus: { ...snapshot.focus, path: snapshot.focus.path.slice() }
+          })
+          return this.deps.onCommand('executeHyperlink', { url, valueList: [{ type: 'text', value }] }) === true
+        }, () => this.deps.focusInput())
+      } },
       { label: this.t('view.paragraph.comment'), icon: 'comment', onClick: () => fire('requestInsertComment') },
 
     ]
@@ -423,6 +448,7 @@ export class ParagraphWidget {
     this.hideContextMenu()
     this.panel.hide()
     this.fontPanel.hide()
+    this.hyperlinkPanel.hide()
     if (this.handle) { this.handle.remove(); this.handle = null }
   }
 }

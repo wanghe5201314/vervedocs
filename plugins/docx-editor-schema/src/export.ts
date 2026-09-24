@@ -1,4 +1,5 @@
 import type { IDocxDocumentMeta, IElement, IPosition } from './types'
+import { splitParagraphs } from './paragraph'
 import { cloneTree, comparePosition, getByPath, isParagraphContainer, isTable, walkTree } from './walk'
 
 interface BookmarkBoundary {
@@ -16,6 +17,56 @@ export function toDocxExportDocument(document: IDocxDocumentMeta): IDocxDocument
   delete result.meta
   result.header ??= contentZones?.header
   result.footer ??= contentZones?.footer
+
+  // 将渲染层的链接默认样式写入导出副本，目录链接仍沿用自己的样式。
+  const normalizeHyperlinks = (elements: IElement[]) => {
+    walkTree(elements, node => {
+      if (node.type !== 'hyperlink' ||
+        (node.extension?.toc as { role?: string } | undefined)?.role === 'entry') return
+      node.color = '#0000FF'
+      node.underline = true
+      const children = (node as IElement & { valueList?: IElement[] }).valueList
+      for (const run of children ?? []) {
+        if (run.type !== 'text') continue
+        run.color = '#0000FF'
+        run.underline = true
+      }
+    })
+  }
+  for (const elements of [result.elements, result.header, result.footer,
+    ...Object.values(result.headerFooterParts ?? {})]) {
+    if (elements) normalizeHyperlinks(elements)
+  }
+
+  const normalizeParagraphRuns = (elements: IElement[]) => {
+    for (const group of splitParagraphs(elements)) {
+      if (group.kind !== 'normal') continue
+      let first = true
+      for (const run of group.runs) {
+        if (run.extension?.bookmarkMarker || (run.type === 'text' && /^[\u200B\uFEFF]+$/.test(run.value))) continue
+        if (first) {
+          first = false
+          continue
+        }
+        if (run.type !== 'text') continue
+        delete run.paragraphStyleId
+        delete run.rowFlex
+        delete run.paragraphFirstLineIndent
+        delete run.paragraphIndentLeft
+        delete run.paragraphIndentRight
+        delete run.paragraphSpacingBefore
+        delete run.paragraphSpacingAfter
+        delete run.lineHeight
+        delete run.lineHeightRule
+        delete run.paragraphColor
+      }
+    }
+  }
+  normalizeParagraphRuns(result.elements)
+  if (result.header) normalizeParagraphRuns(result.header)
+  if (result.footer) normalizeParagraphRuns(result.footer)
+  for (const elements of Object.values(result.headerFooterParts ?? {})) normalizeParagraphRuns(elements)
+
   if (!bookmarks) return result
 
   // Resolve all paths before splitting runs so overlapping ranges keep their positions.

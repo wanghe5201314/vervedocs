@@ -2033,17 +2033,75 @@ export class CommandAdapt {
    * 插入超链接。
    * @param payload 超链接参数，包含 url 与 valueList
    */
-  insertHyperlink(payload: { url: string; valueList: IElement[] }): void {
+  insertHyperlink(payload: { url: string; valueList: IElement[] }): boolean {
+    if (!this.getIsCanInput() || !payload || typeof payload.url !== 'string' ||
+      !Array.isArray(payload.valueList) || !payload.valueList.length) return false
+    const url = payload.url.trim()
+    if (!url || /[\u0000-\u0020\u007F]/.test(url)) return false
+    try {
+      if (!['http:', 'https:', 'mailto:', 'tel:', 'ftp:'].includes(new URL(url).protocol)) return false
+    } catch {
+      return false
+    }
+    const hasRevision = (element: IElement): boolean => {
+      const run = element as ITextElement
+      return !!(run.revisionId || run.revisionType || run.revisionOldRPr ||
+        run.extension?.revisionOldProps || run.extension?.revisionPrevious)
+    }
+    if (payload.valueList.some(run => !run || run.type !== 'text' || typeof run.value !== 'string' ||
+      hasRevision(run) || run.extension?.bookmarkMarker || run.extension?.fieldMarker)) return false
+    const text = payload.valueList.map(run => run.value).join('')
+    if (!text.trim() || /[\r\n\u200B\uFEFF]/.test(text)) return false
+    // 链接子 run 尚不参与修订遍历，不能把待审修订藏入 valueList 或绕过修订模式。
+    if (this.draw.getOptions().trackChanges) return false
+    let success = false
     this.execute(doc => {
-      const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
-      const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
+      const ordered = this.range.getOrdered()
+      if (!ordered) return false
+      const { start, end } = ordered
+      const parentPath = start.path.slice(0, -1)
+      if (!isSamePath(parentPath, end.path.slice(0, -1))) return false
+      const startNode = getByPath(doc.elements, start.path)
+      const endNode = getByPath(doc.elements, end.path)
+      if (startNode?.type !== 'text' || endNode?.type !== 'text') return false
+      if (!Number.isInteger(start.offset) || !Number.isInteger(end.offset) ||
+        start.offset < 0 || start.offset > startNode.value.length ||
+        end.offset < 0 || end.offset > endNode.value.length) return false
+      if (parentPath[parentPath.length - 1] === 'valueList') {
+        const container = getByPath(doc.elements, parentPath.slice(0, -1))
+        if (container?.type !== 'title' && container?.type !== 'list') return false
+      }
+      const parent = getParentContainer(doc.elements, start.path)
       if (!parent) return false
-      const idx = (pos.path[pos.path.length - 1] as number) + 1
-      const link: IElement = { type: 'hyperlink', value: payload.url } as unknown as IElement
-      ;(link as unknown as Record<string, unknown>).valueList = payload.valueList.map(r => ({ ...r, type: 'text' } as IElement))
-      parent.splice(idx, 0, link)
-      return
+      const first = Number(start.path[start.path.length - 1])
+      const last = Number(end.path[end.path.length - 1])
+      const runs = parent.slice(first, last + 1)
+      if (runs.some(run => run.type !== 'text' || hasRevision(run) ||
+        run.extension?.bookmarkMarker || run.extension?.fieldMarker)) return false
+      const selected = runs.map((run, i) => ({
+        ...cloneTree(run),
+        value: run.value.slice(i === 0 ? start.offset : 0, i === runs.length - 1 ? end.offset : run.value.length)
+      })).filter(run => run.value.length)
+      const selectedText = selected.map(run => run.value).join('')
+      // 不跨段落或吞掉段落终止符；不支持的选区必须在任何修改之前退出。
+      if (/[\r\n\u200B\uFEFF]/.test(selectedText)) return false
+      const base = selected[0] ?? startNode
+      // 对原选中文字加链接时沿用原 run 边界；更改显示文字时继承起点格式。
+      const valueList = selectedText === text ? selected : payload.valueList
+        .filter(run => run.value.length)
+        .map(run => ({ ...cloneTree(base), ...cloneTree(run) }))
+      const link = { ...cloneTree(base), type: 'hyperlink', value: url, valueList } as IElement
+      const parts: IElement[] = []
+      if (start.offset > 0) parts.push({ ...cloneTree(startNode), value: startNode.value.slice(0, start.offset) })
+      const linkIndex = first + parts.length
+      parts.push(link)
+      if (end.offset < endNode.value.length) parts.push({ ...cloneTree(endNode), value: endNode.value.slice(end.offset) })
+      parent.splice(first, last - first + 1, ...parts)
+      // layout-engine 将 valueList 展平到链接外层路径，offset 是所有子 run 的总长度。
+      this.range.setCaret({ path: [...parentPath, linkIndex], offset: text.length })
+      success = true
     })
+    return success
   }
 
   /**

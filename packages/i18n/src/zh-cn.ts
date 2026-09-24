@@ -21,6 +21,13 @@ export default {
       cut: '剪切', copy: '复制', paste: '粘贴', fontSettings: '字体...',
       advancedSettings: '段落高级设置', link: '超链接', comment: '插入批注'
     },
+    hyperlink: {
+      text: '显示文字', address: '链接地址',
+      addressPlaceholder: '请输入完整地址（如 https://example.com）',
+      textRequired: '请输入显示文字', addressRequired: '请输入链接地址',
+      addressInvalid: '链接地址必须使用 http、https、mailto、tel 或 ftp 协议',
+      unsupported: '无法插入超链接：当前选区不受支持、包含修订或文档处于修订/只读模式，文档未修改'
+    },
     table: {
       insert: '插入', insertLeft: '在左侧插入', insertRight: '在右侧插入',
       insertAbove: '在上方插入', insertBelow: '在下方插入', columnUnit: '列', rowUnit: '行',

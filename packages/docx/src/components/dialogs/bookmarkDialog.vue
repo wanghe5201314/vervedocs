@@ -42,9 +42,11 @@
         <VdButton type="primary" size="small" :disabled="!canAdd" @click="handleAdd">{{ t('dialog.bookmark.add') }}</VdButton>
         <VdButton :disabled="!selectedName" size="small" @click="handleDelete">{{ t('dialog.bookmark.delete') }}</VdButton>
         <VdButton :disabled="!selectedName" size="small" @click="handleGoto">{{ t('dialog.bookmark.goto') }}</VdButton>
-        <VdButton size="small" @click="visible = false">{{ t('dialog.bookmark.close') }}</VdButton>
       </div>
     </div>
+    <template #footer>
+      <VdButton @click="visible = false">{{ t('dialog.bookmark.close') }}</VdButton>
+    </template>
   </VdDialog>
 </template>
 

@@ -2003,6 +2003,7 @@ export class CommandAdapt {
       if (next?.type === 'text') this.range.setCaret({ path: [...path.slice(0, -1), index + 1], offset: 0 })
       else if (next?.type === 'title' || next?.type === 'list') this.range.setCaret({ path: [...path.slice(0, -1), index + 1, 'valueList', 0], offset: 0 })
       else this.range.setCaret(path.length === 1 ? { path: [index], offset: 0 } : { path, offset: 0 })
+      return true
     })
   }
 
@@ -2026,6 +2027,7 @@ export class CommandAdapt {
         parent.splice(index + 1, 0, { type: 'pageBreak', value: 'manual' })
       }
       this.range.setCaret({ path: [...path.slice(0, -1), index], offset: 0 })
+      return true
     })
   }
 
@@ -2100,6 +2102,7 @@ export class CommandAdapt {
       // layout-engine 将 valueList 展平到链接外层路径，offset 是所有子 run 的总长度。
       this.range.setCaret({ path: [...parentPath, linkIndex], offset: text.length })
       success = true
+      return true
     })
     return success
   }
@@ -2191,6 +2194,7 @@ export class CommandAdapt {
       if (!doc.elements[index + 1] || doc.elements[index + 1].type === 'pageBreak') doc.elements.splice(index + 1, 0, { type: 'text', value: '' })
       const following = doc.elements[index + 1]
       this.range.setCaret({ path: following.type === 'title' || following.type === 'list' ? [index + 1, 'valueList', 0] : [index + 1], offset: 0 })
+      return true
     })
   }
 
@@ -2900,6 +2904,7 @@ export class CommandAdapt {
       if (!isPageStart(doc.elements[end])) this.spliceBodyWithBookmarks(doc, end, 0, [pageBreak()])
       if (end + 1 === doc.elements.length) doc.elements.push({ type: 'text', value: '' })
       this.refreshToc(doc, index, elements.length, id, template, maxLevel)
+      return true
     })
   }
 
@@ -2913,6 +2918,7 @@ export class CommandAdapt {
       const elements = this.buildToc(id, template, maxLevel)
       this.spliceBodyWithBookmarks(doc, group.start, group.end - group.start, elements)
       this.refreshToc(doc, group.start, elements.length, id, template, maxLevel)
+      return true
     })
   }
 
@@ -2927,6 +2933,7 @@ export class CommandAdapt {
       const end = ownedBreak(doc.elements[group.end]) ? group.end + 1 : group.end
       this.spliceBodyWithBookmarks(doc, start, end - start)
       this.range.setCaret({ path: [Math.min(start, doc.elements.length - 1)], offset: 0 })
+      return true
     })
   }
 

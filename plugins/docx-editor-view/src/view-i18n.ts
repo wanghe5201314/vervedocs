@@ -235,7 +235,7 @@ export function viewTranslate(translate: ViewTranslate | undefined, key: string,
   const fallback = viewText[key] ?? key
   const result = translate?.(key, params)
   const text = !result || result === key ? fallback : result
-  return text.replace(/\{(\w+)\}/g, (_, name: string) => String(params?.[name] ?? `{${name}}`))
+  return text.replace(/\{(\w+)}/g, (_, name: string) => String(params?.[name] ?? `{${name}}`))
 }
 
 // Translate template text nodes and display-only attributes, leaving form values intact.

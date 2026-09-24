@@ -60,5 +60,5 @@ export const balloonMessages: Record<string, string> = {
 export function balloonText(translate: BalloonTranslate | undefined, key: string, params?: Record<string, string | number>): string {
   const fallback = balloonMessages[key] ?? key
   if (translate) return translate(key, params)
-  return fallback.replace(/\{(\w+)\}/g, (_, name: string) => String(params?.[name] ?? ''))
+  return fallback.replace(/\{(\w+)}/g, (_, name: string) => String(params?.[name] ?? ''))
 }

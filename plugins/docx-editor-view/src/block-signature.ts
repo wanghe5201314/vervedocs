@@ -21,6 +21,7 @@ export function chartTableSignature(b: BlockNode, layout: DocumentLayout): strin
 /**
  * 计算块的签名（用于跨帧复用 bitmap）：按块类型拼接关键字段为字符串。
  * @param b 块
+ * @param layout 文档布局（用于 chart-table 签名查找）
  * @returns 块签名字符串
  */
 export function signBlock(b: BlockNode, layout?: DocumentLayout): string {

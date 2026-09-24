@@ -492,8 +492,7 @@ export class CommentComponent {
     const pageWidth = this._command.getDrawWidth?.() || 794
     const balloonLeft = pageWidth + 16
     const cardMaxWidth = 270
-    const neededWidth = balloonLeft + cardMaxWidth + 16
-    ;(container as any).__commentNeededWidth = neededWidth
+    ;(container as any).__commentNeededWidth = balloonLeft + cardMaxWidth + 16
     applyContainerWidth(container, pageWidth)
   }
 
@@ -845,8 +844,7 @@ export class CommentComponent {
     if (header) {
       const avatar = header.querySelector(`.${PREFIX}-comment-avatar`) as HTMLDivElement | null
       if (avatar) {
-        const bg = comment.avatarColor || getAvatarColor(comment.userName)
-        avatar.style.background = bg
+        avatar.style.background = comment.avatarColor || getAvatarColor(comment.userName)
         avatar.textContent = comment.userName.charAt(0)
       }
       const username = header.querySelector(`.${PREFIX}-comment-username`) as HTMLSpanElement | null

@@ -538,7 +538,14 @@ export class Draw {
     return this.eventBus
   }
 
+  private isAnnotationEvent(e: MouseEvent): boolean {
+    return e.target instanceof Element
+      && !!e.target.closest('.ce-comment-overlay, .ce-revision-overlay')
+  }
+
   private onMouseDown = (e: MouseEvent): void => {
+    // Annotation controls own their native focus and text selection.
+    if (this.isAnnotationEvent(e)) return
     if (this.options.disabled) return
     this.eventBus?.emit('editorMousedown', e)
     if (!this.range || e.button !== 0) return
@@ -591,6 +598,7 @@ export class Draw {
    * @param e 鼠标事件
    */
   private onMouseMove = (e: MouseEvent): void => {
+    if (!this.isDragging && this.isAnnotationEvent(e)) return
     // 文本选区拖拽保持文本指针；表格边框悬浮和拖拽优先于链接指针。
     if (!this.isDragging && this.tableWidget?.handleMouseMove(e)) return
     // 非拖拽时：hover 超链接显示手型，提示可 Ctrl+点击跳转
@@ -681,6 +689,7 @@ export class Draw {
    * @param e 鼠标事件
    */
   private onContextMenu = (e: MouseEvent): void => {
+    if (this.isAnnotationEvent(e)) return
     e.preventDefault()
     if (this.options.readonly || this.options.disabled) return
 

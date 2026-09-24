@@ -67,8 +67,12 @@ export function signParagraph(b: ParagraphBlock): string {
   const runsKey: string[] = []
   for (const line of b.lines) {
     for (const inl of line.inlines) {
-      const { run: _run, path: _path, ...paint } = inl
-      runsKey.push(JSON.stringify([line.x, line.y, line.height, line.baseline, paint]))
+      const { run, path: _path, ...paint } = inl
+      // Revision colors and decorations are painted from the run, not inline styles.
+      const revision = run && 'revisionId' in run && run.revisionId
+        ? [run.revisionId, run.revisionType, run.revisionAuthor]
+        : null
+      runsKey.push(JSON.stringify([line.x, line.y, line.height, line.baseline, paint, revision]))
     }
   }
   const bulletKey = b.bulletText

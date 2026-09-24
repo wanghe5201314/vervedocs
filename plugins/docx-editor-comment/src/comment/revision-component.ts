@@ -513,6 +513,8 @@ export class RevisionComponent {
 
   private resolveRevision(accept: boolean, revisionId?: string): void {
     if (!this._command) return
+    const options = this._command.getOptions()
+    if (options.readonly || options.disabled) return
     this._hideAnchorLines()
     this._command.commitTransaction(doc => {
       let changed = false
@@ -520,6 +522,7 @@ export class RevisionComponent {
         if (!el.revisionId || !el.revisionType || (revisionId !== undefined && el.revisionId !== revisionId)) continue
         changed = true
         do {
+          // Accepting a deletion or rejecting an insertion removes the content.
           if (el.revisionType === (accept ? 'delete' : 'insert')) {
             parent.splice(index, 1)
             if (!parent.length) parent.push({ type: 'text', value: '' })

@@ -40,9 +40,9 @@ export class HyperlinkWidget {
       if (!value.trim()) return setError('view.hyperlink.textRequired', textInput)
       if (!url) return setError('view.hyperlink.addressRequired', urlInput)
       try {
-        if (/[\u0000-\u0020\u007F]/.test(url)) throw new Error()
+        if (/[\u0000-\u0020\u007F]/.test(url)) return setError('view.hyperlink.addressInvalid', urlInput)
         const protocol = new URL(url).protocol
-        if (!['http:', 'https:', 'mailto:', 'tel:', 'ftp:'].includes(protocol)) throw new Error()
+        if (!['http:', 'https:', 'mailto:', 'tel:', 'ftp:'].includes(protocol)) return setError('view.hyperlink.addressInvalid', urlInput)
       } catch {
         return setError('view.hyperlink.addressInvalid', urlInput)
       }

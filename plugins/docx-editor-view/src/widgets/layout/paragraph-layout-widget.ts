@@ -107,8 +107,7 @@ export class ParagraphLayoutWidget {
 
     const updateLh = () => {
       const t = lhType.value
-      const fixed = t === 'single' || t === '1.5' || t === 'double'
-      lhValue.disabled = fixed
+      lhValue.disabled = t === 'single' || t === '1.5' || t === 'double'
       if (t === 'single') { lhValue.value = '1.00' }
       else if (t === '1.5') { lhValue.value = '1.50' }
       else if (t === 'double') { lhValue.value = '2.00' }
@@ -148,8 +147,7 @@ export class ParagraphLayoutWidget {
     }
 
     const align = this.root!.querySelector<HTMLSelectElement>('#pw-align')!
-    const rowFlex = style.rowFlex === 'alignment' ? 'justify' : (style.rowFlex || 'left')
-    align.value = rowFlex
+    align.value = style.rowFlex === 'alignment' ? 'justify' : (style.rowFlex || 'left')
 
     const outline = this.root!.querySelector<HTMLSelectElement>('#pw-outline')!
     outline.value = style.level || ''
@@ -167,7 +165,7 @@ export class ParagraphLayoutWidget {
     this.syncLhDisabled()
 
     const spacingAfter = this.root!.querySelector<HTMLInputElement>('#pw-spacing-after')!
-    let spAfter = 0
+    let spAfter: number
     try { spAfter = Number(cmd('getParagraphSpacingAfter')) || 0 } catch { spAfter = Number(style.rowMargin ?? 0) }
     spacingAfter.value = displayNumber(spAfter)
 
@@ -204,8 +202,7 @@ export class ParagraphLayoutWidget {
     const lhValue = this.root!.querySelector<HTMLInputElement>('#pw-lh-value')!
     const lhUnit = this.root!.querySelector<HTMLElement>('#pw-lh-unit')!
     const t = lhType.value
-    const fixed = t === 'single' || t === '1.5' || t === 'double'
-    lhValue.disabled = fixed
+    lhValue.disabled = t === 'single' || t === '1.5' || t === 'double'
     lhUnit.textContent = (t === 'atLeast' || t === 'exact') ? viewTranslate(this.translate, 'view.common.points') : viewTranslate(this.translate, 'view.paragraphDialog.times')
   }
 
@@ -233,7 +230,7 @@ export class ParagraphLayoutWidget {
     }
     preview.style.textAlign = alignMap[align] || 'left'
 
-    let lh = 1.5
+    let lh: number
     if (lhType === 'single') lh = 1
     else if (lhType === '1.5') lh = 1.5
     else if (lhType === 'double') lh = 2
@@ -265,8 +262,8 @@ export class ParagraphLayoutWidget {
 
     const lhType = this.root!.querySelector<HTMLSelectElement>('#pw-lh-type')!.value
     const lhValue = this.root!.querySelector<HTMLInputElement>('#pw-lh-value')!.value
-    let lh = 1.5
-    let rule: 'auto' | 'exact' | 'atLeast' = 'auto'
+    let lh: number
+    let rule: 'auto' | 'exact' | 'atLeast'
     if (lhType === 'single') { lh = 1; rule = 'auto' }
     else if (lhType === '1.5') { lh = 1.5; rule = 'auto' }
     else if (lhType === 'double') { lh = 2; rule = 'auto' }

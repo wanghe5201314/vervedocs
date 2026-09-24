@@ -1,6 +1,7 @@
 import dayjs from 'dayjs'
 import type { IDocxDocumentMeta } from '@vervedoc/docx-editor-schema'
 import { clearRevision, getRevisionOldProps, restoreRevisionFormat } from '@vervedoc/docx-editor-schema'
+import { collectOccupiedRanges, resolveVerticalOverlaps, applyContainerWidth } from './balloon-layout'
 
 function revisionNodes(doc: IDocxDocumentMeta): Array<{ el: any; parent: any[]; index: number }> {
   const nodes: Array<{ el: any; parent: any[]; index: number }> = []
@@ -56,7 +57,7 @@ export class RevisionComponent {
   /** 修订 overlay 容器 */
   private _overlayContainer: HTMLDivElement | null = null
   /** 修订气泡 DOM 映射（revisionId → 气泡元素） */
-  private _balloonDoms: Map<string, HTMLDivElement> = new Map()
+  private _balloonDomMap: Map<string, HTMLDivElement> = new Map()
   /** 生命周期回调 */
   private _callbacks: RevisionCallbacks = {}
   /** 锚点竖线 DOM 元素列表 */
@@ -198,24 +199,8 @@ export class RevisionComponent {
     return div
   }
 
-  private _collectOccupiedRanges(selector: string): Array<{ top: number; bottom: number }> {
-    if (!this._container) return []
-    const ranges: Array<{ top: number; bottom: number }> = []
-    const elements = this._container.querySelectorAll(selector)
-    elements.forEach((el: Element) => {
-      const node = el as HTMLElement
-      const top = Number.parseFloat(node.style.top || '')
-      const height = node.offsetHeight || node.getBoundingClientRect().height || 0
-      if (Number.isFinite(top) && height > 0) {
-        ranges.push({ top, bottom: top + height })
-      }
-    })
-    ranges.sort((a, b) => a.top - b.top)
-    return ranges
-  }
-
   private _estimateBalloonHeight(balloon: RevisionBalloonData): number {
-    const existing = this._balloonDoms.get(balloon.revisionId)
+    const existing = this._balloonDomMap.get(balloon.revisionId)
     const existingHeight = existing?.offsetHeight || existing?.getBoundingClientRect().height || 0
     if (existingHeight > 0) return existingHeight
     let height = 82
@@ -224,25 +209,14 @@ export class RevisionComponent {
   }
 
   private _resolveVerticalOverlaps(balloons: RevisionBalloonData[]): void {
-    const occupied = this._collectOccupiedRanges(`.${PREFIX}-comment-balloon`)
-    const GAP = 12
-    for (const balloon of balloons) {
-      const height = this._estimateBalloonHeight(balloon)
-      let top = balloon.top
-      let changed = true
-      while (changed) {
-        changed = false
-        for (const range of occupied) {
-          if (top < range.bottom + GAP && top + height > range.top - GAP) {
-            top = range.bottom + GAP
-            changed = true
-          }
-        }
-      }
-      balloon.top = top
-      occupied.push({ top, bottom: top + height })
-      occupied.sort((a, b) => a.top - b.top)
-    }
+    const occupied = collectOccupiedRanges(this._container, `.${PREFIX}-comment-balloon`)
+    resolveVerticalOverlaps(
+      balloons,
+      occupied,
+      balloon => this._estimateBalloonHeight(balloon),
+      balloon => balloon.top,
+      (balloon, top) => { balloon.top = top }
+    )
   }
 
 
@@ -389,31 +363,15 @@ export class RevisionComponent {
     const pageWidth = this._command.getDrawWidth?.() || 794
     const balloonLeft = pageWidth + 16
     const cardMaxWidth = 270
-    const neededWidth = balloonLeft + cardMaxWidth + 16
-    ;(this._container as any).__revisionNeededWidth = neededWidth
-    this._applyContainerWidth(this._container, pageWidth)
+    ;(this._container as any).__revisionNeededWidth = balloonLeft + cardMaxWidth + 16
+    applyContainerWidth(this._container, pageWidth)
   }
 
   private _restoreContainerWidth(): void {
     if (!this._command || !this._container) return
     const pageWidth = this._command.getDrawWidth?.() || 794
     ;(this._container as any).__revisionNeededWidth = 0
-    this._applyContainerWidth(this._container, pageWidth)
-  }
-
-  private _applyContainerWidth(container: HTMLDivElement, pageWidth: number): void {
-    // 新架构下容器宽度由 Draw 管理，overlay 通过 overflow: visible 自然溢出
-    if ((container as any).__vervedocsNewLayout) return
-    const commentWidth = (container as any).__commentNeededWidth || 0
-    const revisionWidth = (container as any).__revisionNeededWidth || 0
-    const neededWidth = Math.max(commentWidth, revisionWidth)
-    if (neededWidth > pageWidth) {
-      container.style.width = `${neededWidth}px`
-      container.style.minWidth = `${neededWidth}px`
-    } else {
-      container.style.width = `${pageWidth}px`
-      container.style.minWidth = ''
-    }
+    applyContainerWidth(this._container, pageWidth)
   }
 
   private _renderBalloons(balloons: RevisionBalloonData[]) {
@@ -421,19 +379,19 @@ export class RevisionComponent {
     this._balloons = new Map(balloons.map(balloon => [balloon.revisionId, balloon]))
 
     const existingIds = new Set(balloons.map(b => b.revisionId))
-    for (const [id, dom] of this._balloonDoms) {
+    for (const [id, dom] of this._balloonDomMap) {
       if (!existingIds.has(id)) {
         dom.remove()
-        this._balloonDoms.delete(id)
+        this._balloonDomMap.delete(id)
       }
     }
 
     for (const balloon of balloons) {
-      let balloonDom = this._balloonDoms.get(balloon.revisionId)
+      let balloonDom = this._balloonDomMap.get(balloon.revisionId)
       if (!balloonDom) {
         balloonDom = this._createBalloonDom(balloon)
         this._overlayContainer.append(balloonDom)
-        this._balloonDoms.set(balloon.revisionId, balloonDom)
+        this._balloonDomMap.set(balloon.revisionId, balloonDom)
       } else {
         balloonDom.style.top = `${balloon.top}px`
         balloonDom.style.left = `${balloon.left}px`
@@ -475,7 +433,7 @@ export class RevisionComponent {
     this._hideAnchorLines(false)
     this._hoveredRevisionId = balloon.revisionId
     const color = getAvatarColor(balloon.author)
-    const card = this._balloonDoms.get(balloon.revisionId)
+    const card = this._balloonDomMap.get(balloon.revisionId)
     if (card) card.style.borderColor = color
     this._command?.setActiveRevision?.(balloon.revisionId, color)
     this._drawAnchorLines(balloon)
@@ -485,7 +443,7 @@ export class RevisionComponent {
     for (const line of this._anchorLineEls) line.remove()
     this._anchorLineEls = []
     if (!this._overlayContainer) return
-    const card = this._balloonDoms.get(balloon.revisionId)
+    const card = this._balloonDomMap.get(balloon.revisionId)
     if (!card) return
     this._anchorLineEls = drawAnnotationConnector(
       this._overlayContainer, card, balloon.anchor, getAvatarColor(balloon.author), `${PREFIX}-revision-connector`
@@ -496,7 +454,7 @@ export class RevisionComponent {
     for (const el of this._anchorLineEls) el.remove()
     this._anchorLineEls = []
     if (this._hoveredRevisionId === null) return
-    const card = this._balloonDoms.get(this._hoveredRevisionId)
+    const card = this._balloonDomMap.get(this._hoveredRevisionId)
     if (card) card.style.borderColor = '#d9d9d9'
     this._hoveredRevisionId = null
     if (updateActiveRevision) this._command?.setActiveRevision?.(null)
@@ -504,10 +462,10 @@ export class RevisionComponent {
 
   private _clear() {
     this._hideAnchorLines()
-    for (const dom of this._balloonDoms.values()) {
+    for (const dom of this._balloonDomMap.values()) {
       dom.remove()
     }
-    this._balloonDoms.clear()
+    this._balloonDomMap.clear()
     this._balloons.clear()
   }
 
@@ -541,8 +499,8 @@ export class RevisionComponent {
       return changed
     })
     if (revisionId !== undefined) {
-      this._balloonDoms.get(revisionId)?.remove()
-      this._balloonDoms.delete(revisionId)
+      this._balloonDomMap.get(revisionId)?.remove()
+      this._balloonDomMap.delete(revisionId)
     } else this._clear()
   }
 

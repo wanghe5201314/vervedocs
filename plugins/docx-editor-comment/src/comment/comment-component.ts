@@ -4,6 +4,7 @@ import dayjs from 'dayjs'
 import type { CommentHost } from './host'
 import { drawAnnotationConnector, getAvatarColor } from './annotation-visual'
 import { balloonText, type BalloonTranslate } from './translation'
+import { collectOccupiedRanges, resolveVerticalOverlaps, applyContainerWidth } from './balloon-layout'
 
 const PREFIX = 'ce'
 
@@ -357,23 +358,6 @@ export class CommentComponent {
     return pageNo * (pageHeight + pageGap)
   }
 
-  private _collectOccupiedRanges(selector: string): Array<{ top: number; bottom: number }> {
-    const container = this._command?.getContainer?.()
-    if (!container) return []
-    const ranges: Array<{ top: number; bottom: number }> = []
-    const elements = container.querySelectorAll(selector)
-    elements.forEach((el: Element) => {
-      const node = el as HTMLElement
-      const top = Number.parseFloat(node.style.top || '')
-      const height = node.offsetHeight || node.getBoundingClientRect().height || 0
-      if (Number.isFinite(top) && height > 0) {
-        ranges.push({ top, bottom: top + height })
-      }
-    })
-    ranges.sort((a, b) => a.top - b.top)
-    return ranges
-  }
-
   private _estimateCommentHeight(comment: IComment): number {
     const existing = this._cardDoms.get(comment.id)
     const existingHeight = existing?.offsetHeight || existing?.getBoundingClientRect().height || 0
@@ -388,26 +372,16 @@ export class CommentComponent {
   }
 
   private _resolveVerticalOverlaps(comments: IComment[]): void {
-    const occupied = this._collectOccupiedRanges(`.${PREFIX}-revision-balloon`)
-    const GAP = 12
-    for (const comment of comments) {
-      if (!comment.position) continue
-      const height = this._estimateCommentHeight(comment)
-      let top = comment.position.top
-      let changed = true
-      while (changed) {
-        changed = false
-        for (const range of occupied) {
-          if (top < range.bottom + GAP && top + height > range.top - GAP) {
-            top = range.bottom + GAP
-            changed = true
-          }
-        }
-      }
-      comment.position.top = top
-      occupied.push({ top, bottom: top + height })
-      occupied.sort((a, b) => a.top - b.top)
-    }
+    const container = this._command?.getContainer?.() ?? null
+    const occupied = collectOccupiedRanges(container, `.${PREFIX}-revision-balloon`)
+    const positioned = comments.filter(c => c.position)
+    resolveVerticalOverlaps(
+      positioned,
+      occupied,
+      comment => this._estimateCommentHeight(comment),
+      comment => comment.position!.top,
+      (comment, top) => { comment.position!.top = top }
+    )
   }
 
   private _computePositions(): void {
@@ -520,7 +494,7 @@ export class CommentComponent {
     const cardMaxWidth = 270
     const neededWidth = balloonLeft + cardMaxWidth + 16
     ;(container as any).__commentNeededWidth = neededWidth
-    this._applyContainerWidth(container, pageWidth)
+    applyContainerWidth(container, pageWidth)
   }
 
   private _restoreContainerWidth(): void {
@@ -529,22 +503,7 @@ export class CommentComponent {
     if (!container) return
     const pageWidth = this._command.getDrawWidth?.() || 794
     ;(container as any).__commentNeededWidth = 0
-    this._applyContainerWidth(container, pageWidth)
-  }
-
-  private _applyContainerWidth(container: HTMLDivElement, pageWidth: number): void {
-    // 鏂版灦鏋勶細瀹瑰櫒瀹藉害鐢?Draw 绠＄悊锛宱verlay 浠?overflow:visible 鑷劧婧㈠嚭锛屼笉闇€瑕佸己鍒舵敼瀹藉害
-    if ((container as any).__vervedocsNewLayout) return
-    const commentWidth = (container as any).__commentNeededWidth || 0
-    const revisionWidth = (container as any).__revisionNeededWidth || 0
-    const neededWidth = Math.max(commentWidth, revisionWidth)
-    if (neededWidth > pageWidth) {
-      container.style.width = `${neededWidth}px`
-      container.style.minWidth = `${neededWidth}px`
-    } else {
-      container.style.width = `${pageWidth}px`
-      container.style.minWidth = ''
-    }
+    applyContainerWidth(container, pageWidth)
   }
 
   private _renderCards(comments: IComment[]): void {

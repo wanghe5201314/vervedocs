@@ -1,7 +1,7 @@
 import '../../assets/css/hyperlink-widget.css'
 import panelHtml from '../../assets/components/hyperlink-widget.html?raw'
-import { translatePanel, viewTranslate } from '@/view-i18n.ts'
-import type { ViewTranslate } from '@/view-i18n.ts'
+import { translatePanel, viewTranslate } from '../../view-i18n'
+import type { ViewTranslate } from '../../view-i18n'
 
 export class HyperlinkWidget {
   private root: HTMLElement | null = null

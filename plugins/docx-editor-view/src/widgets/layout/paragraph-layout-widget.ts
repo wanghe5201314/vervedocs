@@ -7,7 +7,7 @@
  */
 import '../../assets/css/paragraph-layout-widget.css'
 import panelHtml from '../../assets/components/paragraph-layout-widget.html?raw'
-import { translatePanel, viewTranslate } from '@/view-i18n.ts'
+import { translatePanel, viewTranslate } from '../../view-i18n'
 import type { ViewTranslate } from '@/view-i18n.ts'
 
 /** 每厘米对应的像素数（96 DPI） */

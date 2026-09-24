@@ -1084,7 +1084,7 @@ export class Draw {
         w.focus()
         w.print()
       }
-      frame.srcdoc = `<!doctype html><html><head><meta charset="UTF-8"><title>打印文档</title><style>
+      frame.srcdoc = `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><title>打印文档</title><style>
         @page{margin:0}${pageStyles}
         body{margin:0}
         .page{break-after:page;page-break-after:always}

@@ -349,7 +349,7 @@ export class CommandAdapt {
    */
   insertText(text: string): void {
     if (!this.getIsCanInput()) return
-    if (typeof text !== 'string' || !text) return
+    if (!text) return
     if (this.deleteSelection(false)) {
       // 选区已删除，光标在原选区 start，继续插入 text
     }
@@ -1660,8 +1660,7 @@ export class CommandAdapt {
     if (!table || table.type !== 'table') return
     const t = table as ITableElement
     if (rowIndex < 0 || rowIndex >= t.trList.length) return
-    const h = Math.max(20, Math.round(height))
-    t.trList[rowIndex].height = h
+    t.trList[rowIndex].height = Math.max(20, Math.round(height))
     // 不可迁移：doc 来自 this.draw.getDocument() 而非 getActiveDocument()
     this._commit(doc)
   }
@@ -1950,7 +1949,7 @@ export class CommandAdapt {
   async saveImage(path: Path): Promise<void> {
     const doc = this.draw.getActiveDocument()
     const el = getByPath(doc.elements, path) as unknown as { type: string; value: string } | null
-    if (!el || el.type !== 'image' || typeof el.value !== 'string') return
+    if (!el || el.type !== 'image') return
     try {
       const url = new URL(el.value, document.baseURI)
       if (!['https:', 'http:', 'data:', 'blob:'].includes(url.protocol)) return
@@ -2036,7 +2035,7 @@ export class CommandAdapt {
    * @param payload 超链接参数，包含 url 与 valueList
    */
   insertHyperlink(payload: { url: string; valueList: IElement[] }): boolean {
-    if (!this.getIsCanInput() || !payload || typeof payload.url !== 'string' ||
+    if (!this.getIsCanInput() || !payload ||
       !Array.isArray(payload.valueList) || !payload.valueList.length) return false
     const url = payload.url.trim()
     if (!url || /[\u0000-\u0020\u007F]/.test(url)) return false
@@ -2276,8 +2275,7 @@ export class CommandAdapt {
               const scroller = this.draw.getScroller()
               const scrollContainer = scroller.parentElement as HTMLDivElement
               const absY = page.contentRect.y + b.rect.y
-              const targetScrollTop = Math.max(0, absY - scrollContainer.clientHeight / 2)
-              scrollContainer.scrollTop = targetScrollTop
+              scrollContainer.scrollTop = Math.max(0, absY - scrollContainer.clientHeight / 2)
               this.range.setCaret({ path, offset: 0 })
               return
             }
@@ -3177,8 +3175,7 @@ export class CommandAdapt {
     if (count) {
       const survivor = doc.sections[index + count]
       for (const key of ['headers', 'footers'] as const) {
-        const inherited = Object.assign({}, ...doc.sections.slice(0, index + count + 1).map(section => section[key]))
-        survivor[key] = inherited
+        survivor[key] = Object.assign({}, ...doc.sections.slice(0, index + count + 1).map(section => section[key]))
       }
       doc.sections.splice(index, count)
     }

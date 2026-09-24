@@ -219,7 +219,7 @@ export class LayoutEngine {
     let cursorY = 0
     let currentBlocks: BlockNode[] = []
     let activeColumns: { widths: number[]; gap: number } | undefined
-    let activeColumnId: string | undefined
+    let activeColumnId: string | undefined = undefined
     let columnIndex = 0
     let columnTop = 0
     let columnBottom = 0
@@ -1406,8 +1406,11 @@ export class LayoutEngine {
    *  - 本片内起始、但延伸出本片的格：高度裁剪到本片底部，并重算垂直偏移；
    *  - 起始于本片之前、延伸进本片的格：在首行补一个空内容的续接格，
    *    使边框 / 背景在续页保持连续（内容只在上半显示一次）。
-   *  注意：不修改原表 b 的任何行 / 格对象（后续片段还要复用）。
-   *  @param repeatRowsBefore 需要在片段最前面复制一份的"表头行"下标列表（w:tblHeader），仅在非第一片时使用。 */
+    *  注意：不修改原表 b 的任何行 / 格对象（后续片段还要复用）。
+    *  @param b 表格块
+    *  @param s 起始行下标
+    *  @param e 结束行下标
+    *  @param repeatRowsBefore 需要在片段最前面复制一份的"表头行"下标列表（w:tblHeader），仅在非第一片时使用。 */
   private buildFragment(b: TableBlock, s: number, e: number, repeatRowsBefore?: number[]): TableBlock {
     // 先深拷贝主体行
     const bodyRows = b.rows.slice(s, e + 1).map(r => ({

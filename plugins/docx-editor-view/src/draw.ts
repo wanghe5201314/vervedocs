@@ -987,7 +987,7 @@ export class Draw {
 
   /**
    * 设置页边距并重排+重渲染。
-   * @param margins [top, right, bottom, left]
+   * @param margins 页边距 [top, right, bottom, left]
    */
   setPaperMargins(margins: [number, number, number, number]): void {
     this.options.pageMargins = margins

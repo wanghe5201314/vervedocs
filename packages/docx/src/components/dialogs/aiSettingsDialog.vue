@@ -38,8 +38,8 @@
     </a-form>
     <template #footer>
       <div class="dialog-footer">
-        <VdButton @click="handleClose">{{ t('common.cancel') }}</VdButton>
-        <VdButton type="primary" @click="handleSave">{{ t('common.save') }}</VdButton>
+        <VdButton icon="close" @click="handleClose">{{ t('common.cancel') }}</VdButton>
+        <VdButton type="primary" icon="check" @click="handleSave">{{ t('common.save') }}</VdButton>
       </div>
     </template>
   </VdDialog>

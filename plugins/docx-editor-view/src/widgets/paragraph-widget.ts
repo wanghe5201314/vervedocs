@@ -14,6 +14,7 @@ import { ContextMenu, type MenuItem } from '../context-menu'
 import { ParagraphLayoutWidget } from './layout/paragraph-layout-widget'
 import { FontLayoutWidget } from './layout/font-layout-widget'
 import { positionHandle } from './handle-position'
+import { viewTranslate, type ViewTranslate } from '../view-i18n'
 import '../assets/css/paragraph-handle-menu.css'
 
 
@@ -23,6 +24,7 @@ import '../assets/css/paragraph-handle-menu.css'
  * 由外部宿主提供，用于获取编辑器布局、选区、容器信息以及触发命令等。
  */
 export interface ParagraphWidgetDeps {
+  translate?: ViewTranslate
   /** Whether editing interactions are currently allowed. */
   canEdit: () => boolean
   /** 获取当前文档布局，可能为 null */
@@ -71,8 +73,18 @@ export class ParagraphWidget {
     const onCommand = (cmd: string, ...args: any[]) => {
       if (this.deps.canEdit()) return this.deps.onCommand(cmd, ...args)
     }
-    this.panel.setDeps({ onCommand })
-    this.fontPanel.setDeps({ onCommand })
+    this.panel.setDeps({ onCommand, translate: deps.translate })
+    this.fontPanel.setDeps({ onCommand, translate: deps.translate })
+  }
+
+  refreshTranslations(): void {
+    this.hideMenu()
+    if (this.handle) {
+      this.handle.title = this.t('view.paragraph.format')
+      this.handle.setAttribute('aria-label', this.handle.title)
+    }
+    this.panel.refreshTranslations()
+    this.fontPanel.refreshTranslations()
   }
 
   /**
@@ -83,6 +95,9 @@ export class ParagraphWidget {
   create(): void {
     this.handle = document.createElement('div')
     this.handle.className = 'vervedocs-paragraph-handle'
+    this.handle.setAttribute('role', 'button')
+    this.handle.setAttribute('aria-label', this.t('view.paragraph.format'))
+    this.handle.title = this.t('view.paragraph.format')
     Object.assign(this.handle.style, {
       position: 'fixed',
       width: '22px',
@@ -125,6 +140,8 @@ export class ParagraphWidget {
       return
     }
     if (!this.handle) return
+    this.handle.title = this.t('view.paragraph.format')
+    this.handle.setAttribute('aria-label', this.handle.title)
     const layout = this.deps.getLayout()
     const range = this.deps.getRange()
     if (!layout || !range) { this.hide(); return }
@@ -249,6 +266,8 @@ export class ParagraphWidget {
    * 第一行为正文和 H1-H6，第二行为五种对齐方式。
    * 同时绑定滚动隐藏和点击外部关闭逻辑。
    */
+  private t(key: string): string { return viewTranslate(this.deps.translate, key) }
+
   private showMenu(): void {
     this.hideMenu()
     if (!this.deps.canEdit()) return
@@ -259,7 +278,7 @@ export class ParagraphWidget {
     const menu = document.createElement('div')
     menu.className = 'ce-paragraph-handle-menu'
     menu.setAttribute('role', 'toolbar')
-    menu.setAttribute('aria-label', '段落格式')
+    menu.setAttribute('aria-label', this.t('view.paragraph.format'))
     menu.addEventListener('mousedown', e => e.preventDefault())
     menu.addEventListener('keydown', e => {
       e.stopPropagation()
@@ -286,7 +305,7 @@ export class ParagraphWidget {
     }
 
     const levels = [null, TITLE_LEVEL.FIRST, TITLE_LEVEL.SECOND, TITLE_LEVEL.THIRD, TITLE_LEVEL.FOURTH, TITLE_LEVEL.FIFTH, TITLE_LEVEL.SIXTH]
-    const labels = ['正文', '一级标题', '二级标题', '三级标题', '四级标题', '五级标题', '六级标题']
+    const labels = ['body', 'heading1', 'heading2', 'heading3', 'heading4', 'heading5', 'heading6'].map(key => this.t(`view.paragraph.${key}`))
     levels.forEach((level, index) => {
       const button = addButton(labels[index], (style.level ?? null) === level, 'executeSetTitle', level)
       button.className = 'ce-paragraph-handle-menu__heading'
@@ -299,11 +318,11 @@ export class ParagraphWidget {
     })
 
     const alignments = [
-      { label: '左对齐', value: ROW_FLEX.LEFT, path: 'M4 5H19M4 12H12M4 19H19' },
-      { label: '居中', value: ROW_FLEX.CENTER, path: 'M4 5H19M8 12H15M4 19H19' },
-      { label: '右对齐', value: ROW_FLEX.RIGHT, path: 'M4 5H19M11 12H19M4 19H19' },
-      { label: '两端对齐', value: ROW_FLEX.JUSTIFY, path: 'M4 5H19M4 12H19M4 19H19' },
-      { label: '分散对齐', value: ROW_FLEX.DISTRIBUTE, path: 'M3 4V20M21 4V20M7 13H17M7 19H17' }
+      { label: this.t('view.common.leftAlign'), value: ROW_FLEX.LEFT, path: 'M4 5H19M4 12H12M4 19H19' },
+      { label: this.t('view.common.center'), value: ROW_FLEX.CENTER, path: 'M4 5H19M8 12H15M4 19H19' },
+      { label: this.t('view.common.rightAlign'), value: ROW_FLEX.RIGHT, path: 'M4 5H19M11 12H19M4 19H19' },
+      { label: this.t('view.common.justify'), value: ROW_FLEX.JUSTIFY, path: 'M4 5H19M4 12H19M4 19H19' },
+      { label: this.t('view.common.distribute'), value: ROW_FLEX.DISTRIBUTE, path: 'M3 4V20M21 4V20M7 13H17M7 19H17' }
     ]
     for (const item of alignments) {
       const button = addButton(item.label, alignment === item.value, 'executeSetRowFlex', item.value)
@@ -373,15 +392,15 @@ export class ParagraphWidget {
     }
 
     const items: MenuItem[] = [
-      { label: '剪切', icon: 'content_cut', shortcut: 'Ctrl+X', onClick: () => fire('executeCut') },
-      { label: '复制', icon: 'content_copy', shortcut: 'Ctrl+C', onClick: () => fire('executeCopy') },
-      { label: '粘贴', icon: 'content_paste', shortcut: 'Ctrl+V', onClick: () => fire('executePaste') },
+      { label: this.t('view.paragraph.cut'), icon: 'content_cut', shortcut: 'Ctrl+X', onClick: () => fire('executeCut') },
+      { label: this.t('view.paragraph.copy'), icon: 'content_copy', shortcut: 'Ctrl+C', onClick: () => fire('executeCopy') },
+      { label: this.t('view.paragraph.paste'), icon: 'content_paste', shortcut: 'Ctrl+V', onClick: () => fire('executePaste') },
       { label: '---' },
-      { label: '字体...', icon: 'format_size', onClick: () => { if (this.deps.canEdit()) this.fontPanel.show() } },
-      { label: '段落高级设置', icon: 'subject', onClick: () => { if (this.deps.canEdit()) this.panel.show() } },
+      { label: this.t('view.paragraph.fontSettings'), icon: 'format_size', onClick: () => { if (this.deps.canEdit()) this.fontPanel.show() } },
+      { label: this.t('view.paragraph.advancedSettings'), icon: 'subject', onClick: () => { if (this.deps.canEdit()) this.panel.show() } },
       { label: '---' },
-      { label: '超链接', icon: icons.link, shortcut: 'Ctrl+K', onClick: () => fire('requestInsertHyperlink') },
-      { label: '插入批注', icon: 'comment', onClick: () => fire('requestInsertComment') },
+      { label: this.t('view.paragraph.link'), icon: icons.link, shortcut: 'Ctrl+K', onClick: () => fire('requestInsertHyperlink') },
+      { label: this.t('view.paragraph.comment'), icon: 'comment', onClick: () => fire('requestInsertComment') },
 
     ]
 

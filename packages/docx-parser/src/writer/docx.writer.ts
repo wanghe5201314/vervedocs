@@ -27,7 +27,7 @@ export async function writeDocx(
   options?: IDocxExportOptions
 ): Promise<IDocxExportResult> {
   try {
-    const { Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, BorderStyle, BookmarkStart, BookmarkEnd, Header, Footer } =
+    const { Document, Packer, Paragraph, TextRun, PageBreak, ImageRun, Table, TableRow, TableCell, WidthType, BorderStyle, BookmarkStart, BookmarkEnd, Header, Footer } =
       await import('docx')
 
     const defaultSize = options?.defaultSize ?? 10.5
@@ -64,13 +64,19 @@ export async function writeDocx(
         continue
       }
 
-      if (element.value === '\n' || element.type === 'pageBreak') {
-        if (currentParagraph.length > 0) {
+      if (element.type === 'pageBreak') {
+        children.push(new Paragraph({ children: [...currentParagraph, new PageBreak()] }))
+        currentParagraph = []
+      } else if (element.type === 'text' && element.value === '') {
+        if (currentParagraph.length) {
           children.push(new Paragraph({ children: currentParagraph }))
           currentParagraph = []
         }
-        if (element.type === 'pageBreak') {
-          children.push(new Paragraph({ pageBreakBefore: true }))
+        children.push(new Paragraph({ children: [] }))
+      } else if (element.value === '\n') {
+        if (currentParagraph.length) {
+          children.push(new Paragraph({ children: currentParagraph }))
+          currentParagraph = []
         }
       } else if (element.type === 'image' && element.value) {
         if (currentParagraph.length > 0) {
@@ -238,12 +244,41 @@ export async function writeDocx(
 
     return children
     }
-    const sections = Array.isArray(data) ? undefined : 'elements' in data ? data.sections : data
-    const doc = new Document({ sections: [{
-      children: convertElements(normalizeMainElements(data)),
-      headers: sections?.header?.length ? { default: new Header({ children: convertElements(sections.header) }) } : undefined,
-      footers: sections?.footer?.length ? { default: new Footer({ children: convertElements(sections.footer) }) } : undefined
-    }] })
+    const metadata = !Array.isArray(data) && 'elements' in data ? data : undefined
+    const legacy = !Array.isArray(data) && !('elements' in data) ? data : undefined
+    const groups: IElement[][] = [[]]
+    const breaks: string[] = []
+    for (const element of normalizeMainElements(data)) {
+      if (element.type === 'pageBreak' && ['nextPage', 'continuous', 'evenPage', 'oddPage'].includes(element.value)) {
+        breaks.push(element.value)
+        groups.push([])
+      } else groups[groups.length - 1].push(element)
+    }
+    if (metadata?.sections && metadata.sections.length !== groups.length) throw new Error('分节元数据与正文分节符数量不一致')
+    const twips = (value: number | undefined) => value === undefined ? undefined : Math.round(value * 15)
+    const doc = new Document({ sections: groups.map((elements, index) => {
+      const section = metadata?.sections?.[index]
+      const margin = section?.margins ?? metadata?.margins
+      const parts = (zone: 'header' | 'footer') => {
+        const refs = section?.[zone === 'header' ? 'headers' : 'footers']
+        if (refs) return Object.fromEntries(Object.entries(refs).map(([kind, id]) => [kind, zone === 'header'
+          ? new Header({ children: convertElements(metadata?.headerFooterParts?.[id] ?? []) })
+          : new Footer({ children: convertElements(metadata?.headerFooterParts?.[id] ?? []) })]))
+        const contents = metadata?.[zone] ?? metadata?.contentZones?.[zone] ?? legacy?.[zone]
+        return contents?.length ? { default: zone === 'header' ? new Header({ children: convertElements(contents) }) : new Footer({ children: convertElements(contents) }) } : undefined
+      }
+      return {
+        properties: {
+          type: (index ? breaks[index - 1] : section?.breakType) as any,
+          titlePage: section?.titlePage,
+          page: {
+            size: { width: twips(section?.pageWidth ?? metadata?.pageWidth), height: twips(section?.pageHeight ?? metadata?.pageHeight), orientation: (section?.paperDirection ?? metadata?.paperDirection) === 'horizontal' ? 'landscape' as const : 'portrait' as const },
+            margin: { top: twips(margin?.[0]), right: twips(margin?.[1]), bottom: twips(margin?.[2]), left: twips(margin?.[3]), header: twips(section?.headerDistance), footer: twips(section?.footerDistance), gutter: twips(section?.gutter) }
+          }
+        },
+        children: convertElements(elements), headers: parts('header'), footers: parts('footer')
+      }
+    }) })
     const blob = await Packer.toBlob(doc)
     const arrayBuffer = await blob.arrayBuffer()
     return { success: true, data: arrayBuffer }

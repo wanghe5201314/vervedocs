@@ -335,15 +335,15 @@ interface GalleryStyle {
   level: string | null
 }
 
-const styles: GalleryStyle[] = [
+const styles = computed<GalleryStyle[]>(() => [
   { id: 'normal', label: t('ribbon.home.normalStyle'), level: null, preview: 'home-style-normal' },
   ...['first', 'second', 'third', 'fourth', 'fifth', 'sixth']
     .map((level, index) => ({
       id: level, label: t('ribbon.home.headingStyle', { n: index + 1 }), level, preview: `home-style-heading-${index + 1}`
     }))
-]
+])
 const selectedStyle = computed(() =>
-  styles.find(style => style.level === props.currentTitle)?.id ?? null
+  styles.value.find(style => style.level === props.currentTitle)?.id ?? null
 )
 
 function preserveToolbarFocus(event: MouseEvent) {

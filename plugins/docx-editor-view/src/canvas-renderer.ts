@@ -761,7 +761,7 @@ export class CanvasRenderer {
       el.style.width = `${page.rect.width}px`
       el.style.height = `${page.rect.height}px`
       if (this.opts.showMarginRuler) {
-        this.renderMarginRuler(el, page.rect.width, page.rect.height)
+        this.renderMarginRuler(el, page)
       }
     }
     for (const [idx, el] of this.pageBgEls) {
@@ -773,8 +773,12 @@ export class CanvasRenderer {
    * 绘制 WPS 风格四角边距标尺（SVG，DOM）。内容区四角的角标朝外伸入页边距。
    * 用签名缓存避免每帧重建 SVG。
    */
-  private renderMarginRuler(el: HTMLDivElement, pw: number, ph: number): void {
-    const [mt, mr, mb, ml] = this.opts.pageMargins
+  private renderMarginRuler(el: HTMLDivElement, page: PageLayout): void {
+    const { width: pw, height: ph } = page.rect
+    const ml = page.contentRect.x - page.rect.x
+    const mt = page.contentRect.y - page.rect.y
+    const mr = pw - ml - page.contentRect.width
+    const mb = ph - mt - page.contentRect.height
     const color = this.opts.rulerColor
     const L = 20
     const sig = `${pw}|${ph}|${ml}|${mr}|${mt}|${mb}|${color}`

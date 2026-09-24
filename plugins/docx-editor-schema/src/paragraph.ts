@@ -34,10 +34,17 @@ export interface IParagraphGroup {
 
 /** 判断某个 text run 是否为"段落终止符"（仅由零宽字符构成的 text） */
 function isParagraphTerminator(el: IElement): boolean {
-  if (el.type !== 'text') return false
+  if (el.type !== 'text' || el.extension?.bookmarkMarker) return false
   const v = (el as unknown as { value?: string }).value ?? ''
   if (!v) return false
   return /^[\u200B\uFEFF]+$/.test(v)
+}
+
+/** Some imports omit the separator after a bookmark marker at the end of a paragraph. */
+function endsBookmarkParagraph(previous: IElement, next: IElement): boolean {
+  return !!previous.extension?.bookmarkMarker &&
+    !!previous.sourceParagraphId && !!next.sourceParagraphId &&
+    previous.sourceParagraphId !== next.sourceParagraphId
 }
 
 /**
@@ -76,6 +83,7 @@ export function splitParagraphs(elements: IElement[]): IParagraphGroup[] {
     // 普通段落：收集非块级节点，遇到段落终止符即切段
     const start = i
     while (i < elements.length && !BLOCK_LEVEL_TYPES.has(elements[i].type) && elements[i].type !== 'columnBreak') {
+      if (i > start && endsBookmarkParagraph(elements[i - 1], elements[i])) break
       if (isParagraphTerminator(elements[i])) {
         i++ // 消费终止符
         break
@@ -99,6 +107,7 @@ function splitValueList(valueList: IElement[]): { runs: IElement[]; startIndex: 
   while (vi < valueList.length) {
     const vStart = vi
     while (vi < valueList.length) {
+      if (vi > vStart && endsBookmarkParagraph(valueList[vi - 1], valueList[vi])) break
       if (isParagraphTerminator(valueList[vi])) {
         vi++
         break

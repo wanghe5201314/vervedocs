@@ -143,10 +143,15 @@ export class LayoutEngine {
     }
     setSection(0)
     const sectionBreaks = new Set(['continuous', 'nextPage', 'evenPage', 'oddPage'])
-    const sectionWidths = document?.sections?.map((section, index) => {
-      if (section.pageWidth === undefined || section.pageHeight === undefined || !section.margins) throw new TypeError(`Java sections[${index}] 缺少页面尺寸或页边距`)
-      return section.pageWidth - section.margins[1] - section.margins[3]
-    })
+    const sectionColumns = (index: number) => {
+      const section = document?.sections?.[index]
+      const count = section?.columnCount ?? document?.columnCount ?? 1
+      const gap = section?.columnGap ?? document?.columnGap ?? 20
+      const width = section?.pageWidth !== undefined && section.margins
+        ? section.pageWidth - section.margins[1] - section.margins[3] : contentWidth
+      return { widths: Array(count).fill((width - gap * (count - 1)) / count) as number[], gap }
+    }
+    const sectionWidths = (document?.sections ?? [undefined]).map((_, index) => sectionColumns(index).widths[0])
     const columnGroups = new Map<string, { widths: number[]; gap: number }>()
     let columnSection = 0
     for (const element of elements) {
@@ -275,11 +280,12 @@ export class LayoutEngine {
     for (let i = 0; i < rawBlocks.length; i++) {
       let b = rawBlocks[i]
       const source = b.kind === 'paragraph' ? this.paragraphInputs.get(b)?.runs.find(run => run.value !== '\u200B') : b.block
-      const sourceColumnId = (source as { columnId?: string } | undefined)?.columnId
+      const legacyColumnId = (source as { columnId?: string } | undefined)?.columnId
+      const sourceColumnId = legacyColumnId ?? `section:${sectionIndex}`
       if (sourceColumnId !== activeColumnId) {
         cursorY = Math.max(cursorY, columnBottom)
         activeColumnId = sourceColumnId
-        activeColumns = sourceColumnId ? columnGroups.get(sourceColumnId) : undefined
+        activeColumns = legacyColumnId ? columnGroups.get(legacyColumnId) : sectionColumns(sectionIndex)
         columnIndex = 0; columnTop = cursorY; columnBottom = cursorY
       }
       if (b.kind === 'paragraph' && activeColumns) {
@@ -309,7 +315,10 @@ export class LayoutEngine {
       if (b.kind === 'pageBreak') {
         if (b.block.type === 'columnBreak') { advanceColumn(); continue }
         const breakType = String(b.block.value)
-        if (breakType !== 'continuous') pushPage()
+        const nextSection = sectionBreaks.has(breakType) ? document?.sections?.[sectionIndex + 1] : undefined
+        const geometryChanged = nextSection && (nextSection.pageWidth !== pageWidth || nextSection.pageHeight !== pageHeight ||
+          nextSection.margins?.some((margin, index) => margin !== [mt, mr, mb, ml][index]))
+        if (breakType !== 'continuous' || geometryChanged) pushPage()
         if (sectionBreaks.has(breakType) && document?.sections) {
           sectionIndex++
           if (!document.sections[sectionIndex]) throw new TypeError('Java sections 与正文分节符数量不一致')
@@ -319,6 +328,27 @@ export class LayoutEngine {
         if (breakType === 'evenPage' && (pageIndex + 1) % 2 !== 0) pushPage()
         if (breakType === 'oddPage' && (pageIndex + 1) % 2 !== 1) pushPage()
         if (breakType === 'evenPage' || breakType === 'oddPage') sectionFirstPage = pageIndex
+        continue
+      }
+      // 多栏段落按行流入下一栏/页，而非把整个长段落移出页面。
+      if (b.kind === 'paragraph' && activeColumns && activeColumns.widths.length > 1 && !b.surroundImage && !attachedImages.has(rawBlocks[i] as ParagraphBlock)) {
+        let start = 0
+        while (start < b.lines.length) {
+          const origin = start === 0 ? 0 : b.lines[start].y
+          let end = start
+          while (end < b.lines.length && cursorY + b.lines[end].y + b.lines[end].height - origin <= contentHeight + PAGE_FIT_EPSILON) end++
+          if (end === start) {
+            if (cursorY > columnTop) { advanceColumn(); continue }
+            end++
+          }
+          const lines = b.lines.slice(start, end).map(line => ({ ...line, y: line.y - origin, baseline: line.baseline - origin }))
+          const height = end === b.lines.length ? b.rect.height - origin : lines.at(-1)!.y + lines.at(-1)!.height
+          currentBlocks.push({ ...b, id: nextBlockId(), bulletText: start === 0 ? b.bulletText : undefined,
+            rect: { ...b.rect, x: b.rect.x + columnX(), y: cursorY, height }, lines })
+          cursorY += height
+          start = end
+          if (start < b.lines.length) advanceColumn()
+        }
         continue
       }
       let bh = b.rect.height
@@ -436,7 +466,7 @@ export class LayoutEngine {
       if (!floating) cursorY += bh
     }
     if (currentBlocks.length > 0) pushPage()
-    else if (pages.length === 0) pushPage()
+    else if (pages.length === 0 || rawBlocks.at(-1)?.block?.type === 'pageBreak' && rawBlocks.at(-1)?.block?.value === 'manual') pushPage()
 
     const lastPage = pages[pages.length - 1]
     const totalHeight = lastPage.rect.y + lastPage.rect.height + pageGap
@@ -837,24 +867,45 @@ export class LayoutEngine {
       isFirstLine = false
     }
 
-    for (let ri = 0; ri < runs.length; ri++) {
-      const rawRun = runs[ri]
-      // 超链接：把 valueList 文本拼成等价 text run，标记 URL，渲染为蓝色下划线
-      let hyperlinkUrl: string | undefined
-      let run: IElement = rawRun
+    const layoutRuns = runs.map(rawRun => {
       if (rawRun.type === 'hyperlink') {
         const vl = (rawRun as unknown as { valueList?: IElement[] }).valueList ?? []
-        const text = vl.map(r => String((r as unknown as { value?: string }).value ?? '')).join('')
-        hyperlinkUrl = String((rawRun as unknown as { value?: string }).value ?? '')
-        const base = (vl[0] as unknown as Record<string, unknown>) ?? {}
-        run = {
+        const text = vl.map(r => r.type === 'tab' ? '\t' : String(r.value ?? '')).join('')
+        const base = (vl.find(r => r.type === 'text' && r.value) as unknown as Record<string, unknown>) ?? {}
+        const tocEntry = (rawRun.extension?.toc as { role?: string } | undefined)?.role === 'entry'
+        return {
           type: 'text', value: text,
           font: base.font, size: base.size, bold: base.bold, italic: base.italic,
-          color: '#0563C1', underline: true
+          color: tocEntry ? base.color : '#0563C1', underline: tocEntry ? base.underline : true,
+          extension: rawRun.extension
         } as unknown as IElement
-      } else if (rawRun.type !== 'text') {
-        continue
       }
+      return rawRun
+    })
+    // Imported PAGEREF results may follow the tab in separate runs, with hidden fields in between.
+    const tocPageWidth = (runIndex: number, offset: number): number => {
+      let width = 0
+      for (let i = runIndex; i < layoutRuns.length; i++) {
+        const run = layoutRuns[i]
+        if (run.type !== 'text' || run.extension?.fieldMarker || run.extension?.bookmarkMarker) continue
+        const text = String(run.value ?? '').slice(i === runIndex ? offset : 0)
+        const family = String(run.font ?? this.opts.defaultFont)
+        const font = FONT_FAMILY_CSS[family] ?? family
+        const size = Number(run.size ?? this.opts.defaultSize)
+        for (const ch of text) {
+          if (ch === '\n' || ch === '\t') return width
+          if (ch === '\u200B' || ch === '\uFEFF') continue
+          width += this.measure.charWidth(ch, font, size, !!run.bold, !!run.italic)
+        }
+      }
+      return width
+    }
+
+    for (let ri = 0; ri < runs.length; ri++) {
+      const rawRun = runs[ri]
+      const run = layoutRuns[ri]
+      if (run.type !== 'text') continue
+      const hyperlinkUrl = rawRun.type === 'hyperlink' ? String(rawRun.url ?? rawRun.value ?? '') : undefined
       const anyRun = run as unknown as Record<string, unknown>
       const rawFont = String(anyRun.font ?? this.opts.defaultFont)
       const font = FONT_FAMILY_CSS[rawFont] ?? rawFont
@@ -883,10 +934,28 @@ export class LayoutEngine {
       while (cursorInRun < value.length) {
         const maxLineWidth = currentLineMaxWidth()
         const remaining = maxLineWidth - currentLineWidth
+        const tocEntry = (run.extension?.toc as { role?: string } | undefined)?.role === 'entry'
+        if (tocEntry && value[cursorInRun] === '\t') {
+          const pageWidth = tocPageWidth(ri, cursorInRun + 1)
+          if (currentLineWidth > 0 && remaining < pageWidth + size) {
+            finalizeLine(false)
+            continue
+          }
+          const width = Math.max(0, remaining - pageWidth)
+          currentInlines.push({
+            run, path: runPath, startOffset: cursorInRun, endOffset: cursorInRun + 1,
+            text: '\t', x: currentLineWidth, y: 0, width, height: size,
+            font, size, bold, italic, color, baseline: 0
+          })
+          currentLineWidth += width
+          currentMaxSize = Math.max(currentMaxSize, size)
+          cursorInRun++
+          continue
+        }
         // 若当前行已有内容且首个字符放不下 → 先换行再试，避免溢出被裁
         if (currentLineWidth > 0 && value[cursorInRun] !== '\n') {
           const firstW = this.measure.charWidth(value[cursorInRun], font, size, bold, italic)
-          if (firstW > remaining) {
+          if (firstW > remaining + 0.001) {
             finalizeLine(false)
             continue
           }
@@ -895,9 +964,10 @@ export class LayoutEngine {
         let takenWidth = 0
         for (let i = cursorInRun; i < value.length; i++) {
           const ch = value[i]
+          if (tocEntry && ch === '\t') break
           const w = this.measure.charWidth(ch, font, size, bold, italic)
           if (ch === '\n') { take = i - cursorInRun; break }
-          if (takenWidth + w > remaining && take > 0) break
+          if (takenWidth + w > remaining + 0.001 && take > 0) break
           takenWidth += w
           take++
         }

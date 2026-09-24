@@ -9,6 +9,7 @@
  *  - Regenerate thumbnails only for changed pages.
  */
 
+import { createEditorI18n, type EditorI18n, type Translate } from '@vervedoc/i18n'
 import type { IDocxDocumentMeta, IEditorOption, IPosition, Path } from '@vervedoc/docx-editor-schema'
 import { formatElementTree, pairBookmarkMarkers, getByPath } from '@vervedoc/docx-editor-schema'
 
@@ -65,6 +66,7 @@ export interface DrawDeps {
   onCommand?: (command: string, ...args: any[]) => any
   /** zone 变化回调（由 core 装配，用于驱动 UI 标签显示） */
   onZoneChange?: (zone: Zone) => void
+  i18n?: EditorI18n
 }
 
 /**
@@ -106,6 +108,8 @@ export class Draw {
   private listener?: Listener
   /** 事件总线（用户交互事件） */
   private eventBus?: EventBus
+  private translate: Translate
+  private unsubscribeI18n: () => void
 
   /** 当前滚动 y（wrapper.scrollTop） */
   private scrollY = 0
@@ -206,6 +210,12 @@ export class Draw {
     this.onZoneChange = deps.onZoneChange
     this.listener = deps.listener
     this.eventBus = deps.eventBus
+    const i18n = deps.i18n ?? createEditorI18n(options.locale)
+    this.translate = i18n.t
+    this.unsubscribeI18n = i18n.subscribe(() => {
+      this.options.locale = i18n.locale
+      this.refreshTranslations()
+    })
 
     container.classList.add('vervedocs-container')
     // container 需要作为绝对定位的参照
@@ -335,6 +345,7 @@ export class Draw {
     })
     this.selectionToolbarWidget.create()
     this.tableWidget = new TableWidget({
+      translate: this.translate,
       canEdit: () => !this.options.readonly && !this.options.disabled,
       getLayout: () => this.layout,
       getRange: () => this.range ?? null,
@@ -350,6 +361,7 @@ export class Draw {
     })
     this.tableWidget.create()
     this.headerFooterWidget = new HeaderFooterWidget({
+      translate: this.translate,
       getLayout: () => this.layout,
       getContainerRect: () => this.canvasHost.getBoundingClientRect(),
       getScrollY: () => this.scrollY,
@@ -389,6 +401,7 @@ export class Draw {
     })
     this.chartWidget.create()
     this.paragraphWidget = new ParagraphWidget({
+      translate: this.translate,
       canEdit: () => !this.options.readonly && !this.options.disabled,
       getLayout: () => this.layout,
       getRange: () => this.range ?? null,
@@ -999,6 +1012,13 @@ export class Draw {
    */
   getOptions(): IEditorOption { return this.options }
 
+  /** Refresh display translations without rebuilding open panels or changing editor state. */
+  refreshTranslations(): void {
+    this.paragraphWidget?.refreshTranslations()
+    this.tableWidget?.refreshTranslations()
+    this.headerFooterWidget?.refreshTranslations()
+  }
+
   /**
    * 批量更新编辑器选项并重排+重渲染。
    * @param patch 选项补丁
@@ -1244,6 +1264,7 @@ export class Draw {
 
   /** 销毁视图：解绑事件、断开 ResizeObserver、取消 RAF/定时器、销毁各 widget、移除 DOM。 */
   destroy(): void {
+    this.unsubscribeI18n()
     this.diagnosticNotice?.remove()
     this.wrapper.removeEventListener('scroll', this.onScroll)
     this.wrapper.removeEventListener('mousedown', this.onMouseDown)
@@ -1300,7 +1321,7 @@ export class Draw {
     formatElementTree(this.document.elements, { editorOptions: this.options, bookmarkMarkers })
     // Imported markers initialize the runtime index; repainting must not undo edits.
     if (this.document.bookmarks === undefined && bookmarkMarkers.length > 0) {
-      this.document.bookmarks = pairBookmarkMarkers(bookmarkMarkers)
+      this.document.bookmarks = pairBookmarkMarkers(bookmarkMarkers, this.document.elements)
     }
     const headerElements = this.document.header ?? this.document.contentZones?.header
     const footerElements = this.document.footer ?? this.document.contentZones?.footer
@@ -1469,4 +1490,3 @@ export class Draw {
     this.systemWatermarkWidget?.setConfig(config)
   }
 }
-

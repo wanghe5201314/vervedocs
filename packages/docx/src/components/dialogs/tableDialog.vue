@@ -1,427 +1,282 @@
 <template>
-  <VdDialog v-model:open="visible" width="600px" :closable="false" class="insert-table-dialog app-dialog">
-    <template #title>
-      <div class="custom-dialog-header">
-        <AppstoreOutlined class="title-icon" />
-        <span>{{ t('dialog.table.title') }}</span>
-      </div>
-    </template>
+  <VdDialog v-model:open="visible" width="460px" :title="t('dialog.table.title')" class="insert-table-dialog app-dialog">
     <div class="insert-table-body">
-      <div class="setting-section">
-        <div class="group-title">
-          <span>{{ t('dialog.table.size') }}</span>
-          <div class="line"></div>
+      <section class="setting-section">
+        <div class="section-title">{{ t('dialog.table.size') }}</div>
+        <div class="size-fields">
+          <label class="field">
+            <span>{{ t('dialog.table.columns') }}</span>
+            <a-input-number v-model:value="insertTableForm.cols" :min="1" :max="50" :precision="0" class="number-input" />
+          </label>
+          <label class="field">
+            <span>{{ t('dialog.table.rows') }}</span>
+            <a-input-number v-model:value="insertTableForm.rows" :min="1" :max="100" :precision="0" class="number-input" />
+          </label>
         </div>
-        <div class="table-size-container">
-          <div class="size-item">
-            <div class="size-label">{{ t('dialog.table.columns') }}</div>
-            <a-input-number v-model:value="insertTableForm.cols" :min="1" :max="50" style="width: 150px;" />
-          </div>
-          <div class="size-item">
-            <div class="size-label">{{ t('dialog.table.rows') }}</div>
-            <a-input-number v-model:value="insertTableForm.rows" :min="1" :max="100" style="width: 150px;" />
-          </div>
+      </section>
+
+      <section class="setting-section">
+        <div class="section-title">{{ t('dialog.table.borderSettings') }}</div>
+        <div class="preset-grid">
+          <button
+            v-for="preset in borderPresets"
+            :key="preset"
+            type="button"
+            class="preset-button"
+            :class="{ active: selectedOption === preset }"
+            :aria-pressed="selectedOption === preset"
+            :title="t(`dialog.table.${presetLabels[preset]}`)"
+            @click="selectedOption = preset"
+          >
+            <span class="border-preview" :class="`preview-${preset}`" aria-hidden="true">
+              <span v-for="cell in 4" :key="cell" class="preview-cell" />
+            </span>
+            <span class="preset-label">{{ t(`dialog.table.${presetLabels[preset]}`) }}</span>
+          </button>
         </div>
-      </div>
-
-      <a-divider style="margin: 20px 0;" />
-
-      <div class="setting-section">
-        <div class="group-title">
-          <span>{{ t('dialog.table.borderSettings') }}</span>
-          <div class="line"></div>
+        <div class="border-fields">
+          <label class="field">
+            <span>{{ t('dialog.table.color') }}</span>
+            <span class="color-control">
+              <input v-model="selectedColor" type="color" :disabled="selectedOption === 'none'" :aria-label="t('dialog.table.color')" />
+              <span>{{ selectedColor.toUpperCase() }}</span>
+            </span>
+          </label>
+          <label class="field">
+            <span>{{ t('dialog.table.width') }} ({{ t('dialog.table.widthUnit') }})</span>
+            <a-input-number v-model:value="lineWidth" :min="0.1" :max="5" :step="0.1" :precision="1" :disabled="selectedOption === 'none'" class="number-input" />
+          </label>
         </div>
-        <div class="border-setting-content">
-          <div class="left-panel">
-            <div
-              class="option-item"
-              :class="{ active: selectedOption === 'none' }"
-              @click="selectedOption = 'none'"
-            >
-              <FileOutlined class="option-icon" />
-              <span>{{ t('dialog.table.none') }}</span>
-            </div>
-            <div
-              class="option-item"
-              :class="{ active: selectedOption === 'box' }"
-              @click="selectedOption = 'box'"
-            >
-              <BorderOutlined class="option-icon" />
-              <span>{{ t('dialog.table.box') }}</span>
-            </div>
-            <div
-              class="option-item"
-              :class="{ active: selectedOption === 'all' }"
-              @click="selectedOption = 'all'"
-            >
-              <AppstoreOutlined class="option-icon" />
-              <span>{{ t('dialog.table.all') }}</span>
-            </div>
-            <div
-              class="option-item"
-              :class="{ active: selectedOption === 'grid' }"
-              @click="selectedOption = 'grid'"
-            >
-              <AppstoreOutlined class="option-icon" />
-              <span>{{ t('dialog.table.grid') }}</span>
-            </div>
-            <div
-              class="option-item"
-              :class="{ active: selectedOption === 'custom' }"
-              @click="selectedOption = 'custom'"
-            >
-              <EditOutlined class="option-icon" />
-              <span>{{ t('dialog.table.custom') }}</span>
-            </div>
-          </div>
-
-          <div class="right-panel">
-            <div class="setting-group">
-              <div class="setting-label">{{ t('dialog.table.lineStyle') }}</div>
-              <div class="line-type-list">
-                <div
-                  class="line-type-item"
-                  :class="{ active: selectedLineType === 'solid' }"
-                  @click="selectedLineType = 'solid'"
-                >
-                  <div class="line-preview solid"></div>
-                </div>
-                <div
-                  class="line-type-item"
-                  :class="{ active: selectedLineType === 'dashed' }"
-                  @click="selectedLineType = 'dashed'"
-                >
-                  <div class="line-preview dashed"></div>
-                </div>
-                <div
-                  class="line-type-item"
-                  :class="{ active: selectedLineType === 'dotted' }"
-                  @click="selectedLineType = 'dotted'"
-                >
-                  <div class="line-preview dotted"></div>
-                </div>
-                <div
-                  class="line-type-item"
-                  :class="{ active: selectedLineType === 'double' }"
-                  @click="selectedLineType = 'double'"
-                >
-                  <div class="line-preview double"></div>
-                </div>
-                <div
-                  class="line-type-item"
-                  :class="{ active: selectedLineType === 'dash-dot' }"
-                  @click="selectedLineType = 'dash-dot'"
-                >
-                  <div class="line-preview dash-dot"></div>
-                </div>
-                <div
-                  class="line-type-item"
-                  :class="{ active: selectedLineType === 'dash-dot-dot' }"
-                  @click="selectedLineType = 'dash-dot-dot'"
-                >
-                  <div class="line-preview dash-dot-dot"></div>
-                </div>
-              </div>
-            </div>
-
-            <div class="setting-group">
-              <div class="setting-label">{{ t('dialog.table.color') }}</div>
-              <div class="color-selector">
-                <input
-                  type="color"
-                  :value="selectedColor"
-                  @change="(e: Event) => selectedColor = (e.target as HTMLInputElement).value"
-                  style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;"
-                />
-              </div>
-            </div>
-
-            <div class="setting-group">
-              <div class="setting-label">{{ t('dialog.table.width') }}</div>
-              <div class="width-selector">
-                <a-slider
-                  v-model:value="lineWidth"
-                  :min="0.1"
-                  :max="5"
-                  :step="0.1"
-                  class="width-slider"
-                />
-                <div class="width-value">{{ lineWidth }} {{ t('dialog.table.widthUnit') }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      </section>
     </div>
     <template #footer>
       <div class="dialog-footer">
-        <VdButton type="primary" icon="check" @click="confirmInsertTable">{{ t('common.ok') }}</VdButton>
         <VdButton icon="close" @click="visible = false">{{ t('common.cancel') }}</VdButton>
+        <VdButton type="primary" icon="check" :disabled="!canConfirm" @click="confirmInsertTable">{{ t('common.ok') }}</VdButton>
       </div>
     </template>
   </VdDialog>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 import { VdDialog, VdButton } from '@vervedoc/ui'
-import { AppstoreOutlined, FileOutlined, BorderOutlined, EditOutlined } from '@ant-design/icons-vue'
 import { t } from '@/i18n'
 
-/** 组件 props 定义 */
-const props = defineProps<{
-  modelValue: boolean
-}>()
-
-/** 组件 emits 定义 */
+const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
-  (e: 'confirm', data: { rows: number; cols: number; border?: any }): void
+  (e: 'confirm', data: { rows: number; cols: number; border: { option: BorderPreset; color: string; width: number } }): void
 }>()
 
-/** 弹窗可见性，双向绑定到 modelValue */
+const borderPresets = ['none', 'outside', 'all', 'inside', 'inside-horizontal', 'inside-vertical', 'top', 'bottom', 'left', 'right'] as const
+type BorderPreset = typeof borderPresets[number]
+const presetLabels: Record<BorderPreset, string> = {
+  none: 'none',
+  outside: 'box',
+  all: 'all',
+  inside: 'inside',
+  'inside-horizontal': 'insideHorizontal',
+  'inside-vertical': 'insideVertical',
+  top: 'top',
+  bottom: 'bottom',
+  left: 'left',
+  right: 'right'
+}
+
 const visible = computed({
   get: () => props.modelValue,
-  set: (val) => emit('update:modelValue', val)
+  set: val => emit('update:modelValue', val)
 })
-
-/** 插入表格表单数据（行数与列数） */
-const insertTableForm = ref({
-  rows: 2,
-  cols: 5
-})
-
-/** 选中的边框选项 */
-const selectedOption = ref('none')
-/** 选中的线型 */
-const selectedLineType = ref('solid')
-/** 选中的颜色 */
+const insertTableForm = ref<{ rows: number | undefined; cols: number | undefined }>({ rows: 2, cols: 5 })
+const selectedOption = ref<BorderPreset>('all')
 const selectedColor = ref('#000000')
-/** 线宽 */
-const lineWidth = ref(0.5)
+const lineWidth = ref<number | undefined>(1)
+const canConfirm = computed(() =>
+  Number.isInteger(insertTableForm.value.rows) && Number.isInteger(insertTableForm.value.cols) &&
+  insertTableForm.value.rows! >= 1 && insertTableForm.value.rows! <= 100 &&
+  insertTableForm.value.cols! >= 1 && insertTableForm.value.cols! <= 50 &&
+  (selectedOption.value === 'none' || (lineWidth.value != null && lineWidth.value >= 0.1 && lineWidth.value <= 5))
+)
 
-/** 确认插入表格，触发 confirm 事件并关闭弹窗 */
 const confirmInsertTable = () => {
+  if (!canConfirm.value) return
   emit('confirm', {
-    ...insertTableForm.value,
-    border: {
-      option: selectedOption.value,
-      lineType: selectedLineType.value,
-      color: selectedColor.value,
-      width: lineWidth.value
-    }
+    rows: insertTableForm.value.rows!,
+    cols: insertTableForm.value.cols!,
+    border: { option: selectedOption.value, color: selectedColor.value, width: lineWidth.value ?? 1 }
   })
   visible.value = false
 }
 </script>
 
 <style scoped>
-.custom-dialog-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 16px;
-  color: #303133;
-}
-
-.title-icon {
-  background-color: #1890ff;
-  color: #fff;
-  padding: 4px;
-  border-radius: 4px;
-}
-
 .insert-table-body {
-  padding: 10px 0;
+  padding: 2px 0 0;
 }
 
-.setting-section {
-  margin-bottom: 20px;
+.setting-section + .setting-section {
+  margin-top: 18px;
 }
 
-.group-title {
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #30343b;
+  margin-bottom: 10px;
+}
+
+.size-fields, .border-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.border-fields {
+  margin-top: 14px;
+}
+
+.field {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 20px;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  color: #555d68;
+  font-size: 12px;
 }
 
-.group-title span {
-  font-size: 14px;
-  color: #303133;
-  white-space: nowrap;
+.number-input {
+  width: 100%;
 }
 
-.group-title .line {
-  flex: 1;
-  height: 1px;
-  background-color: #dcdfe6;
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
 }
 
-.table-size-container {
-  display: flex;
-  gap: 40px;
-  align-items: center;
-}
-
-.size-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.size-label {
-  font-size: 14px;
-  color: #303133;
-  font-weight: normal;
-  width: 60px;
-}
-
-.border-setting-content {
-  display: flex;
-  gap: 20px;
-  padding: 10px 0;
-}
-
-.left-panel {
-  width: 120px;
-  border-right: 1px solid #dcdfe6;
-  padding-right: 10px;
-}
-
-.option-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  margin-bottom: 8px;
+.preset-button {
+  min-width: 0;
+  min-height: 72px;
+  padding: 7px 2px 5px;
+  border: 1px solid #d9dee5;
   border-radius: 4px;
+  background: #fff;
+  color: #424b58;
   cursor: pointer;
-  transition: all 0.3s;
-  font-size: 14px;
-  color: #606266;
-}
-
-.option-item:hover {
-  background-color: #e6f7ff;
-  color: #1890ff;
-}
-
-.option-item.active {
-  background-color: #1890ff;
-  color: #fff;
-}
-
-.option-icon {
-  font-size: 16px;
-}
-
-.right-panel {
-  flex: 1;
-  padding-left: 10px;
-}
-
-.setting-group {
-  margin-bottom: 20px;
-}
-
-.setting-label {
-  font-size: 14px;
-  color: #303133;
-  margin-bottom: 8px;
-  display: block;
-}
-
-.line-type-list {
-  background-color: #f5f7fa;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  padding: 10px;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.line-type-item {
-  padding: 8px 12px;
-  margin-bottom: 4px;
-  border-radius: 3px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.line-type-item:hover {
-  background-color: #e6f7ff;
-}
-
-.line-type-item.active {
-  background-color: #1890ff;
-  color: #fff;
-}
-
-.line-preview {
-  height: 20px;
   display: flex;
+  flex-direction: column;
   align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  font: inherit;
 }
 
-.line-preview.solid {
-  border-bottom: 2px solid currentColor;
+.preset-button:hover {
+  border-color: #8cadd0;
+  background: #f6f9fc;
 }
 
-.line-preview.dashed {
-  border-bottom: 2px dashed currentColor;
+.preset-button.active {
+  border-color: #1677c9;
+  background: #edf5fc;
+  color: #145c9b;
 }
 
-.line-preview.dotted {
-  border-bottom: 2px dotted currentColor;
+.preset-button:focus-visible {
+  outline: 2px solid #1677c9;
+  outline-offset: 2px;
 }
 
-.line-preview.double {
-  border-bottom: 3px double currentColor;
-}
-
-.line-preview.dash-dot {
-  background: linear-gradient(to right, currentColor 0%, currentColor 20%, transparent 20%, transparent 30%, currentColor 30%, currentColor 50%, transparent 50%, transparent 60%, currentColor 60%, currentColor 80%, transparent 80%);
-  background-size: 20px 2px;
-  background-repeat: repeat-x;
-  background-position: 0 9px;
-  height: 10px;
-}
-
-.line-preview.dash-dot-dot {
-  background: linear-gradient(to right, currentColor 0%, currentColor 20%, transparent 20%, transparent 30%, currentColor 30%, currentColor 35%, transparent 35%, transparent 45%, currentColor 45%, currentColor 50%, transparent 50%, transparent 60%, currentColor 60%, currentColor 80%, transparent 80%);
-  background-size: 25px 2px;
-  background-repeat: repeat-x;
-  background-position: 0 9px;
-  height: 10px;
-}
-
-.color-selector {
-  display: flex;
-  align-items: center;
-}
-
-.width-selector {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.width-slider {
-  flex: 1;
-}
-
-.width-value {
-  min-width: 80px;
+.preset-label {
+  display: -webkit-box;
+  width: 100%;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
   text-align: center;
-  font-size: 14px;
-  color: #606266;
+  line-height: 1.25;
+  font-size: 11px;
+}
+
+.border-preview {
+  display: grid;
+  grid-template-columns: repeat(2, 13px);
+  grid-template-rows: repeat(2, 10px);
+  flex: none;
+  border: 1px solid #d6dce2;
+  color: #425466;
+}
+
+.preview-cell {
+  box-sizing: border-box;
+}
+
+.preview-all, .preview-outside, .preview-top, .preview-bottom, .preview-left, .preview-right {
+  border-color: #425466;
+}
+
+.preview-none, .preview-inside, .preview-inside-horizontal, .preview-inside-vertical {
+  border-color: #d6dce2;
+}
+
+.preview-none, .preview-inside, .preview-inside-horizontal, .preview-inside-vertical, .preview-top, .preview-bottom, .preview-left, .preview-right {
+  border-style: solid;
+}
+
+.preview-none, .preview-inside, .preview-inside-horizontal, .preview-inside-vertical {
+  border-width: 1px;
+}
+
+.preview-top { border-width: 2px 1px 1px; border-right-color: #d6dce2; border-bottom-color: #d6dce2; border-left-color: #d6dce2; }
+.preview-bottom { border-width: 1px 1px 2px; border-top-color: #d6dce2; border-right-color: #d6dce2; border-left-color: #d6dce2; }
+.preview-left { border-width: 1px 1px 1px 2px; border-top-color: #d6dce2; border-right-color: #d6dce2; border-bottom-color: #d6dce2; }
+.preview-right { border-width: 1px 2px 1px 1px; border-top-color: #d6dce2; border-bottom-color: #d6dce2; border-left-color: #d6dce2; }
+
+.preview-all .preview-cell:nth-child(odd),
+.preview-inside .preview-cell:nth-child(odd),
+.preview-inside-vertical .preview-cell:nth-child(odd) {
+  border-right: 1px solid #425466;
+}
+
+.preview-all .preview-cell:nth-child(-n+2),
+.preview-inside .preview-cell:nth-child(-n+2),
+.preview-inside-horizontal .preview-cell:nth-child(-n+2) {
+  border-bottom: 1px solid #425466;
+}
+
+.color-control {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  gap: 8px;
+  font-size: 12px;
+  color: #555d68;
+}
+
+.color-control input {
+  width: 34px;
+  height: 28px;
+  padding: 2px;
+  border: 1px solid #d9dee5;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.color-control input:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  padding-top: 10px;
+  gap: 8px;
+}
+
+@media (max-width: 480px) {
+  .preset-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 </style>

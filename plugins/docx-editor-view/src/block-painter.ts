@@ -108,6 +108,18 @@ export function paintParagraph(ctx: PaintCtx, b: ParagraphBlock, opts: PaintOpti
         ? getAuthorColor(run && 'revisionAuthor' in run ? String(run.revisionAuthor ?? '') : '')
         : undefined
       const textColor = revisionColor ?? inl.color
+      if (inl.text === '\t' && (run?.extension?.toc as { role?: string } | undefined)?.role === 'entry') {
+        ctx.save()
+        ctx.strokeStyle = textColor
+        ctx.lineWidth = 1
+        ctx.setLineDash([1, 3])
+        ctx.beginPath()
+        ctx.moveTo(inl.x + 3, inl.baseline)
+        ctx.lineTo(inl.x + Math.max(3, inl.width - 3), inl.baseline)
+        ctx.stroke()
+        ctx.restore()
+        continue
+      }
       const font = fontOf(inl)
       const key = `${font}||${textColor}`
       addBucket(buckets, key, {

@@ -52,6 +52,7 @@
     "node": ">=16.0.0"
   },
   "dependencies": {
+    "@vervedoc/i18n": "workspace:^",
     "@vervedoc/docx-editor-schema": "workspace:^",
     "@vervedoc/docx-editor-state": "workspace:^",
     "@vervedoc/docx-editor-transform": "workspace:^",

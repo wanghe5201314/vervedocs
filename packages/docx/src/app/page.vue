@@ -166,7 +166,6 @@
       :editor="{ executeCommand }"
     />
 
-    <TocDialog v-model="tocDialogVisible" @confirm="handleTocConfirm" />
     <AISettingsDialog v-model="aiSettingsDialogVisible" />
     <VersionHistoryDialog
       v-model="versionHistoryDialogVisible"
@@ -226,7 +225,6 @@ import PaperSizeDialog from '@/components/dialogs/paperSizeDialog.vue'
 
 import DateDialog from '@/components/dialogs/dateDialog.vue'
 import ParagraphDialog from '@/components/dialogs/paragraphDialog.vue'
-import TocDialog from '@/components/dialogs/tocDialog.vue'
 import TableBordersDialog from '@/components/dialogs/tableBordersDialog.vue'
 import AISettingsDialog from '@/components/dialogs/aiSettingsDialog.vue'
 import VersionHistoryDialog from '@/components/dialogs/versionHistoryDialog.vue'
@@ -504,7 +502,6 @@ const {
 
   dateDialogVisible,
   paragraphDialogVisible,
-  tocDialogVisible,
   aiSettingsDialogVisible,
   versionHistoryDialogVisible,
   openShortcuts,
@@ -518,7 +515,6 @@ const {
   handlePaperSizeConfirm,
 
   handleDateConfirm,
-  handleTocConfirm,
 
   handleInsertTableDialogConfirm
 } = useDialogs({ executeCommand })

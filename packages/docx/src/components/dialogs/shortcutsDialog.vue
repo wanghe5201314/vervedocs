@@ -94,7 +94,7 @@
       </div>
     </div>
     <template #footer>
-      <VdButton type="primary" @click="visible = false">{{ t('common.close') }}</VdButton>
+      <VdButton type="primary" icon="close" @click="visible = false">{{ t('common.close') }}</VdButton>
     </template>
   </VdDialog>
 </template>

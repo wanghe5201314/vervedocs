@@ -1,4 +1,7 @@
+import { builtinMessages } from '@vervedoc/i18n'
+
 export default {
+  ...builtinMessages.enUS,
   common: {
     ok: 'OK',
     cancel: 'Cancel',
@@ -580,18 +583,25 @@ export default {
     table: {
       title: 'Insert Table',
       size: 'Table Size',
-      columns: 'Columns (C):',
-      rows: 'Rows (R):',
+      columns: 'Columns',
+      rows: 'Rows',
       borderSettings: 'Border Settings',
-      none: 'None (N)',
-      box: 'Box (X)',
-      all: 'All (A)',
+      none: 'None',
+      box: 'Box',
+      all: 'All',
+      inside: 'Inside',
+      insideHorizontal: 'Inside Horizontal',
+      insideVertical: 'Inside Vertical',
+      top: 'Top Border',
+      bottom: 'Bottom Border',
+      left: 'Left Border',
+      right: 'Right Border',
       grid: 'Grid (D)',
       custom: 'Custom (U)',
       lineStyle: 'Line Style (V):',
-      color: 'Color (C):',
-      width: 'Width (W):',
-      widthUnit: 'pt'
+      color: 'Color',
+      width: 'Width',
+      widthUnit: 'px'
     },
     tableBorders: {
       title: 'Table Borders',

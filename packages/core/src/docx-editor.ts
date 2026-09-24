@@ -4,6 +4,7 @@
  * 全新构造，零兼容：只接受 IDocxDocumentMeta。
  */
 
+import { createEditorI18n, type EditorI18n, type BuiltinLocale } from '@vervedoc/i18n'
 import type { IDocxDocumentMeta, IEditorOption, EditorPlugin, PluginHost } from '@vervedoc/docx-editor-schema'
 import { cloneTree, formatElementTree, mergeOption } from '@vervedoc/docx-editor-schema'
 import { EventBus, Listener, RangeManager } from '@vervedoc/docx-editor-state'
@@ -23,6 +24,7 @@ import { ThumbnailManager } from './workers/thumbnail-manager'
  * 组合 Listener / EventBus / RangeManager / Draw / Command / Comment / Revision / Search 等组件。
  */
 export class DocxEditor {
+  private readonly i18n: EditorI18n
   /** 事件监听器（content/range/page/catalog 等命名空间） */
   public listener: Listener
   /** 全局事件总线（hyperlinkMenuClick / chartClick 等右键菜单事件） */
@@ -95,7 +97,8 @@ export class DocxEditor {
     }
 
 
-    const editorOptions = mergeOption(options)
+    this.i18n = createEditorI18n(options.locale)
+    const editorOptions = mergeOption({ ...options, locale: this.i18n.locale })
     const doc: IDocxDocumentMeta = cloneTree(document)
 
     formatElementTree(doc.elements, {
@@ -141,6 +144,7 @@ export class DocxEditor {
 
     this.draw = new Draw(container, editorOptions, {
       document: doc,
+      i18n: this.i18n,
       listener: this.listener,
       eventBus: this.eventBus,
 
@@ -277,6 +281,7 @@ export class DocxEditor {
     // ⚠️ 该对象是 PluginHost 的唯一合法实现，外部严禁替换。
     const drawRef = this.draw
     this.pluginHost = {
+      getI18n: () => this.i18n,
       getContainer: () => drawRef.getScroller(),
       getPositionList: () => null,
       getRevisionAnchor: (revisionId: string) => {
@@ -397,6 +402,10 @@ export class DocxEditor {
    * @returns 文档元数据（含 elements/sections/comments 等）
    */
   getDocument(): IDocxDocumentMeta { return this.draw.getDocument() }
+
+  getLocale(): BuiltinLocale { return this.i18n.locale }
+  setLocale(locale: BuiltinLocale): void { this.i18n.setLocale(locale) }
+  getI18n(): EditorI18n { return this.i18n }
 
   /**
    * 设置文档元数据，重置 zone 到 main 并通知插件同步数据

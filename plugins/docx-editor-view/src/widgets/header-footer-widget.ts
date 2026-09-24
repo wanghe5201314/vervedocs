@@ -11,6 +11,7 @@
  */
 
 import type { DocumentLayout } from '../layout-types'
+import { viewTranslate, type ViewTranslate } from '../view-i18n'
 
 /** 文档区域类型：正文 / 页眉 / 页脚 */
 export type Zone = 'main' | 'header' | 'footer'
@@ -42,6 +43,7 @@ export interface PageNumberOptions {
 
 /** HeaderFooterWidget 的依赖注入接口 */
 export interface HeaderFooterWidgetDeps {
+  translate?: ViewTranslate
   /** 获取当前文档布局 */
   getLayout: () => DocumentLayout | null
   /** 获取容器元素的矩形位置 */
@@ -87,6 +89,7 @@ export class HeaderFooterWidget {
   private selectedPosition: PageNumberPosition = 'center'
   /** 面板内当前选中的页码样式 */
   private selectedStyle: PageNumberStyle = '第1页'
+  private t(key: string): string { return viewTranslate(this.deps.translate, key) }
 
   /** 点击面板外部时隐藏 popup 的全局 mousedown 监听 */
   private onDocumentMouseDown = (e: MouseEvent) => {
@@ -111,6 +114,24 @@ export class HeaderFooterWidget {
     this.createInsertButton()
     this.createPopup()
     document.addEventListener('mousedown', this.onDocumentMouseDown, true)
+  }
+
+  refreshTranslations(): void {
+    for (const [el, zone] of [[this.headerLabelEl, 'header'], [this.footerLabelEl, 'footer']] as const) {
+      const label = el?.querySelector('span')
+      if (label) label.textContent = this.t(`view.pageNumber.${zone}`)
+    }
+    if (this.insertBtnEl) {
+      const label = this.t('view.pageNumber.insert')
+      this.insertBtnEl.children[1].textContent = label
+      this.insertBtnEl.title = label
+      this.insertBtnEl.setAttribute('aria-label', label)
+    }
+    this.popupEl?.querySelectorAll<HTMLElement>('[data-i18n-key]').forEach(el => {
+      el.textContent = this.t(el.dataset.i18nKey!)
+    })
+    this.popupEl?.querySelector('select')?.setAttribute('aria-label', this.t('view.pageNumber.style'))
+    if (this.popupVisible) this.positionPopup()
   }
 
   /** 销毁 widget：移除全局监听与所有 DOM 元素并清理引用 */
@@ -157,9 +178,9 @@ export class HeaderFooterWidget {
       return { el, textEl }
     }
 
-    const h = make('页眉')
+    const h = make(this.t('view.pageNumber.header'))
     this.headerLabelEl = h.el
-    const f = make('页脚')
+    const f = make(this.t('view.pageNumber.footer'))
     this.footerLabelEl = f.el
   }
 
@@ -167,6 +188,8 @@ export class HeaderFooterWidget {
   private createInsertButton(): void {
     const btn = document.createElement('button')
     btn.className = 'vervedocs-zone-insert-pagenumber'
+    btn.title = this.t('view.pageNumber.insert')
+    btn.setAttribute('aria-label', btn.title)
     Object.assign(btn.style, {
       position: 'fixed',
       display: 'none',
@@ -199,7 +222,7 @@ export class HeaderFooterWidget {
     btn.appendChild(icon)
 
     const label = document.createElement('span')
-    label.textContent = '插入页码'
+    label.textContent = this.t('view.pageNumber.insert')
     label.style.color = '#333333'
     btn.appendChild(label)
 
@@ -248,7 +271,8 @@ export class HeaderFooterWidget {
     } as CSSStyleDeclaration)
 
     const styleLabel = document.createElement('span')
-    styleLabel.textContent = '样式:'
+    styleLabel.dataset.i18nKey = 'view.pageNumber.style'
+    styleLabel.textContent = this.t('view.pageNumber.style')
     Object.assign(styleLabel.style, {
       width: '40px',
       fontSize: '12px',
@@ -258,6 +282,7 @@ export class HeaderFooterWidget {
     styleRow.appendChild(styleLabel)
 
     const styleSelect = document.createElement('select')
+    styleSelect.setAttribute('aria-label', this.t('view.pageNumber.style'))
     Object.assign(styleSelect.style, {
       flex: '1',
       height: '26px',
@@ -287,7 +312,12 @@ export class HeaderFooterWidget {
     styleOptions.forEach((s) => {
       const opt = document.createElement('option')
       opt.value = s
-      opt.textContent = s
+      const styleKeys: Partial<Record<PageNumberStyle, string>> = {
+        '第1页': 'stylePage', '第1页共x页': 'styleTotal',
+        '第一页': 'styleFirst', '第一页共X页': 'styleFirstTotal'
+      }
+      if (styleKeys[s]) opt.dataset.i18nKey = `view.pageNumber.${styleKeys[s]}`
+      opt.textContent = styleKeys[s] ? this.t(`view.pageNumber.${styleKeys[s]}`) : s
       styleSelect.appendChild(opt)
     })
     styleSelect.value = this.selectedStyle
@@ -299,7 +329,8 @@ export class HeaderFooterWidget {
 
     // -------- 位置 --------
     const posTitle = document.createElement('div')
-    posTitle.textContent = '位置:'
+    posTitle.dataset.i18nKey = 'view.pageNumber.position'
+    posTitle.textContent = this.t('view.pageNumber.position')
     Object.assign(posTitle.style, {
       fontSize: '12px',
       color: '#1f1f1f',
@@ -316,9 +347,9 @@ export class HeaderFooterWidget {
     } as CSSStyleDeclaration)
 
     const positions: Array<{ value: PageNumberPosition; text: string }> = [
-      { value: 'left', text: '左侧' },
-      { value: 'center', text: '居中' },
-      { value: 'right', text: '右侧' },
+      { value: 'left', text: this.t('view.pageNumber.left') },
+      { value: 'center', text: this.t('view.pageNumber.center') },
+      { value: 'right', text: this.t('view.pageNumber.right') },
     ]
 
     const posItems: Array<{ value: PageNumberPosition; el: HTMLDivElement; preview: HTMLDivElement }> = []
@@ -376,6 +407,7 @@ export class HeaderFooterWidget {
       }
 
       const textEl = document.createElement('span')
+      textEl.dataset.i18nKey = `view.pageNumber.${value}`
       textEl.textContent = text
       Object.assign(textEl.style, {
         fontSize: '11px',
@@ -420,7 +452,8 @@ export class HeaderFooterWidget {
     } as CSSStyleDeclaration)
 
     const confirmBtn = document.createElement('button')
-    confirmBtn.textContent = '确定'
+    confirmBtn.dataset.i18nKey = 'view.common.confirm'
+    confirmBtn.textContent = this.t('view.common.confirm')
     Object.assign(confirmBtn.style, {
       minWidth: '58px',
       height: '26px',
@@ -558,6 +591,7 @@ export class HeaderFooterWidget {
   private updateLabelForZone(layout: DocumentLayout, zone: 'header' | 'footer'): void {
     const el = zone === 'header' ? this.headerLabelEl : this.footerLabelEl
     if (!el) return
+    el.querySelector('span')!.textContent = this.t(`view.pageNumber.${zone}`)
     const page = layout.pages[0]
     if (!page) return
     const rect = zone === 'header' ? page.headerRect : page.footerRect
@@ -589,6 +623,10 @@ export class HeaderFooterWidget {
    */
   private updateInsertButton(layout: DocumentLayout, zone: 'header' | 'footer'): void {
     if (!this.insertBtnEl) return
+    const label = this.t('view.pageNumber.insert')
+    this.insertBtnEl.children[1].textContent = label
+    this.insertBtnEl.title = label
+    this.insertBtnEl.setAttribute('aria-label', label)
     const page = layout.pages[0]
     if (!page) return
     const rect = zone === 'header' ? page.headerRect : page.footerRect
@@ -640,6 +678,10 @@ export class HeaderFooterWidget {
   /** 显示弹出面板并定位 */
   private showPopup(): void {
     if (!this.popupEl) return
+    for (const node of Array.from(this.popupEl.querySelectorAll<HTMLElement>('[data-i18n-key]'))) {
+      node.textContent = this.t(node.dataset.i18nKey!)
+    }
+    this.popupEl.querySelector('select')!.setAttribute('aria-label', this.t('view.pageNumber.style'))
     this.popupEl.style.display = 'block'
     this.popupVisible = true
     this.positionPopup()

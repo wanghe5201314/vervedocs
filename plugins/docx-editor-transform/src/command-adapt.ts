@@ -96,6 +96,7 @@ export class CommandAdapt {
   private _searchContent = ''
   private _revisionSequence = 0
 
+  /** 生成指定类型的修订元数据，包含递增数字 ID、当前作者和时间。 */
   private newRevision(type: 'insert' | 'delete' | 'format'): RevisionMeta {
     // Numeric IDs are also accepted by Word's w:id attribute.
     this._revisionSequence = Math.max(Date.now(), this._revisionSequence + 1)
@@ -107,6 +108,7 @@ export class CommandAdapt {
     }
   }
 
+  /** 跳过删除修订元素并应用格式变更，开启修订时记录变更前的格式。 */
   private formatElements(elements: IElement[], mutate: (element: IElement) => void): void {
     const tracking = !!this.draw.getOptions().trackChanges
     const meta = tracking ? this.newRevision('format') : null
@@ -118,6 +120,7 @@ export class CommandAdapt {
     }
   }
 
+  /** 统一目标文本附近同作者连续删除修订的 ID 和时间，保留各 run 的恢复数据。 */
   private mergeAdjacentDeletions(doc: IDocxDocumentMeta, runs: ITextElement[], meta: RevisionMeta): void {
     const targets = new Set<IElement>(runs)
     const parents = new Set<IElement[]>()
@@ -149,6 +152,7 @@ export class CommandAdapt {
     }
   }
 
+  /** 将范围内文本标记为删除修订（本人新增文本直接清空），收拢光标并按 commit 决定是否提交；无目标 run 时返回 false。 */
   private deleteTrackedRange(doc: IDocxDocumentMeta, start: IPosition, end: IPosition, commit: boolean): boolean {
     const adjusted = this.splitBoundaryRuns(doc, start, end)
     const runs = this.collectRunsInRange(doc.elements, adjusted.start, adjusted.end)
@@ -177,6 +181,7 @@ export class CommandAdapt {
     return true
   }
 
+  /** 按修订方式删除光标相邻的一个 Unicode 字符；backward 为 true 时向前查找，跳过已删除文本和书签标记。 */
   private deleteTrackedCharacter(backward: boolean): void {
     const pos = this.range.getFocus()
     if (!pos) return
@@ -199,6 +204,7 @@ export class CommandAdapt {
     }
   }
 
+  /** 文档、编辑区域或内容与搜索快照不一致时，清空失效的搜索结果。 */
   private validateSearch(): void {
     if (this._searchDocument !== this.draw.getDocument() ||
       this._searchZone !== this.draw.getZone() ||
@@ -208,6 +214,7 @@ export class CommandAdapt {
     }
   }
 
+  /** 保存当前文档引用、编辑区域和内容快照，供搜索结果有效性校验使用。 */
   private captureSearch(): void {
     this._searchDocument = this.draw.getDocument()
     this._searchZone = this.draw.getZone()
@@ -256,6 +263,7 @@ export class CommandAdapt {
     })
   }
 
+  /** 克隆并规范化文档各内容区，切回正文并清空选区，按 resetHistory 初始化或追加历史后通知状态变更。 */
   replaceDocument(document: IDocxDocumentMeta, resetHistory = false): void {
     const doc = cloneTree(document)
     const options = { editorOptions: this.draw.getOptions() as IEditorOption, styles: doc.styles, numbering: doc.numbering }
@@ -274,6 +282,7 @@ export class CommandAdapt {
     this.listener?.emit('abilityChange', this.getAbility())
   }
 
+  /** 在可编辑时对文档副本执行插件事务，清空选区并提交历史与状态通知；回调返回 false 时取消提交。 */
   commitPluginTransaction(action: (doc: IDocxDocumentMeta) => boolean | void): void {
     if (!this.getIsCanInput()) return
     const doc = cloneTree(this.draw.getDocument())
@@ -498,7 +507,10 @@ export class CommandAdapt {
     const runs: { path: Path; text: string }[] = []
     walkTree(doc.elements, (node, ctx) => {
       if (node.type === 'text') {
-        runs.push({ path: ctx.path.slice() as Path, text: (node as ITextElement).value })
+        runs.push({
+          path: ctx.path.slice() as Path,
+          text: node.extension?.bookmarkMarker ? '' : (node as ITextElement).value
+        })
       }
     })
 
@@ -939,6 +951,74 @@ export class CommandAdapt {
     this._commit(doc)
   }
 
+  /** Map body bookmark endpoints before notifying layout or recording history. */
+  private mapBookmarkPositions(doc: IDocxDocumentMeta, map: (point: IPosition, forward: boolean) => IPosition): void {
+    // Header/footer paths belong to a different tree than body bookmarks.
+    if (doc.elements !== this.draw.getDocument().elements) return
+    for (const bookmark of doc.bookmarks ?? []) {
+      const { anchor, focus } = bookmark.range
+      const order = comparePath(anchor.path, focus.path) || anchor.offset - focus.offset
+      bookmark.range = {
+        anchor: map(anchor, order <= 0),
+        focus: map(focus, order >= 0)
+      }
+      bookmark.collapsed = isSamePath(bookmark.range.anchor.path, bookmark.range.focus.path) &&
+        bookmark.range.anchor.offset === bookmark.range.focus.offset
+    }
+  }
+
+  /** Keep offsets and descendant paths aligned when a text run is split. */
+  private mapBookmarksAfterSplit(doc: IDocxDocumentMeta, path: Path, offset: number): void {
+    const parentPath = path.slice(0, -1)
+    const depth = parentPath.length
+    const index = path[depth] as number
+    this.mapBookmarkPositions(doc, (point, forward) => {
+      if (isSamePath(point.path, path)) {
+        if (point.offset > offset || (point.offset === offset && forward)) {
+          return { path: [...parentPath, index + 1], offset: point.offset - offset }
+        }
+      } else if (point.path.length > depth &&
+        isSamePath(point.path.slice(0, depth), parentPath) &&
+        typeof point.path[depth] === 'number' && point.path[depth] > index) {
+        const shifted = point.path.slice() as Path
+        shifted[depth] = Number(shifted[depth]) + 1
+        return { path: shifted, offset: point.offset }
+      }
+      return point
+    })
+  }
+
+  /** Splice body blocks and move bookmarks with them; removed content collapses to the edit boundary. */
+  private spliceBodyWithBookmarks(doc: IDocxDocumentMeta, start: number, count: number, elements: IElement[] = []): void {
+    doc.elements.splice(start, count, ...elements)
+    if (!doc.elements.length) doc.elements.push({ type: 'text', value: '' })
+    let boundary: IPosition | undefined
+    const removedPosition = (): IPosition => {
+      if (!boundary) {
+        const index = Math.min(start, doc.elements.length - 1)
+        const leaves: { node: IElement; path: Path }[] = []
+        walkTree([doc.elements[index]], (node, { path }) => {
+          if (node.type !== 'table' && node.type !== 'title' && node.type !== 'list') {
+            leaves.push({ node, path: [index, ...path.slice(1)] })
+          }
+        })
+        const leaf = start < doc.elements.length ? leaves[0] : leaves[leaves.length - 1]
+        boundary = {
+          path: leaf?.path ?? [index],
+          offset: start >= doc.elements.length && leaf?.node.type === 'text' && !leaf.node.extension?.bookmarkMarker
+            ? leaf.node.value.length : 0
+        }
+      }
+      return { path: [...boundary.path], offset: boundary.offset }
+    }
+    this.mapBookmarkPositions(doc, point => {
+      const index = point.path[0]
+      if (typeof index !== 'number' || index < start) return point
+      if (index < start + count) return removedPosition()
+      return { path: [index + elements.length - count, ...point.path.slice(1)], offset: point.offset }
+    })
+  }
+
   /**
    * 在选区边界拆分 text run，使选区恰好对齐 whole runs。
    * 例：run="中国神华本部"，选 offset 2~6 → 拆成 "中国"|"神华本部"|"月度..."，
@@ -964,6 +1044,7 @@ export class CommandAdapt {
             t.value = t.value.slice(0, startOffset)
             const second = { ...cloneTree(t), value: after } as ITextElement
             parent.splice(idx + 1, 0, second as IElement)
+            this.mapBookmarksAfterSplit(doc, startPath, startOffset)
             startPath = startPath.slice() as Path
             startPath[startPath.length - 1] = idx + 1
             startOffset = 0
@@ -995,6 +1076,7 @@ export class CommandAdapt {
             t.value = t.value.slice(0, endOffset)
             const second = { ...cloneTree(t), value: after } as ITextElement
             parent.splice(idx + 1, 0, second as IElement)
+            this.mapBookmarksAfterSplit(doc, endPath, endOffset)
           }
         }
       }
@@ -1155,6 +1237,7 @@ export class CommandAdapt {
     return null
   }
 
+  /** 从指定路径逐级向上查找最近的列表容器路径，未找到时返回 null。 */
   private getListPath(elements: IElement[], path: Path): Path | null {
     for (let length = path.length; length > 0; length--) {
       if (typeof path[length - 1] !== 'number') continue
@@ -1495,6 +1578,7 @@ export class CommandAdapt {
     })
   }
 
+  /** 获取当前单元格的垂直对齐与底纹颜色（默认顶部对齐、空颜色），无单元格时返回 null。 */
   getCellProperties() {
     const ctx = this.getTableContext()
     const cell = ctx?.table.trList[ctx.trIndex]?.tdList[ctx.tdIndex]
@@ -1904,15 +1988,44 @@ export class CommandAdapt {
     })
   }
 
-  /** 在当前光标处插入分页符。 */
+  /** 在光标处切开正文，后文移至下一页。 */
   insertPageBreak(): void {
+    if (!this.getIsCanInput() || this.draw.getZone() !== 'main') return
+    const pos = this.range.getOrdered()?.start ?? this.range.getFocus()
+    if (pos?.path.includes('trList')) throw new Error('暂不支持在表格单元格内插入分页符：表格分页及 DOCX 导出无法保真')
+    this.deleteSelection(false)
     this.execute(doc => {
-      const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
-      const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
-      if (!parent) return false
-      const idx = (pos.path[pos.path.length - 1] as number) + 1
-      parent.splice(idx, 0, { type: 'pageBreak', value: 'manual' } as IElement)
-      return
+      const path = this.insertBlockAtCaret(doc, { type: 'pageBreak', value: 'manual' })
+      if (!path) return false
+      const index = Number(path[path.length - 1])
+      const parent = getParentContainer(doc.elements, path)!
+      const next = parent[index + 1]
+      if (next?.type === 'text') this.range.setCaret({ path: [...path.slice(0, -1), index + 1], offset: 0 })
+      else if (next?.type === 'title' || next?.type === 'list') this.range.setCaret({ path: [...path.slice(0, -1), index + 1, 'valueList', 0], offset: 0 })
+      else this.range.setCaret(path.length === 1 ? { path: [index], offset: 0 } : { path, offset: 0 })
+    })
+  }
+
+  /** 在光标处插入可编辑的空白页。 */
+  insertBlankPage(): void {
+    if (!this.getIsCanInput() || this.draw.getZone() !== 'main') return
+    const pos = this.range.getOrdered()?.start ?? this.range.getFocus()
+    if (pos?.path.includes('trList')) throw new Error('暂不支持在表格单元格内插入空白页：表格分页及 DOCX 导出无法保真')
+    this.deleteSelection(false)
+    this.execute(doc => {
+      const path = this.insertBlockAtCaret(doc, { type: 'text', value: '' })
+      if (!path) return false
+      const parent = getParentContainer(doc.elements, path)!
+      let index = Number(path[path.length - 1])
+      const previous = parent[index - 1]
+      const next = parent[index + 1]
+      if (previous && !(previous.type === 'pageBreak' && previous.value !== 'continuous')) {
+        parent.splice(index++, 0, { type: 'pageBreak', value: 'manual' })
+      }
+      if (next && !(next.type === 'pageBreak' && next.value !== 'continuous')) {
+        parent.splice(index + 1, 0, { type: 'pageBreak', value: 'manual' })
+      }
+      this.range.setCaret({ path: [...path.slice(0, -1), index], offset: 0 })
     })
   }
 
@@ -1983,34 +2096,43 @@ export class CommandAdapt {
     this.insertElementList([{ type: 'text', value: '\n' } as IElement])
   }
 
-  /** 插入连续分节符 */
-  sectionBreakContinuous(): void {
-    if (this.draw.getZone() !== 'main') return
+  /** 通过分节命令在正文光标处插入连续分节符。 */
+  sectionBreakContinuous(): void { this.sectionBreak('continuous') }
+
+  /** 分节标记描述下一节的开始方式，sections 保存各节自己的设置。 */
+  sectionBreak(breakType: 'nextPage' | 'continuous' | 'evenPage' | 'oddPage'): void {
+    if (!this.getIsCanInput()) return
+    if (this.draw.getZone() !== 'main') throw new Error('分节符只能插入正文')
+    const ordered = this.range.getOrdered()
+    const positions = ordered ? [ordered.start, ordered.end] : [this.range.getFocus()]
+    if (positions.some(pos => pos?.path.includes('trList'))) throw new Error('暂不支持在表格单元格内插入分节符，请将光标移到表格前后的正文段落')
+    this.deleteSelection(false)
     this.execute(doc => {
-      const pos = this.range.getFocus()
-      if (!pos || pos.path.length !== 1) return false
-      const index = Number(pos.path[0])
-      const element = doc.elements[index]
-      if (!element) return false
+      const path = this.insertBlockAtCaret(doc, { type: 'pageBreak', value: breakType })
+      if (!path) return false
+      const index = Number(path[0])
       if (!doc.sections) {
         const options = this.draw.getOptions()
         doc.sections = [{ pageWidth: doc.pageWidth ?? Number(options.pageWidth), pageHeight: doc.pageHeight ?? Number(options.pageHeight),
           margins: [...(doc.margins ?? options.pageMargins as [number, number, number, number])],
-          headerDistance: 0, footerDistance: 0, titlePage: false, breakType: 'nextPage' }]
+          paperDirection: doc.paperDirection, columnCount: doc.columnCount ?? 1, columnGap: doc.columnGap ?? 20, breakType: 'nextPage' }]
+        const parts = doc.headerFooterParts ??= {}
+        for (const zone of ['header', 'footer'] as const) {
+          const elements = doc[zone] ?? doc.contentZones?.[zone]
+          if (elements?.length) {
+            const id = `section-${zone}-${Date.now()}`
+            parts[id] = cloneTree(elements)
+            doc.sections[0][zone === 'header' ? 'headers' : 'footers'] = { default: id }
+          }
+        }
       }
-      const breaks = new Set(['continuous', 'nextPage', 'evenPage', 'oddPage'])
-      const sectionIndex = doc.elements.slice(0, index).filter(el => el.type === 'pageBreak' && breaks.has(el.value)).length
+      const sectionIndex = doc.elements.slice(0, index).filter(el => el.type === 'pageBreak' && ['continuous', 'nextPage', 'evenPage', 'oddPage'].includes(el.value)).length
       const next = cloneTree(doc.sections[sectionIndex])
-      next.breakType = 'continuous'
+      next.breakType = breakType
       doc.sections.splice(sectionIndex + 1, 0, next)
-      const tail: IElement[] = []
-      if (element.type === 'text') {
-        tail.push({ ...element, value: element.value.slice(pos.offset) })
-        element.value = element.value.slice(0, pos.offset)
-      }
-      doc.elements.splice(index + 1, 0, { type: 'pageBreak', value: 'continuous' }, ...tail)
-      this.range.setCaret({ path: [index + 2], offset: 0 })
-      return
+      if (!doc.elements[index + 1] || doc.elements[index + 1].type === 'pageBreak') doc.elements.splice(index + 1, 0, { type: 'text', value: '' })
+      const following = doc.elements[index + 1]
+      this.range.setCaret({ path: following.type === 'title' || following.type === 'list' ? [index + 1, 'valueList', 0] : [index + 1], offset: 0 })
     })
   }
 
@@ -2126,6 +2248,7 @@ export class CommandAdapt {
 
     const levelMap: Record<string, number> = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6 }
     const all: IAutoTocItem[] = []
+    const seen = new Set<string>()
 
     for (const page of layout.pages) {
       const pageNo = page.index + 1
@@ -2135,6 +2258,8 @@ export class CommandAdapt {
         const level = levelMap[titleEl.level] ?? 1
         const name = (titleEl.valueList ?? []).map(v => v.type === 'text' ? (v as ITextElement).value : '').join('')
         const id = JSON.stringify(b.parentPath.concat(b.startIndex))
+        if (seen.has(id) || titleEl.extension?.toc) continue
+        seen.add(id)
         // 从排版块中直接取编号文本（由排版引擎通过 listNumbering 计算得到）
         const bulletText = (b as unknown as { bulletText?: string }).bulletText
         const number = bulletText?.trim() || undefined
@@ -2150,32 +2275,9 @@ export class CommandAdapt {
     }
   }
 
-  /**
-   * 在当前光标处插入自动目录文本。
-   * @param type 目录类型：1 | 2 | 3，对应不同层级深度
-   */
-  insertAutoToc(type: 1 | 2 | 3): void {
-    const result = this.getAutoToc()
-    const items = type === 1 ? result.toc1 : type === 2 ? result.toc2 : result.toc3
-    if (items.length === 0) return
-
-    this.execute(doc => {
-      const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
-      const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
-      if (!parent) return false
-      const idx = (pos.path[pos.path.length - 1] as number) + 1
-
-      const tocElements: IElement[] = items.map(item => ({
-        type: 'text',
-        valueList: [{
-          type: 'text',
-          value: '  '.repeat(item.level - 1) + item.name + ' ' + '\u00b7'.repeat(Math.max(3, 50 - item.name.length - item.level * 2)) + ' ' + String(item.pageNo)
-        }]
-      } as unknown as IElement))
-
-      parent.splice(idx, 0, ...tocElements)
-      return
-    })
+  /** 在正文光标处插入 Office 自动目录模板（均收录三级标题）。 */
+  insertAutoToc(template: 1 | 2): void {
+    this.insertToc({ type: template })
   }
 
   /* -------------------- 页面 / 打印 -------------------- */
@@ -2272,7 +2374,22 @@ export class CommandAdapt {
    */
   setColumns(value: number): void {
     if (!this.getIsCanInput()) return
-    this.draw.updateOptions({ columnCount: value } as Partial<IEditorOption>)
+    if (![1, 2, 3].includes(value)) throw new RangeError('仅支持一栏、二栏或三栏')
+    if (this.draw.getZone() !== 'main') throw new Error('分栏只能应用于正文')
+    const focus = this.range.getFocus()
+    if (focus?.path.includes('trList')) throw new Error('暂不支持在表格单元格内设置分栏，请将光标移到正文段落')
+    this.execute(doc => {
+      const index = Number(focus?.path[0] ?? 0)
+      const sectionIndex = doc.elements.slice(0, index).filter(el => el.type === 'pageBreak' && ['continuous', 'nextPage', 'evenPage', 'oddPage'].includes(el.value)).length
+      const section = doc.sections?.[sectionIndex]
+      if (section) {
+        section.columnCount = value
+        section.columnGap ??= doc.columnGap ?? 20
+      } else {
+        doc.columnCount = value
+        doc.columnGap ??= 20
+      }
+    })
   }
 
   /**
@@ -2589,9 +2706,12 @@ export class CommandAdapt {
     const doc = this.draw.getDocument()
     const bookmark = doc.bookmarks?.find(b => b.name === payload.name)
     if (!bookmark) return
-    this.range.setRange(bookmark.range)
-    const pos = this.findVisiblePosNearby(doc.elements, bookmark.range.focus) ?? bookmark.range.focus
-    this.draw.scrollPositionIntoView?.(pos)
+    const anchor = this.findVisiblePosNearby(doc.elements, bookmark.range.anchor) ?? bookmark.range.anchor
+    const focus = bookmark.collapsed
+      ? anchor
+      : this.findVisiblePosNearby(doc.elements, bookmark.range.focus) ?? bookmark.range.focus
+    this.range.setRange({ anchor, focus })
+    this.draw.scrollPositionIntoView?.(focus)
   }
 
   /**
@@ -2599,6 +2719,7 @@ export class CommandAdapt {
    * 从 marker path 出发，在同一兄弟数组中找相邻的非零宽元素，返回其位置。
    */
   private findVisiblePosNearby(elements: IElement[], pos: IPosition): IPosition | null {
+    if (!getByPath(elements, pos.path)?.extension?.bookmarkMarker) return pos
     const path = pos.path
     if (path.length < 1) return null
     const lastSeg = path[path.length - 1]
@@ -2607,6 +2728,7 @@ export class CommandAdapt {
     const parent = parentPath.length === 0 ? elements : getByPath(elements, parentPath as Path)
     if (!Array.isArray(parent)) return null
     const isVisible = (el: unknown): boolean => {
+      if ((el as IElement)?.extension?.bookmarkMarker) return false
       const v = String((el as { value?: string })?.value ?? '')
       return !!v && !/^[\u200B\uFEFF]+$/.test(v)
     }
@@ -2614,53 +2736,139 @@ export class CommandAdapt {
       if (isVisible(parent[i])) return { path: [...parentPath, i] as Path, offset: 0 }
     }
     for (let i = lastSeg - 1; i >= 0; i--) {
-      if (isVisible(parent[i])) return { path: [...parentPath, i] as Path, offset: 0 }
+      if (isVisible(parent[i])) {
+        const node = parent[i] as IElement
+        return { path: [...parentPath, i] as Path, offset: node.type === 'text' ? node.value.length : 1 }
+      }
     }
     return null
   }
 
   /* -------------------- 目录 -------------------- */
 
-  /**
-   * 插入目录，带 tocId 标识便于后续删除。
-   * @param payload 目录参数，可包含 type/mode 及其他自定义字段
-   */
-  insertToc(payload: { type?: 1 | 2 | 3; mode?: string; [key: string]: unknown }): void {
-    const type = (payload.type as 1 | 2 | 3) ?? 3
-    const result = this.getAutoToc()
-    const items = type === 1 ? result.toc1 : type === 2 ? result.toc2 : result.toc3
-    if (items.length === 0) return
+  /** 读取元素扩展中的目录域元数据，未标记目录域时返回 undefined。 */
+  private tocMetadata(element?: IElement): { id: string; template: 1 | 2; maxLevel: number; role: 'heading' | 'entry' | 'placeholder'; level?: number } | undefined {
+    return element?.extension?.toc as ReturnType<CommandAdapt['tocMetadata']>
+  }
 
+  /** 查找光标所在目录组，否则取首个目录组，返回起止索引（结束不含）及元数据；无目录时返回 null。 */
+  private tocGroup(elements: IElement[]) {
+    const focus = this.range.getFocus()
+    const index = focus?.path.length === 1 ? Number(focus.path[0]) : -1
+    const selected = this.tocMetadata(elements[index])
+    const start = selected
+      ? elements.findIndex(el => this.tocMetadata(el)?.id === selected.id)
+      : elements.findIndex(el => !!this.tocMetadata(el))
+    if (start < 0) return null
+    const metadata = this.tocMetadata(elements[start])!
+    let end = start + 1
+    while (end < elements.length && this.tocMetadata(elements[end])?.id === metadata.id) end++
+    return { start, end, metadata }
+  }
+
+  /** 根据布局目录和最大标题级别生成带目录域标记的标题、条目及段落分隔，无条目时生成提示文本。 */
+  private buildToc(id: string, template: 1 | 2, maxLevel: number): IElement[] {
+    const elements: IElement[] = []
+    const append = (value: string, role: 'heading' | 'entry' | 'placeholder', level?: number) => {
+      const run: ITextElement = {
+        type: 'text', value, size: role === 'heading' ? 21 : 14,
+        bold: role === 'heading', rowFlex: role === 'heading' ? 'center' : 'left',
+        paragraphIndentLeft: role === 'entry' ? ((level ?? 1) - 1) * 21 : 0,
+        paragraphSpacingAfter: role === 'heading' ? 8 : 0,
+        extension: { toc: { id, template, maxLevel, role, ...(level ? { level } : {}) } }
+      }
+      elements.push(run, { ...cloneTree(run), value: '\u200B' })
+    }
+    append('目录', 'heading')
+    const items = this.getAutoToc().toc3.filter(item => item.level <= maxLevel)
+    for (const item of items) {
+      const name = item.name.replace(/[\u200B\uFEFF\t\r\n]/g, '').trim()
+      append(`${item.number ? item.number + ' ' : ''}${name}\t${item.pageNo}`, 'entry', item.level)
+    }
+    if (!items.length) append('未找到目录项。请先为正文应用标题样式，再更新目录。', 'placeholder')
+    return elements
+  }
+
+  /** 在最终布局上刷新页码，所有重排结果合并为同一条历史记录。 */
+  private refreshToc(doc: IDocxDocumentMeta, start: number, count: number, id: string, template: 1 | 2, maxLevel: number): void {
+    for (let pass = 0; pass < 8; pass++) {
+      this.draw.applyActiveDocument(doc)
+      const next = this.buildToc(id, template, maxLevel)
+      const previous = doc.elements.slice(start, start + count)
+      if (next.length === previous.length && next.every((el, i) => el.value === previous[i].value)) break
+      this.spliceBodyWithBookmarks(doc, start, count, next)
+      count = next.length
+    }
+    this.range.setCaret({ path: [start], offset: 0 })
+  }
+
+  /** 插入普通文本目录，extension.toc 为前后端共享的目录域协议。 */
+  insertToc(payload: { type?: 1 | 2; mode?: string; [key: string]: unknown }): void {
+    if (payload.mode === 'update') { this.updateToc(); return }
+    if (this.draw.getZone() !== 'main') return
     this.execute(doc => {
-      const pos = this.range.getFocus() ?? { path: [doc.elements.length], offset: 0 }
-      const parent = pos.path.length === 1 ? doc.elements : getParentContainer(doc.elements, pos.path)
-      if (!parent) return false
-      const idx = (pos.path[pos.path.length - 1] as number) + 1
-
-      const tocId = Date.now().toString()
-      const tocElements: IElement[] = items.map(item => ({
-        type: 'text',
-        valueList: [{
-          type: 'text',
-          value: '  '.repeat(item.level - 1) + item.name + ' ' + '\u00b7'.repeat(Math.max(3, 50 - item.name.length - item.level * 2)) + ' ' + String(item.pageNo)
-        }],
-        tocId
-      } as unknown as IElement))
-
-      parent.splice(idx, 0, ...tocElements)
-      return
+      // 在选区起点插入，保留选中的正文；标题/列表内部提升到整个正文块之前。
+      const pos = this.range.getOrdered()?.start ?? this.range.getFocus()
+      if (pos?.path.includes('trList')) throw new Error('暂不支持在表格单元格内插入目录，请将光标移到表格前后的正文段落')
+      let index = pos ? Number(pos.path[0]) : doc.elements.length
+      const node = doc.elements[index]
+      if (this.tocMetadata(node)) return false
+      if (pos && pos.path.length > 1 && node?.type !== 'title' && node?.type !== 'list') return false
+      if (node?.type === 'text' && pos) {
+        const offset = Math.max(0, Math.min(pos.offset, node.value.length))
+        if (offset > 0 && !/^[\u200B\uFEFF]*$/.test(node.value.slice(0, offset))) {
+          if (offset < node.value.length) {
+            doc.elements.splice(index + 1, 0, { ...cloneTree(node), value: node.value.slice(offset) })
+            node.value = node.value.slice(0, offset)
+            this.mapBookmarksAfterSplit(doc, [index], offset)
+          }
+          index++
+        }
+      } else if (node?.type === 'pageBreak') index++
+      const template = payload.type === 2 ? 2 : 1
+      const maxLevel = payload.maxLevel === 1 || payload.maxLevel === 2 || payload.maxLevel === 3 ? payload.maxLevel : 3
+      const id = `toc-${Date.now()}-${++this._revisionSequence}`
+      const elements = this.buildToc(id, template, maxLevel)
+      const isPageStart = (element?: IElement) => element?.type === 'pageBreak' && element.value !== 'continuous'
+      // 页首可能有编辑器的空文本/段落标记，不为这些占位内容再产生一张空白页。
+      let boundary = index
+      while (boundary > 0 && doc.elements[boundary - 1].type === 'text' && /^[\u200B\uFEFF]*$/.test(doc.elements[boundary - 1].value) && !this.tocMetadata(doc.elements[boundary - 1])) boundary--
+      if (boundary === 0 || isPageStart(doc.elements[boundary - 1])) index = boundary
+      // 单独的扩展标记不属于 extension.toc 域，Java 仍按普通 manual 分页符导出。
+      const pageBreak = (): IElement => ({ type: 'pageBreak', value: 'manual', extension: { tocPageBreak: id } })
+      if (index > 0 && !isPageStart(doc.elements[index - 1])) this.spliceBodyWithBookmarks(doc, index++, 0, [pageBreak()])
+      this.spliceBodyWithBookmarks(doc, index, 0, elements)
+      const end = index + elements.length
+      if (!isPageStart(doc.elements[end])) this.spliceBodyWithBookmarks(doc, end, 0, [pageBreak()])
+      if (end + 1 === doc.elements.length) doc.elements.push({ type: 'text', value: '' })
+      this.refreshToc(doc, index, elements.length, id, template, maxLevel)
     })
   }
 
-  /** 删除所有目录元素（带 tocId 标识的元素） */
-  removeToc(): void {
+  /** 更新选中目录；光标在正文时更新第一个目录。 */
+  updateToc(): void {
+    if (this.draw.getZone() !== 'main') return
     this.execute(doc => {
-      const elements = doc.elements
-      for (let i = elements.length - 1; i >= 0; i--) {
-        if ((elements[i] as unknown as { tocId?: string }).tocId) {
-          elements.splice(i, 1)
-        }
-      }
+      const group = this.tocGroup(doc.elements)
+      if (!group) return false
+      const { id, template, maxLevel } = group.metadata
+      const elements = this.buildToc(id, template, maxLevel)
+      this.spliceBodyWithBookmarks(doc, group.start, group.end - group.start, elements)
+      this.refreshToc(doc, group.start, elements.length, id, template, maxLevel)
+    })
+  }
+
+  /** 删除选中目录组，保留正文及其他目录。 */
+  removeToc(): void {
+    if (this.draw.getZone() !== 'main') return
+    this.execute(doc => {
+      const group = this.tocGroup(doc.elements)
+      if (!group) return false
+      const ownedBreak = (element?: IElement) => element?.type === 'pageBreak' && element.value === 'manual' && element.extension?.tocPageBreak === group.metadata.id
+      const start = ownedBreak(doc.elements[group.start - 1]) ? group.start - 1 : group.start
+      const end = ownedBreak(doc.elements[group.end]) ? group.end + 1 : group.end
+      this.spliceBodyWithBookmarks(doc, start, end - start)
+      this.range.setCaret({ path: [Math.min(start, doc.elements.length - 1)], offset: 0 })
     })
   }
 
@@ -2867,6 +3075,7 @@ export class CommandAdapt {
     this._commit(doc, 'text')
   }
 
+  /** 为复制元素重新分配不冲突的段落 ID，并同步图片锚点；未复制的锚定段落改为脱离引用。 */
   private remapParagraphIdentities(elements: IElement[], existing: IElement[]): void {
     const used = new Set<string>()
     const ids = new Map<string, string>()
@@ -2889,10 +3098,12 @@ export class CommandAdapt {
     })
   }
 
+  /** 判断元素是否为连续、下一页、偶数页或奇数页分节符，不包含普通分页符。 */
   private isSectionBoundary(element: IElement): boolean {
     return element.type === 'pageBreak' && ['continuous', 'nextPage', 'evenPage', 'oddPage'].includes(element.value)
   }
 
+  /** 按正文闭区间内的分节符移除对应节配置，保留后续节格式并补齐继承的页眉页脚引用。 */
   private removeSectionBoundaries(doc: IDocxDocumentMeta, start: number, end: number): void {
     if (!doc.sections || this.draw.getZone() !== 'main') return
     const index = doc.elements.slice(0, start).filter(element => this.isSectionBoundary(element)).length
@@ -2908,6 +3119,7 @@ export class CommandAdapt {
     }
   }
 
+  /** 克隆顶层文本选区及其涉及的节配置、页眉页脚部件，裁剪边界文本；不支持的选区返回 null。 */
   copyFragment(): Partial<IDocxDocumentMeta> | null {
     const ordered = this.range.getOrdered()
     if (!ordered || this.range.isCollapsed() || ordered.start.path.length !== 1 || ordered.end.path.length !== 1) return null
@@ -2929,6 +3141,7 @@ export class CommandAdapt {
     return { elements, sections, headerFooterParts: count ? cloneTree(doc.headerFooterParts) : undefined }
   }
 
+  /** 在正文顶层粘贴文档片段并替换选区，重映射段落标识、合并节配置及页眉页脚部件后提交。 */
   pasteFragment(fragment: Partial<IDocxDocumentMeta>): void {
     if (!this.getIsCanInput()) return
     if (!fragment.elements?.length || this.draw.getZone() !== 'main') return
@@ -3492,6 +3705,7 @@ export class CommandAdapt {
 
   /* -------------------- 表格边框 -------------------- */
 
+  /** 根据单元格跨行跨列关系枚举有效单元格的四条边，标记内外边框及边序号。 */
   private tableBorderSides(table: ITableElement) {
     const sides: { cell: ITd; side: 'top' | 'right' | 'bottom' | 'left'; external: boolean; index: number }[] = []
     const occupied: number[] = []
@@ -3513,6 +3727,7 @@ export class CommandAdapt {
     return sides
   }
 
+  /** 根据边的方向及内外位置，判断指定边框预设是否应显示该边。 */
   private matchesBorderPreset(type: TableBorderPreset, side: 'top' | 'right' | 'bottom' | 'left', external: boolean): boolean {
     if (type === 'all') return true
     if (type === 'outside') return external
@@ -3522,6 +3737,7 @@ export class CommandAdapt {
     return external && type === side
   }
 
+  /** 汇总光标所在表格的边框预设、统一颜色及内外线宽，混合属性为 undefined，无表格时返回 null。 */
   getTableBorders(): { type?: TableBorderPreset; color?: string; width?: number; externalWidth?: number } | null {
     const pos = this.range.getFocus()
     const table = pos && this._findEnclosingTable(this.draw.getActiveDocument().elements, pos.path)
@@ -3540,6 +3756,7 @@ export class CommandAdapt {
     }
   }
 
+  /** 按补丁更新光标所在表格各边的可见性、颜色及内外线宽，并同步 Office 边框属性。 */
   setTableBorders(patch: { type?: TableBorderPreset; color?: string; width?: number; externalWidth?: number }): void {
     if (patch.type !== undefined && !Object.values(TableBorder).includes(patch.type)) return
     if (!Object.values(patch).some(v => v !== undefined)) return

@@ -47,6 +47,9 @@ export type ListTypeName = 'ol' | 'ul'
 export type PageBreakValue = 'manual' | 'auto' | 'continuous' | 'nextPage' | 'evenPage' | 'oddPage'
 
 export interface IDocxSection {
+  /** 等宽栏数，缺省继承文档设置。 */
+  columnCount?: number
+  columnGap?: number
   pageWidth?: number
   pageHeight?: number
   margins?: [number, number, number, number]
@@ -502,6 +505,9 @@ export interface IDocxDocumentMeta {
   /** 文档元素列表（正文） */
   elements: IElement[]
   sections?: IDocxSection[]
+  /** 文档默认等宽栏设置。 */
+  columnCount?: number
+  columnGap?: number
   headerFooterParts?: Record<string, IElement[]>
   evenAndOddHeaders?: boolean
   header?: IElement[]
@@ -595,6 +601,7 @@ export interface IBookmark {
 
 /** 编辑器选项 */
 export interface IEditorOption {
+  locale?: import('@vervedoc/i18n').BuiltinLocale
   /** Record text edits and formatting changes as revisions. */
   trackChanges?: boolean
   /** Display name used for newly created revisions. */

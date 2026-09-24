@@ -1,5 +1,5 @@
 import type { IDocxDocumentMeta, IElement, IPosition } from './types'
-import { cloneTree, comparePosition, getByPath, isParagraphContainer, isTable } from './walk'
+import { cloneTree, comparePosition, getByPath, isParagraphContainer, isTable, walkTree } from './walk'
 
 interface BookmarkBoundary {
   offset: number
@@ -20,10 +20,14 @@ export function toDocxExportDocument(document: IDocxDocumentMeta): IDocxDocument
 
   // Resolve all paths before splitting runs so overlapping ranges keep their positions.
   const boundaries = new Map<IElement, BookmarkBoundary[]>()
-  const addBoundary = (name: string, position: BookmarkBoundary['position'], point: IPosition) => {
+  const resolvePoint = (point: IPosition) => {
     const node = getByPath(result.elements, point.path)
     const length = node?.extension?.bookmarkMarker ? 0 : node?.type === 'text' ? node.value.length : 1
-    if (!node || !Number.isInteger(point.offset) || point.offset < 0 || point.offset > length) {
+    return node && Number.isInteger(point.offset) && point.offset >= 0 && point.offset <= length ? node : null
+  }
+  const addBoundary = (name: string, position: BookmarkBoundary['position'], point: IPosition) => {
+    const node = resolvePoint(point)
+    if (!node) {
       throw new Error(`Invalid bookmark position: ${name}`)
     }
     const entries = boundaries.get(node) ?? []
@@ -31,7 +35,23 @@ export function toDocxExportDocument(document: IDocxDocumentMeta): IDocxDocument
     boundaries.set(node, entries)
   }
   for (const bookmark of bookmarks) {
-    const { anchor, focus } = bookmark.range
+    let { anchor, focus } = bookmark.range
+    if (!resolvePoint(anchor) || !resolvePoint(focus)) {
+      const starts: IPosition[] = []
+      const ends: IPosition[] = []
+      walkTree(result.elements, (node, { path }) => {
+        const marker = node.extension?.bookmarkMarker as { name?: string; position?: string } | undefined
+        if (marker?.name !== bookmark.name) return
+        if (marker.position === 'start') starts.push({ path, offset: 0 })
+        if (marker.position === 'end') ends.push({ path, offset: 0 })
+      })
+      if (starts.length !== 1 || ends.length !== 1 || comparePosition(starts[0], ends[0]) >= 0) {
+        throw new Error(`Invalid bookmark position: ${bookmark.name}`)
+      }
+      // Recover both endpoints together; never mix a stale range with imported markers.
+      anchor = starts[0]
+      focus = ends[0]
+    }
     const [start, end] = comparePosition(anchor, focus) <= 0 ? [anchor, focus] : [focus, anchor]
     addBoundary(bookmark.name, 'start', start)
     addBoundary(bookmark.name, 'end', end)

@@ -113,32 +113,11 @@ export function useEditorPage(options: { getEditorInstance: () => EditorInstance
     instance.command.executeSetColumns(value)
   }
 
-  /**
-   * 获取自动目录数据（含页码），返回三种级别的目录
-   * catalog1: 仅一级标题，catalog2: 一至二级标题，catalog3: 一至三级标题
-   */
-  function getAutoToc() {
-    const instance = getEditorInstance()
-    if (!instance) return null
-    return instance.command.getAutoToc()
-  }
-
-  /**
-   * 在当前光标位置插入自动目录
-   * @param type 目录类型：1=仅一级，2=一至二级，3=一至三级
-   */
-  function insertAutoToc(type: 1 | 2 | 3) {
-    const instance = getEditorInstance()
-    if (!instance) return
-    instance.command.executeInsertAutoToc(type)
-  }
-
   return {
     pageJump, pageMode,
     pageScale, pageScaleRecovery, pageScaleAdd, pageScaleMinus,
 
     paperSize, paperDirection, setPaperMargin, setPaperBackground,
-    columns,
-    getAutoToc, insertAutoToc
+    columns
   }
 }

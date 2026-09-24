@@ -1,10 +1,12 @@
 import '../../assets/css/paragraph-layout-widget.css'
 import panelHtml from '../../assets/components/table-properties-widget.html?raw'
 import type { IPosition } from '@vervedoc/docx-editor-schema'
+import { translatePanel, viewTranslate, type ViewTranslate } from '../../view-i18n'
 
 interface Deps {
   onCommand: (cmd: string, ...args: any[]) => any
   focusInput: () => void
+  translate?: ViewTranslate
 }
 
 export class TablePropertiesWidget {
@@ -27,6 +29,7 @@ export class TablePropertiesWidget {
     const container = document.createElement('div')
     container.innerHTML = panelHtml
     this.root = container.firstElementChild as HTMLElement
+    translatePanel(this.root, this.deps.translate, 'view.tableDialog.')
     document.body.appendChild(this.root)
     this.initial = {}
     for (const [name, value] of Object.entries({ ...borders, ...cell })) {
@@ -106,6 +109,12 @@ export class TablePropertiesWidget {
     this.root.querySelector<HTMLElement>('[data-tab="table"]')!.focus()
   }
 
+  refreshTranslations(): void {
+    if (!this.root) return
+    translatePanel(this.root, this.deps.translate, 'view.tableDialog.')
+    this.updatePreview()
+  }
+
   private selectTab(name: string): void {
     this.root!.querySelectorAll<HTMLElement>('[data-tab]').forEach(tab => {
       const selected = tab.dataset.tab === name
@@ -124,9 +133,10 @@ export class TablePropertiesWidget {
       const valid = /^#[\da-f]{6}$/i.test(color)
       picker.value = valid ? color : '#000000'
       picker.parentElement!.dataset.empty = String(color === '')
-      const label = picker.dataset.colorPicker === 'color' ? '边框颜色' : '单元格底色'
-      const state = color === '' ? (picker.dataset.colorPicker === 'color' ? '保持原样' : '无底色') : (valid ? color : '颜色格式无效')
-      picker.setAttribute('aria-label', `选择${label}（当前${state}）`)
+      const t = (key: string) => viewTranslate(this.deps.translate, `view.tableDialog.${key}`)
+      const label = picker.dataset.colorPicker === 'color' ? t('borderColor') : t('cellColor')
+      const state = color === '' ? (picker.dataset.colorPicker === 'color' ? t('unchanged') : t('noFill')) : (valid ? color : t('invalidColor'))
+      picker.setAttribute('aria-label', viewTranslate(this.deps.translate, 'view.tableDialog.chooseColor', { label, state }))
     })
     const type = value('type')
     this.root!.querySelectorAll<HTMLElement>('[data-preset]').forEach(button => {
@@ -139,9 +149,8 @@ export class TablePropertiesWidget {
       const width = value(name)
       preview.style.setProperty(property, `${width === '' ? 1 : Math.min(8, Math.max(0, Number(width)))}px`)
     }
-    this.root!.querySelector<HTMLElement>('[data-preview-caption]')!.textContent = type
-      ? '边框组合示意；虚线仅标示表格范围。未填写的颜色、宽度保持原样。'
-      : '未选择预设，边框组合保持原样；示意不代表混合样式。'
+    this.root!.querySelector<HTMLElement>('[data-preview-caption]')!.textContent = viewTranslate(this.deps.translate,
+      type ? 'view.tableDialog.presetPreview' : 'view.tableDialog.unchangedPreview')
   }
 
   private apply(): void {

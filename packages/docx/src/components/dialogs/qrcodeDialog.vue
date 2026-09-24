@@ -19,7 +19,7 @@
           </VdButton>
           <template #overlay>
             <VdCard style="min-width: 300px">
-              <a-form :label-col="{ style: { width: '80px' } }" size="small">
+              <a-form :label-col="{ style: { width: 'max-content', flex: 'none', whiteSpace: 'nowrap' } }" size="small">
                 <a-form-item :label="t('dialog.qrcode.backgroundColor')">
                   <input type="color" :value="qrcodeStyle.lightColor" @change.stop="(e: Event) => qrcodeStyle.lightColor = (e.target as HTMLInputElement).value" @click.stop style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
                 </a-form-item>

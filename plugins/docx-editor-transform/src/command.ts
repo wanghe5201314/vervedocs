@@ -284,6 +284,7 @@ export class Command {
    * 插入分页符。
    */
   executePageBreak(): void { this.adapt.insertPageBreak() }
+  executeInsertBlankPage(): void { this.adapt.insertBlankPage() }
   /**
    * 插入超链接。
    * @param payload 超链接参数，包含 url 和 valueList
@@ -311,6 +312,9 @@ export class Command {
    * 插入连续分节符。
    */
   executeSectionBreakContinuous(): void { this.adapt.sectionBreakContinuous() }
+  executeSectionBreakNextPage(): void { this.adapt.sectionBreak('nextPage') }
+  executeSectionBreakEvenPage(): void { this.adapt.sectionBreak('evenPage') }
+  executeSectionBreakOddPage(): void { this.adapt.sectionBreak('oddPage') }
   /**
    * 搜索关键字。
    * @param keyword 搜索关键字
@@ -474,9 +478,9 @@ export class Command {
   getAutoToc(): IAutoTocResult { return this.adapt.getAutoToc() }
   /**
    * 插入自动目录。
-   * @param type 目录类型：1 | 2 | 3
+   * @param type Office 自动目录模板：1 | 2（均收录三级标题）
    */
-  executeInsertAutoToc(type: 1 | 2 | 3): void { this.adapt.insertAutoToc(type) }
+  executeInsertAutoToc(type: 1 | 2): void { this.adapt.insertAutoToc(type) }
   /**
    * 撤销操作。
    */
@@ -509,7 +513,9 @@ export class Command {
    * 插入目录（TOC）。
    * @param payload 目录参数，可包含 type/mode 及其他自定义字段
    */
-  executeInsertToc(payload: { type?: 1 | 2 | 3; mode?: string; [key: string]: unknown }): void { this.adapt.insertToc(payload) }
+  executeInsertToc(payload: { type?: 1 | 2; mode?: string; [key: string]: unknown }): void { this.adapt.insertToc(payload) }
+  /** 更新整个目录，包括标题文本、层级与页码。 */
+  executeUpdateToc(): void { this.adapt.updateToc() }
   /**
    * 移除目录（TOC）。
    */

@@ -22,6 +22,7 @@ function revisionNodes(doc: IDocxDocumentMeta): Array<{ el: any; parent: any[]; 
 import type { CommentHost } from './host'
 import type { GroupAnchor } from './host'
 import { drawAnnotationConnector, getAvatarColor } from './annotation-visual'
+import { balloonText, type BalloonTranslate } from './translation'
 
 const PREFIX = 'ce'
 
@@ -42,6 +43,12 @@ export interface RevisionCallbacks {
 }
 
 export class RevisionComponent {
+  constructor(private readonly translate?: BalloonTranslate) {}
+
+  private _t(key: string, params?: Record<string, string | number>): string {
+    return balloonText(this.translate, `comment.revision.${key}`, params)
+  }
+
   /** 宿主契约（由 core 注入） */
   private _command: CommentHost | null = null
   /** 气泡挂载容器（Draw scroller） */
@@ -98,9 +105,7 @@ export class RevisionComponent {
   }
 
   private _getTypeLabel(type: RevisionBalloonData['type']): string {
-    if (type === 'insert') return '插入：'
-    if (type === 'delete') return '删除：'
-    return '格式：'
+    return this._t(type)
   }
 
   private _createBalloonDom(balloon: RevisionBalloonData): HTMLDivElement {
@@ -136,7 +141,7 @@ export class RevisionComponent {
     const authorSpan = document.createElement('span')
     authorSpan.className = 'revision-author'
     authorSpan.style.cssText = 'color:#1f1f1f;font-weight:700;font-size:12px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;'
-    authorSpan.textContent = balloon.author || '未知'
+    authorSpan.textContent = balloon.author || this._t('unknownAuthor')
 
     const dateSpan = document.createElement('span')
     dateSpan.className = 'revision-date'
@@ -147,7 +152,8 @@ export class RevisionComponent {
     actions.style.cssText = 'display:flex;align-items:center;gap:1px;flex-shrink:0;'
 
     const acceptBtn = document.createElement('button')
-    acceptBtn.title = '接受修订'
+    acceptBtn.title = this._t('accept')
+    acceptBtn.setAttribute('aria-label', acceptBtn.title)
     acceptBtn.type = 'button'
     acceptBtn.style.cssText =
       'display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;' +
@@ -158,7 +164,8 @@ export class RevisionComponent {
     acceptBtn.addEventListener('click', () => { this.accept(balloon.revisionId) })
 
     const rejectBtn = document.createElement('button')
-    rejectBtn.title = '拒绝修订'
+    rejectBtn.title = this._t('reject')
+    rejectBtn.setAttribute('aria-label', rejectBtn.title)
     rejectBtn.type = 'button'
     rejectBtn.style.cssText =
       'display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;' +
@@ -243,29 +250,31 @@ export class RevisionComponent {
   private _formatRevisionDesc(el: any): string {
     const old = getRevisionOldProps(el)
     const parts: string[] = []
-    const boolLabels: Record<string, string> = {
-      bold: '加粗', italic: '斜体', underline: '下划线', strikeout: '删除线',
-      doubleStrikeout: '双删除线', hidden: '隐藏', superscript: '上标', subscript: '下标'
-    }
-    const labels: Record<string, string> = {
-      color: '字体颜色', size: '字号', font: '字体', highlight: '高亮',
-      characterScale: '字符缩放', letterSpacing: '字符间距', textDecoration: '装饰线样式',
-      rowFlex: '对齐方式', lineHeight: '行距', lineHeightRule: '行距规则', rowMargin: '行间距',
-      paragraphIndentLeft: '左缩进', paragraphIndentRight: '右缩进', paragraphFirstLineIndent: '首行缩进',
-      indentHanging: '悬挂缩进', paragraphSpacingBefore: '段前间距', paragraphSpacingAfter: '段后间距'
-    }
+    const boolKeys = ['bold', 'italic', 'underline', 'strikeout', 'doubleStrikeout', 'hidden', 'superscript', 'subscript']
+    const labelKeys = [
+      'color', 'size', 'font', 'highlight', 'characterScale', 'letterSpacing', 'textDecoration',
+      'rowFlex', 'lineHeight', 'lineHeightRule', 'rowMargin', 'paragraphIndentLeft',
+      'paragraphIndentRight', 'paragraphFirstLineIndent', 'indentHanging',
+      'paragraphSpacingBefore', 'paragraphSpacingAfter'
+    ]
     const alignments: Record<string, string> = {
-      left: '左对齐', center: '居中', right: '右对齐', justify: '两端对齐', alignment: '两端对齐', distribute: '分散对齐'
+      left: 'alignLeft', center: 'alignCenter', right: 'alignRight',
+      justify: 'alignJustify', alignment: 'alignJustify', distribute: 'alignDistribute'
     }
     for (const [key, value] of Object.entries(old)) {
       if ((el[key] ?? null) === value) continue
-      if (boolLabels[key]) parts.push(`${el[key] ? '' : '取消'}${boolLabels[key]}`)
-      else if (labels[key]) {
-        const current = el[key] ?? '默认'
-        parts.push(`${labels[key]}: ${key === 'rowFlex' ? alignments[current] || current : current}${key === 'size' && el[key] != null ? 'pt' : ''}`)
+      if (boolKeys.includes(key)) parts.push(`${el[key] ? '' : this._t('undo')}${this._t(key)}`)
+      else if (labelKeys.includes(key)) {
+        const current = el[key] ?? this._t('default')
+        const display = key === 'rowFlex' && alignments[current] ? this._t(alignments[current]) : current
+        parts.push(this._t('property', {
+          label: this._t(key), value: `${display}${key === 'size' && el[key] != null ? 'pt' : ''}`
+        }))
       }
     }
-    return parts.length ? `设置格式: ${parts.join('，')}` : '设置格式'
+    return parts.length
+      ? this._t('formatDescription', { details: parts.join(this._t('separator')) })
+      : this._t('setFormat')
   }
 
   private _getAll(): Array<{
@@ -283,7 +292,9 @@ export class RevisionComponent {
           existing.content += el.value || ''
         } else {
           const description = this._formatRevisionDesc(el)
-          if (!existing.content.split('；').includes(description)) existing.content += `；${description}`
+          if (!existing.content.split(this._t('descriptionSeparator')).includes(description)) {
+            existing.content += `${this._t('descriptionSeparator')}${description}`
+          }
         }
         existing.lastIndex = i
       } else {
@@ -428,7 +439,7 @@ export class RevisionComponent {
         balloonDom.style.left = `${balloon.left}px`
         const authorSpan = balloonDom.querySelector('.revision-author') as HTMLSpanElement
         if (authorSpan) {
-          authorSpan.textContent = balloon.author || '未知'
+          authorSpan.textContent = balloon.author || this._t('unknownAuthor')
         }
         const dateSpan = balloonDom.querySelector('.revision-date') as HTMLSpanElement
         if (dateSpan) {
@@ -441,6 +452,15 @@ export class RevisionComponent {
         const contentSpan = balloonDom.querySelector('.revision-content') as HTMLSpanElement
         if (contentSpan) {
           contentSpan.textContent = balloon.content
+        }
+        const buttons = balloonDom.querySelectorAll<HTMLButtonElement>('button')
+        if (buttons[0]) {
+          buttons[0].title = this._t('accept')
+          buttons[0].setAttribute('aria-label', buttons[0].title)
+        }
+        if (buttons[1]) {
+          buttons[1].title = this._t('reject')
+          buttons[1].setAttribute('aria-label', buttons[1].title)
         }
       }
       const color = getAvatarColor(balloon.author)

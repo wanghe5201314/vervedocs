@@ -11,10 +11,13 @@ import type {
   IComment,
   DocxCommentMeta,
   CommentCallbacks,
-  RevisionCallbacks
+  RevisionCallbacks,
+  PluginHost
 } from '@vervedoc/docx-editor-schema'
 import { CommentComponent } from './comment/comment-component'
 import { RevisionComponent } from './comment/revision-component'
+
+export type { BalloonTranslate } from './comment/translation'
 
 /** 批注插件：EditorPlugin + 批注操作方法（供宿主层调用） */
 export interface CommentPlugin extends EditorPlugin {
@@ -68,12 +71,17 @@ export interface RevisionPlugin extends EditorPlugin {
  * hooks.afterRender 自渲染气泡，hooks.onSetDocument 同步批注数据。
  */
 export function createCommentPlugin(): CommentPlugin {
-  const comment = new CommentComponent()
+  let i18n: ReturnType<PluginHost['getI18n']> | undefined
+  let unsubscribe: (() => void) | undefined
+  const comment = new CommentComponent((key, params) => i18n?.t(key, params) ?? key)
   return {
     name: 'comment',
     install: (host) => {
+      i18n = host.getI18n()
       comment.install(host)
       comment.setEventBus(host.getEventBus())
+      unsubscribe?.()
+      unsubscribe = i18n.subscribe(() => comment.render())
     },
     commands: {
       requestInsertComment: () => comment.add()
@@ -84,7 +92,7 @@ export function createCommentPlugin(): CommentPlugin {
         comment.buildFromMetas(doc.comments ?? [], true)
       }
     },
-    destroy: () => comment.destroy(),
+    destroy: () => { unsubscribe?.(); comment.destroy() },
     add: (userName) => comment.add(userName),
     delete: (id) => comment.delete(id),
     locate: (id) => comment.locate(id),
@@ -104,14 +112,21 @@ export function createCommentPlugin(): CommentPlugin {
  * install 时注入 PluginHost；hooks.afterRender 自渲染修订气泡。
  */
 export function createRevisionPlugin(): RevisionPlugin {
-  const revision = new RevisionComponent()
+  let i18n: ReturnType<PluginHost['getI18n']> | undefined
+  let unsubscribe: (() => void) | undefined
+  const revision = new RevisionComponent((key, params) => i18n?.t(key, params) ?? key)
   return {
     name: 'revision',
-    install: (host) => revision.install(host),
+    install: (host) => {
+      i18n = host.getI18n()
+      revision.install(host)
+      unsubscribe?.()
+      unsubscribe = i18n.subscribe(() => revision.update())
+    },
     hooks: {
       afterRender: () => revision.update()
     },
-    destroy: () => revision.destroy(),
+    destroy: () => { unsubscribe?.(); revision.destroy() },
     getAll: () => revision.getAll(),
     update: () => revision.update(),
     accept: (id) => revision.accept(id),

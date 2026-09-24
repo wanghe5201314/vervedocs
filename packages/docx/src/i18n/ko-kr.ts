@@ -1,4 +1,7 @@
+import { builtinMessages } from '@vervedoc/i18n'
+
 export default {
+  ...builtinMessages.koKR,
   common: {
     ok: '확인',
     cancel: '취소',
@@ -546,18 +549,25 @@ export default {
     table: {
       title: '표 삽입',
       size: '표 크기',
-      columns: '열 수(C):',
-      rows: '행 수(R):',
+      columns: '열 수',
+      rows: '행 수',
       borderSettings: '테두리 설정',
-      none: '없음(N)',
-      box: '테두리(X)',
-      all: '모두(A)',
+      none: '없음',
+      box: '바깥쪽',
+      all: '모두',
+      inside: '안쪽 테두리',
+      insideHorizontal: '안쪽 가로선',
+      insideVertical: '안쪽 세로선',
+      top: '위쪽 테두리',
+      bottom: '아래쪽 테두리',
+      left: '왼쪽 테두리',
+      right: '오른쪽 테두리',
       grid: '모눈(D)',
       custom: '사용자 지정(U)',
       lineStyle: '선 스타일(V):',
-      color: '색상(C):',
-      width: '너비(W):',
-      widthUnit: 'pt'
+      color: '색상',
+      width: '너비',
+      widthUnit: 'px'
     },
     tableBorders: {
       title: '표 테두리',

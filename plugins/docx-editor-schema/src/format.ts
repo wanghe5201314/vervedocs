@@ -23,6 +23,7 @@ import type {
   PathSegment
 } from './types'
 import { DEFAULT_EDITOR_OPTION } from './constants'
+import { isParagraphContainer, isTable, walkTree } from './walk'
 
 /** 按节引用选择页眉页脚；未定义的引用按 OOXML 继承前节同类引用。 */
 export function resolveHeaderFooterPart(doc: IDocxDocumentMeta, zone: 'header' | 'footer', sectionIndex: number, pageIndex: number, firstPage: boolean): string | undefined {
@@ -385,26 +386,52 @@ function inheritParagraphAttrsToChildren(container: ITitleElement | IListElement
 
 /**
  * 将收集到的 bookmarkMarker 列表配对为 IBookmark[]。
- * 同名 start/end 配对，start 的 path 作为 range.anchor，end 的 path 作为 range.focus。
+ * 同名 start/end 配对，范围落在实际内容上，不把零宽标记作为选区文字。
  */
 export function pairBookmarkMarkers(
-  markers: { name: string; position: string; path: Path }[]
+  markers: { name: string; position: string; path: Path }[],
+  elements: IElement[]
 ): IBookmark[] {
+  const leaves: { node: IElement; path: Path }[] = []
+  const indices = new Map<string, number>()
+  walkTree(elements, (node, { path }) => {
+    if (isParagraphContainer(node) || isTable(node)) return
+    indices.set(JSON.stringify(path), leaves.length)
+    leaves.push({ node, path })
+  })
+  const isContent = (node: IElement): boolean =>
+    !node.extension?.bookmarkMarker && !node.extension?.fieldMarker &&
+    (node.type !== 'text' || (!!node.value && !/^[\u200B\uFEFF]+$/.test(node.value)))
   const startMap = new Map<string, Path>()
   const bookmarks: IBookmark[] = []
   for (const m of markers) {
     if (m.position === 'start') {
       startMap.set(m.name, m.path)
-    } else {
+    } else if (m.position === 'end') {
       const startPath = startMap.get(m.name)
       if (startPath) {
+        const start = indices.get(JSON.stringify(startPath))
+        const end = indices.get(JSON.stringify(m.path))
+        let first: typeof leaves[number] | undefined
+        let last: typeof leaves[number] | undefined
+        if (start !== undefined && end !== undefined) {
+          for (let index = start + 1; index < end; index++) {
+            if (!isContent(leaves[index].node)) continue
+            first ??= leaves[index]
+            last = leaves[index]
+          }
+        }
+        const anchor = { path: first?.path ?? startPath, offset: 0 }
         bookmarks.push({
           name: m.name,
           range: {
-            anchor: { path: startPath, offset: 0 },
-            focus: { path: m.path, offset: 0 }
+            anchor,
+            focus: last
+              ? { path: last.path, offset: last.node.type === 'text' ? last.node.value.length : 1 }
+              : { ...anchor }
           },
-          collapsed: false
+          collapsed: !first,
+          hidden: m.name.startsWith('_')
         })
         startMap.delete(m.name)
       }

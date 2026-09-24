@@ -7,6 +7,7 @@
  */
 import '../../assets/css/paragraph-layout-widget.css'
 import panelHtml from '../../assets/components/paragraph-layout-widget.html?raw'
+import { translatePanel, viewTranslate, type ViewTranslate } from '../../view-i18n'
 
 /** 每厘米对应的像素数（96 DPI） */
 const PX_PER_CM = 96 / 2.54
@@ -18,6 +19,7 @@ type CommandFn = (cmd: string, ...args: any[]) => any
 export interface ParagraphLayoutWidgetDeps {
   /** 触发编辑器命令 / 读取状态 */
   onCommand: CommandFn
+  translate?: ViewTranslate
 }
 
 /**
@@ -31,10 +33,12 @@ export class ParagraphLayoutWidget {
   private root: HTMLElement | null = null
   /** 命令回调 */
   private onCommand: CommandFn | null = null
+  private translate?: ViewTranslate
 
   /** 注入依赖 */
   setDeps(deps: ParagraphLayoutWidgetDeps): void {
     this.onCommand = deps.onCommand
+    this.translate = deps.translate
   }
 
   /**
@@ -46,6 +50,7 @@ export class ParagraphLayoutWidget {
     const container = document.createElement('div')
     container.innerHTML = panelHtml
     this.root = container.firstElementChild as HTMLElement
+    translatePanel(this.root, this.translate, 'view.paragraphDialog.')
     document.body.appendChild(this.root)
 
     this.bindTabs()
@@ -56,6 +61,13 @@ export class ParagraphLayoutWidget {
       this.apply()
       this.hide()
     })
+  }
+
+  refreshTranslations(): void {
+    if (!this.root) return
+    translatePanel(this.root, this.translate, 'view.paragraphDialog.')
+    this.syncLhDisabled()
+    this.updatePreview()
   }
 
   /**
@@ -93,7 +105,7 @@ export class ParagraphLayoutWidget {
       if (t === 'single') { lhValue.value = '1' }
       else if (t === '1.5') { lhValue.value = '1.5' }
       else if (t === 'double') { lhValue.value = '2' }
-      lhUnit.textContent = (t === 'atLeast' || t === 'exact') ? '磅' : '倍'
+      lhUnit.textContent = (t === 'atLeast' || t === 'exact') ? viewTranslate(this.translate, 'view.common.points') : viewTranslate(this.translate, 'view.paragraphDialog.times')
       this.updatePreview()
     }
 
@@ -178,7 +190,7 @@ export class ParagraphLayoutWidget {
     const t = lhType.value
     const fixed = t === 'single' || t === '1.5' || t === 'double'
     lhValue.disabled = fixed
-    lhUnit.textContent = (t === 'atLeast' || t === 'exact') ? '磅' : '倍'
+    lhUnit.textContent = (t === 'atLeast' || t === 'exact') ? viewTranslate(this.translate, 'view.common.points') : viewTranslate(this.translate, 'view.paragraphDialog.times')
   }
 
   /** 同步特殊格式度量值禁用态 */
@@ -221,7 +233,7 @@ export class ParagraphLayoutWidget {
     else if (special === 'hanging') indent = -(Number(specialValue) || 0)
     preview.style.textIndent = `${indent * PX_PER_CM}px`
 
-    preview.textContent = '段落预览文本'
+    preview.textContent = viewTranslate(this.translate, 'view.paragraphDialog.previewText')
   }
 
   /** 确定按钮：应用所有设置到编辑器 */

@@ -9,12 +9,13 @@ import dialogHtml from './assets/components/chart-dialog.html?raw'
 import Chart from './chart-lib'
 import { generateChartOption } from './chart-data-extractor'
 import type { IChartConfig, IChartTableData, PluginHost } from '@vervedoc/docx-editor-schema'
+import type { Translate } from '@vervedoc/i18n'
 
 /** 图表类型分类 */
-interface ChartCategory { name: string; label: string }
+interface ChartCategory { name: string }
 
 /** 预览项 */
-interface PreviewItem { id: string; name: string; subtype: string }
+interface PreviewItem { id: string; subtype: string }
 
 /** 配色方案 */
 const colorSchemeMap: Record<string, string[]> = {
@@ -32,54 +33,31 @@ const DATA_COLS = 15
 
 /** 图表类型分类列表 */
 const chartCategories: ChartCategory[] = [
-  { name: 'bar', label: '柱形图' },
-  { name: 'line', label: '折线图' },
-  { name: 'pie', label: '饼图' },
-  { name: 'scatter', label: '散点图' },
-  { name: 'radar', label: '雷达图' },
-  { name: 'mixed', label: '混合图表' }
+  { name: 'bar' }, { name: 'line' }, { name: 'pie' },
+  { name: 'scatter' }, { name: 'radar' }, { name: 'mixed' }
 ]
 
 /** 各图表类型对应的预览项列表 */
 const previewData: Record<string, PreviewItem[]> = {
-  bar: [
-    { id: 'bar-basic', name: '基础柱状图', subtype: 'bar-basic' },
-    { id: 'bar-stacked', name: '堆叠柱状图', subtype: 'bar-stacked' },
-    { id: 'bar-horizontal', name: '横向柱状图', subtype: 'bar-horizontal' }
-  ],
-  line: [
-    { id: 'line-basic', name: '基础折线图', subtype: 'line-basic' },
-    { id: 'line-smooth', name: '平滑折线图', subtype: 'line-smooth' },
-    { id: 'line-stacked', name: '堆叠折线图', subtype: 'line-stacked' },
-    { id: 'line-area', name: '堆叠面积图', subtype: 'line-area' },
-    { id: 'line-step', name: '阶梯折线图', subtype: 'line-step' },
-    { id: 'line-dashed', name: '虚线折线图', subtype: 'line-dashed' }
-  ],
-  pie: [
-    { id: 'pie-basic', name: '基础饼图', subtype: 'pie-basic' },
-    { id: 'pie-doughnut', name: '环形图', subtype: 'pie-doughnut' }
-  ],
-  scatter: [
-    { id: 'scatter-basic', name: '基础散点图', subtype: 'scatter-basic' }
-  ],
-  radar: [
-    { id: 'radar-basic', name: '基础雷达图', subtype: 'radar-basic' },
-    { id: 'radar-filled', name: '填充雷达图', subtype: 'radar-filled' }
-  ],
-  mixed: [
-    { id: 'mixed-line-bar', name: '折柱混合', subtype: 'mixed-line-bar' }
-  ]
+  bar: ['bar-basic', 'bar-stacked', 'bar-horizontal'].map(id => ({ id, subtype: id })),
+  line: ['line-basic', 'line-smooth', 'line-stacked', 'line-area', 'line-step', 'line-dashed'].map(id => ({ id, subtype: id })),
+  pie: ['pie-basic', 'pie-doughnut'].map(id => ({ id, subtype: id })),
+  scatter: [{ id: 'scatter-basic', subtype: 'scatter-basic' }],
+  radar: ['radar-basic', 'radar-filled'].map(id => ({ id, subtype: id })),
+  mixed: [{ id: 'mixed-line-bar', subtype: 'mixed-line-bar' }]
 }
 
 /** 默认示例数据 */
-const defaultTableData: IChartTableData = {
-  headers: ['', '系列1', '系列2', '系列3'],
-  rows: [
-    ['类别1', '4.3', '2.4', '2'],
-    ['类别2', '2.5', '2.1', '1.5'],
-    ['类别3', '3.5', '3.2', '3'],
-    ['类别4', '4.1', '3.5', '3.8']
-  ]
+function defaultTableData(t: Translate): IChartTableData {
+  return {
+    headers: ['', ...[1, 2, 3].map(index => t('chart.sample.series', { index }))],
+    rows: [
+      [t('chart.sample.category', { index: 1 }), '4.3', '2.4', '2'],
+      [t('chart.sample.category', { index: 2 }), '2.5', '2.1', '1.5'],
+      [t('chart.sample.category', { index: 3 }), '3.5', '3.2', '3'],
+      [t('chart.sample.category', { index: 4 }), '4.1', '3.5', '3.8']
+    ]
+  }
 }
 
 /**
@@ -88,6 +66,7 @@ const defaultTableData: IChartTableData = {
 export class ChartDialog {
   private root: HTMLElement | null = null
   private host: PluginHost | null = null
+  private t: Translate = key => key
   private selectedCategory = 'bar'
   private selectedPreview = 'bar-basic'
   /** 编辑模式：正在编辑的图表 ID（null=新建模式） */
@@ -102,6 +81,21 @@ export class ChartDialog {
   /** 注入宿主契约 */
   setHost(host: PluginHost): void {
     this.host = host
+  }
+
+  setTranslator(t: Translate): void {
+    this.t = t
+  }
+
+  /** 只刷新文字，保留当前表单、网格和焦点 */
+  refreshTranslations(): void {
+    if (!this.root) return
+    this.root.querySelectorAll<HTMLElement>('[data-i18n-key]').forEach(el => {
+      el.textContent = this.t(el.dataset.i18nKey!)
+    })
+    this.root.querySelectorAll<HTMLInputElement>('[data-i18n-placeholder]').forEach(el => {
+      el.placeholder = this.t(el.dataset.i18nPlaceholder!)
+    })
   }
 
   /** 显示对话框（传入 chartData 时为编辑模式，预填现有数据） */
@@ -124,6 +118,7 @@ export class ChartDialog {
     this.renderCategories()
     this.renderPreviews()
     this.renderDataTable(chartData?.dataSource?.manualData)
+    this.refreshTranslations()
     this.bindTabs()
     this.bindCollapsePanels()
     this.bindConfig()
@@ -147,7 +142,8 @@ export class ChartDialog {
     for (const cat of chartCategories) {
       const el = document.createElement('div')
       el.className = 'cd-category' + (cat.name === this.selectedCategory ? ' cd-category-active' : '')
-      el.textContent = cat.label
+      el.dataset.i18nKey = `chart.category.${cat.name}`
+      el.textContent = this.t(el.dataset.i18nKey)
       el.addEventListener('click', () => {
         this.selectedCategory = cat.name
         const previews = previewData[cat.name] || []
@@ -179,7 +175,8 @@ export class ChartDialog {
 
       const name = document.createElement('div')
       name.className = 'cd-preview-name'
-      name.textContent = p.name
+      name.dataset.i18nKey = `chart.preview.${p.id}`
+      name.textContent = this.t(name.dataset.i18nKey)
       item.appendChild(name)
 
       item.addEventListener('click', () => {
@@ -195,9 +192,9 @@ export class ChartDialog {
   /** 用 Chart.js 渲染预览小图 */
   private renderPreviewChart(canvas: HTMLCanvasElement, subtype: string): void {
     const chartType = subtype.split('-')[0]
-    const config = generateChartOption(chartType, defaultTableData, {
+    const config = generateChartOption(chartType, defaultTableData(this.t), {
       showTitle: false, showLegend: false, animation: false
-    } as IChartConfig, subtype)
+    } as IChartConfig, subtype, this.t)
     try {
       const chart = new Chart(canvas, {
         ...config,
@@ -245,7 +242,7 @@ export class ChartDialog {
 
   /** 用指定数据或默认数据填充网格 */
   private initData(tableData?: IChartTableData): void {
-    const data = tableData ?? defaultTableData
+    const data = tableData ?? defaultTableData(this.t)
     const { headers, rows } = data
     for (let c = 0; c < headers.length; c++) {
       const input = this.root!.querySelector(`#cd-cell-0-${c}`) as HTMLInputElement

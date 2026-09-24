@@ -1,4 +1,7 @@
+import { builtinMessages } from '@vervedoc/i18n'
+
 export default {
+  ...builtinMessages.jaJP,
   common: {
     ok: 'OK',
     cancel: 'キャンセル',
@@ -546,18 +549,25 @@ export default {
     table: {
       title: '表の挿入',
       size: '表のサイズ',
-      columns: '列数(C):',
-      rows: '行数(R):',
+      columns: '列数',
+      rows: '行数',
       borderSettings: '枠線の設定',
-      none: 'なし(N)',
-      box: '枠(X)',
-      all: 'すべて(A)',
+      none: 'なし',
+      box: '外枠',
+      all: 'すべて',
+      inside: '内側の枠線',
+      insideHorizontal: '内側の横線',
+      insideVertical: '内側の縦線',
+      top: '上の枠線',
+      bottom: '下の枠線',
+      left: '左の枠線',
+      right: '右の枠線',
       grid: '格子(D)',
       custom: 'カスタム(U)',
       lineStyle: '線の種類(V):',
-      color: '色(C):',
-      width: '幅(W):',
-      widthUnit: 'pt'
+      color: '色',
+      width: '幅',
+      widthUnit: 'px'
     },
     tableBorders: {
       title: '表の枠線',

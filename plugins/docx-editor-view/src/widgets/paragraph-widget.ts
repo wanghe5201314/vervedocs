@@ -408,7 +408,7 @@ export class ParagraphWidget {
         const range = this.deps.getRange()
         const savedRange = range?.getRange()
         if (!range || !savedRange) {
-          this.hyperlinkPanel.show('', () => false)
+          this.hyperlinkPanel.show('', () => 'noSelection')
           return
         }
         const snapshot = {
@@ -417,12 +417,12 @@ export class ParagraphWidget {
         }
         const text = this.deps.onCommand('executeExtractSelectionText') as string || ''
         this.hyperlinkPanel.show(text, (value, url) => {
-          if (!this.deps.canEdit()) return false
           range.setRange({
             anchor: { ...snapshot.anchor, path: snapshot.anchor.path.slice() },
             focus: { ...snapshot.focus, path: snapshot.focus.path.slice() }
           })
-          return this.deps.onCommand('executeHyperlink', { url, valueList: [{ type: 'text', value }] }) === true
+          const inserted = this.deps.onCommand('executeHyperlink', { url, valueList: [{ type: 'text', value }] })
+          return inserted === true ? true : this.deps.onCommand('getHyperlinkInsertionError') ?? false
         }, () => this.deps.focusInput())
       } },
       { label: this.t('view.paragraph.comment'), icon: 'comment', onClick: () => fire('requestInsertComment') },

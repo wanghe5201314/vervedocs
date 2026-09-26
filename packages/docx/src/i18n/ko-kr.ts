@@ -36,6 +36,8 @@ export default {
     none: '없음',
     confirmRestore: '복원 확인',
     newDocument: '새 문서',
+    newDocumentConfirmContent: '편집기에 저장되지 않은 내용이 있습니다. 새 문서를 만들면 이 내용이 삭제됩니다. 계속하시겠습니까?',
+    importDocumentConfirmContent: '편집기에 저장되지 않은 내용이 있습니다. 문서를 가져오면 이 내용이 삭제됩니다. 계속하시겠습니까?',
     documentName: '문서 이름',
     unnamedDocument: '제목 없는 문서',
     feedback: '피드백',

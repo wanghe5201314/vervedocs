@@ -36,6 +36,8 @@ export default {
     none: 'None',
     confirmRestore: 'Confirm Restore',
     newDocument: 'New Document',
+    newDocumentConfirmContent: 'The editor has unsaved content. Creating a new document will discard it. Continue?',
+    importDocumentConfirmContent: 'The editor has unsaved content. Importing a document will discard it. Continue?',
     documentName: 'Document Name',
     unnamedDocument: 'Untitled Document',
     feedback: 'Feedback',

@@ -36,6 +36,8 @@ export default {
     none: '無',
     confirmRestore: '確定還原',
     newDocument: '新增文件',
+    newDocumentConfirmContent: '目前編輯器有未儲存的內容，新增文件將會捨棄這些內容，是否繼續？',
+    importDocumentConfirmContent: '目前編輯器有未儲存的內容，匯入文件將會捨棄這些內容，是否繼續？',
     documentName: '檔案名稱',
     unnamedDocument: '未命名文件',
     feedback: '回饋',

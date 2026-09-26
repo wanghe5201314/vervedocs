@@ -290,6 +290,7 @@ export class Command {
    * @param payload 超链接参数，包含 url 和 valueList
    */
   executeHyperlink(payload: { url: string; valueList: IElement[] }): boolean { return this.adapt.insertHyperlink(payload) }
+  getHyperlinkInsertionError() { return this.adapt.getHyperlinkInsertionError() }
   /**
    * 插入 LaTeX 公式。
    * @param payload LaTeX 参数，包含 latex/svg/width/height

@@ -36,6 +36,8 @@ export default {
     none: '无',
     confirmRestore: '确定恢复',
     newDocument: '新建文档',
+    newDocumentConfirmContent: '当前编辑器有未保存的内容，新建文档将会丢弃这些内容，是否继续？',
+    importDocumentConfirmContent: '当前编辑器有未保存的内容，导入文档将会丢弃这些内容，是否继续？',
     documentName: '文档名称',
     unnamedDocument: '未命名文档',
     feedback: '反馈',

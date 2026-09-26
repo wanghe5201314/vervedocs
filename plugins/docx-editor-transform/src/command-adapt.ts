@@ -34,6 +34,11 @@ export type { HistorySnapshot, IHistoryManager } from '@vervedoc/docx-editor-sch
 /** 文档编辑区域类型：主体、页眉、页脚 */
 export type Zone = 'main' | 'header' | 'footer'
 
+export type HyperlinkInsertionError =
+  | 'readOnly' | 'disabled' | 'tracking' | 'revisions' | 'bookmarkSelection'
+  | 'fieldSelection' | 'existingLink' | 'crossContainer' | 'crossParagraph'
+  | 'noSelection' | 'invalidSelection' | 'nonText' | 'invalidText' | 'addressInvalid'
+
 /**
  * DrawLike 接口：描述 CommandAdapt 所依赖的视图/绘制层抽象。
  * 通过该接口隔离命令适配器与具体视图实现，便于测试与解耦。
@@ -95,6 +100,7 @@ export class CommandAdapt {
   private _searchZone: Zone = 'main'
   private _searchContent = ''
   private _revisionSequence = 0
+  private _hyperlinkInsertionError: HyperlinkInsertionError | null = null
 
   /** 生成指定类型的修订元数据，包含递增数字 ID、当前作者和时间。 */
   private newRevision(type: 'insert' | 'delete' | 'format'): RevisionMeta {
@@ -2030,19 +2036,31 @@ export class CommandAdapt {
     })
   }
 
+  /** 最近一次插入超链接失败的原因；成功后清空，供 UI 翻译显示。 */
+  getHyperlinkInsertionError(): HyperlinkInsertionError | null {
+    return this._hyperlinkInsertionError
+  }
+
   /**
    * 插入超链接。
    * @param payload 超链接参数，包含 url 与 valueList
    */
   insertHyperlink(payload: { url: string; valueList: IElement[] }): boolean {
-    if (!this.getIsCanInput() || !payload ||
-      !Array.isArray(payload.valueList) || !payload.valueList.length) return false
-    const url = payload.url.trim()
-    if (!url || /[\u0000-\u0020\u007F]/.test(url)) return false
-    try {
-      if (!['http:', 'https:', 'mailto:', 'tel:', 'ftp:'].includes(new URL(url).protocol)) return false
-    } catch {
+    this._hyperlinkInsertionError = null
+    const fail = (reason: HyperlinkInsertionError): false => {
+      this._hyperlinkInsertionError = reason
       return false
+    }
+    if (this.getIsReadonly()) return fail('readOnly')
+    if (this.getIsDisabled()) return fail('disabled')
+    if (!payload || typeof payload.url !== 'string') return fail('addressInvalid')
+    if (!Array.isArray(payload.valueList) || !payload.valueList.length) return fail('invalidText')
+    const url = payload.url.trim()
+    if (!url || /[\u0000-\u0020\u007F]/.test(url)) return fail('addressInvalid')
+    try {
+      if (!['http:', 'https:', 'mailto:', 'tel:', 'ftp:'].includes(new URL(url).protocol)) return fail('addressInvalid')
+    } catch {
+      return fail('addressInvalid')
     }
     const hasRevision = (element: IElement): boolean => {
       const run = element as ITextElement
@@ -2050,42 +2068,49 @@ export class CommandAdapt {
         run.extension?.revisionOldProps || run.extension?.revisionPrevious)
     }
     if (payload.valueList.some(run => !run || run.type !== 'text' || typeof run.value !== 'string' ||
-      hasRevision(run) || run.extension?.bookmarkMarker || run.extension?.fieldMarker)) return false
+      hasRevision(run) || run.extension?.bookmarkMarker || run.extension?.fieldMarker)) return fail('invalidText')
     const text = payload.valueList.map(run => run.value).join('')
-    if (!text.trim() || /[\r\n\u200B\uFEFF]/.test(text)) return false
     // 链接子 run 尚不参与修订遍历，不能把待审修订藏入 valueList 或绕过修订模式。
-    if (this.draw.getOptions().trackChanges) return false
+    if (this.draw.getOptions().trackChanges) return fail('tracking')
     let success = false
     this.execute(doc => {
       const ordered = this.range.getOrdered()
-      if (!ordered) return false
+      if (!ordered) return fail('noSelection')
       const { start, end } = ordered
       const parentPath = start.path.slice(0, -1)
-      if (!isSamePath(parentPath, end.path.slice(0, -1))) return false
+      if (!isSamePath(parentPath, end.path.slice(0, -1))) return fail('crossContainer')
       const startNode = getByPath(doc.elements, start.path)
       const endNode = getByPath(doc.elements, end.path)
-      if (startNode?.type !== 'text' || endNode?.type !== 'text') return false
+      if (!startNode || !endNode) return fail('invalidSelection')
+      if (startNode.type === 'hyperlink' || endNode.type === 'hyperlink') return fail('existingLink')
+      if (startNode.type !== 'text' || endNode.type !== 'text') return fail('nonText')
       if (!Number.isInteger(start.offset) || !Number.isInteger(end.offset) ||
         start.offset < 0 || start.offset > startNode.value.length ||
-        end.offset < 0 || end.offset > endNode.value.length) return false
+        end.offset < 0 || end.offset > endNode.value.length) return fail('invalidSelection')
       if (parentPath[parentPath.length - 1] === 'valueList') {
         const container = getByPath(doc.elements, parentPath.slice(0, -1))
-        if (container?.type !== 'title' && container?.type !== 'list') return false
+        if (container?.type === 'hyperlink') return fail('existingLink')
+        if (container?.type !== 'title' && container?.type !== 'list') return fail('nonText')
       }
       const parent = getParentContainer(doc.elements, start.path)
-      if (!parent) return false
+      if (!parent) return fail('invalidSelection')
       const first = Number(start.path[start.path.length - 1])
       const last = Number(end.path[end.path.length - 1])
       const runs = parent.slice(first, last + 1)
-      if (runs.some(run => run.type !== 'text' || hasRevision(run) ||
-        run.extension?.bookmarkMarker || run.extension?.fieldMarker)) return false
+      if (runs.some(run => run.extension?.bookmarkMarker)) return fail('bookmarkSelection')
+      if (runs.some(run => run.extension?.fieldMarker)) return fail('fieldSelection')
+      if (runs.some(run => run.type === 'hyperlink')) return fail('existingLink')
+      if (runs.some(run => run.type !== 'text')) return fail('nonText')
+      if (runs.some(hasRevision)) return fail('revisions')
       const selected = runs.map((run, i) => ({
         ...cloneTree(run),
         value: run.value.slice(i === 0 ? start.offset : 0, i === runs.length - 1 ? end.offset : run.value.length)
       })).filter(run => run.value.length)
       const selectedText = selected.map(run => run.value).join('')
       // 不跨段落或吞掉段落终止符；不支持的选区必须在任何修改之前退出。
-      if (/[\r\n\u200B\uFEFF]/.test(selectedText)) return false
+      if (/[\r\n\u200B\uFEFF]/.test(selectedText)) return fail('crossParagraph')
+      // 先检查原选区，避免书签零宽标记被误报为显示文字错误。
+      if (!text.trim() || /[\r\n\u200B\uFEFF]/.test(text)) return fail('invalidText')
       const base = selected[0] ?? startNode
       // 对原选中文字加链接时沿用原 run 边界；更改显示文字时继承起点格式。
       const valueList = selectedText === text ? selected : payload.valueList

@@ -2,6 +2,7 @@ import '../../assets/css/hyperlink-widget.css'
 import panelHtml from '../../assets/components/hyperlink-widget.html?raw'
 import { translatePanel, viewTranslate } from '../../view-i18n'
 import type { ViewTranslate } from '../../view-i18n'
+import type { HyperlinkInsertionError } from '@vervedoc/docx-editor-transform'
 
 export class HyperlinkWidget {
   private root: HTMLElement | null = null
@@ -14,7 +15,7 @@ export class HyperlinkWidget {
     return viewTranslate(this.translate, key)
   }
 
-  show(text: string, onConfirm: (text: string, url: string) => boolean, onSuccess?: () => void): void {
+  show(text: string, onConfirm: (text: string, url: string) => boolean | HyperlinkInsertionError, onSuccess?: () => void): void {
     this.hide()
     const container = document.createElement('div')
     container.innerHTML = panelHtml
@@ -47,10 +48,11 @@ export class HyperlinkWidget {
       } catch {
         return setError('view.hyperlink.addressInvalid', urlInput)
       }
-      if (onConfirm(value, url)) {
+      const result = onConfirm(value, url)
+      if (result === true) {
         this.hide()
         onSuccess?.()
-      } else setError('view.hyperlink.unsupported', urlInput)
+      } else setError(`view.hyperlink.${typeof result === 'string' ? result : 'unsupported'}`, urlInput)
     })
     root.addEventListener('keyup', event => event.stopPropagation())
     root.addEventListener('keypress', event => event.stopPropagation())

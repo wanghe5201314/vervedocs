@@ -36,6 +36,8 @@ export default {
     none: 'なし',
     confirmRestore: '復元の確認',
     newDocument: '新規文書',
+    newDocumentConfirmContent: 'エディタに未保存の内容があります。新規文書を作成するとこれらの内容は破棄されます。続行しますか？',
+    importDocumentConfirmContent: 'エディタに未保存の内容があります。文書をインポートするとこれらの内容は破棄されます。続行しますか？',
     documentName: '文書名',
     unnamedDocument: '無題の文書',
     feedback: 'フィードバック',

@@ -1,6 +1,6 @@
 {
   "name": "@vervedoc/docx-editor-transform",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "DocxEditor 变换层 - 文档变换操作",
   "author": "wanghe",
   "license": "MIT",

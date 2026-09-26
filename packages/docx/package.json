@@ -2,7 +2,7 @@
   "name": "@vervedoc/docx",
   "author": "wanghe",
   "license": "MIT",
-  "version": "2.2.35",
+  "version": "2.2.36",
   "description": "玉衡云文档 完整版UI",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",

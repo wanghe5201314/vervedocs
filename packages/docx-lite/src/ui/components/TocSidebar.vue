@@ -10,6 +10,8 @@
       <div class="catalog-tree">
         <VdTree
           :nodes="treeNodes"
+          :selected-key="selectedKey"
+          background="#fff"
           empty-text="暂无目录"
           @select="handleSelect"
         />
@@ -19,7 +21,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { VdTree, buildTreeFromFlat, type VdTreeNode } from '@vervedoc/ui'
 
 interface FlatTocItem {
@@ -50,7 +52,9 @@ const treeNodes = computed<VdTreeNode[]>(() =>
 )
 
 /** 处理节点选中，抛出 tocClick 事件 */
+const selectedKey = ref<string | undefined>()
 const handleSelect = (key: string) => {
+  selectedKey.value = key
   emit('tocClick', key)
 }
 </script>

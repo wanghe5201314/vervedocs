@@ -1,4 +1,5 @@
 import { builtinMessages } from '@vervedoc/i18n'
+import { controlDialogMessages } from './control-dialog'
 
 export default {
   ...builtinMessages.koKR,
@@ -293,10 +294,13 @@ export default {
       separator: '구분 기호',
       splitLine: '구분선',
       symbol: '기호',
-      dateAndTime: '날짜 및 시간',
+
       barcode: '바코드',
       qrcode: 'QR 코드',
-      signature: '전자 서명'
+      signature: '전자 서명',
+      controlGroup: '컨트롤', control: '콘텐츠 컨트롤', insertControl: '콘텐츠 컨트롤 삽입',
+      controlText: '텍스트', controlNumber: '숫자', controlDate: '날짜', controlSelect: '드롭다운',
+      controlMultiSelect: '다중 선택', controlCheckbox: '체크박스', controlRadioGroup: '라디오 그룹'
     },
     layout: {
       pageSetup: '페이지 설정',
@@ -920,5 +924,17 @@ export default {
     passwordError: '암호가 잘못되었습니다',
     requestFailed: '요청 실패',
     requestFailedWithStatus: '요청 실패({status})'
+  },
+  control: {
+    guide: controlDialogMessages.koKR,
+    title: '제목', placeholder: '자리표시자', required: '필수', readOnly: '읽기 전용', removable: '삭제 가능',
+    options: '옵션', optionValue: '값', optionLabel: '레이블', addOption: '옵션 추가', removeOption: '옵션 제거',
+    defaultValue: '기본값', maxLength: '최대 길이', min: '최소값', max: '최대값', precision: '정밀도',
+    format: '형식', dateMode: '날짜 모드', dateOnly: '날짜만', dateTime: '날짜 및 시간', delimiter: '구분자',
+    checkboxLabel: '체크박스 레이블', confirm: '확인', cancel: '취소', configTitle: '컨트롤 설정',
+    selectControlType: '컨트롤 유형 선택', emptyPlaceholder: '내용 입력', searchPlaceholder: '옵션 검색',
+    noResults: '결과 없음', clear: '지우기', removeControl: '컨트롤 삭제', keepContent: '내용 유지',
+    removeControlAndContent: '컨트롤 및 내용 삭제', clearContent: '내용 지우기', valueRequired: '이 컨트롤은 필수입니다',
+    valueOutOfRange: '값이 범위를 벗어났습니다', invalidNumber: '유효한 숫자를 입력하세요', duplicateOptionValue: '옵션 값이 중복됩니다'
   }
 }

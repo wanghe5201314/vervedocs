@@ -10,6 +10,7 @@ export default {
     noData: '暂无数据', data: '数据'
   },
   view: {
+    control: { search: '搜索选项', noResults: '无匹配结果', clear: '清空' },
     common: {
       cancel: '取消', confirm: '确定', none: '无', leftAlign: '左对齐', rightAlign: '右对齐',
       center: '居中', justify: '两端对齐', distribute: '分散对齐', preview: '预览',

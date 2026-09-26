@@ -455,6 +455,25 @@ const executeCommand = (command: string, ...args: any[]) => {
       value: ''
     }]),
 
+    insertControl: (payload: { kind: string }) => {
+      emit('command', 'openControlDialog', payload)
+    },
+    executeInsertControl: (config: any) => {
+      editorInstance.command.executeInsertControl(config)
+    },
+    executeUpdateControlValue: (controlId: string, value: any) => {
+      editorInstance.command.executeUpdateControlValue(controlId, value)
+    },
+    executeRemoveControl: (controlId: string, keepContent: boolean) => {
+      editorInstance.command.executeRemoveControl(controlId, keepContent)
+    },
+    executeClearControl: (controlId: string) => {
+      editorInstance.command.executeClearControl(controlId)
+    },
+    executeUpdateControlConfig: (controlId: string, config: any) => {
+      editorInstance.command.executeUpdateControlConfig(controlId, config)
+    },
+
     // 分隔符
     pageBreak: pageBreakFn,
     columnBreak: columnBreakFn,
@@ -510,17 +529,6 @@ const executeCommand = (command: string, ...args: any[]) => {
     },
     insertLatex: insertLatexFn,
 
-    // 日期
-    insertDate: (payload: { format: string, value: string }) => {
-      editorInstance.command.executeInsertElementList([{
-        type: 'date',
-        value: '',
-        dateFormat: payload.format,
-        valueList: [{
-          value: payload.value.trim()
-        }]
-      }])
-    },
 
     // 内容块
     block: () => {

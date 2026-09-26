@@ -394,6 +394,99 @@ export interface ISeparatorElement extends IElementBase {
   color?: string
 }
 
+/* ========== 内置内容控件 ========== */
+
+/** 控件种类：区分七类内置控件的行为 */
+export type ControlKind =
+  | 'text'
+  | 'number'
+  | 'date'
+  | 'select'
+  | 'multiSelect'
+  | 'checkbox'
+  | 'radioGroup'
+
+/** 控件选项：稳定的 value 与独立的 label */
+export interface IControlOption {
+  /** 选项稳定标识，不使用下标或文案 */
+  value: string
+  /** 选项显示标签 */
+  label: string
+}
+
+/** 控件配置：所有种类共享的配置字段，可序列化 */
+export interface IControlConfig {
+  /** 控件种类 */
+  kind: ControlKind
+  /** 控件标题 */
+  title?: string
+  /** 占位提示文字 */
+  placeholder?: string
+  /** 是否必填 */
+  required?: boolean
+  /** 内容是否只读 */
+  readOnly?: boolean
+  /** 控件是否可删除 */
+  removable?: boolean
+  /** 选项列表（select / multiSelect / radioGroup 使用） */
+  options?: IControlOption[]
+  /** 多选显示分隔符（multiSelect 使用，默认逗号） */
+  delimiter?: string
+  /** 最大长度（text 使用） */
+  maxLength?: number
+  /** 最小值（number 使用） */
+  min?: number
+  /** 最大值（number 使用） */
+  max?: number
+  /** 小数精度（number 使用） */
+  precision?: number
+  /** 显示格式模板（number / date 使用） */
+  format?: string
+  /** 日期模式：date=仅日期，dateTime=日期时间 */
+  dateMode?: 'date' | 'dateTime'
+  /** 复选框标签（checkbox 使用） */
+  checkboxLabel?: string
+}
+
+/** 控件实际业务值的联合类型 */
+export type ControlDataValue = string | string[] | boolean | number | null
+
+/**
+ * 内置内容控件元素（行内）。
+ *
+ * 统一使用 `type: 'control'`，由 `control.kind` 区分七类控件行为。
+ * `value` 为显示文本（派生自 dataValue + control 配置，用于布局渲染）；
+ * `dataValue` 为实际业务值；`control` 为配置；`valueList` 为纯文本子内容。
+ */
+export interface IControlElement extends IElementBase {
+  /** 元素类型固定为 'control' */
+  type: 'control'
+  /** 控件配置 */
+  control: IControlConfig
+  /** 实际业务值 */
+  dataValue: ControlDataValue
+  /** 显示文本（派生自 dataValue + control 配置，用于布局渲染） */
+  value: string
+  /** 纯文本控件的子内容（text kind 时承载文本子节点） */
+  valueList?: IElement[]
+  /** 字体名 */
+  font?: string
+  /** 字号（pt） */
+  size?: number
+  /** 是否加粗 */
+  bold?: boolean
+  /** 是否斜体 */
+  italic?: boolean
+  /** 字体颜色 */
+  color?: string
+  /** 高亮色（背景色） */
+  highlight?: string
+  /** 是否删除线 */
+  strikeout?: boolean
+  /** 是否下划线 */
+  underline?: boolean
+}
+
 /* ========== 联合类型 ========== */
 
 /** 文档元素联合类型：涵盖所有具体元素类型，并提供兜底扩展类型以避免扁平化 */
@@ -405,6 +498,7 @@ export type IElement =
   | IImageElement
   | IPageBreakElement
   | ISeparatorElement
+  | IControlElement
   | (IElementBase & Record<string, unknown>) // 兜底扩展类型（不扁平化）
 
 /* ========== 段落样式表 ========== */

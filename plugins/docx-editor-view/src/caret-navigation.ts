@@ -62,7 +62,7 @@ export class CaretNavigation {
     if (!range || !layout) return
     const inl = this.deps.findInlineByPos(pos)
     if (!inl) { range.setCaret(pos); return }
-    const text = inl.text
+    const text = inl.controlId ? '\uFFFC' : inl.text
     const localOff = pos.offset - inl.startOffset
     const isWord = (ch: string) => /[A-Za-z0-9_]/.test(ch)
     let left = localOff
@@ -180,7 +180,7 @@ export class CaretNavigation {
     if (!pos) return
     const inl = this.deps.findInlineByPos(pos)
     if (!inl) return
-    const text = inl.text
+    const text = inl.controlId ? '\uFFFC' : inl.text
     const localOff = pos.offset - inl.startOffset
     const isWord = (ch: string) => /[A-Za-z0-9_]/.test(ch)
     let off = localOff

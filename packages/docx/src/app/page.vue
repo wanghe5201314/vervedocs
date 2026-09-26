@@ -160,7 +160,7 @@
       @confirm="handlePaperSizeConfirm"
     />
 
-    <DateDialog v-model="dateDialogVisible" @confirm="handleDateConfirm" />
+
     <ParagraphDialog
       v-model="paragraphDialogVisible"
       :editor="{ executeCommand }"
@@ -171,6 +171,12 @@
       v-model="versionHistoryDialogVisible"
       :doc-id="documentMeta.id"
       @restore="handleVersionRestore"
+    />
+    <ControlDialog
+      v-model="controlDialogVisible"
+      :kind="controlKind"
+      @confirm="handleControlConfirm"
+      @after-confirm="executeCommand('focusEditor')"
     />
     <PasswordCard
       :visible="passwordModalVisible"
@@ -223,11 +229,12 @@ import SignatureDialog from '@/components/dialogs/signatureDialog.vue'
 import WatermarkDialog from '@/components/dialogs/watermarkDialog.vue'
 import PaperSizeDialog from '@/components/dialogs/paperSizeDialog.vue'
 
-import DateDialog from '@/components/dialogs/dateDialog.vue'
+
 import ParagraphDialog from '@/components/dialogs/paragraphDialog.vue'
 import TableBordersDialog from '@/components/dialogs/tableBordersDialog.vue'
 import AISettingsDialog from '@/components/dialogs/aiSettingsDialog.vue'
 import VersionHistoryDialog from '@/components/dialogs/versionHistoryDialog.vue'
+import ControlDialog from '@/components/dialogs/controlDialog.vue'
 
 import Menu from '@/components/layout/menu.vue'
 import LeftDockBar from '@/components/layout/leftDockBar.vue'
@@ -500,7 +507,7 @@ const {
   watermarkDialogVisible,
   paperSizeDialogVisible,
 
-  dateDialogVisible,
+
   paragraphDialogVisible,
   aiSettingsDialogVisible,
   versionHistoryDialogVisible,
@@ -514,9 +521,12 @@ const {
   handleWatermarkConfirm,
   handlePaperSizeConfirm,
 
-  handleDateConfirm,
 
-  handleInsertTableDialogConfirm
+  handleInsertTableDialogConfirm,
+
+  controlDialogVisible,
+  controlKind,
+  handleControlConfirm
 } = useDialogs({ executeCommand })
 
 /** AI 操作处理方法 */
@@ -926,6 +936,11 @@ const handleEditorCommand = (command: string, ...args: any[]) => {
     tablePropertiesDialogVisible.value = true
     return
   }
+  if (command === 'openControlDialog') {
+    controlKind.value = args[0]?.kind ?? 'text'
+    controlDialogVisible.value = true
+    return
+  }
   baseHandleEditorCommand(command, ...args)
 
 }
@@ -943,7 +958,7 @@ const dialogCommands: Record<string, Ref<boolean>> = {
   addWatermark: watermarkDialogVisible,
   customPaperSizeDialog: paperSizeDialogVisible,
 
-  insertDate: dateDialogVisible,
+
   paragraphDialog: paragraphDialogVisible,
   versionHistory: versionHistoryDialogVisible,
   aiSettings: aiSettingsDialogVisible
@@ -1131,6 +1146,12 @@ const handleCommand = (command: string, ...args: any[]) => {
 
   if (command === 'addWatermark' && args.length > 0) {
     executeCommand('addWatermark', args[0])
+    return
+  }
+
+  if (command === 'openControlDialog') {
+    controlKind.value = args[0]?.kind ?? 'text'
+    controlDialogVisible.value = true
     return
   }
 

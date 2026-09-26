@@ -124,8 +124,8 @@ export function paintParagraph(ctx: PaintCtx, b: ParagraphBlock, opts: PaintOpti
       const key = `${font}||${textColor}`
       addBucket(buckets, key, {
         font, color: textColor,
-        x: inl.x, y: inl.baseline,
-        text: inl.text,
+        x: inl.x + (inl.controlMark ? inl.size + (inl.letterSpacing ?? 0) : 0), y: inl.baseline,
+        text: inl.controlMark ? inl.text.slice(1) : inl.text,
         letterSpacing: inl.letterSpacing
       })
       // Review marks are visual overlays, never persisted as ordinary formatting.
@@ -173,5 +173,38 @@ export function paintParagraph(ctx: PaintCtx, b: ParagraphBlock, opts: PaintOpti
     ctx.moveTo(s.x1 + 0.5, s.y1 + 0.5)
     ctx.lineTo(s.x2 + 0.5, s.y2 + 0.5)
     ctx.stroke()
+  }
+  for (const line of b.lines) {
+    for (const inl of line.inlines) {
+      if (!inl.controlMark) continue
+      const { kind, checked } = inl.controlMark
+      const size = inl.size * 0.8
+      const x = inl.x + inl.size * 0.1
+      const y = inl.baseline - size
+      ctx.save()
+      ctx.strokeStyle = inl.color
+      ctx.fillStyle = inl.color
+      ctx.lineWidth = Math.max(1, inl.size / 14)
+      ctx.beginPath()
+      if (kind === 'radio') {
+        ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2)
+      } else {
+        ctx.rect(x, y, size, size)
+      }
+      ctx.stroke()
+      if (checked) {
+        ctx.beginPath()
+        if (kind === 'radio') {
+          ctx.arc(x + size / 2, y + size / 2, size / 4, 0, Math.PI * 2)
+          ctx.fill()
+        } else {
+          ctx.moveTo(x + size * 0.2, y + size * 0.5)
+          ctx.lineTo(x + size * 0.43, y + size * 0.75)
+          ctx.lineTo(x + size * 0.83, y + size * 0.22)
+          ctx.stroke()
+        }
+      }
+      ctx.restore()
+    }
   }
 }

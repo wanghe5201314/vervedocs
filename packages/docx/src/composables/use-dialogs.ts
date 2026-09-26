@@ -35,14 +35,18 @@ export function useDialogs(options: {
   /** 纸张大小对话框是否可见 */
   const paperSizeDialogVisible = ref(false)
 
-  /** 日期对话框是否可见 */
-  const dateDialogVisible = ref(false)
+
   /** 段落对话框是否可见 */
   const paragraphDialogVisible = ref(false)
   /** AI 设置对话框是否可见 */
   const aiSettingsDialogVisible = ref(false)
   /** 版本历史对话框是否可见 */
   const versionHistoryDialogVisible = ref(false)
+
+  /** 控件配置对话框是否可见 */
+  const controlDialogVisible = ref(false)
+  /** 当前配置的控件种类 */
+  const controlKind = ref<'text' | 'number' | 'date' | 'select' | 'multiSelect' | 'checkbox' | 'radioGroup'>('text')
 
   /** 打开快捷键对话框 */
   const openShortcuts = () => {
@@ -116,14 +120,6 @@ export function useDialogs(options: {
 
   /**
 
-   * 处理日期插入确认
-   * @param data 日期格式与值
-   */
-  const handleDateConfirm = (data: { format: string; value: string }) => {
-    executeCommand('insertDate', data)
-  }
-
-  /**
 
    * 处理插入表格确认
    * @param payload 表格行列与边框配置
@@ -162,7 +158,7 @@ export function useDialogs(options: {
     watermarkDialogVisible,
     paperSizeDialogVisible,
 
-    dateDialogVisible,
+
     paragraphDialogVisible,
     aiSettingsDialogVisible,
     versionHistoryDialogVisible,
@@ -176,9 +172,14 @@ export function useDialogs(options: {
     handleWatermarkConfirm,
     handlePaperSizeConfirm,
 
-    handleDateConfirm,
 
     handleInsertTableDialogConfirm,
-    handleTableBordersConfirm
+    handleTableBordersConfirm,
+
+    controlDialogVisible,
+    controlKind,
+    handleControlConfirm: (config: any) => {
+      executeCommand('executeInsertControl', config)
+    }
   }
 }

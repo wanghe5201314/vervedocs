@@ -1,4 +1,5 @@
 import { builtinMessages } from '@vervedoc/i18n'
+import { controlDialogMessages } from './control-dialog'
 
 export default {
   ...builtinMessages.jaJP,
@@ -293,10 +294,13 @@ export default {
       separator: '区切り記号',
       splitLine: '区切り線',
       symbol: '記号',
-      dateAndTime: '日付と時刻',
+
       barcode: 'バーコード',
       qrcode: 'QRコード',
-      signature: '電子署名'
+      signature: '電子署名',
+      controlGroup: 'コントロール', control: 'コンテンツコントロール', insertControl: 'コンテンツコントロール挿入',
+      controlText: 'テキスト', controlNumber: '数値', controlDate: '日付', controlSelect: 'ドロップダウン',
+      controlMultiSelect: '複数選択', controlCheckbox: 'チェックボックス', controlRadioGroup: 'ラジオグループ'
     },
     layout: {
       pageSetup: 'ページ設定',
@@ -920,5 +924,17 @@ export default {
     passwordError: 'パスワードが間違っています',
     requestFailed: 'リクエストに失敗しました',
     requestFailedWithStatus: 'リクエストに失敗しました({status})'
+  },
+  control: {
+    guide: controlDialogMessages.jaJP,
+    title: 'タイトル', placeholder: 'プレースホルダー', required: '必須', readOnly: '読み取り専用', removable: '削除可能',
+    options: 'オプション', optionValue: '値', optionLabel: 'ラベル', addOption: 'オプション追加', removeOption: 'オプション削除',
+    defaultValue: 'デフォルト値', maxLength: '最大長', min: '最小値', max: '最大値', precision: '精度',
+    format: 'フォーマット', dateMode: '日付モード', dateOnly: '日付のみ', dateTime: '日時', delimiter: '区切り文字',
+    checkboxLabel: 'チェックボックスラベル', confirm: 'OK', cancel: 'キャンセル', configTitle: 'コントロール設定',
+    selectControlType: 'コントロール種別を選択', emptyPlaceholder: '内容を入力', searchPlaceholder: 'オプション検索',
+    noResults: '結果なし', clear: 'クリア', removeControl: 'コントロール削除', keepContent: '内容を保持',
+    removeControlAndContent: 'コントロールと内容を削除', clearContent: '内容をクリア', valueRequired: 'このコントロールは必須です',
+    valueOutOfRange: '値が範囲外です', invalidNumber: '有効な数値を入力してください', duplicateOptionValue: 'オプション値が重複しています'
   }
 }

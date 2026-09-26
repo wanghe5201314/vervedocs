@@ -19,11 +19,13 @@ import type {
   ITableElement,
   ITd,
   ITr,
+  IControlElement,
   Path,
   PathSegment
 } from './types'
 import { DEFAULT_EDITOR_OPTION } from './constants'
 import { isParagraphContainer, isTable, walkTree } from './walk'
+import { computeControlDisplayValue } from './control'
 
 /** 按节引用选择页眉页脚；未定义的引用按 OOXML 继承前节同类引用。 */
 export function resolveHeaderFooterPart(doc: IDocxDocumentMeta, zone: 'header' | 'footer', sectionIndex: number, pageIndex: number, firstPage: boolean): string | undefined {
@@ -141,6 +143,9 @@ function normalizeNode(node: IElement, ctx: FormatTreeContext): void {
       break
     case 'pageBreak':
       normalizePageBreak(node as IElement, ctx)
+      break
+    case 'control':
+      normalizeControl(node as IControlElement, ctx)
       break
     default:
       // 兜底：拥有 valueList/tdList/value 数组的容器一律递归
@@ -331,6 +336,22 @@ function normalizePageBreak(node: IElement, ctx: FormatTreeContext): void {
   const anyNode = node as unknown as Record<string, unknown>
   if (anyNode.value == null) throw new TypeError('pageBreak.value 缺失，必须由解析来源提供')
   applyParagraphStyleId(node, ctx)
+}
+
+/**
+ * 归一化 control 节点：确保 control 配置存在，同步显示文本，递归 valueList。
+ * @param node control 节点
+ * @param ctx 格式化上下文
+ */
+function normalizeControl(node: IControlElement, ctx: FormatTreeContext): void {
+  if (!node.control || typeof node.control !== 'object') return
+  node.value = computeControlDisplayValue(node.control, node.dataValue)
+  applyParagraphStyleId(node, ctx)
+  if (Array.isArray(node.valueList)) {
+    ctx._pathStack?.push('valueList')
+    formatElementTree(node.valueList, ctx)
+    ctx._pathStack?.pop()
+  }
 }
 
 /**

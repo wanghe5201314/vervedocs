@@ -10,6 +10,7 @@ export default {
     noData: 'データがありません', data: 'データ'
   },
   view: {
+    control: { search: '選択肢を検索', noResults: '一致する選択肢がありません', clear: 'クリア' },
     common: { cancel: 'キャンセル', confirm: 'OK', none: 'なし', leftAlign: '左揃え', rightAlign: '右揃え', center: '中央揃え', justify: '両端揃え', distribute: '均等割り付け', preview: 'プレビュー', color: '色', spacing: '間隔', points: 'pt' },
     paragraph: { format: '段落の書式', body: '本文', heading1: '見出し 1', heading2: '見出し 2', heading3: '見出し 3', heading4: '見出し 4', heading5: '見出し 5', heading6: '見出し 6', cut: '切り取り', copy: 'コピー', paste: '貼り付け', fontSettings: 'フォント...', advancedSettings: '段落の詳細設定', link: 'ハイパーリンク', comment: 'コメントの挿入' },
     hyperlink: {

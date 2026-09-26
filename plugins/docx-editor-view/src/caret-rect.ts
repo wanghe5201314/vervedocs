@@ -104,6 +104,7 @@ function locateInParagraph(b: ParagraphBlock, pos: IPosition, bx: number, by: nu
   for (const line of b.lines) {
     for (const inl of line.inlines) {
       if (!isSamePath(inl.path, pos.path)) continue
+      if (inl.controlId && !(pos.offset === 0 ? inl.controlStart : inl.controlEnd)) continue
       if (pos.offset < inl.startOffset || pos.offset > inl.endOffset) continue
       const localX = charOffsetToX(inl, pos.offset - inl.startOffset)
       // 光标高度按行高，顶部对齐行顶
@@ -161,6 +162,7 @@ function pathStartsWith(path: Path, prefix: Path): boolean {
  * 使用真实 measureText 度量（与 layout 阶段一致），避免估算错位。
  */
 function charOffsetToX(inl: InlineBox, offsetInInline: number): number {
+  if (inl.controlId) return inl.x + (offsetInInline > 0 ? inl.width : 0)
   if (offsetInInline <= 0) return inl.x
   if (offsetInInline >= inl.text.length) return inl.x + inl.width
   const measure = getSharedMeasure()

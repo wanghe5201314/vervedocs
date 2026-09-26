@@ -10,6 +10,7 @@ export default {
     noData: '暫無資料', data: '資料'
   },
   view: {
+    control: { search: '搜尋選項', noResults: '無匹配結果', clear: '清空' },
     common: { cancel: '取消', confirm: '確定', none: '無', leftAlign: '靠左對齊', rightAlign: '靠右對齊', center: '置中', justify: '左右對齊', distribute: '分散對齊', preview: '預覽', color: '顏色', spacing: '間距', points: '點' },
     paragraph: { format: '段落格式', body: '內文', heading1: '標題 1', heading2: '標題 2', heading3: '標題 3', heading4: '標題 4', heading5: '標題 5', heading6: '標題 6', cut: '剪下', copy: '複製', paste: '貼上', fontSettings: '字型...', advancedSettings: '進階段落設定', link: '超連結', comment: '插入批註' },
     hyperlink: {

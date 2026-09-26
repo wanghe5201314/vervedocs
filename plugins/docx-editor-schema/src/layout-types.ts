@@ -62,6 +62,19 @@ export interface InlineBox {
   letterSpacing?: number
   /** 若该 inline 属于超链接，存其 URL（用于命中跳转） */
   hyperlink?: string
+  /** 若该 inline 属于内置控件，存其控件实例 ID（用于命中激活） */
+  controlId?: string
+  /** 若该 inline 是控件的占位提示文字（空值时显示 placeholder） */
+  controlPlaceholder?: boolean
+  /** Vector selection mark at the beginning of this fragment. */
+  controlMark?: { kind: 'checkbox' | 'radio'; checked: boolean }
+  /** Stable radio option value, including wrapped label fragments. */
+  controlOptionValue?: string
+  /** Only the outer fragments of an atomic control can host its caret. */
+  controlStart?: boolean
+  controlEnd?: boolean
+  /** Display-only fragment offset, independent of the atomic 0/1 document positions. */
+  controlTextOffset?: number
 }
 
 /** 行盒（line）：一行 inline 的布局结果 */

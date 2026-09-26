@@ -10,6 +10,7 @@ export default {
     noData: '데이터 없음', data: '데이터'
   },
   view: {
+    control: { search: '옵션 검색', noResults: '일치하는 옵션 없음', clear: '지우기' },
     common: { cancel: '취소', confirm: '확인', none: '없음', leftAlign: '왼쪽 맞춤', rightAlign: '오른쪽 맞춤', center: '가운데 맞춤', justify: '양쪽 맞춤', distribute: '균등 분할', preview: '미리보기', color: '색상', spacing: '간격', points: 'pt' },
     paragraph: { format: '단락 서식', body: '본문', heading1: '제목 1', heading2: '제목 2', heading3: '제목 3', heading4: '제목 4', heading5: '제목 5', heading6: '제목 6', cut: '잘라내기', copy: '복사', paste: '붙여넣기', fontSettings: '글꼴...', advancedSettings: '단락 고급 설정', link: '하이퍼링크', comment: '메모 삽입' },
     hyperlink: {

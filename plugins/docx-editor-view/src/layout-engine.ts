@@ -18,7 +18,8 @@ import type {
   ITableElement,
   Path
 } from '@vervedoc/docx-editor-schema'
-import { splitParagraphs, FONT_FAMILY_CSS, resolveHeaderFooterPart } from '@vervedoc/docx-editor-schema'
+import { splitParagraphs, FONT_FAMILY_CSS, resolveHeaderFooterPart, isControl } from '@vervedoc/docx-editor-schema'
+import { CONTROL_MARK, getControlPresentation, type ControlPresentation } from './control-presentation'
 import type {
   DocumentLayout, PageLayout, BlockNode, ParagraphBlock,
   ImageBlock, PageBreakBlock, SeparatorBlock, TableBlock, TableRowLayout, TableCellLayout,
@@ -867,7 +868,12 @@ export class LayoutEngine {
       isFirstLine = false
     }
 
-    const layoutRuns = runs.map(rawRun => {
+    const expandedRuns = runs.flatMap((rawRun, sourceIndex): { rawRun: IElement; sourceIndex: number; presentation?: ControlPresentation }[] =>
+      isControl(rawRun)
+        ? getControlPresentation(rawRun).map(presentation => ({ rawRun, sourceIndex, presentation }))
+        : [{ rawRun, sourceIndex }]
+    )
+    const layoutRuns = expandedRuns.map(({ rawRun, presentation }) => {
       if (rawRun.type === 'hyperlink') {
         const vl = (rawRun as unknown as { valueList?: IElement[] }).valueList ?? []
         const text = vl.map(r => r.type === 'tab' ? '\t' : String(r.value ?? '')).join('')
@@ -879,6 +885,12 @@ export class LayoutEngine {
           color: tocEntry ? base.color : '#0000FF', underline: tocEntry ? base.underline : true,
           extension: rawRun.extension
         } as unknown as IElement
+      }
+      if (isControl(rawRun) && presentation) {
+        return {
+          ...rawRun, type: 'text', value: presentation.text,
+          color: presentation.placeholder ? '#999999' : rawRun.color
+        } as IElement
       }
       return rawRun
     })
@@ -901,11 +913,13 @@ export class LayoutEngine {
       return width
     }
 
-    for (let ri = 0; ri < runs.length; ri++) {
-      const rawRun = runs[ri]
+    for (let ri = 0; ri < expandedRuns.length; ri++) {
+      const { rawRun, sourceIndex, presentation } = expandedRuns[ri]
       const run = layoutRuns[ri]
       if (run.type !== 'text') continue
       const hyperlinkUrl = rawRun.type === 'hyperlink' ? String(rawRun.url ?? rawRun.value ?? '') : undefined
+      const controlId = isControl(rawRun) ? String(rawRun.id ?? '') : undefined
+      const controlPlaceholder = presentation?.placeholder
       const anyRun = run as unknown as Record<string, unknown>
       const rawFont = String(anyRun.font ?? this.opts.defaultFont)
       const font = FONT_FAMILY_CSS[rawFont] ?? rawFont
@@ -919,17 +933,32 @@ export class LayoutEngine {
       const groupIds = Array.isArray(anyRun.groupIds) ? anyRun.groupIds as string[] : undefined
       const value = String(anyRun.value ?? '')
 
-      if (!value) continue
+      if (!value) {
+        if (rawRun.type === 'text' && !rawRun.extension?.fieldMarker && !rawRun.extension?.bookmarkMarker) {
+          currentInlines.push({
+            run: rawRun,
+            path: [...runsParentPath, (paragraphKind === 'normal' ? startIndex : runStartIndex) + sourceIndex],
+            startOffset: 0, endOffset: 0, text: '', x: currentLineWidth, y: 0,
+            width: 0, height: size, font, size, bold, italic, color, baseline: 0
+          })
+          currentMaxSize = Math.max(currentMaxSize, size)
+        }
+        continue
+      }
       // 跳过段落终止符（零宽字符），不产出 inline，但 ri 仍递进以保持索引对齐
-      if (/^[\u200B\uFEFF]+$/.test(value)) continue
+      if (!controlId && /^[\u200B\uFEFF]+$/.test(value)) continue
 
       // normal 段落用 elements 原索引（startIndex + ri）作为 path 末段，保证 path 唯一；
       // title/list 的 runsParentPath 已含段索引，ri 是 valueList 切片内索引，需加 runStartIndex 还原原 valueList 索引。
       // 表格单元格内 normal 段落需拼上 runsParentPath（contentPath）以保证 path 全局唯一。
       const runPath: Path = paragraphKind === 'normal'
-        ? [...runsParentPath, startIndex + ri]
-        : [...runsParentPath, runStartIndex + ri]
+        ? [...runsParentPath, startIndex + sourceIndex]
+        : [...runsParentPath, runStartIndex + sourceIndex]
       let cursorInRun = 0
+      const charWidth = (ch: string): number =>
+        presentation?.mark && ch === CONTROL_MARK ? size :
+        controlId && value === '\u200B' ? 20 :
+        this.measure.charWidth(ch, font, size, bold, italic)
 
       while (cursorInRun < value.length) {
         const maxLineWidth = currentLineMaxWidth()
@@ -954,7 +983,7 @@ export class LayoutEngine {
         }
         // 若当前行已有内容且首个字符放不下 → 先换行再试，避免溢出被裁
         if (currentLineWidth > 0 && value[cursorInRun] !== '\n') {
-          const firstW = this.measure.charWidth(value[cursorInRun], font, size, bold, italic)
+          const firstW = charWidth(value[cursorInRun])
           if (firstW > remaining + 0.001) {
             finalizeLine(false)
             continue
@@ -965,7 +994,7 @@ export class LayoutEngine {
         for (let i = cursorInRun; i < value.length; i++) {
           const ch = value[i]
           if (tocEntry && ch === '\t') break
-          const w = this.measure.charWidth(ch, font, size, bold, italic)
+          const w = charWidth(ch)
           if (ch === '\n') { take = i - cursorInRun; break }
           if (takenWidth + w > remaining + 0.001 && take > 0) break
           takenWidth += w
@@ -986,10 +1015,10 @@ export class LayoutEngine {
         const text = value.slice(cursorInRun, segEnd)
         const segWidth = takenWidth
         const inline: InlineBox = {
-          run,
+          run: isControl(rawRun) ? rawRun : run,
           path: runPath,
-          startOffset: cursorInRun,
-          endOffset: segEnd,
+          startOffset: controlId ? 0 : cursorInRun,
+          endOffset: controlId ? 1 : segEnd,
           text,
           x: currentLineWidth, // 暂存为"相对 line 起点"，finalizeLine 会平移
           y: 0,
@@ -1005,7 +1034,14 @@ export class LayoutEngine {
           underline,
           baseline: 0,
           groupIds,
-          hyperlink: hyperlinkUrl
+          hyperlink: hyperlinkUrl,
+          controlId,
+          controlPlaceholder,
+          controlTextOffset: controlId ? cursorInRun : undefined,
+          controlStart: controlId ? cursorInRun === 0 && expandedRuns[ri - 1]?.sourceIndex !== sourceIndex : undefined,
+          controlEnd: controlId ? segEnd === value.length && expandedRuns[ri + 1]?.sourceIndex !== sourceIndex : undefined,
+          controlMark: cursorInRun === 0 ? presentation?.mark : undefined,
+          controlOptionValue: presentation?.optionValue
         }
         currentInlines.push(inline)
         currentLineWidth += segWidth
@@ -1574,6 +1610,8 @@ function applyRowFlex(line: LineBox, containerWidth: number): void {
     if (gaps <= 0) return
     const extra = free / gaps
     let dx = 0
+    let lastTextIndex = line.inlines.length - 1
+    while (lastTextIndex >= 0 && !line.inlines[lastTextIndex].text.length) lastTextIndex--
     for (let i = 0; i < line.inlines.length; i++) {
       const inl = line.inlines[i]
       inl.x += dx
@@ -1581,7 +1619,7 @@ function applyRowFlex(line: LineBox, containerWidth: number): void {
       if (n > 0) {
         inl.letterSpacing = extra
         // 若该 inline 是行尾，其最后一个字符后不再有缝隙需要承担
-        const isLast = i === line.inlines.length - 1
+        const isLast = i === lastTextIndex
         const add = isLast ? extra * (n - 1) : extra * n
         inl.width += add
         dx += add

@@ -6,7 +6,7 @@
  */
 
 import rfdc from 'rfdc'
-import type { IElement, Path, PathSegment, IPosition, ITableElement, ITd, ITr } from './types'
+import type { IElement, Path, PathSegment, IPosition, ITableElement, ITd, ITr, IControlElement, ControlDataValue } from './types'
 
 /* -------------------- 深拷贝 -------------------- */
 
@@ -43,6 +43,15 @@ export function isTable(el: IElement): el is ITableElement {
   return el?.type === 'table' && Array.isArray((el as ITableElement).trList)
 }
 
+/**
+ * 判断元素是否为内置内容控件（type='control' 且 control 配置存在）。
+ * @param el 待判断元素
+ * @returns 是控件则返回 true，并收窄类型
+ */
+export function isControl(el: IElement): el is IControlElement {
+  return el?.type === 'control' && typeof (el as IControlElement).control === 'object' && (el as IControlElement).control !== null
+}
+
 /* -------------------- 访问器 -------------------- */
 
 /** 遍历上下文：携带父节点、路径与索引信息 */
@@ -71,6 +80,8 @@ export function walkTree(elements: IElement[], visitor: Visitor, parentPath: Pat
 
     if (isParagraphContainer(node)) {
       walkTree(node.valueList, visitor, [...path, 'valueList'])
+    } else if (isControl(node) && Array.isArray(node.valueList)) {
+      walkTree(node.valueList, visitor, [...path, 'valueList'])
     } else if (isTable(node)) {
       for (let tr = 0; tr < node.trList.length; tr++) {
         const row = node.trList[tr]
@@ -81,6 +92,72 @@ export function walkTree(elements: IElement[], visitor: Visitor, parentPath: Pat
       }
     }
   }
+}
+
+/* -------------------- 控件归一化 -------------------- */
+
+/**
+ * 将旧的 checkbox/radio/date 类型元素归一化为统一的 control 类型。
+ * 在文档加载边界调用，确保历史数据平滑迁移到新模型。
+ * 保留未知字段，不丢弃原始数据。
+ */
+export function normalizeControlElement(el: IElement): IElement {
+  if (el.type === 'checkbox') {
+    const old = el as IElement & { value?: string }
+    const checked = old.value === 'true' || old.value === '1' || old.value === 'checked'
+    return {
+      ...el,
+      type: 'control' as const,
+      control: { kind: 'checkbox' as const },
+      dataValue: checked as ControlDataValue,
+      value: old.value ?? '',
+    } as IControlElement
+  }
+  if (el.type === 'radio') {
+    const old = el as IElement & { value?: string }
+    return {
+      ...el,
+      type: 'control' as const,
+      control: { kind: 'radioGroup' as const },
+      dataValue: (old.value ?? null) as ControlDataValue,
+      value: old.value ?? '',
+    } as IControlElement
+  }
+  if (el.type === 'date') {
+    const old = el as IElement & { value?: string; valueList?: { value: string }[]; dateFormat?: string }
+    const dateValue = old.valueList?.[0]?.value ?? null
+    return {
+      ...el,
+      type: 'control' as const,
+      control: { kind: 'date' as const, format: old.dateFormat },
+      dataValue: dateValue as ControlDataValue,
+      value: dateValue ?? old.value ?? '',
+    } as IControlElement
+  }
+  return el
+}
+
+/**
+ * 对整棵文档树执行控件归一化（原地替换节点）。
+ * 遍历段落容器、控件 valueList、表格单元格，将旧类型元素转换为统一 control 类型。
+ */
+export function normalizeControlTree(elements: IElement[]): IElement[] {
+  for (let i = 0; i < elements.length; i++) {
+    elements[i] = normalizeControlElement(elements[i])
+    const node = elements[i]
+    if (isParagraphContainer(node)) {
+      normalizeControlTree(node.valueList)
+    } else if (isControl(node) && Array.isArray(node.valueList)) {
+      normalizeControlTree(node.valueList)
+    } else if (isTable(node)) {
+      for (const tr of node.trList) {
+        for (const td of tr.tdList) {
+          normalizeControlTree(td.value)
+        }
+      }
+    }
+  }
+  return elements
 }
 
 /* -------------------- 路径寻址 -------------------- */

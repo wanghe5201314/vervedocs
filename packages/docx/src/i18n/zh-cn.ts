@@ -1,4 +1,5 @@
 import { builtinMessages } from '@vervedoc/i18n'
+import { controlDialogMessages } from './control-dialog'
 
 export default {
   ...builtinMessages.zhCN,
@@ -293,10 +294,20 @@ export default {
       separator: '分隔符',
       splitLine: '分割线',
       symbol: '符号',
-      dateAndTime: '日期和时间',
+
       barcode: '条形码',
       qrcode: '二维码',
-      signature: '电子签名'
+      signature: '电子签名',
+      controlGroup: '控件',
+      control: '内容控件',
+      insertControl: '插入内容控件',
+      controlText: '纯文本',
+      controlNumber: '数字',
+      controlDate: '日期',
+      controlSelect: '单选下拉',
+      controlMultiSelect: '多选下拉',
+      controlCheckbox: '复选框',
+      controlRadioGroup: '单选组'
     },
     layout: {
       pageSetup: '页面设置',
@@ -920,5 +931,45 @@ export default {
     passwordError: '密码错误',
     requestFailed: '请求失败',
     requestFailedWithStatus: '请求失败({status})'
+  },
+  control: {
+    guide: controlDialogMessages.zhCN,
+    title: '标题',
+    placeholder: '占位提示',
+    required: '必填',
+    readOnly: '只读',
+    removable: '可删除',
+    options: '选项',
+    optionValue: '选项值',
+    optionLabel: '选项标签',
+    addOption: '添加选项',
+    removeOption: '移除选项',
+    defaultValue: '默认值',
+    maxLength: '最大长度',
+    min: '最小值',
+    max: '最大值',
+    precision: '小数精度',
+    format: '显示格式',
+    dateMode: '日期模式',
+    dateOnly: '仅日期',
+    dateTime: '日期时间',
+    delimiter: '分隔符',
+    checkboxLabel: '复选框标签',
+    confirm: '确定',
+    cancel: '取消',
+    configTitle: '控件配置',
+    selectControlType: '请选择控件类型',
+    emptyPlaceholder: '请输入内容',
+    searchPlaceholder: '搜索选项',
+    noResults: '无匹配结果',
+    clear: '清空',
+    removeControl: '删除控件',
+    keepContent: '保留内容',
+    removeControlAndContent: '删除控件及内容',
+    clearContent: '清空内容',
+    valueRequired: '此控件为必填项',
+    valueOutOfRange: '值超出允许范围',
+    invalidNumber: '请输入有效数字',
+    duplicateOptionValue: '选项值不能重复'
   }
 }

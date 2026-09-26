@@ -1,4 +1,5 @@
 import { builtinMessages } from '@vervedoc/i18n'
+import { controlDialogMessages } from './control-dialog'
 
 export default {
   ...builtinMessages.enUS,
@@ -327,10 +328,20 @@ export default {
       separator: 'Separator',
       splitLine: 'Horizontal Line',
       symbol: 'Symbol',
-      dateAndTime: 'Date & Time',
+
       barcode: 'Barcode',
       qrcode: 'QR Code',
-      signature: 'Signature'
+      signature: 'Signature',
+      controlGroup: 'Controls',
+      control: 'Content Control',
+      insertControl: 'Insert Content Control',
+      controlText: 'Text',
+      controlNumber: 'Number',
+      controlDate: 'Date',
+      controlSelect: 'Dropdown',
+      controlMultiSelect: 'Multi-Select',
+      controlCheckbox: 'Checkbox',
+      controlRadioGroup: 'Radio Group'
     },
     layout: {
       pageSetup: 'Page Setup',
@@ -920,5 +931,45 @@ export default {
       deleteHint: 'Delete this bookmark',
       noBookmarks: 'No bookmarks'
     }
+  },
+  control: {
+    guide: controlDialogMessages.enUS,
+    title: 'Title',
+    placeholder: 'Placeholder',
+    required: 'Required',
+    readOnly: 'Read Only',
+    removable: 'Removable',
+    options: 'Options',
+    optionValue: 'Value',
+    optionLabel: 'Label',
+    addOption: 'Add Option',
+    removeOption: 'Remove Option',
+    defaultValue: 'Default Value',
+    maxLength: 'Max Length',
+    min: 'Min',
+    max: 'Max',
+    precision: 'Precision',
+    format: 'Format',
+    dateMode: 'Date Mode',
+    dateOnly: 'Date Only',
+    dateTime: 'Date & Time',
+    delimiter: 'Delimiter',
+    checkboxLabel: 'Checkbox Label',
+    confirm: 'OK',
+    cancel: 'Cancel',
+    configTitle: 'Control Configuration',
+    selectControlType: 'Select control type',
+    emptyPlaceholder: 'Enter content',
+    searchPlaceholder: 'Search options',
+    noResults: 'No results',
+    clear: 'Clear',
+    removeControl: 'Remove Control',
+    keepContent: 'Keep Content',
+    removeControlAndContent: 'Remove Control & Content',
+    clearContent: 'Clear Content',
+    valueRequired: 'This control is required',
+    valueOutOfRange: 'Value out of range',
+    invalidNumber: 'Please enter a valid number',
+    duplicateOptionValue: 'Duplicate option value'
   }
 }

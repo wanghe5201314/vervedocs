@@ -2,6 +2,9 @@ export type ViewTranslate = (key: string, params?: Record<string, string | numbe
 
 // Defaults are local to the view layer; option values and command values are never translated.
 export const viewText: Record<string, string> = {
+  'view.control.search': '搜索选项',
+  'view.control.noResults': '无匹配结果',
+  'view.control.clear': '清空',
   'view.common.cancel': '取消',
   'view.common.confirm': '确定',
   'view.common.none': '无',

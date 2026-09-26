@@ -93,7 +93,22 @@
 
     <!-- 符号 -->
     <VdRibbonGroup :title="t('ribbon.insert.symbol')">
-      <VdRibbonButton icon="calendar-clock" :text="t('ribbon.insert.dateAndTime')" :title="t('ribbon.insert.dateAndTime')" size="large" @click="emit('command', 'insertDate')" />
+      <a-dropdown :trigger="['click']">
+        <VdRibbonButton icon="select-all" :text="t('ribbon.insert.control')" :title="t('ribbon.insert.insertControl')" size="large" has-arrow />
+        <template #overlay>
+          <a-menu @click="({ key }: any) => emit('command', 'insertControl', { kind: key })">
+            <a-menu-item key="text">{{ t('ribbon.insert.controlText') }}</a-menu-item>
+            <a-menu-item key="number">{{ t('ribbon.insert.controlNumber') }}</a-menu-item>
+            <a-menu-item key="date">{{ t('ribbon.insert.controlDate') }}</a-menu-item>
+            <a-menu-divider />
+            <a-menu-item key="select">{{ t('ribbon.insert.controlSelect') }}</a-menu-item>
+            <a-menu-item key="multiSelect">{{ t('ribbon.insert.controlMultiSelect') }}</a-menu-item>
+            <a-menu-divider />
+            <a-menu-item key="checkbox">{{ t('ribbon.insert.controlCheckbox') }}</a-menu-item>
+            <a-menu-item key="radioGroup">{{ t('ribbon.insert.controlRadioGroup') }}</a-menu-item>
+          </a-menu>
+        </template>
+      </a-dropdown>
       <VdRibbonButton icon="barcode" :text="t('ribbon.insert.barcode')" :title="t('ribbon.insert.barcode')" size="large" @click="emit('command', 'barcode')" />
       <VdRibbonButton icon="qrcode" :text="t('ribbon.insert.qrcode')" :title="t('ribbon.insert.qrcode')" size="large" @click="emit('command', 'qrcode')" />
       <VdRibbonButton icon="draw" :text="t('ribbon.insert.signature')" :title="t('ribbon.insert.signature')" size="large" @click="emit('command', 'signature')" />

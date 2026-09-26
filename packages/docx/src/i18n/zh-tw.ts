@@ -1,4 +1,5 @@
 import { builtinMessages } from '@vervedoc/i18n'
+import { controlDialogMessages } from './control-dialog'
 
 export default {
   ...builtinMessages.zhTW,
@@ -293,10 +294,20 @@ export default {
       separator: '分隔符號',
       splitLine: '分割線',
       symbol: '符號',
-      dateAndTime: '日期和時間',
+
       barcode: '條碼',
       qrcode: 'QR 碼',
-      signature: '電子簽章'
+      signature: '電子簽章',
+      controlGroup: '控件',
+      control: '內容控件',
+      insertControl: '插入內容控件',
+      controlText: '純文字',
+      controlNumber: '數字',
+      controlDate: '日期',
+      controlSelect: '單選下拉',
+      controlMultiSelect: '多選下拉',
+      controlCheckbox: '核取方塊',
+      controlRadioGroup: '單選組'
     },
     layout: {
       pageSetup: '頁面設定',
@@ -920,5 +931,17 @@ export default {
     passwordError: '密碼錯誤',
     requestFailed: '請求失敗',
     requestFailedWithStatus: '請求失敗({status})'
+  },
+  control: {
+    guide: controlDialogMessages.zhTW,
+    title: '標題', placeholder: '佔位提示', required: '必填', readOnly: '唯讀', removable: '可刪除',
+    options: '選項', optionValue: '選項值', optionLabel: '選項標籤', addOption: '新增選項', removeOption: '移除選項',
+    defaultValue: '預設值', maxLength: '最大長度', min: '最小值', max: '最大值', precision: '小數精度',
+    format: '顯示格式', dateMode: '日期模式', dateOnly: '僅日期', dateTime: '日期時間', delimiter: '分隔符',
+    checkboxLabel: '核取方塊標籤', confirm: '確定', cancel: '取消', configTitle: '控件配置',
+    selectControlType: '請選擇控件類型', emptyPlaceholder: '請輸入內容', searchPlaceholder: '搜尋選項',
+    noResults: '無匹配結果', clear: '清空', removeControl: '刪除控件', keepContent: '保留內容',
+    removeControlAndContent: '刪除控件及內容', clearContent: '清空內容', valueRequired: '此控件為必填項',
+    valueOutOfRange: '值超出允許範圍', invalidNumber: '請輸入有效數字', duplicateOptionValue: '選項值不能重複'
   }
 }

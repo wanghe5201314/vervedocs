@@ -9,12 +9,14 @@ import type {
   IDocxDocumentMeta, IElement, IImageElement, Path, ITextElement,
   ITitleElement, ITableElement, IListElement, ListTypeName, IPosition, IRange, ITd, VerticalAlign,
   IAutoTocItem, IAutoTocResult, DocumentLayout, IBookmark, IEditorOption, BlockNode,
-  HistorySnapshot, IHistoryManager, TableBorderPreset, RevisionMeta
+  HistorySnapshot, IHistoryManager, TableBorderPreset, RevisionMeta,
+  IControlElement, IControlConfig, ControlDataValue
 } from '@vervedoc/docx-editor-schema'
 import {
   getByPath, getParentContainer, cloneTree, walkTree, isSamePath, splitParagraphs, comparePath, formatElementTree,
   DEFAULT_EDITOR_OPTION, applyImageLayout, updateImageLayout, TableBorder, BULLET_STYLES, NUMBER_STYLES, toDocxExportDocument,
-  clearRevision, snapshotRevisionFormat, recordFormatRevision
+  clearRevision, snapshotRevisionFormat, recordFormatRevision,
+  isControl, createControlElement, updateControlElementValue, validateControlValue, validateControlConfig, comparePosition
 } from '@vervedoc/docx-editor-schema'
 import type { RangeManager, IRangeStyle, IEditorAbility, Listener } from '@vervedoc/docx-editor-state'
 
@@ -197,7 +199,29 @@ export class CommandAdapt {
     const current = Number(pos.path[pos.path.length - 1])
     for (let index = current; index >= 0 && index < parent.length; index += backward ? -1 : 1) {
       const run = parent[index]
-      if (run.type !== 'text') return
+      if (run.type !== 'text') {
+        if (isControl(run) && run.control.removable !== false) {
+          parent.splice(index, 1)
+          if (backward) {
+            const prevIdx = index - 1
+            if (prevIdx >= 0 && parent[prevIdx]) {
+              const newPath = [...pos.path.slice(0, -1), prevIdx] as Path
+              const prevEl = parent[prevIdx]
+              const newOffset = prevEl.type === 'text' ? (prevEl as ITextElement).value.length : 0
+              this.range.setCaret({ path: newPath, offset: newOffset })
+            } else {
+              const newPath = [...pos.path.slice(0, -1), 0] as Path
+              this.range.setCaret({ path: newPath, offset: 0 })
+            }
+          } else if (index === current) {
+            const newPath = [...pos.path.slice(0, -1), index] as Path
+            this.range.setCaret({ path: newPath, offset: 0 })
+          }
+          this._commit(doc, 'text')
+          return
+        }
+        return
+      }
       if (run.revisionType === 'delete' || !run.value.length || run.extension?.bookmarkMarker) continue
       const offset = index === current ? pos.offset : backward ? run.value.length : 0
       if ((backward && offset <= 0) || (!backward && offset >= run.value.length)) continue
@@ -349,6 +373,109 @@ export class CommandAdapt {
 
   /* -------------------- 文本编辑 -------------------- */
 
+  private controlText(node: IControlElement): ITextElement {
+    return {
+      type: 'text', value: '', font: node.font, size: node.size,
+      bold: node.bold, italic: node.italic, color: node.color,
+      underline: node.underline, strikeout: node.strikeout,
+      rowFlex: node.rowFlex, sourceParagraphId: node.sourceParagraphId
+    }
+  }
+
+  /** Controls have two caret positions (0 before, 1 after), never editable display-text offsets. */
+  private ensureTextCaret(doc: IDocxDocumentMeta): void {
+    const pos = this.range.getFocus()
+    if (!pos) return
+    const node = getByPath(doc.elements, pos.path)
+    if (!node || !isControl(node)) return
+    const parent = getParentContainer(doc.elements, pos.path)!
+    const index = Number(pos.path.at(-1)) + (pos.offset > 0 ? 1 : 0)
+    parent.splice(index, 0, this.controlText(node))
+    this.range.setCaret({ path: [...pos.path.slice(0, -1), index], offset: 0 })
+  }
+
+  /** Handle an atom or the text immediately beside it before ordinary character deletion. */
+  private deleteControlBoundary(backward: boolean): boolean {
+    const pos = this.range.getFocus()
+    if (!pos) return false
+    const doc = this.draw.getActiveDocument()
+    const node = getByPath(doc.elements, pos.path)
+    const parent = getParentContainer(doc.elements, pos.path)
+    if (!node || !parent) return false
+    const atom = isControl(node)
+    if (!atom && (node.type !== 'text' || (backward ? pos.offset > 0 : pos.offset < node.value.length))) return false
+    const current = Number(pos.path.at(-1))
+    const onAtom = atom && (backward ? pos.offset > 0 : pos.offset === 0)
+    let index = onAtom ? current : current + (backward ? -1 : 1)
+    while (index >= 0 && index < parent.length && parent[index].type === 'text' && parent[index].value === '') {
+      index += backward ? -1 : 1
+    }
+    const target = parent[index]
+    if (target && isControl(target)) {
+      if (target.control.removable === false) return true
+      // Keep an empty text carrier so deleting the only control still leaves a valid caret.
+      parent[index] = this.controlText(target)
+      this.range.setCaret({ path: [...pos.path.slice(0, -1), index], offset: 0 })
+      this._commit(doc)
+      return true
+    }
+    if (atom || (node.type === 'text' && node.value === '' && target?.type === 'text')) {
+      if (target?.type === 'text') {
+        this.range.setCaret({
+          path: [...pos.path.slice(0, -1), index],
+          offset: backward ? target.value.length : 0
+        })
+        if (backward) this.deleteBackward()
+        else this.deleteForward()
+      }
+      return true
+    }
+    return false
+  }
+
+  private deleteRangeWithControls(doc: IDocxDocumentMeta, start: IPosition, end: IPosition, commit: boolean): boolean | null {
+    const entries: { node: ITextElement | IControlElement; path: Path; parent: IElement[]; index: number }[] = []
+    let hasControl = false
+    walkTree(doc.elements, (node, ctx) => {
+      if (node.type !== 'text' && !isControl(node)) return
+      if (comparePath(ctx.path, start.path) >= 0 && comparePath(ctx.path, end.path) <= 0) {
+        entries.push({ node: node as ITextElement | IControlElement, path: ctx.path, parent: ctx.parent as IElement[], index: ctx.index })
+        if (isControl(node)) hasControl = true
+      }
+      if (isControl(node)) return false
+      return
+    })
+    if (!hasControl) return null
+    const selected = entries.filter(({ node, path }) => {
+      const length = isControl(node) ? 1 : node.value.length
+      return comparePosition({ path, offset: length }, start) > 0 && comparePosition({ path, offset: 0 }, end) < 0
+    })
+    if (selected.some(({ node }) => isControl(node) && node.control.removable === false)) return false
+    let caret = start
+    let changed = false
+    for (const { node, path, parent, index } of selected.reverse()) {
+      if (isControl(node)) {
+        parent[index] = this.controlText(node)
+        if (isSamePath(path, start.path)) caret = { path, offset: 0 }
+        changed = true
+      } else {
+        const from = isSamePath(path, start.path) ? start.offset : 0
+        const to = isSamePath(path, end.path) ? end.offset : node.value.length
+        if (from === to) continue
+        if (this.draw.getOptions().trackChanges) {
+          this.deleteTrackedRange(doc, { path, offset: from }, { path, offset: to }, false)
+          if (isSamePath(path, start.path)) caret = this.range.getFocus()!
+        } else {
+          node.value = node.value.slice(0, from) + node.value.slice(to)
+        }
+        changed = true
+      }
+    }
+    this.range.setCaret(caret)
+    if (changed && commit) this._commit(doc)
+    return changed
+  }
+
   /**
    * 在当前光标位置插入文本。若存在选区则先删除选区再插入。
    * @param text 待插入的文本内容
@@ -359,6 +486,8 @@ export class CommandAdapt {
     if (this.deleteSelection(false)) {
       // 选区已删除，光标在原选区 start，继续插入 text
     }
+    if (!this.range.isCollapsed()) return
+    this.ensureTextCaret(this.draw.getActiveDocument())
     const pos = this.range.getFocus()
     if (!pos) return
     const doc = this.draw.getActiveDocument()
@@ -404,13 +533,15 @@ export class CommandAdapt {
     if (!ordered) return false
     const { start, end } = ordered
     const doc = this.draw.getActiveDocument()
+    const controlResult = this.deleteRangeWithControls(doc, start, end, commit)
+    if (controlResult !== null) return controlResult
     if (this.draw.getOptions().trackChanges) {
       return this.deleteTrackedRange(doc, start, end, commit)
     }
 
     const runs: { path: Path; parent: IElement[]; idx: number }[] = []
     walkTree(doc.elements, (node, ctx) => {
-      if (node.type === 'text' && Array.isArray(ctx.parent)) {
+      if ((node.type === 'text' || (isControl(node) && node.control.removable !== false)) && Array.isArray(ctx.parent)) {
         runs.push({ path: ctx.path.slice() as Path, parent: ctx.parent as IElement[], idx: ctx.index })
       }
     })
@@ -510,14 +641,17 @@ export class CommandAdapt {
     const { start, end } = ordered
     const doc = this.draw.getActiveDocument()
 
-    const runs: { path: Path; text: string }[] = []
+    const runs: { path: Path; text: string; atomic?: boolean }[] = []
     walkTree(doc.elements, (node, ctx) => {
-      if (node.type === 'text') {
+      if (node.type === 'text' || isControl(node)) {
         runs.push({
           path: ctx.path.slice() as Path,
-          text: node.extension?.bookmarkMarker ? '' : (node as ITextElement).value
+          text: node.extension?.bookmarkMarker ? '' : node.value,
+          atomic: isControl(node)
         })
       }
+      if (isControl(node)) return false
+      return
     })
 
     let startRunIdx = -1, endRunIdx = -1
@@ -528,15 +662,19 @@ export class CommandAdapt {
     if (startRunIdx === -1 || endRunIdx === -1 || startRunIdx > endRunIdx) return ''
 
     if (startRunIdx === endRunIdx) {
-      return runs[startRunIdx].text.slice(start.offset, end.offset)
+      const run = runs[startRunIdx]
+      return run.text.slice(run.atomic && start.offset > 0 ? run.text.length : start.offset,
+        run.atomic && end.offset > 0 ? run.text.length : end.offset)
     }
 
-    let result = runs[startRunIdx].text.slice(start.offset)
+    const first = runs[startRunIdx]
+    let result = first.text.slice(first.atomic && start.offset > 0 ? first.text.length : start.offset)
     for (let i = startRunIdx + 1; i < endRunIdx; i++) {
       const t = runs[i].text
       result += t === '\u200B' ? '\n' : t
     }
-    result += runs[endRunIdx].text.slice(0, end.offset)
+    const last = runs[endRunIdx]
+    result += last.text.slice(0, last.atomic && end.offset > 0 ? last.text.length : end.offset)
     return result
   }
 
@@ -547,6 +685,7 @@ export class CommandAdapt {
   deleteBackward(): void {
     if (!this.getIsCanInput()) return
     if (this.deleteSelection()) return
+    if (!this.range.isCollapsed() || this.deleteControlBoundary(true)) return
     if (this.draw.getOptions().trackChanges) {
       this.deleteTrackedCharacter(true)
       return
@@ -618,6 +757,7 @@ export class CommandAdapt {
   deleteForward(): void {
     if (!this.getIsCanInput()) return
     if (this.deleteSelection()) return
+    if (!this.range.isCollapsed() || this.deleteControlBoundary(false)) return
     if (this.draw.getOptions().trackChanges) {
       this.deleteTrackedCharacter(false)
       return
@@ -644,6 +784,8 @@ export class CommandAdapt {
   splitParagraph(): void {
     if (this.deleteSelection()) return
     this.execute(doc => {
+      if (!this.range.isCollapsed()) return false
+      this.ensureTextCaret(doc)
       const pos = this.range.getFocus()
       if (!pos) return false
       const node = getByPath(doc.elements, pos.path)
@@ -687,11 +829,11 @@ export class CommandAdapt {
     if (parent && idx > 0) {
       for (let i = idx - 1; i >= 0; i--) {
         const p = parent[i]
-        if (p && p.type === 'text') {
+        if (p && (p.type === 'text' || isControl(p))) {
           const newPath = pos.path.slice() as Path
           newPath[newPath.length - 1] = i
           const t = p as ITextElement
-          this.range.setCaret({ path: newPath, offset: t.value.length })
+          this.range.setCaret({ path: newPath, offset: isControl(p) ? 1 : t.value.length })
           return
         }
       }
@@ -706,6 +848,10 @@ export class CommandAdapt {
     if (!pos) return
     const doc = this.draw.getActiveDocument()
     const node = getByPath(doc.elements, pos.path)
+    if (node && isControl(node) && pos.offset === 0) {
+      this.range.setCaret({ path: pos.path.slice() as Path, offset: 1 })
+      return
+    }
     if (node && node.type === 'text') {
       const t = node as ITextElement
       if (pos.offset < t.value.length) {
@@ -719,7 +865,7 @@ export class CommandAdapt {
     if (parent && idx < parent.length - 1) {
       for (let i = idx + 1; i < parent.length; i++) {
         const p = parent[i]
-        if (p && p.type === 'text') {
+        if (p && (p.type === 'text' || isControl(p))) {
           const newPath = pos.path.slice() as Path
           newPath[newPath.length - 1] = i
           this.range.setCaret({ path: newPath, offset: 0 })
@@ -4050,5 +4196,186 @@ export class CommandAdapt {
         }
       }
     })
+  }
+
+  /* -------------------- 内置内容控件 -------------------- */
+
+  /**
+   * 在当前光标位置插入控件。若光标在文本中间则分割文本。
+   * @param config 控件配置
+   * @param dataValue 初始值（默认 null）
+   * @returns 控件实例 ID，失败返回 null
+   */
+  insertControl(config: IControlConfig, dataValue: ControlDataValue = null): string | null {
+    if (!this.getIsCanInput()) return null
+    const configValidation = validateControlConfig(config)
+    if (!configValidation.valid) return null
+
+    if (!this.range.isCollapsed() && !this.deleteSelection(false)) return null
+    const pos = this.range.getFocus()
+    if (!pos) return null
+
+    const doc = this.draw.getActiveDocument()
+    const parent = getParentContainer(doc.elements, pos.path)
+    if (!parent) return null
+
+    const index = Number(pos.path[pos.path.length - 1])
+    const controlElement = createControlElement(config, dataValue)
+    const currentNode = getByPath(doc.elements, pos.path)
+    let insertedIndex = index
+
+    if (currentNode && currentNode.type === 'text') {
+      const t = currentNode as ITextElement
+      const before = t.value.slice(0, pos.offset)
+      const after = t.value.slice(pos.offset)
+      if (before && after) {
+        t.value = before
+        const afterElement = cloneTree(t)
+        afterElement.value = after
+        parent.splice(index + 1, 0, controlElement, afterElement)
+        insertedIndex = index + 1
+      } else if (before) {
+        parent.splice(index + 1, 0, controlElement)
+        insertedIndex = index + 1
+      } else if (after) {
+        parent.splice(index, 0, controlElement)
+      } else {
+        parent.splice(index, 1, controlElement)
+      }
+    } else {
+      insertedIndex = index + (currentNode && isControl(currentNode) && pos.offset === 0 ? 0 : 1)
+      parent.splice(insertedIndex, 0, controlElement)
+    }
+
+    this.range.setCaret({ path: [...pos.path.slice(0, -1), insertedIndex], offset: 1 })
+    this._commit(doc)
+    return controlElement.id ?? null
+  }
+
+  /**
+   * 更新控件值。先校验，校验失败不修改文档。
+   * @param controlId 控件实例 ID
+   * @param newDataValue 新业务值
+   * @returns 是否成功更新
+   */
+  updateControlValue(controlId: string, newDataValue: ControlDataValue): boolean {
+    let success = false
+    this.execute(doc => {
+      let found = false
+      walkTree(doc.elements, (node) => {
+        if (isControl(node) && node.id === controlId) {
+          if (node.control.readOnly) return false
+          const validation = validateControlValue(node.control, newDataValue)
+          if (!validation.valid) return false
+          const updated = updateControlElementValue(node, newDataValue)
+          Object.assign(node, updated)
+          found = true
+          return false
+        }
+        return
+      })
+      success = found
+      return found
+    })
+    return success
+  }
+
+  /**
+   * 移除控件。
+   * @param controlId 控件实例 ID
+   * @param keepContent true=保留子内容（仅移除控件外壳），false=删除控件及内容
+   */
+  removeControl(controlId: string, keepContent: boolean): void {
+    this.execute(doc => {
+      let found = false
+      walkTree(doc.elements, (node, ctx) => {
+        if (isControl(node) && node.id === controlId) {
+          if (node.control.removable === false) return false
+          if (Array.isArray(ctx.parent)) {
+            const parent = ctx.parent as IElement[]
+            const idx = ctx.index
+            if (keepContent && Array.isArray(node.valueList) && node.valueList.length > 0) {
+              parent.splice(idx, 1, ...node.valueList)
+            } else {
+              parent[idx] = { ...this.controlText(node), value: keepContent ? node.value : '' }
+            }
+            this.range.setCaret({ path: ctx.path, offset: 0 })
+            found = true
+            return false
+          }
+        }
+        return
+      })
+      return found
+    })
+  }
+
+  /**
+   * 清空控件内容（保留控件本身，值置空）。
+   * @param controlId 控件实例 ID
+   */
+  clearControl(controlId: string): void {
+    this.execute(doc => {
+      let found = false
+      walkTree(doc.elements, (node) => {
+        if (isControl(node) && node.id === controlId) {
+          if (node.control.readOnly) return false
+          const cleared = updateControlElementValue(node, null)
+          Object.assign(node, cleared)
+          if (Array.isArray(node.valueList)) {
+            node.valueList = []
+          }
+          found = true
+          return false
+        }
+        return
+      })
+      return found
+    })
+  }
+
+  /**
+   * 更新控件配置（属性编辑）。
+   * @param controlId 控件实例 ID
+   * @param newConfig 新配置
+   */
+  updateControlConfig(controlId: string, newConfig: IControlConfig): boolean {
+    let success = false
+    this.execute(doc => {
+      const configValidation = validateControlConfig(newConfig)
+      if (!configValidation.valid) return false
+      let found = false
+      walkTree(doc.elements, (node) => {
+        if (isControl(node) && node.id === controlId) {
+          node.control = newConfig
+          const updated = updateControlElementValue(node, node.dataValue)
+          Object.assign(node, updated)
+          found = true
+          return false
+        }
+        return
+      })
+      success = found
+      return found
+    })
+    return success
+  }
+
+  /**
+   * 根据 ID 查找控件元素。
+   * @param controlId 控件实例 ID
+   * @returns 控件元素或 null
+   */
+  getControlById(controlId: string): IControlElement | null {
+    const doc = this.draw.getActiveDocument()
+    let result: IControlElement | null = null
+    walkTree(doc.elements, (node) => {
+      if (isControl(node) && node.id === controlId) {
+        result = node
+        return false
+      }
+      return
+    })
+    return result
   }
 }

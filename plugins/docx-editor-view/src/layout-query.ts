@@ -35,6 +35,7 @@ export function findInlineInBlocks(blocks: BlockNode[], pos: IPosition): InlineB
     if (b.kind === 'paragraph') {
       for (const line of b.lines) {
         for (const inl of line.inlines) {
+          if (inl.controlId && !(pos.offset === 0 ? inl.controlStart : inl.controlEnd)) continue
           if (isSamePath(inl.path, pos.path) && pos.offset >= inl.startOffset && pos.offset <= inl.endOffset) {
             return inl
           }
@@ -78,6 +79,7 @@ export function findParagraphInBlocks(blocks: BlockNode[], pos: IPosition): Para
     if (b.kind === 'paragraph') {
       for (const line of b.lines) {
         for (const inl of line.inlines) {
+          if (inl.controlId && !(pos.offset === 0 ? inl.controlStart : inl.controlEnd)) continue
           if (isSamePath(inl.path, pos.path)) return b
         }
       }
@@ -119,6 +121,7 @@ export function findLineInBlocks(blocks: BlockNode[], pos: IPosition): LineBox |
     if (b.kind === 'paragraph') {
       for (const line of b.lines) {
         for (const inl of line.inlines) {
+          if (inl.controlId && !(pos.offset === 0 ? inl.controlStart : inl.controlEnd)) continue
           if (isSamePath(inl.path, pos.path) && pos.offset >= inl.startOffset && pos.offset <= inl.endOffset) {
             return line
           }
@@ -211,4 +214,11 @@ export function findLastInlineInBlocks(blocks: BlockNode[], onInline: (inl: Inli
 /** 按 position 定位 inline，若属于超链接则返回其 URL（供 Ctrl+点击跳转） */
 export function findHyperlinkByPos(layout: DocumentLayout | null, pos: IPosition): string | null {
   return findInlineByPos(layout, pos)?.hyperlink ?? null
+}
+
+/** 按 position 定位 inline，若属于内置控件则返回其 controlId（供点击激活交互浮层） */
+export function findControlByPos(layout: DocumentLayout | null, pos: IPosition): InlineBox | null {
+  const inline = findInlineByPos(layout, pos)
+  if (inline?.controlId) return inline
+  return null
 }

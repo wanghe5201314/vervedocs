@@ -29,6 +29,7 @@ import { WatermarkWidget, type WatermarkConfig } from './widgets/watermark-widge
 import { SystemWatermarkWidget, type SystemWatermarkConfig } from './widgets/watermark-system-widget'
 import { SelectionToolbarWidget } from './widgets/selection-toolbar-widget'
 import { CaretWidget } from './widgets/caret-widget'
+import { ControlWidget } from './widgets/control-widget'
 import { computeDirtyRect, prepareRenderState, type RenderState } from './render-state'
 import {
   findInlineByPos,
@@ -187,6 +188,8 @@ export class Draw {
   private systemWatermarkWidget: SystemWatermarkWidget | null = null
   /** DOM 光标 widget（替代 canvas overlay 绘制光标） */
   private caretWidget: CaretWidget | null = null
+  /** 内置控件交互 widget（点击激活 + 输入浮层） */
+  private controlWidget: ControlWidget | null = null
   /** 光标导航 Controller */
   private caretNavigation: CaretNavigation | null = null
   /** 编辑区域 Manager */
@@ -289,6 +292,7 @@ export class Draw {
           this.tableWidget?.update()
           this.imageWidget?.update()
           this.chartWidget?.update()
+          this.controlWidget?.update()
           this.paragraphWidget?.update()
           this.rulerWidget?.update()
         }
@@ -400,6 +404,23 @@ export class Draw {
       getEventBus: () => this.eventBus
     })
     this.chartWidget.create()
+    this.controlWidget = new ControlWidget({
+      onActivate: position => {
+        this.range?.setCaret(position)
+        this.focusInput()
+      },
+      focusEditor: () => this.focusInput(),
+      translate: this.translate,
+      getZone: () => this.zone,
+      getContainer: () => this.canvasHost,
+      getLayout: () => this.layout,
+      getContainerRect: () => this.canvasHost.getBoundingClientRect(),
+      getScrollY: () => this.scrollY,
+      getPageOffsetX: () => this.getPageOffsetX(),
+      onCommand: (cmd: string, ...args: any[]) => this.onCommand?.(cmd, ...args),
+      isReadonly: () => !!this.options.readonly || !!this.options.disabled
+    })
+    this.controlWidget.create()
     this.paragraphWidget = new ParagraphWidget({
       translate: this.translate,
       canEdit: () => !this.options.readonly && !this.options.disabled,
@@ -568,6 +589,9 @@ export class Draw {
 
     // 双击页眉/页脚区域：切换编辑区域
     if (!this.options.readonly && this.headerFooterWidget?.handleMouseDown(e)) return
+
+    // 内置控件点击激活
+    if (!this.options.readonly && this.controlWidget?.handleMouseDown(e)) return
 
     const pos = this.hit(e.clientX, e.clientY)
     if (!pos) { this.inputEl.focus(); return }
@@ -925,6 +949,7 @@ export class Draw {
    * @param doc 新文档元数据
    */
   setDocument(doc: IDocxDocumentMeta): void {
+    this.controlWidget?.deactivate()
     if (!doc || !Array.isArray(doc.elements)) {
       doc = { ...(doc ?? {}), elements: (doc as { elements?: unknown[] })?.elements ?? [] } as IDocxDocumentMeta
     }
@@ -1023,6 +1048,7 @@ export class Draw {
 
   /** Refresh display translations without rebuilding open panels or changing editor state. */
   refreshTranslations(): void {
+    this.controlWidget?.refreshLocale()
     this.paragraphWidget?.refreshTranslations()
     this.tableWidget?.refreshTranslations()
     this.headerFooterWidget?.refreshTranslations()
@@ -1286,6 +1312,7 @@ export class Draw {
     this.tableWidget?.destroy()
     this.imageWidget?.destroy()
     this.chartWidget?.destroy()
+    this.controlWidget?.destroy()
     this.paragraphWidget?.destroy()
     this.headerFooterWidget?.destroy()
     this.rulerWidget?.destroy()
@@ -1475,6 +1502,7 @@ export class Draw {
       this.paragraphWidget?.update()
       this.imageWidget?.update()
       this.chartWidget?.update()
+      this.controlWidget?.update()
       if (!this._pendingSkipAfterRender) {
         this.afterRender?.()
       }

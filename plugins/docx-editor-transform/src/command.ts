@@ -3,7 +3,7 @@
  */
 
 import type { CommandAdapt } from './command-adapt'
-import type { IElement, Path, IAutoTocResult, IBookmark, IEditorOption, IRange, IDocxDocumentMeta } from '@vervedoc/docx-editor-schema'
+import type { IElement, Path, IAutoTocResult, IBookmark, IEditorOption, IRange, IDocxDocumentMeta, IControlConfig, ControlDataValue, IControlElement } from '@vervedoc/docx-editor-schema'
 import type { IRangeStyle, IEditorAbility } from '@vervedoc/docx-editor-state'
 
 /**
@@ -767,4 +767,57 @@ export class Command {
    * @returns 是否找到并定位成功
    */
   executeLocateRevision(id: string): boolean { return this.adapt.locateRevision(id) }
+
+  /* -------------------- 内置内容控件 -------------------- */
+
+  /**
+   * 在当前光标位置插入控件。
+   * @param config 控件配置
+   * @param dataValue 初始值（默认 null）
+   * @returns 控件实例 ID，失败返回 null
+   */
+  executeInsertControl(config: IControlConfig, dataValue?: ControlDataValue): string | null {
+    return this.adapt.insertControl(config, dataValue ?? null)
+  }
+  /**
+   * 更新控件值。
+   * @param controlId 控件实例 ID
+   * @param newDataValue 新业务值
+   * @returns 是否成功更新
+   */
+  executeUpdateControlValue(controlId: string, newDataValue: ControlDataValue): boolean {
+    return this.adapt.updateControlValue(controlId, newDataValue)
+  }
+  /**
+   * 移除控件。
+   * @param controlId 控件实例 ID
+   * @param keepContent true=保留子内容，false=删除控件及内容
+   */
+  executeRemoveControl(controlId: string, keepContent: boolean): void {
+    this.adapt.removeControl(controlId, keepContent)
+  }
+  /**
+   * 清空控件内容（保留控件本身）。
+   * @param controlId 控件实例 ID
+   */
+  executeClearControl(controlId: string): void {
+    this.adapt.clearControl(controlId)
+  }
+  /**
+   * 更新控件配置。
+   * @param controlId 控件实例 ID
+   * @param newConfig 新配置
+   * @returns 是否成功更新
+   */
+  executeUpdateControlConfig(controlId: string, newConfig: IControlConfig): boolean {
+    return this.adapt.updateControlConfig(controlId, newConfig)
+  }
+  /**
+   * 根据 ID 查找控件元素。
+   * @param controlId 控件实例 ID
+   * @returns 控件元素或 null
+   */
+  executeGetControlById(controlId: string): IControlElement | null {
+    return this.adapt.getControlById(controlId)
+  }
 }

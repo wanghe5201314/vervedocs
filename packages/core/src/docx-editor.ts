@@ -13,7 +13,7 @@ import { CommandChain } from './command-chain'
 import { Command, CommandAdapt } from '@vervedoc/docx-editor-transform'
 import { Search, BlockParticle, DateParticle, LaTexParticle, ControlComponent } from '@vervedoc/docx-editor-commands'
 import { HistoryComponent } from '@vervedoc/docx-editor-history'
-import { ShortcutHandler } from './shortcut'
+import { ShortcutHandler } from '@vervedoc/docx-editor-keymap'
 import { WorkerManager } from './workers/worker-manager'
 import { ThumbnailManager } from './workers/thumbnail-manager'
 

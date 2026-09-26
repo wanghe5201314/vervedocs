@@ -1,3 +1,2 @@
-export { Shortcut } from './shortcut'
-export { KeymapComponent } from './keymap-component'
-export { isMod } from '@vervedoc/docx-editor-schema'
+export { ShortcutHandler } from './shortcut'
+export type { ShortcutDeps } from './shortcut'

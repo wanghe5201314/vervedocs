@@ -1,156 +1,191 @@
-import { IRegisterShortcut, isMod } from '@vervedoc/docx-editor-schema'
-import { Command, createSafeCommand } from '@vervedoc/docx-editor-transform'
-import { coreKeys } from './keys/core-keys'
-import { richtextKeys } from './keys/richtext-keys'
-import { titleKeys } from './keys/title-keys'
-import { listKeys } from './keys/list-keys'
-import { scaleKeys } from './keys/scale-keys'
-
-/** Draw 编辑器实例类型（来自 docx-editor-core，此处使用 any 兜底以避免循环依赖） */
-type Draw = any
-
 /**
- * 快捷键管理类
+ * VerveDocs Keymap —— 快捷键处理
  *
- * 负责注册全局快捷键与编辑器代理输入框快捷键，监听键盘事件并匹配执行对应回调。
- * 内置快捷键来源于 coreKeys、richtextKeys、titleKeys、listKeys、scaleKeys，
- * 同时支持外部通过 registerShortcutList 注册额外快捷键。
+ * 从 packages/core 迁入的键盘快捷键逻辑，分四组：
+ *  - 编辑键：复制/剪切/粘贴/全选/删除/Enter/Tab/Escape
+ *  - 光标键：方向键/Home/End/PageUp/PageDown（含 Ctrl 词移动/文档首尾）
+ *  - 格式键：加粗/斜体/下划线/删除线/字号/对齐/列表/标题/清除格式
+ *  - 历史键：撤销/重做/分页
  */
-export class Shortcut {
-  /** 原始命令对象，用于执行内置快捷键回调 */
-  private command: Command
-  /** 安全命令对象（经 createSafeCommand 包装），用于执行外部注册的快捷键回调 */
-  private safeCommand: Command
-  /** 内置全局快捷键列表（在 document 上监听） */
-  private globalShortcutList: IRegisterShortcut[]
-  /** 内置编辑器代理输入框快捷键列表（在 agent DOM 上监听） */
-  private agentShortcutList: IRegisterShortcut[]
-  /** 外部注册的全局快捷键列表 */
-  private externalGlobalList: IRegisterShortcut[]
-  /** 外部注册的编辑器代理输入框快捷键列表 */
-  private externalAgentList: IRegisterShortcut[]
-  /** 编辑器代理输入框 DOM 节点，用于监听 keydown 事件 */
-  private _agentDom: HTMLTextAreaElement | null = null
-  /** 已绑定的代理 keydown 处理函数引用，便于卸载时移除监听 */
-  private _boundAgentKeydown: ((evt: KeyboardEvent) => void) | null = null
+
+import type { Draw } from '@vervedoc/docx-editor-view'
+import type { Command, CommandAdapt } from '@vervedoc/docx-editor-transform'
+import type { RangeManager } from '@vervedoc/docx-editor-state'
+import { ROW_FLEX, LIST_TYPE, LIST_STYLE, TITLE_LEVEL } from '@vervedoc/docx-editor-schema'
+
+/** 快捷键处理器依赖注入接口 */
+export interface ShortcutDeps {
+  /** 获取 Draw 视图实例 */
+  getDraw: () => Draw
+  /** 获取 Command 命令实例 */
+  getCommand: () => Command
+  dispatchCommand: (command: string, ...args: any[]) => any
+  /** 获取 RangeManager 选区管理器 */
+  getRange: () => RangeManager
+  /** 获取 CommandAdapt 适配器（可能未初始化） */
+  getAdapt: () => CommandAdapt | null
+}
+
+/** 键盘快捷键处理器，分编辑/光标/格式/历史四组 */
+export class ShortcutHandler {
+  /** 依赖注入 */
+  private deps: ShortcutDeps
 
   /**
-   * 创建 Shortcut 实例并完成内置快捷键注册与事件绑定
-   *
-   * @param draw Draw 编辑器实例，用于获取代理输入框 DOM
-   * @param command 命令对象，用于在内置快捷键回调中执行对应命令
+   * 构造快捷键处理器
+   * @param deps 依赖注入对象
    */
-  constructor(draw: Draw, command: Command) {
-    this.command = command
-    this.safeCommand = createSafeCommand(command)
-    this.globalShortcutList = []
-    this.agentShortcutList = []
-    this.externalGlobalList = []
-    this.externalAgentList = []
-    this._addShortcutList(
-      [...coreKeys, ...richtextKeys, ...titleKeys, ...listKeys, ...scaleKeys],
-      false
-    )
-    this._addEvent()
-    this._boundAgentKeydown = this._agentKeydown.bind(this)
-    this._agentDom = draw.getCursor().getAgentDom()
-    this._agentDom?.addEventListener('keydown', this._boundAgentKeydown)
-  }
-
-  /** 在 document 上绑定全局 keydown 事件 */
-  private _addEvent() {
-    document.addEventListener('keydown', this._globalKeydown)
+  constructor(deps: ShortcutDeps) {
+    this.deps = deps
   }
 
   /**
-   * 移除全局与代理输入框的 keydown 事件监听并释放引用
+   * 处理键盘事件，依次尝试编辑/光标/格式/历史四组快捷键
+   * @param e 键盘事件
    */
-  public removeEvent() {
-    document.removeEventListener('keydown', this._globalKeydown)
-    if (this._agentDom && this._boundAgentKeydown) {
-      this._agentDom.removeEventListener('keydown', this._boundAgentKeydown)
-      this._agentDom = null
-      this._boundAgentKeydown = null
+  handle = (e: KeyboardEvent): void => {
+    const adapt = this.deps.getAdapt()
+    if (!adapt) return
+    const draw = this.deps.getDraw()
+    const command = this.deps.getCommand()
+
+    if (this.handleEditKeys(e, adapt, draw)) return
+    if (this.handleCursorKeys(e, adapt, draw)) return
+    if (this.handleFormatKeys(e, command)) return
+    if (this.handleHistoryKeys(e, command)) return
+  }
+
+  /**
+   * 处理编辑类快捷键（复制/剪切/粘贴/全选/删除/Enter/Tab/Escape）
+   * @param e 键盘事件
+   * @param adapt 命令适配器
+   * @param draw 视图实例
+   * @returns 是否已处理该事件
+   */
+  private handleEditKeys(e: KeyboardEvent, adapt: CommandAdapt, draw: Draw): boolean {
+    const mod = e.ctrlKey || e.metaKey
+
+    const clipboardCommand = { c: 'executeCopy', x: 'executeCut', v: 'executePaste' }[e.key.toLowerCase()]
+    if (mod && !e.altKey && !e.shiftKey && clipboardCommand) {
+      e.preventDefault()
+      this.deps.dispatchCommand(clipboardCommand)
+      return true
     }
-  }
-
-  /**
-   * 将一批快捷键注册到内部或外部列表，按数组顺序逆序插入以保持先注册优先
-   *
-   * @param payload 待注册的快捷键配置数组
-   * @param isExternal 是否为外部注册（true 使用 external 列表与 safeCommand，false 使用内置列表与 command）
-   */
-  private _addShortcutList(
-    payload: IRegisterShortcut[],
-    isExternal: boolean
-  ) {
-    for (let s = payload.length - 1; s >= 0; s--) {
-      const shortCut = payload[s]
-      const targetGlobal = isExternal
-        ? this.externalGlobalList
-        : this.globalShortcutList
-      const targetAgent = isExternal
-        ? this.externalAgentList
-        : this.agentShortcutList
-      if (shortCut.isGlobal) {
-        targetGlobal.unshift(shortCut)
-      } else {
-        targetAgent.unshift(shortCut)
-      }
+    if (mod && e.key === 'a') {
+      e.preventDefault()
+      draw.selectAll()
+      return true
     }
+    if (e.key === 'Backspace') { e.preventDefault(); adapt.deleteBackward(); return true }
+    if (e.key === 'Delete')    { e.preventDefault(); adapt.deleteForward(); return true }
+    if (e.key === 'Enter')     { e.preventDefault(); adapt.splitParagraph(); return true }
+    if (e.key === 'Tab')       { e.preventDefault(); adapt.insertText('\t'); return true }
+    if (e.key === 'Escape')    { e.preventDefault(); this.deps.getRange().collapseToStart(); return true }
+
+    return false
   }
 
   /**
-   * 外部注册快捷键列表入口，使用安全命令执行回调
-   *
-   * @param payload 待注册的外部快捷键配置数组
+   * 处理光标移动快捷键（方向键/Home/End/PageUp/PageDown，含 Ctrl 词移动/文档首尾）
+   * @param e 键盘事件
+   * @param adapt 命令适配器
+   * @param draw 视图实例
+   * @returns 是否已处理该事件
    */
-  public registerShortcutList(payload: IRegisterShortcut[]) {
-    this._addShortcutList(payload, true)
-  }
+  private handleCursorKeys(e: KeyboardEvent, adapt: CommandAdapt, draw: Draw): boolean {
+    const mod = e.ctrlKey || e.metaKey
 
-  /** 全局 keydown 处理函数：依次执行内置与外部全局快捷键匹配 */
-  private _globalKeydown = (evt: KeyboardEvent) => {
-    this._execute(evt, this.globalShortcutList, this.command)
-    this._execute(evt, this.externalGlobalList, this.safeCommand)
-  }
-
-  /** 代理输入框 keydown 处理函数：依次执行内置与外部代理快捷键匹配 */
-  private _agentKeydown(evt: KeyboardEvent) {
-    this._execute(evt, this.agentShortcutList, this.command)
-    this._execute(evt, this.externalAgentList, this.safeCommand)
-  }
-
-  /**
-   * 在指定快捷键列表中匹配键盘事件，命中且未禁用则执行回调并阻止默认行为
-   *
-   * @param evt 键盘事件对象
-   * @param shortCutList 候选快捷键列表
-   * @param command 传入回调执行的命令对象
-   */
-  private _execute(
-    evt: KeyboardEvent,
-    shortCutList: IRegisterShortcut[],
-    command: Command
-  ) {
-    if (!shortCutList.length) return
-    for (let s = 0; s < shortCutList.length; s++) {
-      const shortCut = shortCutList[s]
-      if (
-        (shortCut.mod
-          ? isMod(evt) === !!shortCut.mod
-          : evt.ctrlKey === !!shortCut.ctrl &&
-            evt.metaKey === !!shortCut.meta) &&
-        evt.shiftKey === !!shortCut.shift &&
-        evt.altKey === !!shortCut.alt &&
-        evt.key.toLowerCase() === shortCut.key.toLowerCase()
-      ) {
-        if (!shortCut.disable && shortCut.callback) {
-          shortCut.callback(command)
-          evt.preventDefault()
-        }
-        break
-      }
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault()
+      if (mod) draw.moveCaretWordLeft()
+      else adapt.moveCaretLeft()
+      return true
     }
+    if (e.key === 'ArrowRight') {
+      e.preventDefault()
+      if (mod) draw.moveCaretWordRight()
+      else adapt.moveCaretRight()
+      return true
+    }
+    if (e.key === 'ArrowUp')   { e.preventDefault(); draw.moveCaretUp(); return true }
+    if (e.key === 'ArrowDown') { e.preventDefault(); draw.moveCaretDown(); return true }
+    if (e.key === 'Home') {
+      e.preventDefault()
+      if (mod) draw.moveCaretToDocStart()
+      else draw.moveCaretToLineStart()
+      return true
+    }
+    if (e.key === 'End') {
+      e.preventDefault()
+      if (mod) draw.moveCaretToDocEnd()
+      else draw.moveCaretToLineEnd()
+      return true
+    }
+    if (e.key === 'PageUp')   { e.preventDefault(); for (let i = 0; i < 10; i++) draw.moveCaretUp(); return true }
+    if (e.key === 'PageDown') { e.preventDefault(); for (let i = 0; i < 10; i++) draw.moveCaretDown(); return true }
+
+    return false
+  }
+
+  /**
+   * 处理格式快捷键（加粗/斜体/下划线/删除线/字号/对齐/列表/标题/清除格式）
+   * @param e 键盘事件
+   * @param command 命令实例
+   * @returns 是否已处理该事件
+   */
+  private handleFormatKeys(e: KeyboardEvent, command: Command): boolean {
+    const mod = e.ctrlKey || e.metaKey
+    if (!mod) return false
+    const k = e.key.toLowerCase()
+
+    if (!e.shiftKey && !e.altKey) {
+      if (k === 'b') { e.preventDefault(); command.executeSetBold(); return true }
+      if (k === 'i') { e.preventDefault(); command.executeSetItalic(); return true }
+      if (k === 'u') { e.preventDefault(); command.executeSetUnderline(); return true }
+      if (k === '\\') { e.preventDefault(); command.executeClearFormat(); return true }
+      if (k === '[') { e.preventDefault(); command.executeSizeMinus(); return true }
+      if (k === ']') { e.preventDefault(); command.executeSizeAdd(); return true }
+      if (k === 'l') { e.preventDefault(); command.executeSetRowFlex(ROW_FLEX.LEFT); return true }
+      if (k === 'e') { e.preventDefault(); command.executeSetRowFlex(ROW_FLEX.CENTER); return true }
+      if (k === 'r') { e.preventDefault(); command.executeSetRowFlex(ROW_FLEX.RIGHT); return true }
+      if (k === 'j') { e.preventDefault(); command.executeSetRowFlex(ROW_FLEX.JUSTIFY); return true }
+    }
+
+    if (e.shiftKey && !e.altKey) {
+      if (k === 'x') { e.preventDefault(); command.executeSetStrikeout(); return true }
+      if (k === 'j') { e.preventDefault(); command.executeSetRowFlex(ROW_FLEX.DISTRIBUTE); return true }
+      if (k === 'i') { e.preventDefault(); command.executeSetList(LIST_TYPE.UL, LIST_STYLE.DISC); return true }
+      if (k === 'u') { e.preventDefault(); command.executeSetList(LIST_TYPE.OL, LIST_STYLE.DECIMAL); return true }
+    }
+
+    if (e.altKey && !e.shiftKey) {
+      if (k === '0') { e.preventDefault(); command.executeSetTitle(null); return true }
+      if (k === '1') { e.preventDefault(); command.executeSetTitle(TITLE_LEVEL.FIRST); return true }
+      if (k === '2') { e.preventDefault(); command.executeSetTitle(TITLE_LEVEL.SECOND); return true }
+      if (k === '3') { e.preventDefault(); command.executeSetTitle(TITLE_LEVEL.THIRD); return true }
+      if (k === '4') { e.preventDefault(); command.executeSetTitle(TITLE_LEVEL.FOURTH); return true }
+      if (k === '5') { e.preventDefault(); command.executeSetTitle(TITLE_LEVEL.FIFTH); return true }
+      if (k === '6') { e.preventDefault(); command.executeSetTitle(TITLE_LEVEL.SIXTH); return true }
+    }
+
+    return false
+  }
+
+  /**
+   * 处理历史快捷键（撤销/重做/分页）
+   * @param e 键盘事件
+   * @param command 命令实例
+   * @returns 是否已处理该事件
+   */
+  private handleHistoryKeys(e: KeyboardEvent, command: Command): boolean {
+    const mod = e.ctrlKey || e.metaKey
+    if (!mod) return false
+    const k = e.key.toLowerCase()
+
+    if (!e.shiftKey && k === 'z') { e.preventDefault(); command.executeUndo(); return true }
+    if ((e.shiftKey && k === 'z') || (!e.shiftKey && k === 'y')) { e.preventDefault(); command.executeRedo(); return true }
+    if (k === 'enter') { e.preventDefault(); command.executePageBreak(); return true }
+
+    return false
   }
 }

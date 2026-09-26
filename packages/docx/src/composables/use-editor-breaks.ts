@@ -1,3 +1,5 @@
+import { message } from 'ant-design-vue'
+
 /**
  * 编辑器实例接口
  */
@@ -16,6 +18,16 @@ export function useEditorBreaks(options: {
   getEditorInstance: () => EditorInstance | null
 }) {
   const { getEditorInstance } = options
+
+  function insertSection(command: string) {
+    const instance = getEditorInstance()
+    if (!instance) return
+    try {
+      instance.command[command]()
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '插入分节符失败')
+    }
+  }
 
   /** 插入分页符 */
   function pageBreak() {
@@ -39,32 +51,16 @@ export function useEditorBreaks(options: {
   }
 
   /** 插入下一页分节符 */
-  function sectionBreakNextPage() {
-    const instance = getEditorInstance()
-    if (!instance) return
-    instance.command.executePageBreak()
-  }
+  function sectionBreakNextPage() { insertSection('executeSectionBreakNextPage') }
 
   /** 插入连续分节符 */
-  function sectionBreakContinuous() {
-    const instance = getEditorInstance()
-    if (!instance) return
-    instance.command.executeSectionBreakContinuous()
-  }
+  function sectionBreakContinuous() { insertSection('executeSectionBreakContinuous') }
 
   /** 插入偶数页分节符 */
-  function sectionBreakEvenPage() {
-    const instance = getEditorInstance()
-    if (!instance) return
-    instance.command.executePageBreak()
-  }
+  function sectionBreakEvenPage() { insertSection('executeSectionBreakEvenPage') }
 
   /** 插入奇数页分节符 */
-  function sectionBreakOddPage() {
-    const instance = getEditorInstance()
-    if (!instance) return
-    instance.command.executePageBreak()
-  }
+  function sectionBreakOddPage() { insertSection('executeSectionBreakOddPage') }
 
   /**
    * 插入分隔线

@@ -31,8 +31,8 @@
     </VdCard>
     </div>
     <template #footer>
-      <VdButton @click="visible = false">{{ t('common.cancel') }}</VdButton>
-      <VdButton type="primary" @click="handleConfirm">{{ t('common.ok') }}</VdButton>
+      <VdButton icon="close" @click="visible = false">{{ t('common.cancel') }}</VdButton>
+      <VdButton type="primary" icon="check" @click="handleConfirm">{{ t('common.ok') }}</VdButton>
     </template>
   </VdDialog>
 </template>

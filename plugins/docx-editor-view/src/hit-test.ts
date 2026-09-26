@@ -116,6 +116,9 @@ function hitLine(line: LineBox, lx: number): IPosition | null {
   const measure = getSharedMeasure()
   for (const inl of line.inlines) {
     if (lx >= inl.x && lx <= inl.x + inl.width) {
+      if (inl.text === '\t' && (inl.run.extension?.toc as { role?: string } | undefined)?.role === 'entry') {
+        return { path: inl.path, offset: lx < inl.x + inl.width / 2 ? inl.startOffset : inl.endOffset }
+      }
       let cursor = inl.x
       const ls = inl.letterSpacing ?? 0
       for (let i = 0; i < inl.text.length; i++) {

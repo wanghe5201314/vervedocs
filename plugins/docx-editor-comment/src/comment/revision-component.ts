@@ -1,6 +1,7 @@
 import dayjs from 'dayjs'
 import type { IDocxDocumentMeta } from '@vervedoc/docx-editor-schema'
 import { clearRevision, getRevisionOldProps, restoreRevisionFormat } from '@vervedoc/docx-editor-schema'
+import { collectOccupiedRanges, resolveVerticalOverlaps, applyContainerWidth } from './balloon-layout'
 
 function revisionNodes(doc: IDocxDocumentMeta): Array<{ el: any; parent: any[]; index: number }> {
   const nodes: Array<{ el: any; parent: any[]; index: number }> = []
@@ -22,6 +23,7 @@ function revisionNodes(doc: IDocxDocumentMeta): Array<{ el: any; parent: any[]; 
 import type { CommentHost } from './host'
 import type { GroupAnchor } from './host'
 import { drawAnnotationConnector, getAvatarColor } from './annotation-visual'
+import { balloonText, type BalloonTranslate } from './translation'
 
 const PREFIX = 'ce'
 
@@ -42,6 +44,12 @@ export interface RevisionCallbacks {
 }
 
 export class RevisionComponent {
+  constructor(private readonly translate?: BalloonTranslate) {}
+
+  private _t(key: string, params?: Record<string, string | number>): string {
+    return balloonText(this.translate, `comment.revision.${key}`, params)
+  }
+
   /** 宿主契约（由 core 注入） */
   private _command: CommentHost | null = null
   /** 气泡挂载容器（Draw scroller） */
@@ -49,7 +57,7 @@ export class RevisionComponent {
   /** 修订 overlay 容器 */
   private _overlayContainer: HTMLDivElement | null = null
   /** 修订气泡 DOM 映射（revisionId → 气泡元素） */
-  private _balloonDoms: Map<string, HTMLDivElement> = new Map()
+  private _balloonDomMap: Map<string, HTMLDivElement> = new Map()
   /** 生命周期回调 */
   private _callbacks: RevisionCallbacks = {}
   /** 锚点竖线 DOM 元素列表 */
@@ -98,9 +106,7 @@ export class RevisionComponent {
   }
 
   private _getTypeLabel(type: RevisionBalloonData['type']): string {
-    if (type === 'insert') return '插入：'
-    if (type === 'delete') return '删除：'
-    return '格式：'
+    return this._t(type)
   }
 
   private _createBalloonDom(balloon: RevisionBalloonData): HTMLDivElement {
@@ -136,7 +142,7 @@ export class RevisionComponent {
     const authorSpan = document.createElement('span')
     authorSpan.className = 'revision-author'
     authorSpan.style.cssText = 'color:#1f1f1f;font-weight:700;font-size:12px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;'
-    authorSpan.textContent = balloon.author || '未知'
+    authorSpan.textContent = balloon.author || this._t('unknownAuthor')
 
     const dateSpan = document.createElement('span')
     dateSpan.className = 'revision-date'
@@ -147,7 +153,8 @@ export class RevisionComponent {
     actions.style.cssText = 'display:flex;align-items:center;gap:1px;flex-shrink:0;'
 
     const acceptBtn = document.createElement('button')
-    acceptBtn.title = '接受修订'
+    acceptBtn.title = this._t('accept')
+    acceptBtn.setAttribute('aria-label', acceptBtn.title)
     acceptBtn.type = 'button'
     acceptBtn.style.cssText =
       'display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;' +
@@ -158,7 +165,8 @@ export class RevisionComponent {
     acceptBtn.addEventListener('click', () => { this.accept(balloon.revisionId) })
 
     const rejectBtn = document.createElement('button')
-    rejectBtn.title = '拒绝修订'
+    rejectBtn.title = this._t('reject')
+    rejectBtn.setAttribute('aria-label', rejectBtn.title)
     rejectBtn.type = 'button'
     rejectBtn.style.cssText =
       'display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;' +
@@ -191,24 +199,8 @@ export class RevisionComponent {
     return div
   }
 
-  private _collectOccupiedRanges(selector: string): Array<{ top: number; bottom: number }> {
-    if (!this._container) return []
-    const ranges: Array<{ top: number; bottom: number }> = []
-    const elements = this._container.querySelectorAll(selector)
-    elements.forEach((el: Element) => {
-      const node = el as HTMLElement
-      const top = Number.parseFloat(node.style.top || '')
-      const height = node.offsetHeight || node.getBoundingClientRect().height || 0
-      if (Number.isFinite(top) && height > 0) {
-        ranges.push({ top, bottom: top + height })
-      }
-    })
-    ranges.sort((a, b) => a.top - b.top)
-    return ranges
-  }
-
   private _estimateBalloonHeight(balloon: RevisionBalloonData): number {
-    const existing = this._balloonDoms.get(balloon.revisionId)
+    const existing = this._balloonDomMap.get(balloon.revisionId)
     const existingHeight = existing?.offsetHeight || existing?.getBoundingClientRect().height || 0
     if (existingHeight > 0) return existingHeight
     let height = 82
@@ -217,25 +209,14 @@ export class RevisionComponent {
   }
 
   private _resolveVerticalOverlaps(balloons: RevisionBalloonData[]): void {
-    const occupied = this._collectOccupiedRanges(`.${PREFIX}-comment-balloon`)
-    const GAP = 12
-    for (const balloon of balloons) {
-      const height = this._estimateBalloonHeight(balloon)
-      let top = balloon.top
-      let changed = true
-      while (changed) {
-        changed = false
-        for (const range of occupied) {
-          if (top < range.bottom + GAP && top + height > range.top - GAP) {
-            top = range.bottom + GAP
-            changed = true
-          }
-        }
-      }
-      balloon.top = top
-      occupied.push({ top, bottom: top + height })
-      occupied.sort((a, b) => a.top - b.top)
-    }
+    const occupied = collectOccupiedRanges(this._container, `.${PREFIX}-comment-balloon`)
+    resolveVerticalOverlaps(
+      balloons,
+      occupied,
+      balloon => this._estimateBalloonHeight(balloon),
+      balloon => balloon.top,
+      (balloon, top) => { balloon.top = top }
+    )
   }
 
 
@@ -243,29 +224,31 @@ export class RevisionComponent {
   private _formatRevisionDesc(el: any): string {
     const old = getRevisionOldProps(el)
     const parts: string[] = []
-    const boolLabels: Record<string, string> = {
-      bold: '加粗', italic: '斜体', underline: '下划线', strikeout: '删除线',
-      doubleStrikeout: '双删除线', hidden: '隐藏', superscript: '上标', subscript: '下标'
-    }
-    const labels: Record<string, string> = {
-      color: '字体颜色', size: '字号', font: '字体', highlight: '高亮',
-      characterScale: '字符缩放', letterSpacing: '字符间距', textDecoration: '装饰线样式',
-      rowFlex: '对齐方式', lineHeight: '行距', lineHeightRule: '行距规则', rowMargin: '行间距',
-      paragraphIndentLeft: '左缩进', paragraphIndentRight: '右缩进', paragraphFirstLineIndent: '首行缩进',
-      indentHanging: '悬挂缩进', paragraphSpacingBefore: '段前间距', paragraphSpacingAfter: '段后间距'
-    }
+    const boolKeys = ['bold', 'italic', 'underline', 'strikeout', 'doubleStrikeout', 'hidden', 'superscript', 'subscript']
+    const labelKeys = [
+      'color', 'size', 'font', 'highlight', 'characterScale', 'letterSpacing', 'textDecoration',
+      'rowFlex', 'lineHeight', 'lineHeightRule', 'rowMargin', 'paragraphIndentLeft',
+      'paragraphIndentRight', 'paragraphFirstLineIndent', 'indentHanging',
+      'paragraphSpacingBefore', 'paragraphSpacingAfter'
+    ]
     const alignments: Record<string, string> = {
-      left: '左对齐', center: '居中', right: '右对齐', justify: '两端对齐', alignment: '两端对齐', distribute: '分散对齐'
+      left: 'alignLeft', center: 'alignCenter', right: 'alignRight',
+      justify: 'alignJustify', alignment: 'alignJustify', distribute: 'alignDistribute'
     }
     for (const [key, value] of Object.entries(old)) {
       if ((el[key] ?? null) === value) continue
-      if (boolLabels[key]) parts.push(`${el[key] ? '' : '取消'}${boolLabels[key]}`)
-      else if (labels[key]) {
-        const current = el[key] ?? '默认'
-        parts.push(`${labels[key]}: ${key === 'rowFlex' ? alignments[current] || current : current}${key === 'size' && el[key] != null ? 'pt' : ''}`)
+      if (boolKeys.includes(key)) parts.push(`${el[key] ? '' : this._t('undo')}${this._t(key)}`)
+      else if (labelKeys.includes(key)) {
+        const current = el[key] ?? this._t('default')
+        const display = key === 'rowFlex' && alignments[current] ? this._t(alignments[current]) : current
+        parts.push(this._t('property', {
+          label: this._t(key), value: `${display}${key === 'size' && el[key] != null ? 'pt' : ''}`
+        }))
       }
     }
-    return parts.length ? `设置格式: ${parts.join('，')}` : '设置格式'
+    return parts.length
+      ? this._t('formatDescription', { details: parts.join(this._t('separator')) })
+      : this._t('setFormat')
   }
 
   private _getAll(): Array<{
@@ -283,7 +266,9 @@ export class RevisionComponent {
           existing.content += el.value || ''
         } else {
           const description = this._formatRevisionDesc(el)
-          if (!existing.content.split('；').includes(description)) existing.content += `；${description}`
+          if (!existing.content.split(this._t('descriptionSeparator')).includes(description)) {
+            existing.content += `${this._t('descriptionSeparator')}${description}`
+          }
         }
         existing.lastIndex = i
       } else {
@@ -378,31 +363,15 @@ export class RevisionComponent {
     const pageWidth = this._command.getDrawWidth?.() || 794
     const balloonLeft = pageWidth + 16
     const cardMaxWidth = 270
-    const neededWidth = balloonLeft + cardMaxWidth + 16
-    ;(this._container as any).__revisionNeededWidth = neededWidth
-    this._applyContainerWidth(this._container, pageWidth)
+    ;(this._container as any).__revisionNeededWidth = balloonLeft + cardMaxWidth + 16
+    applyContainerWidth(this._container, pageWidth)
   }
 
   private _restoreContainerWidth(): void {
     if (!this._command || !this._container) return
     const pageWidth = this._command.getDrawWidth?.() || 794
     ;(this._container as any).__revisionNeededWidth = 0
-    this._applyContainerWidth(this._container, pageWidth)
-  }
-
-  private _applyContainerWidth(container: HTMLDivElement, pageWidth: number): void {
-    // 新架构下容器宽度由 Draw 管理，overlay 通过 overflow: visible 自然溢出
-    if ((container as any).__vervedocsNewLayout) return
-    const commentWidth = (container as any).__commentNeededWidth || 0
-    const revisionWidth = (container as any).__revisionNeededWidth || 0
-    const neededWidth = Math.max(commentWidth, revisionWidth)
-    if (neededWidth > pageWidth) {
-      container.style.width = `${neededWidth}px`
-      container.style.minWidth = `${neededWidth}px`
-    } else {
-      container.style.width = `${pageWidth}px`
-      container.style.minWidth = ''
-    }
+    applyContainerWidth(this._container, pageWidth)
   }
 
   private _renderBalloons(balloons: RevisionBalloonData[]) {
@@ -410,25 +379,25 @@ export class RevisionComponent {
     this._balloons = new Map(balloons.map(balloon => [balloon.revisionId, balloon]))
 
     const existingIds = new Set(balloons.map(b => b.revisionId))
-    for (const [id, dom] of this._balloonDoms) {
+    for (const [id, dom] of this._balloonDomMap) {
       if (!existingIds.has(id)) {
         dom.remove()
-        this._balloonDoms.delete(id)
+        this._balloonDomMap.delete(id)
       }
     }
 
     for (const balloon of balloons) {
-      let balloonDom = this._balloonDoms.get(balloon.revisionId)
+      let balloonDom = this._balloonDomMap.get(balloon.revisionId)
       if (!balloonDom) {
         balloonDom = this._createBalloonDom(balloon)
         this._overlayContainer.append(balloonDom)
-        this._balloonDoms.set(balloon.revisionId, balloonDom)
+        this._balloonDomMap.set(balloon.revisionId, balloonDom)
       } else {
         balloonDom.style.top = `${balloon.top}px`
         balloonDom.style.left = `${balloon.left}px`
         const authorSpan = balloonDom.querySelector('.revision-author') as HTMLSpanElement
         if (authorSpan) {
-          authorSpan.textContent = balloon.author || '未知'
+          authorSpan.textContent = balloon.author || this._t('unknownAuthor')
         }
         const dateSpan = balloonDom.querySelector('.revision-date') as HTMLSpanElement
         if (dateSpan) {
@@ -441,6 +410,15 @@ export class RevisionComponent {
         const contentSpan = balloonDom.querySelector('.revision-content') as HTMLSpanElement
         if (contentSpan) {
           contentSpan.textContent = balloon.content
+        }
+        const buttons = balloonDom.querySelectorAll<HTMLButtonElement>('button')
+        if (buttons[0]) {
+          buttons[0].title = this._t('accept')
+          buttons[0].setAttribute('aria-label', buttons[0].title)
+        }
+        if (buttons[1]) {
+          buttons[1].title = this._t('reject')
+          buttons[1].setAttribute('aria-label', buttons[1].title)
         }
       }
       const color = getAvatarColor(balloon.author)
@@ -455,7 +433,7 @@ export class RevisionComponent {
     this._hideAnchorLines(false)
     this._hoveredRevisionId = balloon.revisionId
     const color = getAvatarColor(balloon.author)
-    const card = this._balloonDoms.get(balloon.revisionId)
+    const card = this._balloonDomMap.get(balloon.revisionId)
     if (card) card.style.borderColor = color
     this._command?.setActiveRevision?.(balloon.revisionId, color)
     this._drawAnchorLines(balloon)
@@ -465,7 +443,7 @@ export class RevisionComponent {
     for (const line of this._anchorLineEls) line.remove()
     this._anchorLineEls = []
     if (!this._overlayContainer) return
-    const card = this._balloonDoms.get(balloon.revisionId)
+    const card = this._balloonDomMap.get(balloon.revisionId)
     if (!card) return
     this._anchorLineEls = drawAnnotationConnector(
       this._overlayContainer, card, balloon.anchor, getAvatarColor(balloon.author), `${PREFIX}-revision-connector`
@@ -476,7 +454,7 @@ export class RevisionComponent {
     for (const el of this._anchorLineEls) el.remove()
     this._anchorLineEls = []
     if (this._hoveredRevisionId === null) return
-    const card = this._balloonDoms.get(this._hoveredRevisionId)
+    const card = this._balloonDomMap.get(this._hoveredRevisionId)
     if (card) card.style.borderColor = '#d9d9d9'
     this._hoveredRevisionId = null
     if (updateActiveRevision) this._command?.setActiveRevision?.(null)
@@ -484,15 +462,17 @@ export class RevisionComponent {
 
   private _clear() {
     this._hideAnchorLines()
-    for (const dom of this._balloonDoms.values()) {
+    for (const dom of this._balloonDomMap.values()) {
       dom.remove()
     }
-    this._balloonDoms.clear()
+    this._balloonDomMap.clear()
     this._balloons.clear()
   }
 
   private resolveRevision(accept: boolean, revisionId?: string): void {
     if (!this._command) return
+    const options = this._command.getOptions()
+    if (options.readonly || options.disabled) return
     this._hideAnchorLines()
     this._command.commitTransaction(doc => {
       let changed = false
@@ -500,6 +480,7 @@ export class RevisionComponent {
         if (!el.revisionId || !el.revisionType || (revisionId !== undefined && el.revisionId !== revisionId)) continue
         changed = true
         do {
+          // Accepting a deletion or rejecting an insertion removes the content.
           if (el.revisionType === (accept ? 'delete' : 'insert')) {
             parent.splice(index, 1)
             if (!parent.length) parent.push({ type: 'text', value: '' })
@@ -518,8 +499,8 @@ export class RevisionComponent {
       return changed
     })
     if (revisionId !== undefined) {
-      this._balloonDoms.get(revisionId)?.remove()
-      this._balloonDoms.delete(revisionId)
+      this._balloonDomMap.get(revisionId)?.remove()
+      this._balloonDomMap.delete(revisionId)
     } else this._clear()
   }
 

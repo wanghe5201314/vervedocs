@@ -2,6 +2,7 @@
  * 图表数据提取和处理工具
  */
 import type { IChartTableData, IChartDataRange, IChartConfig } from '@vervedoc/docx-editor-schema'
+import type { Translate } from '@vervedoc/i18n'
 
 /**
  * 图表类型
@@ -137,7 +138,8 @@ export function generateChartOption(
   chartType: ChartType | string,
   tableData: IChartTableData,
   config: IChartConfig,
-  subtype?: string
+  subtype?: string,
+  t?: Translate
 ): ChartJsConfig {
   const { headers, rows } = tableData
   const resolvedSubtype = subtype || `${chartType}-basic`
@@ -150,7 +152,7 @@ export function generateChartOption(
     return {
       type: 'bar',
       data: { labels: [], datasets: [] },
-      options: { ...buildBaseOptions(config), plugins: { ...buildBaseOptions(config).plugins, title: { display: true, text: config.title || '暂无数据' } } }
+      options: { ...buildBaseOptions(config), plugins: { ...buildBaseOptions(config).plugins, title: { display: true, text: config.title || (t?.('chart.noData') ?? '暂无数据') } } }
     }
   }
 
@@ -210,7 +212,7 @@ export function generateChartOption(
       data: {
         labels,
         datasets: [{
-          label: numericHeaders[0] || '数据',
+          label: numericHeaders[0] || (t?.('chart.data') ?? '数据'),
           data,
           backgroundColor: labels.map((_, i) => colors[i % colors.length])
         }]

@@ -1,23 +1,23 @@
 <div class="cd-mask">
   <div class="cd-dialog">
-    <div class="cd-title">插入图表</div>
+    <div class="cd-title" data-i18n-key="chart.dialog.title">插入图表</div>
     <div class="cd-tabs">
-      <div class="cd-tab cd-tab-active" data-tab="settings">设置</div>
-      <div class="cd-tab" data-tab="data">数据</div>
+      <div class="cd-tab cd-tab-active" data-tab="settings" data-i18n-key="chart.dialog.settings">设置</div>
+      <div class="cd-tab" data-tab="data" data-i18n-key="chart.dialog.data">数据</div>
     </div>
     <div class="cd-body">
       <!-- ===== Tab 1：设置 ===== -->
       <div class="cd-pane cd-pane-active" data-pane="settings">
         <div class="cd-layout">
           <div class="cd-type-tree">
-            <div class="cd-tree-title">选择图表类型</div>
+            <div class="cd-tree-title" data-i18n-key="chart.dialog.selectType">选择图表类型</div>
             <div class="cd-tree-list" id="cd-category-list"></div>
           </div>
           <div class="cd-preview-config">
             <div class="cd-collapse">
               <div class="cd-collapse-header cd-collapse-active" id="cd-preview-header">
                 <span class="cd-collapse-arrow">▼</span>
-                <span>图表预览</span>
+                <span data-i18n-key="chart.dialog.preview">图表预览</span>
               </div>
               <div class="cd-collapse-content" id="cd-preview-content">
                 <div class="cd-preview-grid" id="cd-preview-grid"></div>
@@ -26,29 +26,29 @@
             <div class="cd-collapse">
               <div class="cd-collapse-header" id="cd-config-header">
                 <span class="cd-collapse-arrow">▶</span>
-                <span>图表配置</span>
+                <span data-i18n-key="chart.dialog.config">图表配置</span>
               </div>
               <div class="cd-collapse-content" id="cd-config-content" style="display:none">
                 <div class="cd-config-form">
-                  <label class="cd-row"><span class="cd-label">显示标题</span><input type="checkbox" id="cd-show-title" checked></label>
-                  <label class="cd-row" id="cd-title-row"><span class="cd-label">标题名称</span><input type="text" id="cd-title" class="cd-input" placeholder="请输入图表标题"></label>
-                  <label class="cd-row" id="cd-title-pos-row"><span class="cd-label">标题位置</span>
-                    <select id="cd-title-position" class="cd-input"><option value="left">左</option><option value="center" selected>中</option><option value="right">右</option></select>
+                  <label class="cd-row"><span class="cd-label" data-i18n-key="chart.config.showTitle">显示标题</span><input type="checkbox" id="cd-show-title" checked></label>
+                  <label class="cd-row" id="cd-title-row"><span class="cd-label" data-i18n-key="chart.config.title">标题名称</span><input type="text" id="cd-title" class="cd-input" data-i18n-placeholder="chart.config.titlePlaceholder" placeholder="请输入图表标题"></label>
+                  <label class="cd-row" id="cd-title-pos-row"><span class="cd-label" data-i18n-key="chart.config.titlePosition">标题位置</span>
+                    <select id="cd-title-position" class="cd-input"><option value="left" data-i18n-key="chart.position.left">左</option><option value="center" selected data-i18n-key="chart.position.center">中</option><option value="right" data-i18n-key="chart.position.right">右</option></select>
                   </label>
                   <div class="cd-divider"></div>
-                  <label class="cd-row"><span class="cd-label">显示图例</span><input type="checkbox" id="cd-show-legend" checked></label>
-                  <label class="cd-row" id="cd-legend-row"><span class="cd-label">图例位置</span>
-                    <select id="cd-legend-position" class="cd-input"><option value="top">上</option><option value="bottom" selected>下</option><option value="left">左</option><option value="right">右</option></select>
+                  <label class="cd-row"><span class="cd-label" data-i18n-key="chart.config.showLegend">显示图例</span><input type="checkbox" id="cd-show-legend" checked></label>
+                  <label class="cd-row" id="cd-legend-row"><span class="cd-label" data-i18n-key="chart.config.legendPosition">图例位置</span>
+                    <select id="cd-legend-position" class="cd-input"><option value="top" data-i18n-key="chart.position.top">上</option><option value="bottom" selected data-i18n-key="chart.position.bottom">下</option><option value="left" data-i18n-key="chart.position.left">左</option><option value="right" data-i18n-key="chart.position.right">右</option></select>
                   </label>
                   <div class="cd-divider"></div>
-                  <label class="cd-row"><span class="cd-label">X轴标题</span><input type="text" id="cd-xaxis-label" class="cd-input" placeholder="请输入X轴标题"></label>
-                  <label class="cd-row"><span class="cd-label">Y轴标题</span><input type="text" id="cd-yaxis-label" class="cd-input" placeholder="请输入Y轴标题"></label>
-                  <label class="cd-row"><span class="cd-label">显示网格线</span><input type="checkbox" id="cd-show-grid" checked></label>
+                  <label class="cd-row"><span class="cd-label" data-i18n-key="chart.config.xAxisLabel">X轴标题</span><input type="text" id="cd-xaxis-label" class="cd-input" data-i18n-placeholder="chart.config.xAxisPlaceholder" placeholder="请输入X轴标题"></label>
+                  <label class="cd-row"><span class="cd-label" data-i18n-key="chart.config.yAxisLabel">Y轴标题</span><input type="text" id="cd-yaxis-label" class="cd-input" data-i18n-placeholder="chart.config.yAxisPlaceholder" placeholder="请输入Y轴标题"></label>
+                  <label class="cd-row"><span class="cd-label" data-i18n-key="chart.config.showGrid">显示网格线</span><input type="checkbox" id="cd-show-grid" checked></label>
                   <div class="cd-divider"></div>
-                  <label class="cd-row"><span class="cd-label">显示数据标签</span><input type="checkbox" id="cd-show-datalabel"></label>
+                  <label class="cd-row"><span class="cd-label" data-i18n-key="chart.config.showDataLabel">显示数据标签</span><input type="checkbox" id="cd-show-datalabel"></label>
                   <div class="cd-divider"></div>
-                  <label class="cd-row"><span class="cd-label">配色方案</span>
-                    <select id="cd-color-scheme" class="cd-input"><option value="default" selected>默认</option><option value="warm">暖色调</option><option value="cool">冷色调</option><option value="nature">自然色</option></select>
+                  <label class="cd-row"><span class="cd-label" data-i18n-key="chart.config.colorScheme">配色方案</span>
+                    <select id="cd-color-scheme" class="cd-input"><option value="default" selected data-i18n-key="chart.colorScheme.default">默认</option><option value="warm" data-i18n-key="chart.colorScheme.warm">暖色调</option><option value="cool" data-i18n-key="chart.colorScheme.cool">冷色调</option><option value="nature" data-i18n-key="chart.colorScheme.nature">自然色</option></select>
                   </label>
                 </div>
               </div>
@@ -71,14 +71,14 @@
             <table class="cd-data-grid" id="cd-data-table"></table>
           </div>
           <div class="cd-data-toolbar">
-            <button type="button" class="cd-data-btn" id="cd-clear-data">清空</button>
+            <button type="button" class="cd-data-btn" id="cd-clear-data" data-i18n-key="chart.dialog.clear">清空</button>
           </div>
         </div>
       </div>
     </div>
     <div class="cd-actions">
-      <button type="button" id="cd-cancel">取消</button>
-      <button type="button" id="cd-ok" class="cd-ok">确定</button>
+      <button type="button" id="cd-cancel" data-i18n-key="chart.dialog.cancel">取消</button>
+      <button type="button" id="cd-ok" class="cd-ok" data-i18n-key="chart.dialog.confirm">确定</button>
     </div>
   </div>
 </div>

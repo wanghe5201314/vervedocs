@@ -1,4 +1,7 @@
+import { builtinMessages } from '@vervedoc/i18n'
+
 export default {
+  ...builtinMessages.zhCN,
   common: {
     ok: '确定',
     cancel: '取消',
@@ -33,6 +36,8 @@ export default {
     none: '无',
     confirmRestore: '确定恢复',
     newDocument: '新建文档',
+    newDocumentConfirmContent: '当前编辑器有未保存的内容，新建文档将会丢弃这些内容，是否继续？',
+    importDocumentConfirmContent: '当前编辑器有未保存的内容，导入文档将会丢弃这些内容，是否继续？',
     documentName: '文档名称',
     unnamedDocument: '未命名文档',
     feedback: '反馈',
@@ -546,18 +551,25 @@ export default {
     table: {
       title: '插入表格',
       size: '表格尺寸',
-      columns: '列数(C):',
-      rows: '行数(R):',
+      columns: '列数',
+      rows: '行数',
       borderSettings: '边框设置',
-      none: '无(N)',
-      box: '方框(X)',
-      all: '全部(A)',
+      none: '无',
+      box: '外框',
+      all: '全部',
+      inside: '内边框',
+      insideHorizontal: '内部横线',
+      insideVertical: '内部竖线',
+      top: '上边框',
+      bottom: '下边框',
+      left: '左边框',
+      right: '右边框',
       grid: '网格(D)',
       custom: '自定义(U)',
       lineStyle: '线型(V):',
-      color: '颜色(C):',
-      width: '宽度(W):',
-      widthUnit: '磅'
+      color: '颜色',
+      width: '宽度',
+      widthUnit: '像素'
     },
     tableBorders: {
       title: '表格边框',

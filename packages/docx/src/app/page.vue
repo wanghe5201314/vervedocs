@@ -166,7 +166,6 @@
       :editor="{ executeCommand }"
     />
 
-    <TocDialog v-model="tocDialogVisible" @confirm="handleTocConfirm" />
     <AISettingsDialog v-model="aiSettingsDialogVisible" />
     <VersionHistoryDialog
       v-model="versionHistoryDialogVisible"
@@ -226,7 +225,6 @@ import PaperSizeDialog from '@/components/dialogs/paperSizeDialog.vue'
 
 import DateDialog from '@/components/dialogs/dateDialog.vue'
 import ParagraphDialog from '@/components/dialogs/paragraphDialog.vue'
-import TocDialog from '@/components/dialogs/tocDialog.vue'
 import TableBordersDialog from '@/components/dialogs/tableBordersDialog.vue'
 import AISettingsDialog from '@/components/dialogs/aiSettingsDialog.vue'
 import VersionHistoryDialog from '@/components/dialogs/versionHistoryDialog.vue'
@@ -504,7 +502,6 @@ const {
 
   dateDialogVisible,
   paragraphDialogVisible,
-  tocDialogVisible,
   aiSettingsDialogVisible,
   versionHistoryDialogVisible,
   openShortcuts,
@@ -518,7 +515,6 @@ const {
   handlePaperSizeConfirm,
 
   handleDateConfirm,
-  handleTocConfirm,
 
   handleInsertTableDialogConfirm
 } = useDialogs({ executeCommand })
@@ -750,14 +746,15 @@ const {
 })
 
 /** 文档操作方法：重命名、新建、权限、反�?*/
-const { renameDoc, newDoc, openAccessPermission, openFeedback } =
+const { renameDoc, newDoc, openAccessPermission, openFeedback, confirmDiscardUnsaved } =
   useDocumentActions({
     documentMeta,
     emitMetaChange,
     executeCommand,
     saveNow,
     setSuppressSaveOnce,
-    applyDocumentReplace
+    applyDocumentReplace,
+    getEditorInstance
   })
 
 /** 注册对外暴露�?API 对象 */
@@ -982,12 +979,13 @@ const aiCommands: Record<
 }
 
 /** 处理文档导入：弹出文件选择框，调用导入回调并替换文档内�?*/
-const handleImportDoc = () => {
+const handleImportDoc = async () => {
   if (fileOperationPending) return
   if (!importCallback) {
     message.warning(t('editor.importNoCallback'))
     return
   }
+  if (!(await confirmDiscardUnsaved(t('topHeader.import'), t('common.importDocumentConfirmContent')))) return
   const input = document.createElement('input')
   input.type = 'file'
   input.accept = '.doc,.docx'

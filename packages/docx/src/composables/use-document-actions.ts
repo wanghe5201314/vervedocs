@@ -24,6 +24,8 @@ export function useDocumentActions(options: {
   setSuppressSaveOnce: (value: boolean) => void
   /** 整文档替换（清空正文/页眉页脚/批注） */
   applyDocumentReplace: (payload: ReplaceDocumentPayload) => Promise<void>
+  /** 获取编辑器实例（用于判断是否有未保存内容） */
+  getEditorInstance: () => any
 }) {
   const confirm = useDialogConfirm()
   const {
@@ -31,7 +33,8 @@ export function useDocumentActions(options: {
     emitMetaChange,
     saveNow,
     setSuppressSaveOnce,
-    applyDocumentReplace
+    applyDocumentReplace,
+    getEditorInstance
   } = options
 
   /**
@@ -81,9 +84,36 @@ export function useDocumentActions(options: {
   }
 
   /**
-   * 新建文档：重置元数据，并通过整文档替换清空正文/页眉页脚/批注
+   * 判断编辑器当前是否有内容（正文/页眉/页脚任一非空）
+   */
+  const hasEditorContent = (): boolean => {
+    const value = getEditorInstance()?.command?.getValue?.()
+    if (!value) return false
+    if (Array.isArray(value)) return value.length > 0
+    const { main, header, footer } = value
+    return (Array.isArray(main) && main.length > 0) ||
+      (Array.isArray(header) && header.length > 0) ||
+      (Array.isArray(footer) && footer.length > 0)
+  }
+
+  /**
+   * 若编辑器有未保存内容则弹出确认框；无内容或用户确认返回 true，用户取消返回 false
+   */
+  const confirmDiscardUnsaved = async (title: string, content: string): Promise<boolean> => {
+    if (!hasEditorContent()) return true
+    return confirm({
+      title,
+      content,
+      okText: t('common.ok'),
+      cancelText: t('common.cancel')
+    })
+  }
+
+  /**
+   * 新建文档：若编辑器有未保存内容则先确认，重置元数据并通过整文档替换清空正文/页眉页脚/批注
    */
   const newDoc = async () => {
+    if (!(await confirmDiscardUnsaved(t('common.newDocument'), t('common.newDocumentConfirmContent')))) return
     setSuppressSaveOnce(true)
     documentMeta.id = 'local'
     documentMeta.path = ''
@@ -100,5 +130,5 @@ export function useDocumentActions(options: {
     })
   }
 
-  return { renameDoc, newDoc, openAccessPermission, openFeedback }
+  return { renameDoc, newDoc, openAccessPermission, openFeedback, confirmDiscardUnsaved }
 }

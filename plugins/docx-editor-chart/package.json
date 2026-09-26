@@ -1,6 +1,6 @@
 {
   "name": "@vervedoc/docx-editor-chart",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "DocxEditor 图表插件 - 基于 Chart.js",
   "author": "wanghe",
   "license": "MIT",
@@ -40,6 +40,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "type:check": "tsc --noEmit -p tsconfig.json",
     "preview": "vite preview"
   },
   "peerDependencies": {
@@ -47,6 +48,7 @@
   },
   "dependencies": {
     "@vervedoc/docx-editor-schema": "workspace:^",
+    "@vervedoc/i18n": "workspace:^",
     "chart.js": "^4.4.0"
   },
   "devDependencies": {

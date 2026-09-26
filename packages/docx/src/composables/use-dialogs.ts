@@ -39,8 +39,6 @@ export function useDialogs(options: {
   const dateDialogVisible = ref(false)
   /** 段落对话框是否可见 */
   const paragraphDialogVisible = ref(false)
-  /** 目录对话框是否可见 */
-  const tocDialogVisible = ref(false)
   /** AI 设置对话框是否可见 */
   const aiSettingsDialogVisible = ref(false)
   /** 版本历史对话框是否可见 */
@@ -126,14 +124,6 @@ export function useDialogs(options: {
   }
 
   /**
-   * 处理目录插入确认
-   * @param data 目录配置数据
-   */
-  const handleTocConfirm = (data: any) => {
-    executeCommand('tocInsert', { mode: 'custom', ...data })
-  }
-
-  /**
 
    * 处理插入表格确认
    * @param payload 表格行列与边框配置
@@ -141,9 +131,7 @@ export function useDialogs(options: {
   const handleInsertTableDialogConfirm = (payload: { rows: number; cols: number; border?: any }) => {
     executeCommand('insertTable', { rows: payload.rows, cols: payload.cols })
     const border = payload.border || {}
-    const opt = String(border.option || '').trim().toLowerCase()
-    const type = opt === 'none' ? 'none' : opt === 'box' ? 'outside' : 'all'
-    executeCommand('tableBorderType', type)
+    executeCommand('tableBorderType', border.option)
     if (border.color) executeCommand('tableBorderColor', String(border.color))
     if (border.width !== undefined) executeCommand('tableBorderWidth', Number(border.width))
   }
@@ -176,7 +164,6 @@ export function useDialogs(options: {
 
     dateDialogVisible,
     paragraphDialogVisible,
-    tocDialogVisible,
     aiSettingsDialogVisible,
     versionHistoryDialogVisible,
     openShortcuts,
@@ -190,7 +177,6 @@ export function useDialogs(options: {
     handlePaperSizeConfirm,
 
     handleDateConfirm,
-    handleTocConfirm,
 
     handleInsertTableDialogConfirm,
     handleTableBordersConfirm

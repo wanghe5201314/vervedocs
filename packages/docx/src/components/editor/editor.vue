@@ -4,7 +4,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import DocxEditor, { IElement } from '@vervedoc/core'
 import { createCommentPlugin, createRevisionPlugin } from '@vervedoc/docx-editor-comment'
 import { createChartPlugin } from '@vervedoc/docx-editor-chart'
@@ -24,13 +24,14 @@ import { useEditorLatex } from '@/composables/use-editor-latex'
 import { useEditorBarcode } from '@/composables/use-editor-barcode'
 import { useEditorFormat } from '@/composables/use-editor-format'
 import { useEditorPage } from '@/composables/use-editor-page'
-import { t } from '@/i18n'
+import { t, currentLocale } from '@/i18n'
 
 /** 编辑器初始元素数据 */
 const data: IElement[] = []
 
 /** 编辑器初始化选项 */
 const options = {
+  locale: currentLocale.value,
   defaultFont: t('editor.defaultFont'),
   defaultSize: 14,
   showRuler: true,
@@ -186,14 +187,13 @@ const initEditor = async () => {
         success: true,
         elements: data
       },
-      options
+      { ...options, locale: currentLocale.value }
     )
 
     // 注册可选功能插件（批注/修订/图表）
     editorInstance.use(createCommentPlugin())
     editorInstance.use(createRevisionPlugin())
     editorInstance.use(createChartPlugin())
-
 
     // 保存实例到全局，供cypress使用
     ;(window as any).editor = editorInstance
@@ -552,7 +552,7 @@ const executeCommand = (command: string, ...args: any[]) => {
     setPaperMargin: setPaperMarginFn,
     setPaperBackground: setPaperBackgroundFn,
 
-    insertBlankPageBefore: (direction?: string) => insertBlankPageBefore(direction),
+    insertBlankPage: (direction?: string) => insertBlankPage(direction),
 
     columns: columnsFn,
 
@@ -635,6 +635,10 @@ const getEditorInstance = () => {
   return editorInstance
 }
 
+watch(currentLocale, (locale) => {
+  editorInstance?.setLocale(locale)
+})
+
 // 生命周期钩子
 onMounted(() => {
   initEditor()
@@ -654,10 +658,10 @@ onBeforeUnmount(() => {
 })
 
 /**
- * 在当前页之前插入空白页，可选切换纸张方向
+ * 在当前光标处插入空白页，可选切换纸张方向
  * @param direction - 纸张方向，'horizontal' 或 'vertical'
  */
-const insertBlankPageBefore = (direction?: string) => {
+const insertBlankPage = (direction?: string) => {
   if (!editorInstance) return
 
   if (direction === 'horizontal') {
@@ -666,31 +670,7 @@ const insertBlankPageBefore = (direction?: string) => {
     editorInstance.command.executeSetPaperDirection('vertical')
   }
 
-  const range = editorInstance.command.getRange()
-  if (!range) return
-
-  const currentPageNo = range.pageNo || 0
-
-  const result = editorInstance.command.getValue()
-  const mainData = result?.data?.main
-  if (!mainData) return
-
-  let currentPage = 0
-  let insertIndex = 0
-
-  for (let i = 0; i < mainData.length; i++) {
-    if (currentPage === currentPageNo) {
-      insertIndex = i
-      break
-    }
-
-    if (mainData[i].type === 'pageBreak') {
-      currentPage++
-    }
-  }
-
-  editorInstance.command.executeSetRange(insertIndex, insertIndex)
-  editorInstance.command.executePageBreak()
+  editorInstance.command.executeInsertBlankPage()
 }
 
 // 暴露方法给父组件
@@ -698,7 +678,7 @@ defineExpose({
   executeCommand,
   getEditorInstance,
   getSearchAPI: () => searchAPI,
-  insertBlankPageBefore
+  insertBlankPage
 })
 </script>
 

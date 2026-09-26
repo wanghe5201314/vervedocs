@@ -12,8 +12,8 @@
     />
     <div v-if="error" class="password-error">{{ error }}</div>
     <template #footer>
-      <VdButton @click="handleCancel">{{ t('common.cancel') }}</VdButton>
-      <VdButton type="primary" :loading="loading" @click="handleOk">{{ t('common.confirm') }}</VdButton>
+      <VdButton icon="close" @click="handleCancel">{{ t('common.cancel') }}</VdButton>
+      <VdButton type="primary" icon="check" :loading="loading" @click="handleOk">{{ t('common.confirm') }}</VdButton>
     </template>
   </VdDialog>
 </template>

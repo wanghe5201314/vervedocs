@@ -5,6 +5,7 @@
  */
 
 import './assets/css/context-menu.css'
+import { viewTranslate, type ViewTranslate } from './view-i18n'
 
 /** CSS 类名前缀，所有菜单相关样式均以此为前缀 */
 const PREFIX = 'ce-table-context-menu'
@@ -96,6 +97,8 @@ export class ContextMenu {
   private submenuEl: HTMLDivElement | null = null
   /** 子菜单延迟隐藏定时器句柄 */
   private hideTimer: number | null = null
+
+  constructor(private translate?: ViewTranslate) {}
 
   /**
    * 在指定坐标显示主菜单。
@@ -204,6 +207,7 @@ export class ContextMenu {
 
       const input = document.createElement('input')
       input.type = 'number'
+      input.setAttribute('aria-label', item.label)
       input.className = `${PREFIX}__input`
       input.value = String(item.input.defaultValue)
       const min = item.input.min ?? 1
@@ -250,6 +254,7 @@ export class ContextMenu {
 
       const colorInput = document.createElement('input')
       colorInput.type = 'color'
+      colorInput.setAttribute('aria-label', item.label)
       colorInput.className = `${PREFIX}__color-input`
       colorInput.value = item.colorPicker.defaultColor ?? '#ffffff'
       colorValue = colorInput.value
@@ -268,7 +273,7 @@ export class ContextMenu {
       if (item.colorPicker.allowClear) {
         const clear = document.createElement('span')
         clear.className = `${PREFIX}__color-clear`
-        clear.textContent = '无'
+        clear.textContent = viewTranslate(this.translate, 'view.common.none')
         clear.addEventListener('mousedown', (e) => { e.stopPropagation() })
         clear.addEventListener('click', (e) => {
           e.stopPropagation()
@@ -342,11 +347,11 @@ export class ContextMenu {
     const rect = el.getBoundingClientRect()
     const vw = window.innerWidth
     const vh = window.innerHeight
-    if (x + rect.width > vw) {
-      el.style.left = `${Math.max(4, vw - rect.width - 4)}px`
+    if (x + rect.width > vw || x < 4) {
+      el.style.left = `${Math.max(4, Math.min(vw - rect.width - 4, x < 4 ? 4 : vw - rect.width - 4))}px`
     }
-    if (y + rect.height > vh) {
-      el.style.top = `${Math.max(4, vh - rect.height - 4)}px`
+    if (y + rect.height > vh || y < 4) {
+      el.style.top = `${Math.max(4, Math.min(vh - rect.height - 4, y < 4 ? 4 : vh - rect.height - 4))}px`
     }
   }
 

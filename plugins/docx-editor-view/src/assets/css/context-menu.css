@@ -22,8 +22,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  line-height: 1;
-  white-space: nowrap;
+  line-height: 1.35;
+  white-space: normal;
   transition: background-color 0.15s ease;
 }
 
@@ -80,9 +80,11 @@
 }
 
 .ce-table-context-menu__label {
+  min-width: 0;
   font-size: 11px;
   color: #303133;
   font-weight: 400;
+  overflow-wrap: anywhere;
 }
 
 .ce-table-context-menu__shortcut {
@@ -106,6 +108,7 @@
 
 .ce-table-context-menu--sub {
   min-width: 190px;
+  max-width: calc(100vw - 8px);
 }
 
 .ce-table-context-menu__input-wrap {

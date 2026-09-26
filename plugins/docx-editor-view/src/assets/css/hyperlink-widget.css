@@ -1,0 +1,39 @@
+@import './paragraph-layout-widget.css';
+
+.hw-panel {
+  width: 480px;
+  max-width: calc(100vw - 24px);
+}
+
+.hw-body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 20px 16px;
+}
+
+.hw-body label {
+  color: #606266;
+  white-space: nowrap;
+}
+
+.hw-body input {
+  min-width: 0;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid #dcdfe6;
+  font: inherit;
+}
+
+.hw-body input:focus {
+  outline: none;
+  border-color: #4096ff;
+}
+
+.hw-error {
+  grid-column: 1 / -1;
+  min-height: 18px;
+  color: #d93025;
+  font-size: 12px;
+}

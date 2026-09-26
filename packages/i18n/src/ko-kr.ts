@@ -1,0 +1,46 @@
+export default {
+  chart: {
+    dialog: { title: '차트 삽입', settings: '설정', data: '데이터', selectType: '차트 종류 선택', preview: '차트 미리보기', config: '차트 설정', clear: '지우기', cancel: '취소', confirm: '확인' },
+    category: { bar: '세로 막대형', line: '꺾은선형', pie: '원형', scatter: '분산형', radar: '방사형', mixed: '혼합형' },
+    preview: { 'bar-basic': '기본 세로 막대형', 'bar-stacked': '누적 세로 막대형', 'bar-horizontal': '가로 막대형', 'line-basic': '기본 꺾은선형', 'line-smooth': '부드러운 꺾은선형', 'line-stacked': '누적 꺾은선형', 'line-area': '누적 영역형', 'line-step': '계단형 꺾은선', 'line-dashed': '점선 꺾은선', 'pie-basic': '기본 원형', 'pie-doughnut': '도넛형', 'scatter-basic': '기본 분산형', 'radar-basic': '기본 방사형', 'radar-filled': '채워진 방사형', 'mixed-line-bar': '꺾은선 및 막대 혼합형' },
+    config: { showTitle: '제목 표시', title: '제목', titlePlaceholder: '차트 제목 입력', titlePosition: '제목 위치', showLegend: '범례 표시', legendPosition: '범례 위치', xAxisLabel: 'X축 제목', xAxisPlaceholder: 'X축 제목 입력', yAxisLabel: 'Y축 제목', yAxisPlaceholder: 'Y축 제목 입력', showGrid: '눈금선 표시', showDataLabel: '데이터 레이블 표시', colorScheme: '색 구성표' },
+    position: { left: '왼쪽', center: '가운데', right: '오른쪽', top: '위', bottom: '아래' },
+    colorScheme: { default: '기본값', warm: '따뜻한 색', cool: '차가운 색', nature: '자연색' },
+    sample: { series: '계열{index}', category: '범주{index}' },
+    noData: '데이터 없음', data: '데이터'
+  },
+  view: {
+    common: { cancel: '취소', confirm: '확인', none: '없음', leftAlign: '왼쪽 맞춤', rightAlign: '오른쪽 맞춤', center: '가운데 맞춤', justify: '양쪽 맞춤', distribute: '균등 분할', preview: '미리보기', color: '색상', spacing: '간격', points: 'pt' },
+    paragraph: { format: '단락 서식', body: '본문', heading1: '제목 1', heading2: '제목 2', heading3: '제목 3', heading4: '제목 4', heading5: '제목 5', heading6: '제목 6', cut: '잘라내기', copy: '복사', paste: '붙여넣기', fontSettings: '글꼴...', advancedSettings: '단락 고급 설정', link: '하이퍼링크', comment: '메모 삽입' },
+    hyperlink: {
+      text: '표시 텍스트', address: '링크 주소', addressPlaceholder: '전체 주소를 입력하세요(예: https://example.com)',
+      textRequired: '표시 텍스트를 입력하세요', addressRequired: '링크 주소를 입력하세요',
+      addressInvalid: '링크 주소는 http, https, mailto, tel 또는 ftp 프로토콜을 사용해야 합니다',
+      unsupported: '링크가 삽입되지 않았으며 구체적인 원인을 확인할 수 없습니다. 텍스트를 다시 선택하고 시도하세요. 문서는 변경되지 않았습니다.',
+      bookmarkSelection: '선택 영역에 책갈피 경계가 포함되어 있습니다. 현재 편집기는 책갈피 경계를 가로지르는 링크 삽입을 지원하지 않습니다. 경계를 피하도록 선택 영역을 조정하세요. 텍스트와 책갈피는 변경되지 않았습니다.',
+      fieldSelection: '선택 영역에 목차나 페이지 번호 같은 Word 필드가 포함되어 있습니다. 필드 밖의 일반 텍스트를 선택하세요. 문서는 변경되지 않았습니다.',
+      existingLink: '선택 영역에 기존 링크가 포함되어 있습니다. 중첩 링크와 링크 교체는 아직 지원되지 않습니다. 링크가 없는 텍스트를 선택하세요. 문서는 변경되지 않았습니다.',
+      crossContainer: '선택 영역이 여러 단락이나 셀 등 서로 다른 텍스트 영역에 걸쳐 있습니다. 같은 단락 안에서 텍스트를 선택하세요. 문서는 변경되지 않았습니다.',
+      crossParagraph: '선택 영역에 줄 바꿈이나 단락 끝이 포함되어 있습니다. 같은 단락 안에서 줄 바꿈이 없는 텍스트를 선택하세요. 문서는 변경되지 않았습니다.',
+      revisions: '선택 영역에 처리되지 않은 변경 내용이 있습니다. 검토 후 적용하거나 취소하거나, 변경 내용이 없는 텍스트를 선택하세요. 문서는 변경되지 않았습니다.',
+      tracking: '변경 내용 추적이 켜져 있습니다. 이 모드에서는 링크 삽입이 아직 지원되지 않습니다. 추적을 끄고 다시 시도하세요. 문서는 변경되지 않았습니다.',
+      readOnly: '문서가 읽기 전용입니다. 편집 가능한 모드로 전환하세요. 문서는 변경되지 않았습니다.',
+      disabled: '편집 기능이 비활성화되어 있습니다. 편집을 활성화하고 다시 시도하세요. 문서는 변경되지 않았습니다.',
+      noSelection: '커서 위치나 선택 영역을 찾을 수 없습니다. 대화 상자를 닫고 본문에 커서를 놓거나 텍스트를 선택하세요. 문서는 변경되지 않았습니다.',
+      invalidSelection: '텍스트 선택 영역이 더 이상 유효하지 않습니다. 대화 상자를 닫고 텍스트를 다시 선택하세요. 문서는 변경되지 않았습니다.',
+      nonText: '선택 영역에 이미지나 표 등 일반 텍스트가 아닌 내용이 있습니다. 일반 텍스트만 선택하세요. 문서는 변경되지 않았습니다.',
+      invalidText: '표시 텍스트는 비어 있지 않은 일반 텍스트여야 하며 줄 바꿈이나 숨겨진 제어 표식을 포함할 수 없습니다. 표시 텍스트를 수정하세요. 문서는 변경되지 않았습니다.'
+    },
+    table: { insert: '삽입', insertLeft: '왼쪽에 삽입', insertRight: '오른쪽에 삽입', insertAbove: '위에 삽입', insertBelow: '아래에 삽입', columnUnit: '열', rowUnit: '행', insertCell: '셀(E)...', splitCell: '셀 분할', mergeCell: '셀 병합', delete: '삭제', deleteRow: '행 삭제', deleteColumn: '열 삭제', deleteTable: '표 전체 삭제', selectAll: '표 전체 선택', horizontalAlign: '가로 맞춤', centerAlign: '가운데 맞춤', verticalAlign: '세로 맞춤', alignTop: '위쪽 맞춤', alignMiddle: '세로 가운데 맞춤', alignBottom: '아래쪽 맞춤', background: '음영 색상', repeatHeader: '머리글 행 반복', properties: '표 속성', select: '표 선택', addColumn: '열 추가', addRow: '행 추가' },
+    font: { title: '글꼴', characterSpacing: '문자 간격', cjkFont: '중국어 글꼴', style: '글꼴 스타일', regular: '보통', italic: '기울임꼴', bold: '굵게', boldItalic: '굵은 기울임꼴', size: '글자 크기', effects: '효과', strikethrough: '취소선', underline: '밑줄', superscript: '위 첨자', subscript: '아래 첨자', doubleStrikethrough: '이중 취소선', hidden: '숨김', previewText: '글꼴 미리보기 ABCabc 123', scale: '확대/축소', standard: '표준', expanded: '넓게', condensed: '좁게', position: '위치', raised: '위로', lowered: '아래로', spacingPreview: '문자 간격 미리보기 ABCabc 123', unsupported: '간격 및 위치 기능은 향후 버전에서 지원됩니다' },
+    paragraphDialog: { title: '단락', indentSpacing: '들여쓰기 및 간격', linePageBreak: '줄 및 페이지 나누기', cjkLayout: '중국어 조판', general: '일반', alignment: '맞춤', outline: '개요 수준', bodyText: '본문', level1: '수준 1', level2: '수준 2', level3: '수준 3', level4: '수준 4', level5: '수준 5', level6: '수준 6', indent: '들여쓰기', beforeText: '텍스트 앞', afterText: '텍스트 뒤', special: '특수', firstLine: '첫 줄', hanging: '내어쓰기', measure: '기준', cm: 'cm', adjustRightIndent: '문서 눈금이 정의된 경우 오른쪽 들여쓰기 자동 조정', before: '단락 앞', after: '단락 뒤', lineSpacing: '줄 간격', single: '1줄', oneHalf: '1.5줄', double: '2줄', atLeast: '최소', exact: '고정', multiple: '배수', setting: '설정값', times: '배', alignGrid: '문서 눈금이 정의된 경우 눈금에 맞춤', previewText: '단락 미리보기 텍스트', pagination: '페이지 나누기', widow: '문단 보호', keepNext: '다음 단락과 함께', breakBefore: '단락 앞에서 페이지 나누기', lineBreak: '줄 바꿈', noLineNumber: '줄 번호 표시 안 함', noHyphen: '하이픈 넣지 않음', unsupported: '이 기능은 향후 버전에서 지원됩니다', cjkWrap: '중국어 줄 바꿈 규칙 사용', punctuationOverflow: '문장 부호의 여백 넘침 허용', wordBreak: '서양어 단어 중간에서 줄 바꿈 허용', compressPunctuation: '줄 시작 문장 부호 압축 허용', cjkWesternSpacing: '중국어와 서양어 사이 간격 자동 조정', cjkNumberSpacing: '중국어와 숫자 사이 간격 자동 조정', textAlignment: '문자 맞춤', align: '맞춤', auto: '자동', baseline: '기준선에 맞춤' },
+    tableDialog: { categories: '속성 범주', table: '표', cell: '셀', presetHint: '미리 설정을 적용하면 표 전체의 테두리 구성이 바뀌며 선택하지 않은 테두리는 지워집니다.', border: '테두리', preset: '미리 설정', unchanged: '변경 안 함', allBorders: '모든 테두리', outsideBorders: '바깥쪽 테두리', noBorders: '테두리 없음', insideBorders: '안쪽 테두리', insideHorizontal: '안쪽 가로선', insideVertical: '안쪽 세로선', topBorder: '위쪽 테두리', bottomBorder: '아래쪽 테두리', leftBorder: '왼쪽 테두리', rightBorder: '오른쪽 테두리', borderPresets: '테두리 미리 설정', all: '모두', outside: '바깥쪽', inside: '안쪽', colorFormatTitle: '#RRGGBB 형식의 색상을 입력하세요', colorFormatClearTitle: '#RRGGBB 형식의 색상을 입력하세요. 비워 두면 지워집니다', borderColor: '테두리 색상', cellColor: '셀 배경색', chooseColor: '{label} 선택(현재: {state})', innerWidth: '안쪽 테두리 두께', outerWidth: '바깥쪽 테두리 두께', innerWidthAria: '안쪽 테두리 두께(픽셀)', outerWidthAria: '바깥쪽 테두리 두께(픽셀)', colorHelp: '색상 형식: #RRGGBB. 비워 두면 변경되지 않습니다.', borderPreview: '테두리 미리보기', presetPreview: '테두리 구성 미리보기. 점선은 표 범위만 나타냅니다. 입력하지 않은 색상과 두께는 변경되지 않습니다.', unchangedPreview: '선택한 미리 설정이 없어 테두리 구성이 유지됩니다. 미리보기는 혼합된 스타일을 나타내지 않습니다.', cellHint: '아래 설정은 현재 셀(마우스 오른쪽 버튼으로 클릭한 셀)에만 적용됩니다.', fill: '채우기', noFill: '채우기 없음', invalidColor: '색상 형식이 올바르지 않습니다', clearFill: '채우기 지우기', fillHelp: '색상 형식: #RRGGBB. 비워 두면 채우지 않습니다.', verticalAlign: '세로 맞춤', alignCenter: '가운데 맞춤' },
+    pageNumber: { header: '머리글', footer: '바닥글', insert: '페이지 번호 삽입', style: '스타일:', position: '위치:', left: '왼쪽', center: '가운데', right: '오른쪽', stylePage: '1페이지', styleTotal: '전체 x페이지 중 1페이지', styleFirst: '첫 페이지', styleFirstTotal: '전체 X페이지 중 첫 페이지' },
+    fontFamily: { SimSun: 'SimSun(쑹체)', SimHei: 'SimHei(헤이체)', KaiTi: 'KaiTi(카이체)', FangSong: 'FangSong(팡쑹)', MicrosoftYaHei: 'Microsoft YaHei', DengXian: 'DengXian', STSong: 'STSong', STHeiti: 'STHeiti', STKaiti: 'STKaiti', STFangsong: 'STFangsong', STZhongsong: 'STZhongsong', STXihei: 'STXihei', STXingkai: 'STXingkai', STLiti: 'STLiti', STXinwei: 'STXinwei', STCaiyun: 'STCaiyun' },
+    fontSize: { chuhao: '초호(42pt)', xiaochu: '소초(36pt)', yihao: '1호(26pt)', xiaoyi: '소1호(24pt)', erhao: '2호(22pt)', xiaoer: '소2호(18pt)', sanhao: '3호(16pt)', xiaosan: '소3호(15pt)', sihao: '4호(14pt)', xiaosi: '소4호(12pt)', wuhao: '5호(10.5pt)', xiaowu: '소5호(9pt)', liuhao: '6호(7.5pt)', xiaoliu: '소6호(6.5pt)', qihao: '7호(5.5pt)', bahao: '8호(5pt)' }
+  },
+  comment: {
+    balloon: { edit: '메모 편집', delete: '메모 삭제', resolve: '메모 해결', reopen: '메모 다시 열기', placeholder: '메모 내용을 입력하세요...', save: '저장', cancel: '취소', source: '출처:', addReply: '답글 추가', replyPlaceholder: '답글 입력...', reply: '답글' },
+    revision: { unknownAuthor: '알 수 없음', accept: '변경 내용 수락', reject: '변경 내용 거부', insert: '삽입:', delete: '삭제:', format: '서식:', bold: '굵게', italic: '기울임꼴', underline: '밑줄', strikeout: '취소선', doubleStrikeout: '이중 취소선', hidden: '숨김', superscript: '위 첨자', subscript: '아래 첨자', color: '글꼴 색상', size: '글자 크기', font: '글꼴', highlight: '강조', characterScale: '문자 확대/축소', letterSpacing: '문자 간격', textDecoration: '문자 장식 스타일', rowFlex: '맞춤', lineHeight: '줄 간격', lineHeightRule: '줄 간격 규칙', rowMargin: '행 간격', paragraphIndentLeft: '왼쪽 들여쓰기', paragraphIndentRight: '오른쪽 들여쓰기', paragraphFirstLineIndent: '첫 줄 들여쓰기', indentHanging: '내어쓰기', paragraphSpacingBefore: '단락 앞 간격', paragraphSpacingAfter: '단락 뒤 간격', alignLeft: '왼쪽 맞춤', alignCenter: '가운데 맞춤', alignRight: '오른쪽 맞춤', alignJustify: '양쪽 맞춤', alignDistribute: '균등 분할', undo: '취소', default: '기본값', property: '{label}: {value}', formatDescription: '서식 설정: {details}', setFormat: '서식 설정', separator: ', ', descriptionSeparator: '; ' }
+  }
+}

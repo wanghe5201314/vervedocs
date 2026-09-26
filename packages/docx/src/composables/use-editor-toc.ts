@@ -18,10 +18,11 @@ export function useEditorToc(options: { getEditorInstance: () => EditorInstance 
    * 插入目录
    * @param payload 目录插入参数
    */
-  async function tocInsert(payload: any) {
+  function tocInsert(payload: { type?: 1 | 2; mode?: string; [key: string]: unknown }) {
     const instance = getEditorInstance()
     if (!instance) return
-    instance.command.executeInsertToc(payload)
+    if (payload.mode === 'update') instance.command.executeUpdateToc()
+    else instance.command.executeInsertToc(payload)
   }
 
   /** 删除目录 */

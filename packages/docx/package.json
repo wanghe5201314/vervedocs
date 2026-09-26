@@ -2,7 +2,7 @@
   "name": "@vervedoc/docx",
   "author": "wanghe",
   "license": "MIT",
-  "version": "2.2.35",
+  "version": "2.2.36",
   "description": "玉衡云文档 完整版UI",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
@@ -72,6 +72,7 @@
     "@vervedoc/docx-editor-chart": "workspace:^",
     "@vervedoc/docx-editor-comment": "workspace:^",
     "@vervedoc/docx-editor-schema": "workspace:^",
+    "@vervedoc/i18n": "workspace:^",
     "ant-design-vue": "catalog:",
     "jsbarcode": "^3.12.3",
     "qrcode": "^1.5.4"

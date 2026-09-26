@@ -48,14 +48,14 @@ const emit = defineEmits<{ (e: 'command', cmd: string, ...args: any[]): void; (e
 const activePage = ref('export')
 const firstFocusable = ref<HTMLButtonElement>()
 const panel = ref<HTMLElement>()
-const mainItems = [
+const mainItems = computed(() => [
   { key: 'new', label: t('ribbon.file.newItem'), icon: 'file-plus-outline' },
   { key: 'import', label: t('ribbon.file.importItem'), icon: 'file-import-outline', shortcut: 'Ctrl+Alt+O' },
   { key: 'save', label: t('ribbon.file.saveItem'), icon: 'content-save-outline', shortcut: 'Ctrl+S' },
   { key: 'export', label: t('ribbon.file.downloadItem'), icon: 'download-outline' },
   { key: 'print', label: t('ribbon.file.printItem'), icon: 'printer-outline', shortcut: 'Ctrl+P' },
   { key: 'protectDoc', label: t('ribbon.file.protectItem'), icon: 'shield-lock-outline' }
-]
+])
 const formats = [
   { name: 'Word', value: 'docx', color: '#23477f', kind: 'word', available: true },
   { name: 'PDF', value: 'pdf', color: '#bb493a', kind: 'pdf', available: false }

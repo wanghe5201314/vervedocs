@@ -39,6 +39,7 @@ export interface GroupContext {
  * 该契约是 CommentHost 的泛化版本，批注/修订等插件共用。
  */
 export interface PluginHost {
+  getI18n(): import('@vervedoc/i18n').EditorI18n
   /** 获取气泡挂载容器（Draw 的 scroller） */
   getContainer(): HTMLDivElement | null
   /** 兼容旧架构的 positionList，新架构固定返回 null */

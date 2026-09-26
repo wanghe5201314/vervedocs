@@ -3,6 +3,8 @@ import { cloneTree, walkTree } from '@vervedoc/docx-editor-schema'
 import dayjs from 'dayjs'
 import type { CommentHost } from './host'
 import { drawAnnotationConnector, getAvatarColor } from './annotation-visual'
+import { balloonText, type BalloonTranslate } from './translation'
+import { collectOccupiedRanges, resolveVerticalOverlaps, applyContainerWidth } from './balloon-layout'
 
 const PREFIX = 'ce'
 
@@ -61,6 +63,11 @@ export interface CommentCallbacks {
 }
 
 export class CommentComponent {
+  constructor(private readonly translate?: BalloonTranslate) {}
+
+  private _t(key: string): string {
+    return balloonText(this.translate, `comment.balloon.${key}`)
+  }
 
   /** 宿主契约（由 core 注入，提供选区/文档/渲染等能力） */
   private _command: CommentHost | null = null
@@ -351,23 +358,6 @@ export class CommentComponent {
     return pageNo * (pageHeight + pageGap)
   }
 
-  private _collectOccupiedRanges(selector: string): Array<{ top: number; bottom: number }> {
-    const container = this._command?.getContainer?.()
-    if (!container) return []
-    const ranges: Array<{ top: number; bottom: number }> = []
-    const elements = container.querySelectorAll(selector)
-    elements.forEach((el: Element) => {
-      const node = el as HTMLElement
-      const top = Number.parseFloat(node.style.top || '')
-      const height = node.offsetHeight || node.getBoundingClientRect().height || 0
-      if (Number.isFinite(top) && height > 0) {
-        ranges.push({ top, bottom: top + height })
-      }
-    })
-    ranges.sort((a, b) => a.top - b.top)
-    return ranges
-  }
-
   private _estimateCommentHeight(comment: IComment): number {
     const existing = this._cardDoms.get(comment.id)
     const existingHeight = existing?.offsetHeight || existing?.getBoundingClientRect().height || 0
@@ -382,26 +372,16 @@ export class CommentComponent {
   }
 
   private _resolveVerticalOverlaps(comments: IComment[]): void {
-    const occupied = this._collectOccupiedRanges(`.${PREFIX}-revision-balloon`)
-    const GAP = 12
-    for (const comment of comments) {
-      if (!comment.position) continue
-      const height = this._estimateCommentHeight(comment)
-      let top = comment.position.top
-      let changed = true
-      while (changed) {
-        changed = false
-        for (const range of occupied) {
-          if (top < range.bottom + GAP && top + height > range.top - GAP) {
-            top = range.bottom + GAP
-            changed = true
-          }
-        }
-      }
-      comment.position.top = top
-      occupied.push({ top, bottom: top + height })
-      occupied.sort((a, b) => a.top - b.top)
-    }
+    const container = this._command?.getContainer?.() ?? null
+    const occupied = collectOccupiedRanges(container, `.${PREFIX}-revision-balloon`)
+    const positioned = comments.filter(c => c.position)
+    resolveVerticalOverlaps(
+      positioned,
+      occupied,
+      comment => this._estimateCommentHeight(comment),
+      comment => comment.position!.top,
+      (comment, top) => { comment.position!.top = top }
+    )
   }
 
   private _computePositions(): void {
@@ -512,9 +492,8 @@ export class CommentComponent {
     const pageWidth = this._command.getDrawWidth?.() || 794
     const balloonLeft = pageWidth + 16
     const cardMaxWidth = 270
-    const neededWidth = balloonLeft + cardMaxWidth + 16
-    ;(container as any).__commentNeededWidth = neededWidth
-    this._applyContainerWidth(container, pageWidth)
+    ;(container as any).__commentNeededWidth = balloonLeft + cardMaxWidth + 16
+    applyContainerWidth(container, pageWidth)
   }
 
   private _restoreContainerWidth(): void {
@@ -523,22 +502,7 @@ export class CommentComponent {
     if (!container) return
     const pageWidth = this._command.getDrawWidth?.() || 794
     ;(container as any).__commentNeededWidth = 0
-    this._applyContainerWidth(container, pageWidth)
-  }
-
-  private _applyContainerWidth(container: HTMLDivElement, pageWidth: number): void {
-    // 鏂版灦鏋勶細瀹瑰櫒瀹藉害鐢?Draw 绠＄悊锛宱verlay 浠?overflow:visible 鑷劧婧㈠嚭锛屼笉闇€瑕佸己鍒舵敼瀹藉害
-    if ((container as any).__vervedocsNewLayout) return
-    const commentWidth = (container as any).__commentNeededWidth || 0
-    const revisionWidth = (container as any).__revisionNeededWidth || 0
-    const neededWidth = Math.max(commentWidth, revisionWidth)
-    if (neededWidth > pageWidth) {
-      container.style.width = `${neededWidth}px`
-      container.style.minWidth = `${neededWidth}px`
-    } else {
-      container.style.width = `${pageWidth}px`
-      container.style.minWidth = ''
-    }
+    applyContainerWidth(container, pageWidth)
   }
 
   private _renderCards(comments: IComment[]): void {
@@ -615,6 +579,7 @@ export class CommentComponent {
       const btn = document.createElement('button')
       btn.classList.add(className)
       btn.title = title
+      btn.setAttribute('aria-label', title)
       btn.type = 'button'
       btn.style.cssText = 'display:flex;align-items:center;justify-content:center;width:20px;height:20px;border:none;background:transparent;border-radius:4px;cursor:pointer;color:#444;transition:background 0.15s ease,color 0.15s ease;padding:0;'
       btn.innerHTML = icon
@@ -629,7 +594,7 @@ export class CommentComponent {
 
     const editBtn = createActionBtn(
       `${PREFIX}-comment-edit`,
-      '缂栬緫鎵规敞',
+      this._t('edit'),
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 16.25V20h3.75L18.8 8.94l-3.75-3.75L4 16.25Z" fill="currentColor"/><path d="m14.96 5.19 3.75 3.75 1.09-1.09a1.5 1.5 0 0 0 0-2.12l-1.63-1.63a1.5 1.5 0 0 0-2.12 0l-1.09 1.09Z" fill="currentColor"/></svg>',
       () => {
         comment.isEditing = true
@@ -638,7 +603,7 @@ export class CommentComponent {
     )
     const deleteBtn = createActionBtn(
       `${PREFIX}-comment-delete`,
-      '鍒犻櫎鎵规敞',
+      this._t('delete'),
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M7 21a2 2 0 0 1-2-2V7h14v12a2 2 0 0 1-2 2H7Z" fill="currentColor"/><path d="M9 4h6l1 2h4v1.5H4V6h4l1-2Z" fill="currentColor"/></svg>',
       () => {
         this.delete(comment.id)
@@ -648,7 +613,7 @@ export class CommentComponent {
     )
     const resolveBtn = createActionBtn(
       `${PREFIX}-comment-resolve`,
-      comment.status === 2 ? '閲嶆柊鎵撳紑鎵规敞' : '瑙ｅ喅鎵规敞',
+      this._t(comment.status === 2 ? 'reopen' : 'resolve'),
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="m9.55 18.2-5.4-5.4 1.41-1.4 3.99 3.98 8.89-8.88 1.41 1.41-10.3 10.29Z" fill="currentColor"/></svg>',
       () => {
         const resolved = comment.status !== 2
@@ -677,6 +642,7 @@ export class CommentComponent {
 
   private _renderCardBody(container: HTMLDivElement, comment: IComment): void {
     container.innerHTML = ''
+    container.dataset.mode = comment.isEditing ? 'editing' : comment.isReplying ? 'replying' : 'viewing'
 
     if (comment.isEditing) {
       const editDiv = document.createElement('div')
@@ -684,7 +650,7 @@ export class CommentComponent {
 
       const textarea = document.createElement('textarea')
       textarea.classList.add(`${PREFIX}-comment-textarea`)
-      textarea.placeholder = '请输入批注内容...'
+      textarea.placeholder = this._t('placeholder')
       textarea.rows = 3
       textarea.value = this._drafts.get(comment.id) ?? comment.content
       textarea.style.cssText = 'width:93%;min-height:80px;padding:8px 10px;border:1px solid #dcdfe6;border-radius:6px;font-size:13px;font-family:inherit;line-height:1.6;resize:vertical;outline:none;transition:border-color 0.2s ease;'
@@ -699,14 +665,16 @@ export class CommentComponent {
       actions.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;margin-top:8px;'
 
       const saveBtn = document.createElement('button')
-      saveBtn.textContent = '保存'
+      saveBtn.classList.add(`${PREFIX}-comment-save`)
+      saveBtn.textContent = this._t('save')
       saveBtn.style.cssText = `padding:5px 14px;font-size:12px;border:none;border-radius:6px;cursor:pointer;transition:all 0.15s ease;font-weight:500;background:${this._annotationColor};color:#fff;`
       saveBtn.addEventListener('click', () => this._handleSave(comment))
       saveBtn.addEventListener('mouseenter', () => { saveBtn.style.background = '#66b1ff' })
       saveBtn.addEventListener('mouseleave', () => { saveBtn.style.background = this._annotationColor })
 
       const cancelBtn = document.createElement('button')
-      cancelBtn.textContent = '取消'
+      cancelBtn.classList.add(`${PREFIX}-comment-cancel`)
+      cancelBtn.textContent = this._t('cancel')
       cancelBtn.style.cssText = 'padding:5px 14px;font-size:12px;border:none;border-radius:6px;cursor:pointer;transition:all 0.15s ease;font-weight:500;background:#f5f5f5;color:#666;'
       cancelBtn.addEventListener('click', () => this._handleCancel(comment))
       cancelBtn.addEventListener('mouseenter', () => { cancelBtn.style.background = '#e8e8e8' })
@@ -726,8 +694,9 @@ export class CommentComponent {
       sourceDiv.style.cssText = 'font-size:12px;color:#1f1f1f;line-height:1.45;word-break:break-word;'
 
       const label = document.createElement('span')
+      label.classList.add(`${PREFIX}-comment-source`)
       label.style.cssText = 'font-weight:500;color:#1f1f1f;'
-      label.textContent = '取自：'
+      label.textContent = this._t('source')
 
       const value = document.createElement('span')
       value.textContent = sourceText
@@ -793,7 +762,8 @@ export class CommentComponent {
     } else {
       const replyTrigger = document.createElement('button')
       replyTrigger.type = 'button'
-    replyTrigger.textContent = '添加回复'
+      replyTrigger.classList.add(`${PREFIX}-comment-add-reply`)
+      replyTrigger.textContent = this._t('addReply')
       replyTrigger.style.cssText = 'margin-top:6px;padding:0;border:none;background:transparent;color:#1a73e8;font-size:11px;line-height:1.3;cursor:pointer;text-decoration:underline;text-underline-offset:2px;'
       replyTrigger.addEventListener('click', () => {
         comment.isReplying = true
@@ -808,7 +778,8 @@ export class CommentComponent {
     replyEdit.style.cssText = 'margin:8px 0;'
 
     const textarea = document.createElement('textarea')
-    textarea.placeholder = '输入回复...'
+    textarea.classList.add(`${PREFIX}-comment-reply-textarea`)
+    textarea.placeholder = this._t('replyPlaceholder')
     textarea.rows = 2
     textarea.style.cssText = 'width:93%;min-height:50px;padding:8px 10px;border:1px solid #dcdfe6;border-radius:6px;font-size:13px;font-family:inherit;line-height:1.6;resize:vertical;outline:none;transition:border-color 0.2s ease;'
     textarea.addEventListener('focus', () => { textarea.style.borderColor = this._annotationColor })
@@ -818,13 +789,15 @@ export class CommentComponent {
     actions.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;margin-top:8px;'
 
     const replyBtn = document.createElement('button')
-    replyBtn.textContent = '回复'
+    replyBtn.classList.add(`${PREFIX}-comment-reply-submit`)
+    replyBtn.textContent = this._t('reply')
     replyBtn.style.cssText = `padding:5px 14px;font-size:12px;border:none;border-radius:6px;cursor:pointer;transition:all 0.15s ease;font-weight:500;background:${this._annotationColor};color:#fff;`
     replyBtn.addEventListener('mouseenter', () => { replyBtn.style.background = '#66b1ff' })
     replyBtn.addEventListener('mouseleave', () => { replyBtn.style.background = this._annotationColor })
 
     const cancelBtn = document.createElement('button')
-    cancelBtn.textContent = '取消'
+    cancelBtn.classList.add(`${PREFIX}-comment-reply-cancel`)
+    cancelBtn.textContent = this._t('cancel')
     cancelBtn.style.cssText = 'padding:5px 14px;font-size:12px;border:none;border-radius:6px;cursor:pointer;transition:all 0.15s ease;font-weight:500;background:#f5f5f5;color:#666;'
     cancelBtn.addEventListener('mouseenter', () => { cancelBtn.style.background = '#e8e8e8' })
     cancelBtn.addEventListener('mouseleave', () => { cancelBtn.style.background = '#f5f5f5'; cancelBtn.style.color = '#666' })
@@ -871,8 +844,7 @@ export class CommentComponent {
     if (header) {
       const avatar = header.querySelector(`.${PREFIX}-comment-avatar`) as HTMLDivElement | null
       if (avatar) {
-        const bg = comment.avatarColor || getAvatarColor(comment.userName)
-        avatar.style.background = bg
+        avatar.style.background = comment.avatarColor || getAvatarColor(comment.userName)
         avatar.textContent = comment.userName.charAt(0)
       }
       const username = header.querySelector(`.${PREFIX}-comment-username`) as HTMLSpanElement | null
@@ -884,9 +856,20 @@ export class CommentComponent {
         dateSpan.textContent = formatCommentDisplayDate(comment.createdDate)
       }
 
+      const editBtn = header.querySelector<HTMLButtonElement>(`.${PREFIX}-comment-edit`)
+      if (editBtn) {
+        editBtn.title = this._t('edit')
+        editBtn.setAttribute('aria-label', editBtn.title)
+      }
+      const deleteBtn = header.querySelector<HTMLButtonElement>(`.${PREFIX}-comment-delete`)
+      if (deleteBtn) {
+        deleteBtn.title = this._t('delete')
+        deleteBtn.setAttribute('aria-label', deleteBtn.title)
+      }
       const resolveBtn = header.querySelector(`.${PREFIX}-comment-resolve`) as HTMLButtonElement | null
       if (resolveBtn) {
-        resolveBtn.title = comment.status === 2 ? '閲嶆柊鎵撳紑鎵规敞' : '瑙ｅ喅鎵规敞'
+        resolveBtn.title = this._t(comment.status === 2 ? 'reopen' : 'resolve')
+        resolveBtn.setAttribute('aria-label', resolveBtn.title)
         resolveBtn.style.color = comment.status === 2 ? '#2f8f4e' : '#444'
         resolveBtn.style.background = comment.status === 2 ? '#eef8f1' : 'transparent'
       }
@@ -894,7 +877,26 @@ export class CommentComponent {
 
     const bodyContainer = card.querySelector(`.${PREFIX}-comment-body`) as HTMLDivElement
     if (bodyContainer) {
-      this._renderCardBody(bodyContainer, comment)
+      const mode = comment.isEditing ? 'editing' : comment.isReplying ? 'replying' : 'viewing'
+      if (bodyContainer.dataset.mode !== mode || mode === 'viewing') {
+        this._renderCardBody(bodyContainer, comment)
+      } else if (mode === 'editing') {
+        const textarea = bodyContainer.querySelector<HTMLTextAreaElement>(`.${PREFIX}-comment-textarea`)
+        if (textarea) textarea.placeholder = this._t('placeholder')
+        const save = bodyContainer.querySelector<HTMLButtonElement>(`.${PREFIX}-comment-save`)
+        if (save) save.textContent = this._t('save')
+        const cancel = bodyContainer.querySelector<HTMLButtonElement>(`.${PREFIX}-comment-cancel`)
+        if (cancel) cancel.textContent = this._t('cancel')
+      } else {
+        const source = bodyContainer.querySelector<HTMLElement>(`.${PREFIX}-comment-source`)
+        if (source) source.textContent = this._t('source')
+        const textarea = bodyContainer.querySelector<HTMLTextAreaElement>(`.${PREFIX}-comment-reply-textarea`)
+        if (textarea) textarea.placeholder = this._t('replyPlaceholder')
+        const reply = bodyContainer.querySelector<HTMLButtonElement>(`.${PREFIX}-comment-reply-submit`)
+        if (reply) reply.textContent = this._t('reply')
+        const cancel = bodyContainer.querySelector<HTMLButtonElement>(`.${PREFIX}-comment-reply-cancel`)
+        if (cancel) cancel.textContent = this._t('cancel')
+      }
     }
   }
 

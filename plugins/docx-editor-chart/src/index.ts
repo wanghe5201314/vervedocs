@@ -16,6 +16,7 @@ import type { PluginHost } from '@vervedoc/docx-editor-schema'
 import { renderChartToDataUrl } from './chart-renderer'
 import { extractTableData, generateChartOption } from './chart-data-extractor'
 import { ChartDialog } from './chart-dialog'
+import type { Translate } from '@vervedoc/i18n'
 
 // 确保 Chart.js 控制器注册（导入时立即执行）
 import './chart-lib'
@@ -26,7 +27,7 @@ import './chart-lib'
 export class ChartJsRenderer implements IChartRenderer {
   private chart: any
 
-  constructor(chartInstance?: any) {
+  constructor(chartInstance?: any, private t?: Translate) {
     this.chart = chartInstance
   }
 
@@ -40,7 +41,7 @@ export class ChartJsRenderer implements IChartRenderer {
     config: IChartConfig,
     subtype?: string
   ): any {
-    return generateChartOption(chartType, tableData, config, subtype)
+    return generateChartOption(chartType, tableData, config, subtype, this.t)
   }
 
   extractTableData(tableElement: any, range?: IChartDataRange): IChartTableData {
@@ -68,13 +69,17 @@ export function createChartPlugin(
   let host: PluginHost | null = null
   const dialog = new ChartDialog()
   let unsubscribeChartClick: (() => void) | null = null
+  let unsubscribeLocale: (() => void) | null = null
   return {
     name: 'chart',
     install: (h) => {
+      const i18n = h.getI18n()
       dialog.setHost(h)
-      renderer = new ChartJsRenderer(options?.chart)
+      dialog.setTranslator(i18n.t)
+      renderer = new ChartJsRenderer(options?.chart, i18n.t)
       host = h
       h.setChartRenderer(renderer)
+      unsubscribeLocale = i18n.subscribe(() => dialog.refreshTranslations())
       unsubscribeChartClick = h.getEventBus().on('chartClick', (data: any) => {
         dialog.show({
           chartId: data.chartId,
@@ -90,6 +95,8 @@ export function createChartPlugin(
     },
     destroy: () => {
       unsubscribeChartClick?.()
+      unsubscribeLocale?.()
+      unsubscribeLocale = null
       host?.setChartRenderer(null)
       host = null
       dialog.hide()

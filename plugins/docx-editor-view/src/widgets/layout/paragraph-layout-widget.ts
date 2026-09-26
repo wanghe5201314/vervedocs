@@ -7,6 +7,8 @@
  */
 import '../../assets/css/paragraph-layout-widget.css'
 import panelHtml from '../../assets/components/paragraph-layout-widget.html?raw'
+import { translatePanel, viewTranslate } from '../../view-i18n'
+import type { ViewTranslate } from '../../view-i18n'
 
 /** 每厘米对应的像素数（96 DPI） */
 const PX_PER_CM = 96 / 2.54
@@ -18,6 +20,7 @@ type CommandFn = (cmd: string, ...args: any[]) => any
 export interface ParagraphLayoutWidgetDeps {
   /** 触发编辑器命令 / 读取状态 */
   onCommand: CommandFn
+  translate?: ViewTranslate
 }
 
 /**
@@ -31,10 +34,12 @@ export class ParagraphLayoutWidget {
   private root: HTMLElement | null = null
   /** 命令回调 */
   private onCommand: CommandFn | null = null
+  private translate?: ViewTranslate
 
   /** 注入依赖 */
   setDeps(deps: ParagraphLayoutWidgetDeps): void {
     this.onCommand = deps.onCommand
+    this.translate = deps.translate
   }
 
   /**
@@ -46,16 +51,31 @@ export class ParagraphLayoutWidget {
     const container = document.createElement('div')
     container.innerHTML = panelHtml
     this.root = container.firstElementChild as HTMLElement
+    translatePanel(this.root, this.translate, 'view.paragraphDialog.')
     document.body.appendChild(this.root)
 
     this.bindTabs()
     this.bindIndentSpacing()
+    this.root.querySelectorAll<HTMLInputElement>('input[type="number"]').forEach(input => {
+      input.addEventListener('blur', () => {
+        if (input.value !== '' && Number.isFinite(input.valueAsNumber)) {
+          input.value = input.valueAsNumber.toFixed(2)
+        }
+      })
+    })
     this.fillValues()
     this.root.querySelector('#pw-cancel')!.addEventListener('click', () => this.hide())
     this.root.querySelector('#pw-ok')!.addEventListener('click', () => {
       this.apply()
       this.hide()
     })
+  }
+
+  refreshTranslations(): void {
+    if (!this.root) return
+    translatePanel(this.root, this.translate, 'view.paragraphDialog.')
+    this.syncLhDisabled()
+    this.updatePreview()
   }
 
   /**
@@ -88,19 +108,18 @@ export class ParagraphLayoutWidget {
 
     const updateLh = () => {
       const t = lhType.value
-      const fixed = t === 'single' || t === '1.5' || t === 'double'
-      lhValue.disabled = fixed
-      if (t === 'single') { lhValue.value = '1' }
-      else if (t === '1.5') { lhValue.value = '1.5' }
-      else if (t === 'double') { lhValue.value = '2' }
-      lhUnit.textContent = (t === 'atLeast' || t === 'exact') ? '磅' : '倍'
+      lhValue.disabled = t === 'single' || t === '1.5' || t === 'double'
+      if (t === 'single') { lhValue.value = '1.00' }
+      else if (t === '1.5') { lhValue.value = '1.50' }
+      else if (t === 'double') { lhValue.value = '2.00' }
+      lhUnit.textContent = (t === 'atLeast' || t === 'exact') ? viewTranslate(this.translate, 'view.common.points') : viewTranslate(this.translate, 'view.paragraphDialog.times')
       this.updatePreview()
     }
 
     const updateSpecial = () => {
       const s = special.value
       specialValue.disabled = s === 'none'
-      if (s === 'none') { specialValue.value = '0' }
+      if (s === 'none') { specialValue.value = '0.00' }
       this.updatePreview()
     }
 
@@ -117,14 +136,19 @@ export class ParagraphLayoutWidget {
   private fillValues(): void {
     if (!this.onCommand) return
     const cmd = this.onCommand
+    const displayNumber = (value: number) => value.toFixed(2)
 
     let style: any = null
     try { style = cmd('getRangeStyle') } catch { /* noop */ }
-    if (!style) return
+    if (!style) {
+      this.root!.querySelectorAll<HTMLInputElement>('input[type="number"]').forEach(input => {
+        input.value = Number(input.value).toFixed(2)
+      })
+      return
+    }
 
     const align = this.root!.querySelector<HTMLSelectElement>('#pw-align')!
-    const rowFlex = style.rowFlex === 'alignment' ? 'justify' : (style.rowFlex || 'left')
-    align.value = rowFlex
+    align.value = style.rowFlex === 'alignment' ? 'justify' : (style.rowFlex || 'left')
 
     const outline = this.root!.querySelector<HTMLSelectElement>('#pw-outline')!
     outline.value = style.level || ''
@@ -133,39 +157,42 @@ export class ParagraphLayoutWidget {
     const lhValue = this.root!.querySelector<HTMLInputElement>('#pw-lh-value')!
     const lh = Number(style.lineHeight ?? 1.5)
     const rule: string = style.lineHeightRule || 'auto'
-    if (rule === 'exact') { lhType.value = 'exact'; lhValue.value = String(Math.round(lh * 72 / 96 * 100) / 100) }
-    else if (rule === 'atLeast') { lhType.value = 'atLeast'; lhValue.value = String(Math.round(lh * 72 / 96 * 100) / 100) }
-    else if (lh === 1) { lhType.value = 'single' }
-    else if (lh === 1.5) { lhType.value = '1.5' }
-    else if (lh === 2) { lhType.value = 'double' }
-    else { lhType.value = 'multiple'; lhValue.value = String(lh) }
+    if (rule === 'exact') { lhType.value = 'exact'; lhValue.value = displayNumber(lh * 72 / 96) }
+    else if (rule === 'atLeast') { lhType.value = 'atLeast'; lhValue.value = displayNumber(lh * 72 / 96) }
+    else if (lh === 1) { lhType.value = 'single'; lhValue.value = displayNumber(1) }
+    else if (lh === 1.5) { lhType.value = '1.5'; lhValue.value = displayNumber(1.5) }
+    else if (lh === 2) { lhType.value = 'double'; lhValue.value = displayNumber(2) }
+    else { lhType.value = 'multiple'; lhValue.value = displayNumber(lh) }
     this.syncLhDisabled()
 
     const spacingAfter = this.root!.querySelector<HTMLInputElement>('#pw-spacing-after')!
-    let spAfter = 0
+    let spAfter: number
     try { spAfter = Number(cmd('getParagraphSpacingAfter')) || 0 } catch { spAfter = Number(style.rowMargin ?? 0) }
-    spacingAfter.value = String(spAfter)
+    spacingAfter.value = displayNumber(spAfter)
 
     const spacingBefore = this.root!.querySelector<HTMLInputElement>('#pw-spacing-before')!
-    try { spacingBefore.value = String(Number(cmd('getParagraphSpacingBefore')) || 0) } catch { /* noop */ }
+    try { spacingBefore.value = displayNumber(Number(cmd('getParagraphSpacingBefore')) || 0) } catch { /* noop */ }
 
     const indentLeft = this.root!.querySelector<HTMLInputElement>('#pw-indent-left')!
     const indentRight = this.root!.querySelector<HTMLInputElement>('#pw-indent-right')!
-    try { indentLeft.value = String((Number(cmd('getParagraphIndentLeft')) || 0) / PX_PER_CM) } catch { /* noop */ }
-    try { indentRight.value = String((Number(cmd('getParagraphIndentRight')) || 0) / PX_PER_CM) } catch { /* noop */ }
+    try { indentLeft.value = displayNumber((Number(cmd('getParagraphIndentLeft')) || 0) / PX_PER_CM) } catch { /* noop */ }
+    try { indentRight.value = displayNumber((Number(cmd('getParagraphIndentRight')) || 0) / PX_PER_CM) } catch { /* noop */ }
 
     let indentPx = 0
     try { indentPx = Number(cmd('getFirstLineIndent')) || 0 } catch { /* noop */ }
     const special = this.root!.querySelector<HTMLSelectElement>('#pw-special')!
     const specialValue = this.root!.querySelector<HTMLInputElement>('#pw-special-value')!
     if (indentPx === 0) {
-      special.value = 'none'; specialValue.value = '0'
+      special.value = 'none'; specialValue.value = displayNumber(0)
     } else if (indentPx > 0) {
-      special.value = 'firstLine'; specialValue.value = (Math.round((indentPx / PX_PER_CM) * 100) / 100).toFixed(2)
+      special.value = 'firstLine'; specialValue.value = displayNumber(indentPx / PX_PER_CM)
     } else {
-      special.value = 'hanging'; specialValue.value = (Math.round((Math.abs(indentPx) / PX_PER_CM) * 100) / 100).toFixed(2)
+      special.value = 'hanging'; specialValue.value = displayNumber(Math.abs(indentPx) / PX_PER_CM)
     }
     this.syncSpecialDisabled()
+    this.root!.querySelectorAll<HTMLInputElement>('input[type="number"]').forEach(input => {
+      input.value = Number(input.value).toFixed(2)
+    })
 
     this.updatePreview()
   }
@@ -176,9 +203,8 @@ export class ParagraphLayoutWidget {
     const lhValue = this.root!.querySelector<HTMLInputElement>('#pw-lh-value')!
     const lhUnit = this.root!.querySelector<HTMLElement>('#pw-lh-unit')!
     const t = lhType.value
-    const fixed = t === 'single' || t === '1.5' || t === 'double'
-    lhValue.disabled = fixed
-    lhUnit.textContent = (t === 'atLeast' || t === 'exact') ? '磅' : '倍'
+    lhValue.disabled = t === 'single' || t === '1.5' || t === 'double'
+    lhUnit.textContent = (t === 'atLeast' || t === 'exact') ? viewTranslate(this.translate, 'view.common.points') : viewTranslate(this.translate, 'view.paragraphDialog.times')
   }
 
   /** 同步特殊格式度量值禁用态 */
@@ -205,7 +231,7 @@ export class ParagraphLayoutWidget {
     }
     preview.style.textAlign = alignMap[align] || 'left'
 
-    let lh = 1.5
+    let lh: number
     if (lhType === 'single') lh = 1
     else if (lhType === '1.5') lh = 1.5
     else if (lhType === 'double') lh = 2
@@ -221,7 +247,7 @@ export class ParagraphLayoutWidget {
     else if (special === 'hanging') indent = -(Number(specialValue) || 0)
     preview.style.textIndent = `${indent * PX_PER_CM}px`
 
-    preview.textContent = '段落预览文本'
+    preview.textContent = viewTranslate(this.translate, 'view.paragraphDialog.previewText')
   }
 
   /** 确定按钮：应用所有设置到编辑器 */
@@ -237,8 +263,8 @@ export class ParagraphLayoutWidget {
 
     const lhType = this.root!.querySelector<HTMLSelectElement>('#pw-lh-type')!.value
     const lhValue = this.root!.querySelector<HTMLInputElement>('#pw-lh-value')!.value
-    let lh = 1.5
-    let rule: 'auto' | 'exact' | 'atLeast' = 'auto'
+    let lh: number
+    let rule: 'auto' | 'exact' | 'atLeast'
     if (lhType === 'single') { lh = 1; rule = 'auto' }
     else if (lhType === '1.5') { lh = 1.5; rule = 'auto' }
     else if (lhType === 'double') { lh = 2; rule = 'auto' }

@@ -2,7 +2,7 @@
   <div class="ribbon-tab-panel">
     <!-- 页面 -->
     <VdRibbonGroup :title="t('ribbon.insert.page')">
-      <VdRibbonButton icon="file-document-outline" :text="t('ribbon.insert.blankPage')" :title="t('ribbon.insert.insertBlankPage')" size="large" @click="emit('command', 'insertBlankPageBefore')" />
+      <VdRibbonButton icon="file-document-outline" :text="t('ribbon.insert.blankPage')" :title="t('ribbon.insert.insertBlankPage')" size="large" @click="emit('command', 'insertBlankPage')" />
       <a-dropdown :trigger="['click']">
         <VdRibbonButton icon="format-page-break" :text="t('ribbon.insert.pageBreak')" :title="t('ribbon.insert.pageBreak')" size="large" has-arrow />
         <template #overlay>

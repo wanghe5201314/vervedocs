@@ -1,6 +1,6 @@
 {
   "name": "@vervedoc/core",
-  "version": "3.3.12",
+  "version": "3.3.13",
   "description": "VerveDoc Core 核心编辑器库（Canvas 2D 高性能实现）",
   "author": "wanghe",
   "license": "MIT",
@@ -52,6 +52,7 @@
     "node": ">=16.0.0"
   },
   "dependencies": {
+    "@vervedoc/i18n": "workspace:^",
     "@vervedoc/docx-editor-schema": "workspace:^",
     "@vervedoc/docx-editor-state": "workspace:^",
     "@vervedoc/docx-editor-transform": "workspace:^",

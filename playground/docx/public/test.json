@@ -1,5 +1,7 @@
 {
   "sections" : [ {
+    "columnCount" : 1,
+    "columnGap" : 48.0,
     "pageWidth" : 793.33,
     "pageHeight" : 1122.0,
     "margins" : [ 95.33, 91.0, 26.67, 105.27 ],
@@ -14,6 +16,8 @@
       "default" : "/word/footer1.xml"
     }
   }, {
+    "columnCount" : 1,
+    "columnGap" : 48.0,
     "pageWidth" : 793.33,
     "pageHeight" : 1122.0,
     "margins" : [ 95.33, 92.33, 77.27, 105.93 ],
@@ -28,10 +32,12 @@
       "default" : "/word/footer2.xml"
     }
   } ],
+  "columnCount" : 1,
+  "columnGap" : 48.0,
   "evenAndOddHeaders" : false,
   "headerFooterParts" : {
     "/word/footer1.xml" : [ {
-      "sourceParagraphId" : "6b1535a6-0839-4556-8e33-299dca81babb",
+      "sourceParagraphId" : "69ea5c24-a810-4ae7-bedc-39bbc01c0b24",
       "type" : "text",
       "value" : "",
       "rowFlex" : "left",
@@ -45,7 +51,14 @@
       "lineHeightRule" : "auto"
     } ],
     "/word/footer2.xml" : [ {
-      "sourceParagraphId" : "b0504282-5c0e-4536-97b3-7a9b654c4cbf",
+      "fontFamilies" : {
+        "ascii" : "宋体",
+        "hAnsi" : "宋体",
+        "eastAsia" : "宋体",
+        "cs" : "宋体"
+      },
+      "sourceFont" : "SimSun",
+      "sourceParagraphId" : "a65d3972-2b57-4285-b910-6fd475266bff",
       "type" : "text",
       "value" : "—5—",
       "font" : "SimSun",
@@ -67,7 +80,7 @@
   },
   "success" : true,
   "elements" : [ {
-    "sourceParagraphId" : "15d1b660-82dd-4988-9071-ae0e44896400",
+    "sourceParagraphId" : "ab23ae95-f1c1-46fa-af23-704c0b41a16a",
     "type" : "title",
     "value" : "",
     "rowFlex" : "left",
@@ -88,7 +101,14 @@
     "lineHeight" : 1.1,
     "lineHeightRule" : "auto",
     "valueList" : [ {
-      "sourceParagraphId" : "15d1b660-82dd-4988-9071-ae0e44896400",
+      "fontFamilies" : {
+        "ascii" : "黑体",
+        "hAnsi" : "黑体",
+        "eastAsia" : "黑体",
+        "cs" : "黑体"
+      },
+      "sourceFont" : "SimHei",
+      "sourceParagraphId" : "ab23ae95-f1c1-46fa-af23-704c0b41a16a",
       "type" : "text",
       "value" : "关于2026年4月开展高等学历继续教育本科学生学士",
       "font" : "SimHei",
@@ -114,14 +134,28 @@
       "lineHeightRule" : "auto",
       "letterSpacing" : 0.67
     }, {
-      "sourceParagraphId" : "15d1b660-82dd-4988-9071-ae0e44896400",
+      "fontFamilies" : {
+        "ascii" : "黑体",
+        "hAnsi" : "黑体",
+        "eastAsia" : "黑体",
+        "cs" : "黑体"
+      },
+      "sourceFont" : "SimHei",
+      "sourceParagraphId" : "ab23ae95-f1c1-46fa-af23-704c0b41a16a",
       "type" : "text",
       "value" : " ",
       "font" : "SimHei",
       "size" : 24.0,
       "color" : "#000000"
     }, {
-      "sourceParagraphId" : "15d1b660-82dd-4988-9071-ae0e44896400",
+      "fontFamilies" : {
+        "ascii" : "黑体",
+        "hAnsi" : "黑体",
+        "eastAsia" : "黑体",
+        "cs" : "黑体"
+      },
+      "sourceFont" : "SimHei",
+      "sourceParagraphId" : "ab23ae95-f1c1-46fa-af23-704c0b41a16a",
       "type" : "text",
       "value" : "学位外语水平考试的通知",
       "font" : "SimHei",
@@ -129,44 +163,13 @@
       "bold" : true,
       "color" : "#000000",
       "letterSpacing" : -0.8
-    }, {
-      "sourceParagraphId" : "15d1b660-82dd-4988-9071-ae0e44896400",
-      "type" : "text",
-      "value" : "1111",
-      "font" : "SimHei",
-      "size" : 24.0,
-      "color" : "#000000",
-      "revisionId" : "0",
-      "revisionType" : "insert",
-      "revisionAuthor" : "Scerken",
-      "revisionDate" : "2026-08-21T02:04:16Z"
-    }, {
-      "sourceParagraphId" : "15d1b660-82dd-4988-9071-ae0e44896400",
-      "type" : "text",
-      "value" : "​",
-      "extension" : {
-        "bookmarkMarker" : {
-          "name" : "_GoBack",
-          "position" : "start"
-        }
-      }
-    }, {
-      "sourceParagraphId" : "15d1b660-82dd-4988-9071-ae0e44896400",
-      "type" : "text",
-      "value" : "​",
-      "extension" : {
-        "bookmarkMarker" : {
-          "name" : "_GoBack",
-          "position" : "end"
-        }
-      }
     } ],
     "level" : "first"
   }, {
     "type" : "text",
     "value" : "​"
   }, {
-    "sourceParagraphId" : "18399763-1907-4ef6-ba51-39f19f289efe",
+    "sourceParagraphId" : "96353c61-968f-42b7-b892-017ec7173edd",
     "type" : "text",
     "value" : "",
     "rowFlex" : "left",
@@ -182,7 +185,7 @@
     "type" : "text",
     "value" : "​"
   }, {
-    "sourceParagraphId" : "072b6d4e-a7f4-4356-b3c5-6a65babdcf35",
+    "sourceParagraphId" : "aeb8f26b-44ce-46a3-947f-9bf575669286",
     "type" : "text",
     "value" : "",
     "rowFlex" : "left",
@@ -198,9 +201,16 @@
     "type" : "text",
     "value" : "​"
   }, {
-    "sourceParagraphId" : "7e07d44a-87db-46a0-b885-49fb427ea53c",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "79684100-e969-4b36-adbb-73d967d78dda",
     "type" : "text",
-    "value" : "学校计划2026年4月在吉林省、辽宁省、山西省、",
+    "value" : "学校计划2026年",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000",
@@ -222,7 +232,51 @@
     "letterSpacing" : 1.27,
     "paragraphStyleId" : "3"
   }, {
-    "sourceParagraphId" : "7e07d44a-87db-46a0-b885-49fb427ea53c",
+    "sourceParagraphId" : "79684100-e969-4b36-adbb-73d967d78dda",
+    "type" : "hyperlink",
+    "value" : "",
+    "valueList" : [ {
+      "fontFamilies" : {
+        "ascii" : "仿宋",
+        "hAnsi" : "仿宋",
+        "eastAsia" : "仿宋",
+        "cs" : "仿宋"
+      },
+      "sourceFont" : "FangSong",
+      "characterStyleId" : "7",
+      "type" : "text",
+      "value" : "4月在吉林省",
+      "font" : "FangSong",
+      "size" : 18.67,
+      "color" : "#800080",
+      "underline" : true,
+      "letterSpacing" : 1.27
+    } ],
+    "url" : "http://localhost:5173/"
+  }, {
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "79684100-e969-4b36-adbb-73d967d78dda",
+    "type" : "text",
+    "value" : "、辽宁省、山西省、",
+    "font" : "FangSong",
+    "size" : 18.67,
+    "color" : "#000000",
+    "letterSpacing" : 1.27
+  }, {
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "79684100-e969-4b36-adbb-73d967d78dda",
     "type" : "text",
     "value" : "新疆维吾尔",
     "font" : "FangSong",
@@ -230,14 +284,28 @@
     "color" : "#000000",
     "letterSpacing" : 1.2
   }, {
-    "sourceParagraphId" : "7e07d44a-87db-46a0-b885-49fb427ea53c",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "79684100-e969-4b36-adbb-73d967d78dda",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "7e07d44a-87db-46a0-b885-49fb427ea53c",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "79684100-e969-4b36-adbb-73d967d78dda",
     "type" : "text",
     "value" : "自治区、山东省、浙江省、广东省、河北省、贵州省、海南省",
     "font" : "FangSong",
@@ -245,7 +313,14 @@
     "color" : "#000000",
     "letterSpacing" : 0.6
   }, {
-    "sourceParagraphId" : "7e07d44a-87db-46a0-b885-49fb427ea53c",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "79684100-e969-4b36-adbb-73d967d78dda",
     "type" : "text",
     "value" : "举行",
     "font" : "FangSong",
@@ -253,14 +328,28 @@
     "color" : "#000000",
     "letterSpacing" : 0.53
   }, {
-    "sourceParagraphId" : "7e07d44a-87db-46a0-b885-49fb427ea53c",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "79684100-e969-4b36-adbb-73d967d78dda",
     "type" : "text",
     "value" : "  ",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "7e07d44a-87db-46a0-b885-49fb427ea53c",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "79684100-e969-4b36-adbb-73d967d78dda",
     "type" : "text",
     "value" : "2026年上半年高等学历继续教育学士学位外语考试，现将有关事项",
     "font" : "FangSong",
@@ -268,7 +357,14 @@
     "color" : "#000000",
     "letterSpacing" : 0.8
   }, {
-    "sourceParagraphId" : "7e07d44a-87db-46a0-b885-49fb427ea53c",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "79684100-e969-4b36-adbb-73d967d78dda",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
@@ -276,7 +372,14 @@
     "color" : "#000000",
     "letterSpacing" : 0.53
   }, {
-    "sourceParagraphId" : "7e07d44a-87db-46a0-b885-49fb427ea53c",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "79684100-e969-4b36-adbb-73d967d78dda",
     "type" : "text",
     "value" : "通知如下：",
     "font" : "FangSong",
@@ -287,7 +390,7 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "525c6dc5-fe11-47ec-9f69-9ac9cbeeb61d",
+    "sourceParagraphId" : "2e5a6e9a-012d-4f31-9381-4b16b6298e19",
     "type" : "title",
     "value" : "",
     "rowFlex" : "left",
@@ -304,7 +407,14 @@
     "lineHeight" : 0.93,
     "lineHeightRule" : "auto",
     "valueList" : [ {
-      "sourceParagraphId" : "525c6dc5-fe11-47ec-9f69-9ac9cbeeb61d",
+      "fontFamilies" : {
+        "ascii" : "楷体",
+        "hAnsi" : "楷体",
+        "eastAsia" : "楷体",
+        "cs" : "楷体"
+      },
+      "sourceFont" : "KaiTi",
+      "sourceParagraphId" : "2e5a6e9a-012d-4f31-9381-4b16b6298e19",
       "type" : "text",
       "value" : "一",
       "font" : "KaiTi",
@@ -325,7 +435,14 @@
       "lineHeight" : 0.93,
       "lineHeightRule" : "auto"
     }, {
-      "sourceParagraphId" : "525c6dc5-fe11-47ec-9f69-9ac9cbeeb61d",
+      "fontFamilies" : {
+        "ascii" : "楷体",
+        "hAnsi" : "楷体",
+        "eastAsia" : "楷体",
+        "cs" : "楷体"
+      },
+      "sourceFont" : "KaiTi",
+      "sourceParagraphId" : "2e5a6e9a-012d-4f31-9381-4b16b6298e19",
       "type" : "text",
       "value" : " ",
       "font" : "KaiTi",
@@ -333,7 +450,14 @@
       "color" : "#000000",
       "letterSpacing" : -4.6
     }, {
-      "sourceParagraphId" : "525c6dc5-fe11-47ec-9f69-9ac9cbeeb61d",
+      "fontFamilies" : {
+        "ascii" : "楷体",
+        "hAnsi" : "楷体",
+        "eastAsia" : "楷体",
+        "cs" : "楷体"
+      },
+      "sourceFont" : "KaiTi",
+      "sourceParagraphId" : "2e5a6e9a-012d-4f31-9381-4b16b6298e19",
       "type" : "text",
       "value" : "、时间安排",
       "font" : "KaiTi",
@@ -346,7 +470,14 @@
     "type" : "text",
     "value" : "​"
   }, {
-    "sourceParagraphId" : "aef57883-71d2-40cc-bc11-42be30fd1d65",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "b1b43819-dfd7-4dab-9e32-b4819ae67caa",
     "type" : "text",
     "value" : "1.网上报名时间：2026年3月26日8:00—2026年4月2日18:00",
     "font" : "FangSong",
@@ -371,9 +502,16 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "26053ed2-f755-4da5-b788-468b7345fb40",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "75041454-33e2-43d1-af74-4a6de2067054",
     "type" : "text",
-    "value" : "2.考生缴费时间：2026年3月26日9:00—2026",
+    "value" : "2.考生缴费时间：2026年3月26日9:00—",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000",
@@ -392,27 +530,62 @@
     "lineHeightRule" : "auto",
     "paragraphStyleId" : "3"
   }, {
-    "sourceParagraphId" : "26053ed2-f755-4da5-b788-468b7345fb40",
+    "sourceParagraphId" : "75041454-33e2-43d1-af74-4a6de2067054",
     "type" : "text",
-    "value" : "年4月2日23:",
+    "value" : "​",
+    "extension" : {
+      "bookmarkMarker" : {
+        "name" : "测试啊",
+        "position" : "start"
+      }
+    }
+  }, {
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "75041454-33e2-43d1-af74-4a6de2067054",
+    "type" : "text",
+    "value" : "2026年4月2日23:",
     "font" : "FangSong",
     "size" : 18.67,
-    "color" : "#000000",
-    "groupIds" : [ "comment_0" ]
+    "color" : "#000000"
   }, {
-    "sourceParagraphId" : "26053ed2-f755-4da5-b788-468b7345fb40",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "75041454-33e2-43d1-af74-4a6de2067054",
     "type" : "text",
     "value" : "00",
     "font" : "FangSong",
     "size" : 18.67,
-    "color" : "#000000",
-    "groupIds" : [ "comment_0" ]
+    "color" : "#000000"
   }, {
+    "sourceParagraphId" : "75041454-33e2-43d1-af74-4a6de2067054",
     "type" : "text",
     "value" : "​",
-    "size" : 18.67
+    "extension" : {
+      "bookmarkMarker" : {
+        "name" : "测试啊",
+        "position" : "end"
+      }
+    }
   }, {
-    "sourceParagraphId" : "f90139c4-e50e-4196-9532-7a342b830304",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "dbd50d8f-1f31-449e-862f-0889b4518c16",
     "type" : "text",
     "value" : "3.准考证打印时间：2026年4月6日12:00至开考前。",
     "font" : "FangSong",
@@ -437,7 +610,14 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "6dab2931-af0a-49e7-8616-5ac2f83c7cff",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "55d8e636-ce6b-424c-a987-5a1b54a16bf4",
     "type" : "text",
     "value" : "4.考试时间：2026年4月11日—4月12日(具体考试时间以准考",
     "font" : "FangSong",
@@ -463,7 +643,14 @@
     "letterSpacing" : 1.13,
     "paragraphStyleId" : "3"
   }, {
-    "sourceParagraphId" : "6dab2931-af0a-49e7-8616-5ac2f83c7cff",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "55d8e636-ce6b-424c-a987-5a1b54a16bf4",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
@@ -471,7 +658,14 @@
     "color" : "#000000",
     "letterSpacing" : 0.8
   }, {
-    "sourceParagraphId" : "6dab2931-af0a-49e7-8616-5ac2f83c7cff",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "55d8e636-ce6b-424c-a987-5a1b54a16bf4",
     "type" : "text",
     "value" : "证为准)",
     "font" : "FangSong",
@@ -483,7 +677,14 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "ee2ec33e-33da-4b1f-b685-9bdb846928a9",
+    "fontFamilies" : {
+      "ascii" : "宋体",
+      "hAnsi" : "宋体",
+      "eastAsia" : "宋体",
+      "cs" : "宋体"
+    },
+    "sourceFont" : "SimSun",
+    "sourceParagraphId" : "d30fe14e-81d5-41fc-9c5d-52bc437453be",
     "type" : "text",
     "value" : "5.",
     "font" : "SimSun",
@@ -509,7 +710,14 @@
     "letterSpacing" : 0.93,
     "paragraphStyleId" : "3"
   }, {
-    "sourceParagraphId" : "ee2ec33e-33da-4b1f-b685-9bdb846928a9",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "d30fe14e-81d5-41fc-9c5d-52bc437453be",
     "type" : "text",
     "value" : "考试地点：吉林省长春市、辽宁省丹东市、",
     "font" : "FangSong",
@@ -517,24 +725,47 @@
     "color" : "#000000",
     "letterSpacing" : 0.93
   }, {
-    "sourceParagraphId" : "ee2ec33e-33da-4b1f-b685-9bdb846928a9",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "d30fe14e-81d5-41fc-9c5d-52bc437453be",
     "type" : "text",
     "value" : "山西省太原市",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000",
     "highlight" : "#FFFF00",
-    "letterSpacing" : 0.93
+    "letterSpacing" : 0.93,
+    "groupIds" : [ "comment_0" ]
   }, {
-    "sourceParagraphId" : "ee2ec33e-33da-4b1f-b685-9bdb846928a9",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "d30fe14e-81d5-41fc-9c5d-52bc437453be",
     "type" : "text",
     "value" : "、",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000",
-    "letterSpacing" : 0.93
+    "letterSpacing" : 0.93,
+    "groupIds" : [ "comment_0" ]
   }, {
-    "sourceParagraphId" : "ee2ec33e-33da-4b1f-b685-9bdb846928a9",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "d30fe14e-81d5-41fc-9c5d-52bc437453be",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
@@ -542,7 +773,14 @@
     "color" : "#000000",
     "letterSpacing" : 0.73
   }, {
-    "sourceParagraphId" : "ee2ec33e-33da-4b1f-b685-9bdb846928a9",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "d30fe14e-81d5-41fc-9c5d-52bc437453be",
     "type" : "text",
     "value" : "新疆维吾尔自治区乌鲁木齐市、山东省济南市、浙江省杭州市、广",
     "font" : "FangSong",
@@ -550,14 +788,28 @@
     "color" : "#000000",
     "letterSpacing" : 0.93
   }, {
-    "sourceParagraphId" : "ee2ec33e-33da-4b1f-b685-9bdb846928a9",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "d30fe14e-81d5-41fc-9c5d-52bc437453be",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "ee2ec33e-33da-4b1f-b685-9bdb846928a9",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "d30fe14e-81d5-41fc-9c5d-52bc437453be",
     "type" : "text",
     "value" : "东省广州市、河北省石家庄市、贵州省贵阳市、海南省海口市，具",
     "font" : "FangSong",
@@ -565,7 +817,14 @@
     "color" : "#000000",
     "letterSpacing" : 0.87
   }, {
-    "sourceParagraphId" : "ee2ec33e-33da-4b1f-b685-9bdb846928a9",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "d30fe14e-81d5-41fc-9c5d-52bc437453be",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
@@ -573,7 +832,14 @@
     "color" : "#000000",
     "letterSpacing" : 0.73
   }, {
-    "sourceParagraphId" : "ee2ec33e-33da-4b1f-b685-9bdb846928a9",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "d30fe14e-81d5-41fc-9c5d-52bc437453be",
     "type" : "text",
     "value" : "体地点以准考证为准。",
     "font" : "FangSong",
@@ -584,7 +850,7 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "5bcedbd9-e850-482e-bdbb-37aad07bac27",
+    "sourceParagraphId" : "1ff75e36-de69-4d8a-a3b8-5d40d41f24c4",
     "type" : "title",
     "value" : "",
     "rowFlex" : "left",
@@ -601,7 +867,14 @@
     "lineHeight" : 0.94,
     "lineHeightRule" : "auto",
     "valueList" : [ {
-      "sourceParagraphId" : "5bcedbd9-e850-482e-bdbb-37aad07bac27",
+      "fontFamilies" : {
+        "ascii" : "楷体",
+        "hAnsi" : "楷体",
+        "eastAsia" : "楷体",
+        "cs" : "楷体"
+      },
+      "sourceFont" : "KaiTi",
+      "sourceParagraphId" : "1ff75e36-de69-4d8a-a3b8-5d40d41f24c4",
       "type" : "text",
       "value" : "二、报考对象",
       "font" : "KaiTi",
@@ -627,7 +900,14 @@
     "type" : "text",
     "value" : "​"
   }, {
-    "sourceParagraphId" : "d4478cd0-8bfa-4ef4-a97e-beaa7d9c101d",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "cfd3e04c-9fea-414c-8c60-c48ac89e3121",
     "type" : "text",
     "value" : "1.2023级规定学制(2.5年)内正常完",
     "font" : "FangSong",
@@ -646,7 +926,14 @@
     "letterSpacing" : 1.33,
     "paragraphStyleId" : "3"
   }, {
-    "sourceParagraphId" : "d4478cd0-8bfa-4ef4-a97e-beaa7d9c101d",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "cfd3e04c-9fea-414c-8c60-c48ac89e3121",
     "type" : "text",
     "value" : "成学业的本科毕业学生；",
     "font" : "FangSong",
@@ -658,7 +945,14 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "1e54b357-1a76-4112-9a9a-4a5d9d9148d1",
+    "fontFamilies" : {
+      "ascii" : "宋体",
+      "hAnsi" : "宋体",
+      "eastAsia" : "宋体",
+      "cs" : "宋体"
+    },
+    "sourceFont" : "SimSun",
+    "sourceParagraphId" : "4a3ea448-98df-4d16-b6fd-c99ec2ba5db4",
     "type" : "text",
     "value" : "2.",
     "font" : "SimSun",
@@ -684,15 +978,86 @@
     "letterSpacing" : 1.27,
     "paragraphStyleId" : "3"
   }, {
-    "sourceParagraphId" : "1e54b357-1a76-4112-9a9a-4a5d9d9148d1",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "4a3ea448-98df-4d16-b6fd-c99ec2ba5db4",
     "type" : "text",
-    "value" : "各省2022—2023级高起本科、2024级、2025级、2026级预",
+    "value" : "各省2022—2023级",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000",
     "letterSpacing" : 1.27
   }, {
-    "sourceParagraphId" : "1e54b357-1a76-4112-9a9a-4a5d9d9148d1",
+    "sourceParagraphId" : "4a3ea448-98df-4d16-b6fd-c99ec2ba5db4",
+    "type" : "hyperlink",
+    "value" : "",
+    "valueList" : [ {
+      "fontFamilies" : {
+        "ascii" : "仿宋",
+        "hAnsi" : "仿宋",
+        "eastAsia" : "仿宋",
+        "cs" : "仿宋"
+      },
+      "sourceFont" : "FangSong",
+      "characterStyleId" : "8",
+      "type" : "text",
+      "value" : "高起本科、2024级、2025级",
+      "font" : "FangSong",
+      "size" : 18.67,
+      "color" : "#0000FF",
+      "underline" : true,
+      "letterSpacing" : 1.27
+    } ],
+    "url" : "http://localhost:5173/"
+  }, {
+    "sourceParagraphId" : "4a3ea448-98df-4d16-b6fd-c99ec2ba5db4",
+    "type" : "text",
+    "value" : "​",
+    "extension" : {
+      "bookmarkMarker" : {
+        "name" : "_GoBack",
+        "position" : "start"
+      }
+    }
+  }, {
+    "sourceParagraphId" : "4a3ea448-98df-4d16-b6fd-c99ec2ba5db4",
+    "type" : "text",
+    "value" : "​",
+    "extension" : {
+      "bookmarkMarker" : {
+        "name" : "_GoBack",
+        "position" : "end"
+      }
+    }
+  }, {
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "4a3ea448-98df-4d16-b6fd-c99ec2ba5db4",
+    "type" : "text",
+    "value" : "、2026级预",
+    "font" : "FangSong",
+    "size" : 18.67,
+    "color" : "#000000",
+    "letterSpacing" : 1.27
+  }, {
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "4a3ea448-98df-4d16-b6fd-c99ec2ba5db4",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
@@ -700,7 +1065,14 @@
     "color" : "#000000",
     "letterSpacing" : 1.13
   }, {
-    "sourceParagraphId" : "1e54b357-1a76-4112-9a9a-4a5d9d9148d1",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "4a3ea448-98df-4d16-b6fd-c99ec2ba5db4",
     "type" : "text",
     "value" : "申请学位的本科生。",
     "font" : "FangSong",
@@ -711,7 +1083,14 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "0b667d79-e788-4fed-a123-65fc366cd232",
+    "fontFamilies" : {
+      "ascii" : "楷体",
+      "hAnsi" : "楷体",
+      "eastAsia" : "楷体",
+      "cs" : "楷体"
+    },
+    "sourceFont" : "KaiTi",
+    "sourceParagraphId" : "2cef4b36-3394-4fef-ad17-68d38df23891",
     "type" : "text",
     "value" : "三、考试科目",
     "font" : "KaiTi",
@@ -737,7 +1116,14 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "70d0706e-37a0-4421-82bf-404edefad0f1",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "c041f3be-4fcc-44d5-a6c9-016ecc050fd3",
     "type" : "text",
     "value" : "考试语种：英语。",
     "font" : "FangSong",
@@ -762,7 +1148,7 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "156c51b3-4e5a-4ee0-8d3d-8bce73b9e01a",
+    "sourceParagraphId" : "e755bcb3-35d0-494d-98a3-97078071b1c4",
     "type" : "title",
     "value" : "",
     "rowFlex" : "left",
@@ -779,7 +1165,14 @@
     "lineHeight" : 0.93,
     "lineHeightRule" : "auto",
     "valueList" : [ {
-      "sourceParagraphId" : "156c51b3-4e5a-4ee0-8d3d-8bce73b9e01a",
+      "fontFamilies" : {
+        "ascii" : "仿宋",
+        "hAnsi" : "仿宋",
+        "eastAsia" : "仿宋",
+        "cs" : "仿宋"
+      },
+      "sourceFont" : "FangSong",
+      "sourceParagraphId" : "e755bcb3-35d0-494d-98a3-97078071b1c4",
       "type" : "text",
       "value" : "四",
       "font" : "FangSong",
@@ -802,7 +1195,14 @@
       "letterSpacing" : -0.67,
       "paragraphStyleId" : "3"
     }, {
-      "sourceParagraphId" : "156c51b3-4e5a-4ee0-8d3d-8bce73b9e01a",
+      "fontFamilies" : {
+        "ascii" : "仿宋",
+        "hAnsi" : "仿宋",
+        "eastAsia" : "仿宋",
+        "cs" : "仿宋"
+      },
+      "sourceFont" : "FangSong",
+      "sourceParagraphId" : "e755bcb3-35d0-494d-98a3-97078071b1c4",
       "type" : "text",
       "value" : " ",
       "font" : "FangSong",
@@ -810,7 +1210,14 @@
       "color" : "#000000",
       "letterSpacing" : -3.13
     }, {
-      "sourceParagraphId" : "156c51b3-4e5a-4ee0-8d3d-8bce73b9e01a",
+      "fontFamilies" : {
+        "ascii" : "仿宋",
+        "hAnsi" : "仿宋",
+        "eastAsia" : "仿宋",
+        "cs" : "仿宋"
+      },
+      "sourceFont" : "FangSong",
+      "sourceParagraphId" : "e755bcb3-35d0-494d-98a3-97078071b1c4",
       "type" : "text",
       "value" : "、考试大纲",
       "font" : "FangSong",
@@ -825,7 +1232,14 @@
     "type" : "text",
     "value" : "​"
   }, {
-    "sourceParagraphId" : "cb94a23c-e80a-4535-bfcf-b5b33464b0b1",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "598cf427-2ca5-467a-b5d9-16ce8bc22cbc",
     "type" : "text",
     "value" : "英语语种：《成人高等教育本科毕业生学士学位英语",
     "font" : "FangSong",
@@ -850,21 +1264,42 @@
     "lineHeightRule" : "auto",
     "paragraphStyleId" : "3"
   }, {
-    "sourceParagraphId" : "cb94a23c-e80a-4535-bfcf-b5b33464b0b1",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "598cf427-2ca5-467a-b5d9-16ce8bc22cbc",
     "type" : "text",
     "value" : "水平考试大纲",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "cb94a23c-e80a-4535-bfcf-b5b33464b0b1",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "598cf427-2ca5-467a-b5d9-16ce8bc22cbc",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "cb94a23c-e80a-4535-bfcf-b5b33464b0b1",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "598cf427-2ca5-467a-b5d9-16ce8bc22cbc",
     "type" : "text",
     "value" : "(非英语专业)》(2016年12月第二版)",
     "font" : "FangSong",
@@ -876,7 +1311,14 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "1a13c95c-078a-49fb-9ee9-60cc8de35168",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "4bf269ff-fff8-42b7-9157-bf0ae164daef",
     "type" : "text",
     "value" : "作者：教育部学位与研究生教育发展中心；",
     "font" : "FangSong",
@@ -901,7 +1343,14 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "ce32ef4a-8e73-4f36-b5b7-666e7b4ad940",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "2f17ff5d-86da-413d-b4fa-dae7a3c5f2d9",
     "type" : "text",
     "value" : "出版社",
     "font" : "FangSong",
@@ -923,7 +1372,14 @@
     "letterSpacing" : -0.93,
     "paragraphStyleId" : "3"
   }, {
-    "sourceParagraphId" : "ce32ef4a-8e73-4f36-b5b7-666e7b4ad940",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "2f17ff5d-86da-413d-b4fa-dae7a3c5f2d9",
     "type" : "text",
     "value" : "：高等教育出版社；",
     "font" : "FangSong",
@@ -935,7 +1391,14 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "972519d0-c265-406b-a0c9-b7634cd9d6e2",
+    "fontFamilies" : {
+      "ascii" : "Times New Roman",
+      "hAnsi" : "Times New Roman",
+      "eastAsia" : "Times New Roman",
+      "cs" : "Times New Roman"
+    },
+    "sourceFont" : "SimHei",
+    "sourceParagraphId" : "b16e6013-5bc0-4c58-a111-b09beb12518b",
     "type" : "text",
     "value" : "ISBN:9787040467734.",
     "font" : "SimHei",
@@ -959,7 +1422,7 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "3e89d78f-81bd-4267-9060-eb277806e016",
+    "sourceParagraphId" : "e5aebb5a-8454-464f-8302-0ee2c79b445f",
     "type" : "title",
     "value" : "",
     "rowFlex" : "left",
@@ -976,7 +1439,14 @@
     "lineHeight" : 0.93,
     "lineHeightRule" : "auto",
     "valueList" : [ {
-      "sourceParagraphId" : "3e89d78f-81bd-4267-9060-eb277806e016",
+      "fontFamilies" : {
+        "ascii" : "仿宋",
+        "hAnsi" : "仿宋",
+        "eastAsia" : "仿宋",
+        "cs" : "仿宋"
+      },
+      "sourceFont" : "FangSong",
+      "sourceParagraphId" : "e5aebb5a-8454-464f-8302-0ee2c79b445f",
       "type" : "text",
       "value" : "五",
       "font" : "FangSong",
@@ -998,7 +1468,14 @@
       "lineHeightRule" : "auto",
       "paragraphStyleId" : "3"
     }, {
-      "sourceParagraphId" : "3e89d78f-81bd-4267-9060-eb277806e016",
+      "fontFamilies" : {
+        "ascii" : "仿宋",
+        "hAnsi" : "仿宋",
+        "eastAsia" : "仿宋",
+        "cs" : "仿宋"
+      },
+      "sourceFont" : "FangSong",
+      "sourceParagraphId" : "e5aebb5a-8454-464f-8302-0ee2c79b445f",
       "type" : "text",
       "value" : " ",
       "font" : "FangSong",
@@ -1006,7 +1483,14 @@
       "color" : "#000000",
       "letterSpacing" : -5.2
     }, {
-      "sourceParagraphId" : "3e89d78f-81bd-4267-9060-eb277806e016",
+      "fontFamilies" : {
+        "ascii" : "仿宋",
+        "hAnsi" : "仿宋",
+        "eastAsia" : "仿宋",
+        "cs" : "仿宋"
+      },
+      "sourceFont" : "FangSong",
+      "sourceParagraphId" : "e5aebb5a-8454-464f-8302-0ee2c79b445f",
       "type" : "text",
       "value" : "、考试方式及监考方式",
       "font" : "FangSong",
@@ -1020,7 +1504,14 @@
     "type" : "text",
     "value" : "​"
   }, {
-    "sourceParagraphId" : "a232b887-93ac-492e-a85c-1aa80cf16cb1",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "101b04c5-3dae-4c9c-ba9b-bc2944a6e79c",
     "type" : "text",
     "value" : "考试采取线下机考考试形式(闭卷),共120分钟。实行“考",
     "font" : "FangSong",
@@ -1042,7 +1533,14 @@
     "letterSpacing" : 2.27,
     "paragraphStyleId" : "3"
   }, {
-    "sourceParagraphId" : "a232b887-93ac-492e-a85c-1aa80cf16cb1",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "101b04c5-3dae-4c9c-ba9b-bc2944a6e79c",
     "type" : "text",
     "value" : " 前人脸识别身份验证”“考中全程录像监测”等防",
     "font" : "FangSong",
@@ -1050,7 +1548,14 @@
     "color" : "#000000",
     "letterSpacing" : 1.0
   }, {
-    "sourceParagraphId" : "a232b887-93ac-492e-a85c-1aa80cf16cb1",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "101b04c5-3dae-4c9c-ba9b-bc2944a6e79c",
     "type" : "text",
     "value" : "作弊手段，监考",
     "font" : "FangSong",
@@ -1058,14 +1563,28 @@
     "color" : "#000000",
     "letterSpacing" : 0.93
   }, {
-    "sourceParagraphId" : "a232b887-93ac-492e-a85c-1aa80cf16cb1",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "101b04c5-3dae-4c9c-ba9b-bc2944a6e79c",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "a232b887-93ac-492e-a85c-1aa80cf16cb1",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "101b04c5-3dae-4c9c-ba9b-bc2944a6e79c",
     "type" : "text",
     "value" : "教师考后全程影像视频材料留存备查，确保考试严",
     "font" : "FangSong",
@@ -1073,7 +1592,14 @@
     "color" : "#000000",
     "letterSpacing" : 0.6
   }, {
-    "sourceParagraphId" : "a232b887-93ac-492e-a85c-1aa80cf16cb1",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "101b04c5-3dae-4c9c-ba9b-bc2944a6e79c",
     "type" : "text",
     "value" : "肃性和公正性。",
     "font" : "FangSong",
@@ -1085,7 +1611,7 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "b8542f00-a830-4a01-b95a-cfb4c3eab43c",
+    "sourceParagraphId" : "ab9060cb-ff11-4c15-bc32-90992d72710e",
     "type" : "title",
     "value" : "",
     "rowFlex" : "left",
@@ -1102,7 +1628,14 @@
     "lineHeight" : 0.93,
     "lineHeightRule" : "auto",
     "valueList" : [ {
-      "sourceParagraphId" : "b8542f00-a830-4a01-b95a-cfb4c3eab43c",
+      "fontFamilies" : {
+        "ascii" : "仿宋",
+        "hAnsi" : "仿宋",
+        "eastAsia" : "仿宋",
+        "cs" : "仿宋"
+      },
+      "sourceFont" : "FangSong",
+      "sourceParagraphId" : "ab9060cb-ff11-4c15-bc32-90992d72710e",
       "type" : "text",
       "value" : "六、考试成绩",
       "font" : "FangSong",
@@ -1130,7 +1663,14 @@
     "type" : "text",
     "value" : "​"
   }, {
-    "sourceParagraphId" : "8a605713-3303-45fe-b3e7-93ef2c5eec06",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "2010d312-598a-42b7-8d05-096c7d34ccb7",
     "type" : "text",
     "value" : "考试结束一个月内公布成绩。考试成绩采用百分制，考试结果",
     "font" : "FangSong",
@@ -1152,7 +1692,14 @@
     "letterSpacing" : 0.93,
     "paragraphStyleId" : "3"
   }, {
-    "sourceParagraphId" : "8a605713-3303-45fe-b3e7-93ef2c5eec06",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "2010d312-598a-42b7-8d05-096c7d34ccb7",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
@@ -1160,7 +1707,14 @@
     "color" : "#000000",
     "letterSpacing" : 0.8
   }, {
-    "sourceParagraphId" : "8a605713-3303-45fe-b3e7-93ef2c5eec06",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "2010d312-598a-42b7-8d05-096c7d34ccb7",
     "type" : "text",
     "value" : "以合格、不合格公布。对考试成绩有异议的考",
     "font" : "FangSong",
@@ -1168,7 +1722,14 @@
     "color" : "#000000",
     "letterSpacing" : 1.0
   }, {
-    "sourceParagraphId" : "8a605713-3303-45fe-b3e7-93ef2c5eec06",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "2010d312-598a-42b7-8d05-096c7d34ccb7",
     "type" : "text",
     "value" : "生可申请复核。复核",
     "font" : "FangSong",
@@ -1176,14 +1737,28 @@
     "color" : "#000000",
     "letterSpacing" : 0.93
   }, {
-    "sourceParagraphId" : "8a605713-3303-45fe-b3e7-93ef2c5eec06",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "2010d312-598a-42b7-8d05-096c7d34ccb7",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "8a605713-3303-45fe-b3e7-93ef2c5eec06",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "2010d312-598a-42b7-8d05-096c7d34ccb7",
     "type" : "text",
     "value" : "工作只是复核考生答卷在阅卷工作中有无漏阅，登分、合分有无错",
     "font" : "FangSong",
@@ -1191,14 +1766,28 @@
     "color" : "#000000",
     "letterSpacing" : 0.93
   }, {
-    "sourceParagraphId" : "8a605713-3303-45fe-b3e7-93ef2c5eec06",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "2010d312-598a-42b7-8d05-096c7d34ccb7",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "8a605713-3303-45fe-b3e7-93ef2c5eec06",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "2010d312-598a-42b7-8d05-096c7d34ccb7",
     "type" : "text",
     "value" : "误等，不涉及试题内容及评卷标准，不提供查阅试",
     "font" : "FangSong",
@@ -1206,7 +1795,14 @@
     "color" : "#000000",
     "letterSpacing" : 1.0
   }, {
-    "sourceParagraphId" : "8a605713-3303-45fe-b3e7-93ef2c5eec06",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "2010d312-598a-42b7-8d05-096c7d34ccb7",
     "type" : "text",
     "value" : "卷服务。复核工",
     "font" : "FangSong",
@@ -1214,14 +1810,28 @@
     "color" : "#000000",
     "letterSpacing" : 0.93
   }, {
-    "sourceParagraphId" : "8a605713-3303-45fe-b3e7-93ef2c5eec06",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "2010d312-598a-42b7-8d05-096c7d34ccb7",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "8a605713-3303-45fe-b3e7-93ef2c5eec06",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "2010d312-598a-42b7-8d05-096c7d34ccb7",
     "type" : "text",
     "value" : "作在成绩发布后一周内可申请，过期不予复核。",
     "font" : "FangSong",
@@ -1233,7 +1843,7 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "1aa98082-8511-4480-8747-34aa8ebbc7d4",
+    "sourceParagraphId" : "cd0a3327-c382-4aa0-ac48-7dd102a0b050",
     "type" : "title",
     "value" : "",
     "rowFlex" : "left",
@@ -1250,7 +1860,14 @@
     "lineHeight" : 0.93,
     "lineHeightRule" : "auto",
     "valueList" : [ {
-      "sourceParagraphId" : "1aa98082-8511-4480-8747-34aa8ebbc7d4",
+      "fontFamilies" : {
+        "ascii" : "仿宋",
+        "hAnsi" : "仿宋",
+        "eastAsia" : "仿宋",
+        "cs" : "仿宋"
+      },
+      "sourceFont" : "FangSong",
+      "sourceParagraphId" : "cd0a3327-c382-4aa0-ac48-7dd102a0b050",
       "type" : "text",
       "value" : "七、考试费用",
       "font" : "FangSong",
@@ -1278,7 +1895,14 @@
     "type" : "text",
     "value" : "​"
   }, {
-    "sourceParagraphId" : "ed24165f-a822-4c14-85f9-faab524a0f70",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "3b59dfd5-b81b-497f-890d-640f4e25215e",
     "type" : "text",
     "value" : "80元/人/次，报名时网上直接缴纳。",
     "font" : "FangSong",
@@ -1306,7 +1930,7 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "0ca4c36e-1e32-44c8-a032-5d8cdbf43a02",
+    "sourceParagraphId" : "e96d2236-6d00-4f13-a6b2-618f5b2500f3",
     "type" : "title",
     "value" : "",
     "rowFlex" : "left",
@@ -1322,7 +1946,14 @@
     "lineHeight" : 0.93,
     "lineHeightRule" : "auto",
     "valueList" : [ {
-      "sourceParagraphId" : "0ca4c36e-1e32-44c8-a032-5d8cdbf43a02",
+      "fontFamilies" : {
+        "ascii" : "仿宋",
+        "hAnsi" : "仿宋",
+        "eastAsia" : "仿宋",
+        "cs" : "仿宋"
+      },
+      "sourceFont" : "FangSong",
+      "sourceParagraphId" : "e96d2236-6d00-4f13-a6b2-618f5b2500f3",
       "type" : "text",
       "value" : "八、报名网址",
       "font" : "FangSong",
@@ -1349,7 +1980,14 @@
     "type" : "text",
     "value" : "​"
   }, {
-    "sourceParagraphId" : "e47f31ad-2f7e-49d7-87d8-29a8c4d772f5",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "6ece31c0-42b9-4159-81c1-7585386c5716",
     "type" : "text",
     "value" : "报名系统为PC 端，网址为： ",
     "font" : "FangSong",
@@ -1370,15 +2008,34 @@
     "lineHeightRule" : "auto",
     "letterSpacing" : 1.33
   }, {
-    "sourceParagraphId" : "e47f31ad-2f7e-49d7-87d8-29a8c4d772f5",
-    "type" : "text",
-    "value" : "https://exam.yxbyun.com",
-    "font" : "FangSong",
-    "size" : 18.67,
-    "color" : "#000000",
-    "letterSpacing" : 1.33
+    "sourceParagraphId" : "6ece31c0-42b9-4159-81c1-7585386c5716",
+    "type" : "hyperlink",
+    "value" : "",
+    "valueList" : [ {
+      "fontFamilies" : {
+        "ascii" : "仿宋",
+        "hAnsi" : "仿宋",
+        "eastAsia" : "仿宋",
+        "cs" : "仿宋"
+      },
+      "sourceFont" : "FangSong",
+      "type" : "text",
+      "value" : "https://exam.yxbyun.com",
+      "font" : "FangSong",
+      "size" : 18.67,
+      "color" : "#000000",
+      "letterSpacing" : 1.33
+    } ],
+    "url" : "https://exam.yxbyun.com"
   }, {
-    "sourceParagraphId" : "e47f31ad-2f7e-49d7-87d8-29a8c4d772f5",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "6ece31c0-42b9-4159-81c1-7585386c5716",
     "type" : "text",
     "value" : ",          此网 址用于本次考试考生报名、审核信息、打印准考证、缴费、成绩查询全流程。登录时，院校位置选择“",
     "font" : "FangSong",
@@ -1386,7 +2043,14 @@
     "color" : "#000000",
     "letterSpacing" : 1.33
   }, {
-    "sourceParagraphId" : "e47f31ad-2f7e-49d7-87d8-29a8c4d772f5",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "6ece31c0-42b9-4159-81c1-7585386c5716",
     "type" : "text",
     "value" : "延边大学",
     "font" : "FangSong",
@@ -1395,7 +2059,14 @@
     "highlight" : "#FFFF00",
     "letterSpacing" : 1.33
   }, {
-    "sourceParagraphId" : "e47f31ad-2f7e-49d7-87d8-29a8c4d772f5",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "6ece31c0-42b9-4159-81c1-7585386c5716",
     "type" : "text",
     "value" : "”,登录账号为本人身份证号，密码为身份证后六位。",
     "font" : "FangSong",
@@ -1407,7 +2078,7 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "38295168-85e5-4032-8880-a136625edfcc",
+    "sourceParagraphId" : "bb8acfb3-6888-469c-b0f3-90436926b354",
     "type" : "title",
     "value" : "",
     "rowFlex" : "left",
@@ -1423,7 +2094,14 @@
     "lineHeight" : 0.93,
     "lineHeightRule" : "auto",
     "valueList" : [ {
-      "sourceParagraphId" : "38295168-85e5-4032-8880-a136625edfcc",
+      "fontFamilies" : {
+        "ascii" : "仿宋",
+        "hAnsi" : "仿宋",
+        "eastAsia" : "仿宋",
+        "cs" : "仿宋"
+      },
+      "sourceFont" : "FangSong",
+      "sourceParagraphId" : "bb8acfb3-6888-469c-b0f3-90436926b354",
       "type" : "text",
       "value" : "九",
       "font" : "FangSong",
@@ -1444,7 +2122,14 @@
       "lineHeightRule" : "auto",
       "paragraphStyleId" : "3"
     }, {
-      "sourceParagraphId" : "38295168-85e5-4032-8880-a136625edfcc",
+      "fontFamilies" : {
+        "ascii" : "仿宋",
+        "hAnsi" : "仿宋",
+        "eastAsia" : "仿宋",
+        "cs" : "仿宋"
+      },
+      "sourceFont" : "FangSong",
+      "sourceParagraphId" : "bb8acfb3-6888-469c-b0f3-90436926b354",
       "type" : "text",
       "value" : " ",
       "font" : "FangSong",
@@ -1452,7 +2137,14 @@
       "color" : "#000000",
       "letterSpacing" : -4.67
     }, {
-      "sourceParagraphId" : "38295168-85e5-4032-8880-a136625edfcc",
+      "fontFamilies" : {
+        "ascii" : "仿宋",
+        "hAnsi" : "仿宋",
+        "eastAsia" : "仿宋",
+        "cs" : "仿宋"
+      },
+      "sourceFont" : "FangSong",
+      "sourceParagraphId" : "bb8acfb3-6888-469c-b0f3-90436926b354",
       "type" : "text",
       "value" : "、注意事项",
       "font" : "FangSong",
@@ -1466,7 +2158,14 @@
     "type" : "text",
     "value" : "​"
   }, {
-    "sourceParagraphId" : "eb2f412c-18bf-48ed-94bf-7d3310a7f883",
+    "fontFamilies" : {
+      "ascii" : "宋体",
+      "hAnsi" : "宋体",
+      "eastAsia" : "宋体",
+      "cs" : "宋体"
+    },
+    "sourceFont" : "SimSun",
+    "sourceParagraphId" : "0181d35a-4ff3-4b62-a25a-b9d4e0b996d6",
     "type" : "text",
     "value" : "1.",
     "font" : "SimSun",
@@ -1490,7 +2189,14 @@
     "letterSpacing" : 0.67,
     "paragraphStyleId" : "3"
   }, {
-    "sourceParagraphId" : "eb2f412c-18bf-48ed-94bf-7d3310a7f883",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "0181d35a-4ff3-4b62-a25a-b9d4e0b996d6",
     "type" : "text",
     "value" : "考生选择的考试地点与考生参加成人高考省份相同",
     "font" : "FangSong",
@@ -1498,7 +2204,14 @@
     "color" : "#000000",
     "letterSpacing" : 0.93
   }, {
-    "sourceParagraphId" : "eb2f412c-18bf-48ed-94bf-7d3310a7f883",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "0181d35a-4ff3-4b62-a25a-b9d4e0b996d6",
     "type" : "text",
     "value" : "。",
     "font" : "FangSong",
@@ -1510,7 +2223,14 @@
     "value" : "​",
     "size" : 21.33
   }, {
-    "sourceParagraphId" : "224fb866-70b3-4069-b4d4-0d2da68b50cc",
+    "fontFamilies" : {
+      "ascii" : "宋体",
+      "hAnsi" : "宋体",
+      "eastAsia" : "宋体",
+      "cs" : "宋体"
+    },
+    "sourceFont" : "SimSun",
+    "sourceParagraphId" : "17d2120d-f4d7-419f-a25e-adb4998f976a",
     "type" : "text",
     "value" : "2.",
     "font" : "SimSun",
@@ -1532,7 +2252,14 @@
     "letterSpacing" : 0.8,
     "paragraphStyleId" : "3"
   }, {
-    "sourceParagraphId" : "224fb866-70b3-4069-b4d4-0d2da68b50cc",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "17d2120d-f4d7-419f-a25e-adb4998f976a",
     "type" : "text",
     "value" : "考生认真阅读报名须知，准确填报个人信息，如因个人原因",
     "font" : "FangSong",
@@ -1540,14 +2267,28 @@
     "color" : "#000000",
     "letterSpacing" : 0.8
   }, {
-    "sourceParagraphId" : "224fb866-70b3-4069-b4d4-0d2da68b50cc",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "17d2120d-f4d7-419f-a25e-adb4998f976a",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "224fb866-70b3-4069-b4d4-0d2da68b50cc",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "17d2120d-f4d7-419f-a25e-adb4998f976a",
     "type" : "text",
     "value" : "错报、漏报造成无法参加考试或成绩无效，由考生本人自行负责。",
     "font" : "FangSong",
@@ -1559,7 +2300,14 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "ad11b7e3-b693-45bc-b491-aa103cf358a1",
+    "fontFamilies" : {
+      "ascii" : "宋体",
+      "hAnsi" : "宋体",
+      "eastAsia" : "宋体",
+      "cs" : "宋体"
+    },
+    "sourceFont" : "SimSun",
+    "sourceParagraphId" : "614b6d28-cc06-480a-9885-06526ce44a92",
     "type" : "text",
     "value" : "3.",
     "font" : "SimSun",
@@ -1583,7 +2331,14 @@
     "letterSpacing" : 1.0,
     "paragraphStyleId" : "3"
   }, {
-    "sourceParagraphId" : "ad11b7e3-b693-45bc-b491-aa103cf358a1",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "614b6d28-cc06-480a-9885-06526ce44a92",
     "type" : "text",
     "value" : "考生缴费时认真核对缴费信息，切勿重复缴费，缴重、缴错",
     "font" : "FangSong",
@@ -1591,14 +2346,28 @@
     "color" : "#000000",
     "letterSpacing" : 1.0
   }, {
-    "sourceParagraphId" : "ad11b7e3-b693-45bc-b491-aa103cf358a1",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "614b6d28-cc06-480a-9885-06526ce44a92",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "ad11b7e3-b693-45bc-b491-aa103cf358a1",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "614b6d28-cc06-480a-9885-06526ce44a92",
     "type" : "text",
     "value" : "或退考等一律不予退费。",
     "font" : "FangSong",
@@ -1609,7 +2378,14 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "687eb9fe-8643-4e60-bc07-0bd1d0a584be",
+    "fontFamilies" : {
+      "ascii" : "宋体",
+      "hAnsi" : "宋体",
+      "eastAsia" : "宋体",
+      "cs" : "宋体"
+    },
+    "sourceFont" : "SimSun",
+    "sourceParagraphId" : "ba908e3b-3467-4cdb-9776-10f0e8c915bd",
     "type" : "text",
     "value" : "4.",
     "font" : "SimSun",
@@ -1633,7 +2409,14 @@
     "letterSpacing" : 1.0,
     "paragraphStyleId" : "3"
   }, {
-    "sourceParagraphId" : "687eb9fe-8643-4e60-bc07-0bd1d0a584be",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "ba908e3b-3467-4cdb-9776-10f0e8c915bd",
     "type" : "text",
     "value" : "考生严格遵守考场纪律，考试过程中有违法违纪行为，按照",
     "font" : "FangSong",
@@ -1641,14 +2424,28 @@
     "color" : "#000000",
     "letterSpacing" : 1.0
   }, {
-    "sourceParagraphId" : "687eb9fe-8643-4e60-bc07-0bd1d0a584be",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "ba908e3b-3467-4cdb-9776-10f0e8c915bd",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "687eb9fe-8643-4e60-bc07-0bd1d0a584be",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "ba908e3b-3467-4cdb-9776-10f0e8c915bd",
     "type" : "text",
     "value" : "相关规定严肃处理。",
     "font" : "FangSong",
@@ -1659,7 +2456,7 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "df0112dd-9232-445a-8801-c3ac8dc24c7e",
+    "sourceParagraphId" : "0ff0d78c-c183-4a3d-a5bb-678ee9806c43",
     "type" : "title",
     "value" : "",
     "rowFlex" : "left",
@@ -1676,7 +2473,14 @@
     "lineHeight" : 0.93,
     "lineHeightRule" : "auto",
     "valueList" : [ {
-      "sourceParagraphId" : "df0112dd-9232-445a-8801-c3ac8dc24c7e",
+      "fontFamilies" : {
+        "ascii" : "楷体",
+        "hAnsi" : "楷体",
+        "eastAsia" : "楷体",
+        "cs" : "楷体"
+      },
+      "sourceFont" : "KaiTi",
+      "sourceParagraphId" : "0ff0d78c-c183-4a3d-a5bb-678ee9806c43",
       "type" : "text",
       "value" : "十",
       "font" : "KaiTi",
@@ -1697,7 +2501,14 @@
       "lineHeight" : 0.93,
       "lineHeightRule" : "auto"
     }, {
-      "sourceParagraphId" : "df0112dd-9232-445a-8801-c3ac8dc24c7e",
+      "fontFamilies" : {
+        "ascii" : "楷体",
+        "hAnsi" : "楷体",
+        "eastAsia" : "楷体",
+        "cs" : "楷体"
+      },
+      "sourceFont" : "KaiTi",
+      "sourceParagraphId" : "0ff0d78c-c183-4a3d-a5bb-678ee9806c43",
       "type" : "text",
       "value" : " ",
       "font" : "KaiTi",
@@ -1705,7 +2516,14 @@
       "color" : "#000000",
       "letterSpacing" : -5.13
     }, {
-      "sourceParagraphId" : "df0112dd-9232-445a-8801-c3ac8dc24c7e",
+      "fontFamilies" : {
+        "ascii" : "楷体",
+        "hAnsi" : "楷体",
+        "eastAsia" : "楷体",
+        "cs" : "楷体"
+      },
+      "sourceFont" : "KaiTi",
+      "sourceParagraphId" : "0ff0d78c-c183-4a3d-a5bb-678ee9806c43",
       "type" : "text",
       "value" : "、联系方式",
       "font" : "KaiTi",
@@ -1718,7 +2536,14 @@
     "type" : "text",
     "value" : "​"
   }, {
-    "sourceParagraphId" : "f8d3c171-eb3d-4939-b69e-1b812b0703b4",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "1a567623-05c1-4710-b2f4-a917c79d5c00",
     "type" : "text",
     "value" : "技术中心咨询电话400-1680910。",
     "font" : "FangSong",
@@ -1743,7 +2568,7 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "9a558ad7-5c6e-4938-a399-c1983f934d8c",
+    "sourceParagraphId" : "c04f7f61-ee25-488e-9161-8e34b136ce15",
     "type" : "text",
     "value" : "",
     "rowFlex" : "left",
@@ -1759,7 +2584,14 @@
     "type" : "text",
     "value" : "​"
   }, {
-    "sourceParagraphId" : "c0effbab-b0a2-43a6-9309-c5b47e74c170",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "9e9016e1-6037-45b3-a8dc-d9bc854abc7a",
     "type" : "text",
     "value" : "附件1:",
     "font" : "FangSong",
@@ -1782,7 +2614,14 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "f1efb505-26ac-4704-8394-246e85ba3d3c",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "58f1ae83-5e08-4e15-aae4-bc94fed9aac8",
     "type" : "text",
     "value" : "报名须知",
     "font" : "FangSong",
@@ -1809,7 +2648,7 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "c12c79a3-e0cb-4fec-a64b-d931e7ad75cf",
+    "sourceParagraphId" : "d32c6db2-21f0-4830-bb1f-b35530575eb3",
     "type" : "text",
     "value" : "",
     "rowFlex" : "left",
@@ -1825,7 +2664,7 @@
     "type" : "text",
     "value" : "​"
   }, {
-    "sourceParagraphId" : "91092f1f-79bf-4836-90b0-b6bcc989d6e7",
+    "sourceParagraphId" : "029347b1-423a-4611-9293-0e684df990ba",
     "type" : "text",
     "value" : "",
     "rowFlex" : "left",
@@ -1841,7 +2680,14 @@
     "type" : "text",
     "value" : "​"
   }, {
-    "sourceParagraphId" : "003a97b7-538a-4d80-a25b-1fbff218f68e",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "ff718ce2-98d8-4e64-a09a-6b6f60ebd2cf",
     "type" : "text",
     "value" : "1.学位外语考试网上报名时间为：2026年3月26日8:00—2026年",
     "font" : "FangSong",
@@ -1862,14 +2708,28 @@
     "lineHeightRule" : "auto",
     "paragraphStyleId" : "3"
   }, {
-    "sourceParagraphId" : "003a97b7-538a-4d80-a25b-1fbff218f68e",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "ff718ce2-98d8-4e64-a09a-6b6f60ebd2cf",
     "type" : "text",
     "value" : "  ",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "003a97b7-538a-4d80-a25b-1fbff218f68e",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "ff718ce2-98d8-4e64-a09a-6b6f60ebd2cf",
     "type" : "text",
     "value" : "4月2日18:00,考生缴费时间：2026年3月26",
     "font" : "FangSong",
@@ -1877,7 +2737,14 @@
     "color" : "#000000",
     "letterSpacing" : 1.0
   }, {
-    "sourceParagraphId" : "003a97b7-538a-4d80-a25b-1fbff218f68e",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "ff718ce2-98d8-4e64-a09a-6b6f60ebd2cf",
     "type" : "text",
     "value" : "日9:00—2026年4月2日",
     "font" : "FangSong",
@@ -1885,21 +2752,42 @@
     "color" : "#000000",
     "letterSpacing" : 0.93
   }, {
-    "sourceParagraphId" : "003a97b7-538a-4d80-a25b-1fbff218f68e",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "ff718ce2-98d8-4e64-a09a-6b6f60ebd2cf",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "003a97b7-538a-4d80-a25b-1fbff218f68e",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "ff718ce2-98d8-4e64-a09a-6b6f60ebd2cf",
     "type" : "text",
     "value" : "23:00,报名费80元，请考生提前下载微信、支付宝，以备扫码缴费，",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "003a97b7-538a-4d80-a25b-1fbff218f68e",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "ff718ce2-98d8-4e64-a09a-6b6f60ebd2cf",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
@@ -1907,14 +2795,28 @@
     "color" : "#000000",
     "letterSpacing" : 1.07
   }, {
-    "sourceParagraphId" : "003a97b7-538a-4d80-a25b-1fbff218f68e",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "ff718ce2-98d8-4e64-a09a-6b6f60ebd2cf",
     "type" : "text",
     "value" : "支付成功后报名才算完成。",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "003a97b7-538a-4d80-a25b-1fbff218f68e",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "ff718ce2-98d8-4e64-a09a-6b6f60ebd2cf",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
@@ -1922,28 +2824,56 @@
     "color" : "#000000",
     "letterSpacing" : 5.2
   }, {
-    "sourceParagraphId" : "003a97b7-538a-4d80-a25b-1fbff218f68e",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "ff718ce2-98d8-4e64-a09a-6b6f60ebd2cf",
     "type" : "text",
     "value" : "一旦完成支付，无法对",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "003a97b7-538a-4d80-a25b-1fbff218f68e",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "ff718ce2-98d8-4e64-a09a-6b6f60ebd2cf",
     "type" : "text",
     "value" : "考生报考信息进",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "003a97b7-538a-4d80-a25b-1fbff218f68e",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "ff718ce2-98d8-4e64-a09a-6b6f60ebd2cf",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "003a97b7-538a-4d80-a25b-1fbff218f68e",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "ff718ce2-98d8-4e64-a09a-6b6f60ebd2cf",
     "type" : "text",
     "value" : "行修改，缴重、缴错、退考等一律不予退费，请考生务必在支付前 ",
     "font" : "FangSong",
@@ -1951,7 +2881,14 @@
     "color" : "#000000",
     "letterSpacing" : 0.93
   }, {
-    "sourceParagraphId" : "003a97b7-538a-4d80-a25b-1fbff218f68e",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "ff718ce2-98d8-4e64-a09a-6b6f60ebd2cf",
     "type" : "text",
     "value" : "确认已正确填报信息，并在此时段内完成报名缴费(",
     "font" : "FangSong",
@@ -1959,7 +2896,14 @@
     "color" : "#000000",
     "letterSpacing" : 1.27
   }, {
-    "sourceParagraphId" : "003a97b7-538a-4d80-a25b-1fbff218f68e",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "ff718ce2-98d8-4e64-a09a-6b6f60ebd2cf",
     "type" : "text",
     "value" : "考生务必自己",
     "font" : "FangSong",
@@ -1967,14 +2911,28 @@
     "color" : "#000000",
     "letterSpacing" : 1.2
   }, {
-    "sourceParagraphId" : "003a97b7-538a-4d80-a25b-1fbff218f68e",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "ff718ce2-98d8-4e64-a09a-6b6f60ebd2cf",
     "type" : "text",
     "value" : "  ",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "003a97b7-538a-4d80-a25b-1fbff218f68e",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "ff718ce2-98d8-4e64-a09a-6b6f60ebd2cf",
     "type" : "text",
     "value" : "缴费，不允许代缴，仔细核对姓名等信息，确认是自己名字在提交",
     "font" : "FangSong",
@@ -1982,7 +2940,14 @@
     "color" : "#000000",
     "letterSpacing" : 0.93
   }, {
-    "sourceParagraphId" : "003a97b7-538a-4d80-a25b-1fbff218f68e",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "ff718ce2-98d8-4e64-a09a-6b6f60ebd2cf",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
@@ -1990,7 +2955,14 @@
     "color" : "#000000",
     "letterSpacing" : 1.13
   }, {
-    "sourceParagraphId" : "003a97b7-538a-4d80-a25b-1fbff218f68e",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "ff718ce2-98d8-4e64-a09a-6b6f60ebd2cf",
     "type" : "text",
     "value" : "缴费，否则后果自负)。",
     "font" : "FangSong",
@@ -2002,7 +2974,14 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "131351fe-445e-4ea8-a48b-fa303f462917",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "23f8d90f-be10-41d4-a626-9f8c55cda6b4",
     "type" : "text",
     "value" : "2.打印准考证时间为2026年4月6日12:00至开考前，考生根",
     "font" : "FangSong",
@@ -2026,14 +3005,28 @@
     "letterSpacing" : 1.73,
     "paragraphStyleId" : "3"
   }, {
-    "sourceParagraphId" : "131351fe-445e-4ea8-a48b-fa303f462917",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "23f8d90f-be10-41d4-a626-9f8c55cda6b4",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "131351fe-445e-4ea8-a48b-fa303f462917",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "23f8d90f-be10-41d4-a626-9f8c55cda6b4",
     "type" : "text",
     "value" : "据准考证时间地点按时参加考试。",
     "font" : "FangSong",
@@ -2044,7 +3037,14 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "e22f0623-50cf-45ff-868f-8c72e71e7a13",
+    "fontFamilies" : {
+      "ascii" : "Times New Roman",
+      "hAnsi" : "Times New Roman",
+      "eastAsia" : "Times New Roman",
+      "cs" : "Times New Roman"
+    },
+    "sourceFont" : "SimHei",
+    "sourceParagraphId" : "5f77c495-8a15-498d-b80c-11e3a2c47f22",
     "type" : "text",
     "value" : "3. ",
     "font" : "SimHei",
@@ -2067,35 +3067,70 @@
     "lineHeightRule" : "auto",
     "paragraphStyleId" : "3"
   }, {
-    "sourceParagraphId" : "e22f0623-50cf-45ff-868f-8c72e71e7a13",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "5f77c495-8a15-498d-b80c-11e3a2c47f22",
     "type" : "text",
     "value" : "报名系统为",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "e22f0623-50cf-45ff-868f-8c72e71e7a13",
+    "fontFamilies" : {
+      "ascii" : "Times New Roman",
+      "hAnsi" : "Times New Roman",
+      "eastAsia" : "Times New Roman",
+      "cs" : "Times New Roman"
+    },
+    "sourceFont" : "SimHei",
+    "sourceParagraphId" : "5f77c495-8a15-498d-b80c-11e3a2c47f22",
     "type" : "text",
     "value" : "PC",
     "font" : "SimHei",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "e22f0623-50cf-45ff-868f-8c72e71e7a13",
+    "fontFamilies" : {
+      "ascii" : "Times New Roman",
+      "hAnsi" : "Times New Roman",
+      "eastAsia" : "Times New Roman",
+      "cs" : "Times New Roman"
+    },
+    "sourceFont" : "SimHei",
+    "sourceParagraphId" : "5f77c495-8a15-498d-b80c-11e3a2c47f22",
     "type" : "text",
     "value" : " ",
     "font" : "SimHei",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "e22f0623-50cf-45ff-868f-8c72e71e7a13",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "5f77c495-8a15-498d-b80c-11e3a2c47f22",
     "type" : "text",
     "value" : "端，网址为：",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "e22f0623-50cf-45ff-868f-8c72e71e7a13",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "5f77c495-8a15-498d-b80c-11e3a2c47f22",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
@@ -2103,77 +3138,153 @@
     "color" : "#000000",
     "letterSpacing" : -4.33
   }, {
-    "sourceParagraphId" : "e22f0623-50cf-45ff-868f-8c72e71e7a13",
-    "type" : "text",
-    "value" : "https",
-    "font" : "SimHei",
-    "size" : 18.67,
-    "color" : "#000000"
+    "sourceParagraphId" : "5f77c495-8a15-498d-b80c-11e3a2c47f22",
+    "type" : "hyperlink",
+    "value" : "",
+    "valueList" : [ {
+      "fontFamilies" : {
+        "ascii" : "Times New Roman",
+        "hAnsi" : "Times New Roman",
+        "eastAsia" : "Times New Roman",
+        "cs" : "Times New Roman"
+      },
+      "sourceFont" : "SimHei",
+      "type" : "text",
+      "value" : "https",
+      "font" : "SimHei",
+      "size" : 18.67,
+      "color" : "#000000"
+    }, {
+      "fontFamilies" : {
+        "ascii" : "Times New Roman",
+        "hAnsi" : "Times New Roman",
+        "eastAsia" : "Times New Roman",
+        "cs" : "Times New Roman"
+      },
+      "sourceFont" : "SimHei",
+      "type" : "text",
+      "value" : "://",
+      "font" : "SimHei",
+      "size" : 18.67,
+      "color" : "#000000"
+    }, {
+      "fontFamilies" : {
+        "ascii" : "Times New Roman",
+        "hAnsi" : "Times New Roman",
+        "eastAsia" : "Times New Roman",
+        "cs" : "Times New Roman"
+      },
+      "sourceFont" : "SimHei",
+      "type" : "text",
+      "value" : "exam",
+      "font" : "SimHei",
+      "size" : 18.67,
+      "color" : "#000000"
+    }, {
+      "fontFamilies" : {
+        "ascii" : "Times New Roman",
+        "hAnsi" : "Times New Roman",
+        "eastAsia" : "Times New Roman",
+        "cs" : "Times New Roman"
+      },
+      "sourceFont" : "SimHei",
+      "type" : "text",
+      "value" : ".",
+      "font" : "SimHei",
+      "size" : 18.67,
+      "color" : "#000000"
+    }, {
+      "fontFamilies" : {
+        "ascii" : "Times New Roman",
+        "hAnsi" : "Times New Roman",
+        "eastAsia" : "Times New Roman",
+        "cs" : "Times New Roman"
+      },
+      "sourceFont" : "SimHei",
+      "type" : "text",
+      "value" : "yxbyun",
+      "font" : "SimHei",
+      "size" : 18.67,
+      "color" : "#000000"
+    }, {
+      "fontFamilies" : {
+        "ascii" : "Times New Roman",
+        "hAnsi" : "Times New Roman",
+        "eastAsia" : "Times New Roman",
+        "cs" : "Times New Roman"
+      },
+      "sourceFont" : "SimHei",
+      "type" : "text",
+      "value" : ".",
+      "font" : "SimHei",
+      "size" : 18.67,
+      "color" : "#000000"
+    }, {
+      "fontFamilies" : {
+        "ascii" : "Times New Roman",
+        "hAnsi" : "Times New Roman",
+        "eastAsia" : "Times New Roman",
+        "cs" : "Times New Roman"
+      },
+      "sourceFont" : "SimHei",
+      "type" : "text",
+      "value" : "com",
+      "font" : "SimHei",
+      "size" : 18.67,
+      "color" : "#000000"
+    } ],
+    "url" : "https://exam.yxbyun.com"
   }, {
-    "sourceParagraphId" : "e22f0623-50cf-45ff-868f-8c72e71e7a13",
-    "type" : "text",
-    "value" : "://",
-    "font" : "SimHei",
-    "size" : 18.67,
-    "color" : "#000000"
-  }, {
-    "sourceParagraphId" : "e22f0623-50cf-45ff-868f-8c72e71e7a13",
-    "type" : "text",
-    "value" : "exam",
-    "font" : "SimHei",
-    "size" : 18.67,
-    "color" : "#000000"
-  }, {
-    "sourceParagraphId" : "e22f0623-50cf-45ff-868f-8c72e71e7a13",
-    "type" : "text",
-    "value" : ".",
-    "font" : "SimHei",
-    "size" : 18.67,
-    "color" : "#000000"
-  }, {
-    "sourceParagraphId" : "e22f0623-50cf-45ff-868f-8c72e71e7a13",
-    "type" : "text",
-    "value" : "yxbyun",
-    "font" : "SimHei",
-    "size" : 18.67,
-    "color" : "#000000"
-  }, {
-    "sourceParagraphId" : "e22f0623-50cf-45ff-868f-8c72e71e7a13",
-    "type" : "text",
-    "value" : ".",
-    "font" : "SimHei",
-    "size" : 18.67,
-    "color" : "#000000"
-  }, {
-    "sourceParagraphId" : "e22f0623-50cf-45ff-868f-8c72e71e7a13",
-    "type" : "text",
-    "value" : "com",
-    "font" : "SimHei",
-    "size" : 18.67,
-    "color" : "#000000"
-  }, {
-    "sourceParagraphId" : "e22f0623-50cf-45ff-868f-8c72e71e7a13",
+    "fontFamilies" : {
+      "ascii" : "Times New Roman",
+      "hAnsi" : "Times New Roman",
+      "eastAsia" : "Times New Roman",
+      "cs" : "Times New Roman"
+    },
+    "sourceFont" : "SimHei",
+    "sourceParagraphId" : "5f77c495-8a15-498d-b80c-11e3a2c47f22",
     "type" : "text",
     "value" : "           ",
     "font" : "SimHei",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "e22f0623-50cf-45ff-868f-8c72e71e7a13",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "5f77c495-8a15-498d-b80c-11e3a2c47f22",
     "type" : "text",
     "value" : "账",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "e22f0623-50cf-45ff-868f-8c72e71e7a13",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "5f77c495-8a15-498d-b80c-11e3a2c47f22",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "e22f0623-50cf-45ff-868f-8c72e71e7a13",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "5f77c495-8a15-498d-b80c-11e3a2c47f22",
     "type" : "text",
     "value" : "号为本人身份证号，密码为身份证后6位，本系统用于此次考试考",
     "font" : "FangSong",
@@ -2181,7 +3292,14 @@
     "color" : "#000000",
     "letterSpacing" : 1.2
   }, {
-    "sourceParagraphId" : "e22f0623-50cf-45ff-868f-8c72e71e7a13",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "5f77c495-8a15-498d-b80c-11e3a2c47f22",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
@@ -2189,7 +3307,14 @@
     "color" : "#000000",
     "letterSpacing" : 0.73
   }, {
-    "sourceParagraphId" : "e22f0623-50cf-45ff-868f-8c72e71e7a13",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "5f77c495-8a15-498d-b80c-11e3a2c47f22",
     "type" : "text",
     "value" : "生报名、打印准考证、缴费、(支持微信和支付宝缴费)成绩查询",
     "font" : "FangSong",
@@ -2197,7 +3322,14 @@
     "color" : "#000000",
     "letterSpacing" : 1.6
   }, {
-    "sourceParagraphId" : "e22f0623-50cf-45ff-868f-8c72e71e7a13",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "5f77c495-8a15-498d-b80c-11e3a2c47f22",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
@@ -2205,7 +3337,14 @@
     "color" : "#000000",
     "letterSpacing" : 1.13
   }, {
-    "sourceParagraphId" : "e22f0623-50cf-45ff-868f-8c72e71e7a13",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "5f77c495-8a15-498d-b80c-11e3a2c47f22",
     "type" : "text",
     "value" : "全流程。",
     "font" : "FangSong",
@@ -2216,7 +3355,14 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "d158c3af-4623-493b-897a-e0e7d654a8ea",
+    "fontFamilies" : {
+      "ascii" : "宋体",
+      "hAnsi" : "宋体",
+      "eastAsia" : "宋体",
+      "cs" : "宋体"
+    },
+    "sourceFont" : "SimSun",
+    "sourceParagraphId" : "2144ffc0-c778-458c-81e9-ded5249fa8f3",
     "type" : "text",
     "value" : "4.",
     "font" : "SimSun",
@@ -2240,7 +3386,14 @@
     "letterSpacing" : 0.8,
     "paragraphStyleId" : "3"
   }, {
-    "sourceParagraphId" : "d158c3af-4623-493b-897a-e0e7d654a8ea",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "2144ffc0-c778-458c-81e9-ded5249fa8f3",
     "type" : "text",
     "value" : "报名时系统会对上传照片与公安部人证核身服务进行",
     "font" : "FangSong",
@@ -2248,7 +3401,14 @@
     "color" : "#000000",
     "letterSpacing" : 0.8
   }, {
-    "sourceParagraphId" : "d158c3af-4623-493b-897a-e0e7d654a8ea",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "2144ffc0-c778-458c-81e9-ded5249fa8f3",
     "type" : "text",
     "value" : "核验，",
     "font" : "FangSong",
@@ -2256,14 +3416,28 @@
     "color" : "#000000",
     "letterSpacing" : 0.73
   }, {
-    "sourceParagraphId" : "d158c3af-4623-493b-897a-e0e7d654a8ea",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "2144ffc0-c778-458c-81e9-ded5249fa8f3",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "d158c3af-4623-493b-897a-e0e7d654a8ea",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "2144ffc0-c778-458c-81e9-ded5249fa8f3",
     "type" : "text",
     "value" : "请严格按照以下要求上传照片：",
     "font" : "FangSong",
@@ -2274,7 +3448,14 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "523e305f-abac-42d7-a9a7-41a9614e291d",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "1313a2be-f022-426f-a1e8-d197439ac923",
     "type" : "text",
     "value" : "(1)必须是报考本人真实“免冠蓝底或白底”照片，不许戴",
     "font" : "FangSong",
@@ -2298,14 +3479,28 @@
     "letterSpacing" : 1.67,
     "paragraphStyleId" : "3"
   }, {
-    "sourceParagraphId" : "523e305f-abac-42d7-a9a7-41a9614e291d",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "1313a2be-f022-426f-a1e8-d197439ac923",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "523e305f-abac-42d7-a9a7-41a9614e291d",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "1313a2be-f022-426f-a1e8-d197439ac923",
     "type" : "text",
     "value" : "眼镜，照片应清晰可识别身份，不允许上传美颜或",
     "font" : "FangSong",
@@ -2313,14 +3508,28 @@
     "color" : "#000000",
     "letterSpacing" : 0.73
   }, {
-    "sourceParagraphId" : "523e305f-abac-42d7-a9a7-41a9614e291d",
+    "fontFamilies" : {
+      "ascii" : "Times New Roman",
+      "hAnsi" : "Times New Roman",
+      "eastAsia" : "Times New Roman",
+      "cs" : "Times New Roman"
+    },
+    "sourceFont" : "SimHei",
+    "sourceParagraphId" : "1313a2be-f022-426f-a1e8-d197439ac923",
     "type" : "text",
     "value" : "PS",
     "font" : "SimHei",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "523e305f-abac-42d7-a9a7-41a9614e291d",
+    "fontFamilies" : {
+      "ascii" : "Times New Roman",
+      "hAnsi" : "Times New Roman",
+      "eastAsia" : "Times New Roman",
+      "cs" : "Times New Roman"
+    },
+    "sourceFont" : "SimHei",
+    "sourceParagraphId" : "1313a2be-f022-426f-a1e8-d197439ac923",
     "type" : "text",
     "value" : " ",
     "font" : "SimHei",
@@ -2328,7 +3537,14 @@
     "color" : "#000000",
     "letterSpacing" : 0.73
   }, {
-    "sourceParagraphId" : "523e305f-abac-42d7-a9a7-41a9614e291d",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "1313a2be-f022-426f-a1e8-d197439ac923",
     "type" : "text",
     "value" : "后的照片",
     "font" : "FangSong",
@@ -2336,7 +3552,14 @@
     "color" : "#000000",
     "letterSpacing" : 0.73
   }, {
-    "sourceParagraphId" : "523e305f-abac-42d7-a9a7-41a9614e291d",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "1313a2be-f022-426f-a1e8-d197439ac923",
     "type" : "text",
     "value" : "，过",
     "font" : "FangSong",
@@ -2344,14 +3567,28 @@
     "color" : "#000000",
     "letterSpacing" : 0.67
   }, {
-    "sourceParagraphId" : "523e305f-abac-42d7-a9a7-41a9614e291d",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "1313a2be-f022-426f-a1e8-d197439ac923",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "523e305f-abac-42d7-a9a7-41a9614e291d",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "1313a2be-f022-426f-a1e8-d197439ac923",
     "type" : "text",
     "value" : "于模糊的照片无法上报成功。如因上传的照片有问题，导致人脸识",
     "font" : "FangSong",
@@ -2359,7 +3596,14 @@
     "color" : "#000000",
     "letterSpacing" : 0.93
   }, {
-    "sourceParagraphId" : "523e305f-abac-42d7-a9a7-41a9614e291d",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "1313a2be-f022-426f-a1e8-d197439ac923",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
@@ -2367,7 +3611,14 @@
     "color" : "#000000",
     "letterSpacing" : 1.07
   }, {
-    "sourceParagraphId" : "523e305f-abac-42d7-a9a7-41a9614e291d",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "1313a2be-f022-426f-a1e8-d197439ac923",
     "type" : "text",
     "value" : "别比对不通过，最终无法进入考场的情况，后果自负。",
     "font" : "FangSong",
@@ -2379,7 +3630,7 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "290c92da-7de9-41d6-8894-e13c75d9f83d",
+    "sourceParagraphId" : "8ca4793e-a6aa-40b5-a03e-ebef3c32bc95",
     "type" : "text",
     "value" : "",
     "rowFlex" : "left",
@@ -2395,7 +3646,7 @@
     "type" : "text",
     "value" : "​"
   }, {
-    "sourceParagraphId" : "f90672a6-13f2-4459-9ab7-311c9724c55a",
+    "sourceParagraphId" : "72711937-d5c0-4545-9ed8-d88ed058863d",
     "type" : "text",
     "value" : "",
     "rowFlex" : "left",
@@ -2411,7 +3662,7 @@
     "type" : "text",
     "value" : "​"
   }, {
-    "sourceParagraphId" : "9e788780-a468-450b-aba2-d82e41cc31c9",
+    "sourceParagraphId" : "2a809a35-65a6-4679-a2bd-6b44e1cead68",
     "type" : "text",
     "value" : "",
     "rowFlex" : "left",
@@ -2473,7 +3724,7 @@
         } ]
       }
     },
-    "sourceParagraphId" : "b9eb1573-8386-475b-bded-764dfa6c4f7e",
+    "sourceParagraphId" : "ef36e7dd-a0cc-4007-b6fe-32f878e9f860",
     "type" : "image",
     "value" : "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAE8AAAAXCAYAAABK6RIcAAADeElEQVRYhe2Yz28bRRiGnwl2EzvJLKpTvEHrSIHGldaU5IJk8+tQJBuBuCW5oAK3XgGh9I9AIRw50APmRiPBwUIULkhIOEKRsCPZQlvASLsI14oj2Q3rtHEzHOw0TeNg6lbdrcRz2tU3O/N+r2Z3v2+EUgpfsuuCWwfAbgbZC4aIRiVBIXjMY2n7BLwWcCybFmxkFcDKlSjXo7MsLWWEDox7LG0fn5pnY1fWVf7TKwDknSQyNc0NYM9bYYfwpXnuZpFS8QcurZYBqBgJZj3W1Atfmmflcmotl2Ote+96quZ4/GVewwYnr9aLbWrtOG/ONwH41pEeC+vNkNcCHmV8tPNc3JpF/ftVrL9NwnGDCy91vnl/rEpueayuFz4yz8JyLJVdheiFJGefBqPSMS8EbHsrrie+eW3tH9eVVa7imPNMxxOc1TUxImBE4Jui+G4Odt5NF9Wq49Rdmq12/yeHhiEo0XWJHBshOKiCbidhrVVw6iGMNxaITwoRazuDzvif1rO3WjTd3f7ju3kaUYk2PnIodGDe5i/sFT9Xy9kC323U+k86dhr0DEtLadIvnBaT95rE7XU7nYTFsxCf490kYmIUqAJ80R20OOjsR6lfhWJWfZwt8E2h2n/86FOgZ/jwgwyvvTwj7gwdmDc6gYileP6VGI+fafafdPgJ0EziuibC95wBgAIc7HpV5fOSSCJOzJwWMQ3EbYn7phkDrdCTcASMJKlzBuMzjf7jh0+BNJma1MTdoQPztCmGtCmx+MyD0/mvKKBlUXEqXMpL3pppIXEol7vx6u8Ku5NcoxFiO2Tza6mktk9oQpcSfdBDAmlAYkHMJ2D+PlMQnp2qKAXFT9SXX+V4Z2WDkydDhMN3fDl3XWhtAeA0A9wKhNF1SSCa5sV0hosXM0IXwtNDAm9LlciciKeC6j2eOxprOuDkAbhcktyQBulMAk2amGYMDQb/ST0gvNt5/bDzsLaiABYvGzSMJMvLCyImBJrX2rr4ps57FPnfvPvAR+3ZYXZ2dmjWat3rE+zQoAacAt+8tv4yb7/6r7f4s3xVXSt3uoytrV2u15/k51JJqfCEuCklRiSEEEdKr4eKv34YfxVgI6ve/6zA1z/9Rrt5DYCqG2BveIyIHiE0e57X06/y0duzwmvz/LXzwhEwUqTOGcj4MV2OMYd5JvJwdR3DP5nKI5dzmMGUAAAAAElFTkSuQmCC",
     "width" : 52.0,
@@ -2496,7 +3747,7 @@
     "type" : "text",
     "value" : "​"
   }, {
-    "sourceParagraphId" : "67db5b28-2386-4aff-91d5-b8008bd6e6cc",
+    "sourceParagraphId" : "bdac9617-53f2-42bf-a10a-205525e36a07",
     "type" : "text",
     "value" : "",
     "rowFlex" : "left",
@@ -2515,7 +3766,7 @@
     "type" : "text",
     "value" : "​"
   }, {
-    "sourceParagraphId" : "21a50e4f-b034-4f13-8509-ca51fdf316ae",
+    "sourceParagraphId" : "343f74df-baf9-4f7b-8c22-e5484bf414ab",
     "type" : "text",
     "value" : "",
     "rowFlex" : "left",
@@ -2531,7 +3782,7 @@
     "type" : "text",
     "value" : "​"
   }, {
-    "sourceParagraphId" : "4551e0da-c0db-4942-8a11-5da9347a0a53",
+    "sourceParagraphId" : "f7876c49-b654-4291-bd49-22ee545d5a2e",
     "type" : "text",
     "value" : "",
     "rowFlex" : "left",
@@ -2547,7 +3798,7 @@
     "type" : "text",
     "value" : "​"
   }, {
-    "sourceParagraphId" : "3b87a8fb-8552-436a-91e6-7fbf3d1ab468",
+    "sourceParagraphId" : "863ddc7d-7cdb-46ae-afdb-8a9955fcd68c",
     "type" : "text",
     "value" : "",
     "rowFlex" : "left",
@@ -2563,7 +3814,14 @@
     "type" : "text",
     "value" : "​"
   }, {
-    "sourceParagraphId" : "01e89c3f-5e62-42a8-8577-f22ee1e0b617",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "55fc65db-df24-435e-8c03-3299b95d9764",
     "type" : "text",
     "value" : "(2)上传照片应严禁佩戴或露出帽饰，包括发卡、项",
     "font" : "FangSong",
@@ -2584,21 +3842,42 @@
     "lineHeightRule" : "auto",
     "paragraphStyleId" : "3"
   }, {
-    "sourceParagraphId" : "01e89c3f-5e62-42a8-8577-f22ee1e0b617",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "55fc65db-df24-435e-8c03-3299b95d9764",
     "type" : "text",
     "value" : "链、耳环、",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "01e89c3f-5e62-42a8-8577-f22ee1e0b617",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "55fc65db-df24-435e-8c03-3299b95d9764",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "01e89c3f-5e62-42a8-8577-f22ee1e0b617",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "55fc65db-df24-435e-8c03-3299b95d9764",
     "type" : "text",
     "value" : "耳钉、鼻环、唇钉、眼镜等。",
     "font" : "FangSong",
@@ -2609,7 +3888,14 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "64d3af95-809a-44c7-8abe-9f64a9ee2462",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "b4101256-25a3-47d1-a075-b0cffc6549f6",
     "type" : "text",
     "value" : "(3)不得穿着奇装异服，衣着避免复杂图案、条纹。",
     "font" : "FangSong",
@@ -2635,7 +3921,14 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "1329f7ee-148a-4686-bde4-e10df85bd03e",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "5738fc8d-7c6d-4e0a-ba8f-fc64c6bb1565",
     "type" : "text",
     "value" : "(4)嘴唇应自然闭合，头发梳理整齐，不得遮挡眉毛、眼睛和",
     "font" : "FangSong",
@@ -2659,7 +3952,14 @@
     "letterSpacing" : 0.87,
     "paragraphStyleId" : "3"
   }, {
-    "sourceParagraphId" : "1329f7ee-148a-4686-bde4-e10df85bd03e",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "5738fc8d-7c6d-4e0a-ba8f-fc64c6bb1565",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
@@ -2667,7 +3967,14 @@
     "color" : "#000000",
     "letterSpacing" : 0.73
   }, {
-    "sourceParagraphId" : "1329f7ee-148a-4686-bde4-e10df85bd03e",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "5738fc8d-7c6d-4e0a-ba8f-fc64c6bb1565",
     "type" : "text",
     "value" : "耳朵，长发者建议束发。",
     "font" : "FangSong",
@@ -2678,7 +3985,14 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "33a932bb-ed0e-41ef-8a32-0e08a31563f0",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "8c54d728-afbe-4f7d-b8fb-97975e969b94",
     "type" : "text",
     "value" : "(5)严禁化浓妆，佩戴有色隐形眼镜、美瞳等。",
     "font" : "FangSong",
@@ -2704,7 +4018,14 @@
     "value" : "​",
     "size" : 18.67
   }, {
-    "sourceParagraphId" : "bf238173-66e5-4d4a-b391-6f21c1f052d7",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "1fbb4c99-5943-4827-a55f-2b399dc32de5",
     "type" : "text",
     "value" : "(6)照片必须是标准",
     "font" : "FangSong",
@@ -2728,14 +4049,28 @@
     "letterSpacing" : 1.27,
     "paragraphStyleId" : "3"
   }, {
-    "sourceParagraphId" : "bf238173-66e5-4d4a-b391-6f21c1f052d7",
+    "fontFamilies" : {
+      "ascii" : "宋体",
+      "hAnsi" : "宋体",
+      "eastAsia" : "宋体",
+      "cs" : "宋体"
+    },
+    "sourceFont" : "SimSun",
+    "sourceParagraphId" : "1fbb4c99-5943-4827-a55f-2b399dc32de5",
     "type" : "text",
     "value" : "JPG",
     "font" : "SimSun",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "bf238173-66e5-4d4a-b391-6f21c1f052d7",
+    "fontFamilies" : {
+      "ascii" : "宋体",
+      "hAnsi" : "宋体",
+      "eastAsia" : "宋体",
+      "cs" : "宋体"
+    },
+    "sourceFont" : "SimSun",
+    "sourceParagraphId" : "1fbb4c99-5943-4827-a55f-2b399dc32de5",
     "type" : "text",
     "value" : "、",
     "font" : "SimSun",
@@ -2743,14 +4078,28 @@
     "color" : "#000000",
     "letterSpacing" : 1.27
   }, {
-    "sourceParagraphId" : "bf238173-66e5-4d4a-b391-6f21c1f052d7",
+    "fontFamilies" : {
+      "ascii" : "宋体",
+      "hAnsi" : "宋体",
+      "eastAsia" : "宋体",
+      "cs" : "宋体"
+    },
+    "sourceFont" : "SimSun",
+    "sourceParagraphId" : "1fbb4c99-5943-4827-a55f-2b399dc32de5",
     "type" : "text",
     "value" : "JPEG",
     "font" : "SimSun",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "bf238173-66e5-4d4a-b391-6f21c1f052d7",
+    "fontFamilies" : {
+      "ascii" : "宋体",
+      "hAnsi" : "宋体",
+      "eastAsia" : "宋体",
+      "cs" : "宋体"
+    },
+    "sourceFont" : "SimSun",
+    "sourceParagraphId" : "1fbb4c99-5943-4827-a55f-2b399dc32de5",
     "type" : "text",
     "value" : "、",
     "font" : "SimSun",
@@ -2758,14 +4107,28 @@
     "color" : "#000000",
     "letterSpacing" : 1.27
   }, {
-    "sourceParagraphId" : "bf238173-66e5-4d4a-b391-6f21c1f052d7",
+    "fontFamilies" : {
+      "ascii" : "宋体",
+      "hAnsi" : "宋体",
+      "eastAsia" : "宋体",
+      "cs" : "宋体"
+    },
+    "sourceFont" : "SimSun",
+    "sourceParagraphId" : "1fbb4c99-5943-4827-a55f-2b399dc32de5",
     "type" : "text",
     "value" : "PNG",
     "font" : "SimSun",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "bf238173-66e5-4d4a-b391-6f21c1f052d7",
+    "fontFamilies" : {
+      "ascii" : "宋体",
+      "hAnsi" : "宋体",
+      "eastAsia" : "宋体",
+      "cs" : "宋体"
+    },
+    "sourceFont" : "SimSun",
+    "sourceParagraphId" : "1fbb4c99-5943-4827-a55f-2b399dc32de5",
     "type" : "text",
     "value" : " ",
     "font" : "SimSun",
@@ -2773,7 +4136,14 @@
     "color" : "#000000",
     "letterSpacing" : 4.33
   }, {
-    "sourceParagraphId" : "bf238173-66e5-4d4a-b391-6f21c1f052d7",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "1fbb4c99-5943-4827-a55f-2b399dc32de5",
     "type" : "text",
     "value" : "格式的“竖版”照片，",
     "font" : "FangSong",
@@ -2781,14 +4151,28 @@
     "color" : "#000000",
     "letterSpacing" : 1.27
   }, {
-    "sourceParagraphId" : "bf238173-66e5-4d4a-b391-6f21c1f052d7",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "1fbb4c99-5943-4827-a55f-2b399dc32de5",
     "type" : "text",
     "value" : " ",
     "font" : "FangSong",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "bf238173-66e5-4d4a-b391-6f21c1f052d7",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "1fbb4c99-5943-4827-a55f-2b399dc32de5",
     "type" : "text",
     "value" : "文件最大不超过2",
     "font" : "FangSong",
@@ -2796,14 +4180,28 @@
     "color" : "#000000",
     "letterSpacing" : 0.93
   }, {
-    "sourceParagraphId" : "bf238173-66e5-4d4a-b391-6f21c1f052d7",
+    "fontFamilies" : {
+      "ascii" : "宋体",
+      "hAnsi" : "宋体",
+      "eastAsia" : "宋体",
+      "cs" : "宋体"
+    },
+    "sourceFont" : "SimSun",
+    "sourceParagraphId" : "1fbb4c99-5943-4827-a55f-2b399dc32de5",
     "type" : "text",
     "value" : "MB",
     "font" : "SimSun",
     "size" : 18.67,
     "color" : "#000000"
   }, {
-    "sourceParagraphId" : "bf238173-66e5-4d4a-b391-6f21c1f052d7",
+    "fontFamilies" : {
+      "ascii" : "宋体",
+      "hAnsi" : "宋体",
+      "eastAsia" : "宋体",
+      "cs" : "宋体"
+    },
+    "sourceFont" : "SimSun",
+    "sourceParagraphId" : "1fbb4c99-5943-4827-a55f-2b399dc32de5",
     "type" : "text",
     "value" : "; ",
     "font" : "SimSun",
@@ -2811,7 +4209,14 @@
     "color" : "#000000",
     "letterSpacing" : 0.93
   }, {
-    "sourceParagraphId" : "bf238173-66e5-4d4a-b391-6f21c1f052d7",
+    "fontFamilies" : {
+      "ascii" : "仿宋",
+      "hAnsi" : "仿宋",
+      "eastAsia" : "仿宋",
+      "cs" : "仿宋"
+    },
+    "sourceFont" : "FangSong",
+    "sourceParagraphId" : "1fbb4c99-5943-4827-a55f-2b399dc32de5",
     "type" : "text",
     "value" : "建议宽高比例为3:4。",
     "font" : "FangSong",
@@ -2821,7 +4226,7 @@
   } ],
   "header" : [ ],
   "footer" : [ {
-    "sourceParagraphId" : "1f614114-fdd2-475f-bedc-7e15652c7b5c",
+    "sourceParagraphId" : "0381b9f7-230d-4efe-83ba-808ee46a9d48",
     "type" : "text",
     "value" : "",
     "rowFlex" : "left",
@@ -2837,7 +4242,14 @@
     "type" : "text",
     "value" : "​"
   }, {
-    "sourceParagraphId" : "a85f3f6b-d5ff-4387-99ad-3ca9f78dd87f",
+    "fontFamilies" : {
+      "ascii" : "宋体",
+      "hAnsi" : "宋体",
+      "eastAsia" : "宋体",
+      "cs" : "宋体"
+    },
+    "sourceFont" : "SimSun",
+    "sourceParagraphId" : "c6712a3d-e1c3-47f8-8b0c-b183b0c7e36a",
     "type" : "text",
     "value" : "—5—",
     "font" : "SimSun",
@@ -2859,9 +4271,9 @@
   "comments" : [ {
     "id" : "0",
     "author" : "Scerken",
-    "date" : "2026-08-21T01:56:40Z",
+    "date" : "2026-09-24T15:38:56Z",
     "initials" : "",
-    "content" : "111111"
+    "content" : "11111111111111111111111"
   } ],
   "pageWidth" : 793.33,
   "pageHeight" : 1122.0,
@@ -3036,11 +4448,13 @@
         "semiHidden" : false
       }, {
         "name" : "annotation text",
+        "qFormat" : true,
         "unhideWhenUsed" : false,
         "uiPriority" : 0,
         "semiHidden" : false
       }, {
         "name" : "header",
+        "qFormat" : true,
         "unhideWhenUsed" : false,
         "uiPriority" : 0,
         "semiHidden" : false
@@ -4252,6 +5666,7 @@
       "uiPriority" : {
         "val" : 0
       },
+      "qFormat" : { },
       "pPr" : {
         "jc" : {
           "val" : "left"
@@ -4302,6 +5717,7 @@
       "uiPriority" : {
         "val" : 0
       },
+      "qFormat" : { },
       "pPr" : {
         "pBdr" : {
           "top" : {
@@ -4358,8 +5774,48 @@
         }
       }
     }, {
-      "type" : "table",
+      "type" : "character",
       "styleId" : "7",
+      "name" : {
+        "val" : "FollowedHyperlink"
+      },
+      "basedOn" : {
+        "val" : "6"
+      },
+      "uiPriority" : {
+        "val" : 0
+      },
+      "rPr" : {
+        "color" : {
+          "val" : "800080"
+        },
+        "u" : {
+          "val" : "single"
+        }
+      }
+    }, {
+      "type" : "character",
+      "styleId" : "8",
+      "name" : {
+        "val" : "Hyperlink"
+      },
+      "basedOn" : {
+        "val" : "6"
+      },
+      "uiPriority" : {
+        "val" : 0
+      },
+      "rPr" : {
+        "color" : {
+          "val" : "0000FF"
+        },
+        "u" : {
+          "val" : "single"
+        }
+      }
+    }, {
+      "type" : "table",
+      "styleId" : "9",
       "customStyle" : true,
       "name" : {
         "val" : "Table Normal"

@@ -1,4 +1,7 @@
+import { builtinMessages } from '@vervedoc/i18n'
+
 export default {
+  ...builtinMessages.koKR,
   common: {
     ok: '확인',
     cancel: '취소',
@@ -33,6 +36,8 @@ export default {
     none: '없음',
     confirmRestore: '복원 확인',
     newDocument: '새 문서',
+    newDocumentConfirmContent: '편집기에 저장되지 않은 내용이 있습니다. 새 문서를 만들면 이 내용이 삭제됩니다. 계속하시겠습니까?',
+    importDocumentConfirmContent: '편집기에 저장되지 않은 내용이 있습니다. 문서를 가져오면 이 내용이 삭제됩니다. 계속하시겠습니까?',
     documentName: '문서 이름',
     unnamedDocument: '제목 없는 문서',
     feedback: '피드백',
@@ -546,18 +551,25 @@ export default {
     table: {
       title: '표 삽입',
       size: '표 크기',
-      columns: '열 수(C):',
-      rows: '행 수(R):',
+      columns: '열 수',
+      rows: '행 수',
       borderSettings: '테두리 설정',
-      none: '없음(N)',
-      box: '테두리(X)',
-      all: '모두(A)',
+      none: '없음',
+      box: '바깥쪽',
+      all: '모두',
+      inside: '안쪽 테두리',
+      insideHorizontal: '안쪽 가로선',
+      insideVertical: '안쪽 세로선',
+      top: '위쪽 테두리',
+      bottom: '아래쪽 테두리',
+      left: '왼쪽 테두리',
+      right: '오른쪽 테두리',
       grid: '모눈(D)',
       custom: '사용자 지정(U)',
       lineStyle: '선 스타일(V):',
-      color: '색상(C):',
-      width: '너비(W):',
-      widthUnit: 'pt'
+      color: '색상',
+      width: '너비',
+      widthUnit: 'px'
     },
     tableBorders: {
       title: '표 테두리',

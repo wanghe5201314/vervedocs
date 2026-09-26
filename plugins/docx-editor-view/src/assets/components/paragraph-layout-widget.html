@@ -1,5 +1,5 @@
 <div class="pw-panel-mask">
-  <div class="pw-panel">
+  <div class="pw-panel pw-paragraph-panel">
     <div class="pw-panel-title">段落</div>
 
     <div class="pw-tabs">
@@ -16,7 +16,7 @@
           <legend>常规</legend>
           <div class="pw-grid">
             <div class="pw-field">
-              <span class="pw-field-label">对齐方式</span>
+              <label class="pw-field-label" for="pw-align">对齐方式</label>
               <select id="pw-align" class="pw-ctrl">
                 <option value="left">左对齐</option>
                 <option value="center">居中对齐</option>
@@ -26,7 +26,7 @@
               </select>
             </div>
             <div class="pw-field">
-              <span class="pw-field-label">大纲级别</span>
+              <label class="pw-field-label" for="pw-outline">大纲级别</label>
               <select id="pw-outline" class="pw-ctrl">
                 <option value="">正文文本</option>
                 <option value="first">1 级</option>
@@ -44,12 +44,12 @@
           <legend>缩进</legend>
           <div class="pw-grid">
             <div class="pw-field">
-              <span class="pw-field-label">文本之前</span>
-              <input type="number" id="pw-indent-left" class="pw-ctrl" value="0" min="0" step="0.01">
+              <label class="pw-field-label" for="pw-indent-left">文本之前</label>
+              <input type="number" id="pw-indent-left" class="pw-ctrl" value="0.00" min="0" step="0.01">
               <span class="pw-unit">厘米</span>
             </div>
             <div class="pw-field">
-              <span class="pw-field-label">特殊格式</span>
+              <label class="pw-field-label" for="pw-special">特殊格式</label>
               <select id="pw-special" class="pw-ctrl">
                 <option value="none">无</option>
                 <option value="firstLine">首行缩进</option>
@@ -57,13 +57,13 @@
               </select>
             </div>
             <div class="pw-field">
-              <span class="pw-field-label">文本之后</span>
-              <input type="number" id="pw-indent-right" class="pw-ctrl" value="0" min="0" step="0.01">
+              <label class="pw-field-label" for="pw-indent-right">文本之后</label>
+              <input type="number" id="pw-indent-right" class="pw-ctrl" value="0.00" min="0" step="0.01">
               <span class="pw-unit">厘米</span>
             </div>
             <div class="pw-field">
-              <span class="pw-field-label">度量值</span>
-              <input type="number" id="pw-special-value" class="pw-ctrl" value="0" min="0" step="0.01" disabled>
+              <label class="pw-field-label" for="pw-special-value">度量值</label>
+              <input type="number" id="pw-special-value" class="pw-ctrl" value="0.00" min="0" step="0.01" disabled>
               <span class="pw-unit">厘米</span>
             </div>
           </div>
@@ -74,12 +74,12 @@
           <legend>间距</legend>
           <div class="pw-grid">
             <div class="pw-field">
-              <span class="pw-field-label">段前</span>
-              <input type="number" id="pw-spacing-before" class="pw-ctrl" value="0" min="0" step="0.5">
+              <label class="pw-field-label" for="pw-spacing-before">段前</label>
+              <input type="number" id="pw-spacing-before" class="pw-ctrl" value="0.00" min="0" step="0.5">
               <span class="pw-unit">磅</span>
             </div>
             <div class="pw-field">
-              <span class="pw-field-label">行距</span>
+              <label class="pw-field-label" for="pw-lh-type">行距</label>
               <select id="pw-lh-type" class="pw-ctrl">
                 <option value="single">单倍行距</option>
                 <option value="1.5">1.5 倍行距</option>
@@ -90,13 +90,13 @@
               </select>
             </div>
             <div class="pw-field">
-              <span class="pw-field-label">段后</span>
-              <input type="number" id="pw-spacing-after" class="pw-ctrl" value="0" min="0" step="0.5">
+              <label class="pw-field-label" for="pw-spacing-after">段后</label>
+              <input type="number" id="pw-spacing-after" class="pw-ctrl" value="0.00" min="0" step="0.5">
               <span class="pw-unit">磅</span>
             </div>
             <div class="pw-field">
-              <span class="pw-field-label">设置值</span>
-              <input type="number" id="pw-lh-value" class="pw-ctrl" value="1" min="0" step="0.05" disabled>
+              <label class="pw-field-label" for="pw-lh-value">设置值</label>
+              <input type="number" id="pw-lh-value" class="pw-ctrl" value="1.00" min="0" step="0.05" disabled>
               <span class="pw-unit" id="pw-lh-unit">磅</span>
             </div>
           </div>
@@ -142,7 +142,7 @@
         <fieldset class="pw-group">
           <legend>文字对齐方式</legend>
           <div class="pw-field">
-            <span class="pw-field-label">对齐</span>
+            <label class="pw-field-label" for="pw-text-align">对齐</label>
             <select id="pw-text-align" class="pw-ctrl" disabled>
               <option value="auto">自动</option>
               <option value="top">顶端对齐</option>

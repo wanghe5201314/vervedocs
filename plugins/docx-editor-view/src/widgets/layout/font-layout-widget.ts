@@ -6,6 +6,7 @@
  */
 import '../../assets/css/font-layout-widget.css'
 import panelHtml from '../../assets/components/font-layout-widget.html?raw'
+import { translatePanel, viewText, viewTranslate, type ViewTranslate } from '../../view-i18n'
 import {
   FONT_FAMILY_MAP,
   FONT_FAMILY_LABEL,
@@ -20,6 +21,7 @@ type CommandFn = (cmd: string, ...args: any[]) => any
 export interface FontLayoutWidgetDeps {
   /** 触发编辑器命令 / 读取状态 */
   onCommand: CommandFn
+  translate?: ViewTranslate
 }
 
 /**
@@ -33,10 +35,12 @@ export class FontLayoutWidget {
   private root: HTMLElement | null = null
   /** 命令回调 */
   private onCommand: CommandFn | null = null
+  private translate?: ViewTranslate
 
   /** 注入依赖 */
   setDeps(deps: FontLayoutWidgetDeps): void {
     this.onCommand = deps.onCommand
+    this.translate = deps.translate
   }
 
   /** 显示字体设置面板 */
@@ -46,6 +50,7 @@ export class FontLayoutWidget {
     const container = document.createElement('div')
     container.innerHTML = panelHtml
     this.root = container.firstElementChild as HTMLElement
+    translatePanel(this.root, this.translate, 'view.font.')
     document.body.appendChild(this.root)
 
     this.fillFontOptions()
@@ -60,6 +65,10 @@ export class FontLayoutWidget {
     })
   }
 
+  refreshTranslations(): void {
+    if (this.root) translatePanel(this.root, this.translate, 'view.font.')
+  }
+
   /** 关闭面板 */
   hide(): void {
     if (this.root) { this.root.remove(); this.root = null }
@@ -71,7 +80,8 @@ export class FontLayoutWidget {
     const opts = FONT_FAMILY_MAP.map(e => {
       const o = document.createElement('option')
       o.value = e.value
-      o.textContent = e.label
+      const key = `view.fontFamily.${e.value.replace(/\s/g, '')}`
+      o.textContent = key in viewText ? viewTranslate(this.translate, key) : e.label
       return o
     })
     cjk.append(...opts)
@@ -83,7 +93,9 @@ export class FontLayoutWidget {
     for (const item of FONT_SIZE_LIST) {
       const o = document.createElement('option')
       o.value = String(item)
-      o.textContent = String(item)
+      const sizeKeys = ['chuhao', 'xiaochu', 'yihao', 'xiaoyi', 'erhao', 'xiaoer', 'sanhao', 'xiaosan', 'sihao', 'xiaosi', 'wuhao', 'xiaowu', 'liuhao', 'xiaoliu', 'qihao', 'bahao']
+      const index = FONT_SIZE_LIST.indexOf(item)
+      o.textContent = index < sizeKeys.length ? viewTranslate(this.translate, `view.fontSize.${sizeKeys[index]}`) : String(item)
       size.appendChild(o)
     }
   }

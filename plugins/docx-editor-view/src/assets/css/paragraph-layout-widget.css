@@ -106,6 +106,61 @@
   line-height: 28px;
 }
 
+.pw-paragraph-panel {
+  max-width: calc(100vw - 24px);
+}
+
+.pw-paragraph-panel .pw-group {
+  min-width: 0;
+}
+
+.pw-paragraph-panel .pw-grid {
+  grid-template-columns: repeat(2, max-content minmax(0, 1fr) max-content);
+  column-gap: 6px;
+}
+
+.pw-paragraph-panel .pw-field {
+  min-width: 0;
+}
+
+.pw-paragraph-panel .pw-grid > .pw-field {
+  display: grid;
+  grid-column: span 3;
+  grid-template-columns: subgrid;
+}
+
+.pw-paragraph-panel .pw-grid > .pw-field:nth-child(odd) {
+  margin-right: 6px;
+}
+
+.pw-paragraph-panel .pw-field-label {
+  width: auto;
+  white-space: nowrap;
+}
+
+.pw-paragraph-panel .pw-ctrl {
+  width: 100%;
+  min-width: 0;
+}
+
+.pw-paragraph-panel .pw-grid > .pw-field > .pw-ctrl:last-child {
+  grid-column: 2 / -1;
+}
+
+.pw-paragraph-panel .pw-unit {
+  white-space: nowrap;
+}
+
+@media (max-width: 540px) {
+  .pw-paragraph-panel .pw-grid {
+    grid-template-columns: max-content minmax(0, 1fr) max-content;
+  }
+
+  .pw-paragraph-panel .pw-grid > .pw-field:nth-child(odd) {
+    margin-right: 0;
+  }
+}
+
 /* ===== 通用控件 ===== */
 .pw-ctrl {
   flex: 1;
@@ -312,6 +367,6 @@
   .tp-border-layout { grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .tp-body { height: 390px; }
   .tp-preview-stage { min-height: 116px; }
-  .tp-cell-fill { grid-template-columns: 60px minmax(0, 1fr); }
+  .tp-cell-fill { grid-template-columns: max-content minmax(0, 1fr); }
   .tp-cell-fill button { grid-column: 2; justify-self: start; }
 }

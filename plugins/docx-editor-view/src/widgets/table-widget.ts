@@ -15,6 +15,7 @@ import type { IPosition } from '@vervedoc/docx-editor-schema'
 import { ContextMenu, type MenuItem } from '../context-menu'
 import { positionHandle } from './handle-position'
 import { TablePropertiesWidget } from './layout/table-properties-widget'
+import { viewText, viewTranslate, type ViewTranslate } from '../view-i18n'
 
 /** 边框热区半宽（像素），鼠标距离边框小于该值时视为命中边框可拖拽 */
 const BORDER_HOT = 4
@@ -43,6 +44,7 @@ interface DragState {
  * 由外部宿主提供，用于获取编辑器布局、选区、容器信息以及触发命令等。
  */
 export interface TableWidgetDeps {
+  translate?: ViewTranslate
   /** Whether editing interactions are currently allowed. */
   canEdit: () => boolean
   /** 获取当前文档布局，可能为 null */
@@ -78,7 +80,7 @@ export class TableWidget {
   /** 表格底部中间的添加行手柄 DOM 元素 */
   private addRowHandle: HTMLDivElement | null = null
   /** 右键上下文菜单实例 */
-  private contextMenu = new ContextMenu()
+  private contextMenu: ContextMenu
   /** 当前边框拖拽状态，未拖拽时为 null */
   private dragState: DragState | null = null
   /** 标记光标样式是否已被修改，用于在离开边框时恢复 */
@@ -92,12 +94,24 @@ export class TableWidget {
   private panel: TablePropertiesWidget
 
   constructor(private deps: TableWidgetDeps) {
+    this.contextMenu = new ContextMenu(deps.translate)
     this.panel = new TablePropertiesWidget({
       onCommand: (cmd, ...args) => {
         if (this.deps.canEdit()) this.deps.onCommand(cmd, ...args)
       },
-      focusInput: () => this.deps.focusInput()
+      focusInput: () => this.deps.focusInput(),
+      translate: deps.translate
     })
+  }
+
+  refreshTranslations(): void {
+    this.contextMenu.hide()
+    for (const [el, key] of [[this.handle, 'select'], [this.addColHandle, 'addColumn'], [this.addRowHandle, 'addRow']] as const) {
+      if (!el) continue
+      el.title = viewTranslate(this.deps.translate, `view.table.${key}`)
+      el.setAttribute('aria-label', el.title)
+    }
+    this.panel.refreshTranslations()
   }
 
   /* -------------------- 创建 -------------------- */
@@ -119,6 +133,8 @@ export class TableWidget {
   private createHandle(): HTMLDivElement {
     const el = document.createElement('div')
     el.className = 'vervedocs-table-handle'
+    el.title = viewTranslate(this.deps.translate, 'view.table.select')
+    el.setAttribute('aria-label', el.title)
     const icon = document.createElement('span')
     icon.className = 'material-symbols-outlined'
     icon.textContent = 'drag_indicator'
@@ -157,6 +173,8 @@ export class TableWidget {
   private createAddColHandle(): HTMLDivElement {
     const el = document.createElement('div')
     el.className = 'vervedocs-table-add-col'
+    el.title = viewTranslate(this.deps.translate, 'view.table.addColumn')
+    el.setAttribute('aria-label', el.title)
     const icon = document.createElement('span')
     icon.className = 'material-symbols-outlined'
     icon.textContent = 'add'
@@ -205,6 +223,8 @@ export class TableWidget {
   private createAddRowHandle(): HTMLDivElement {
     const el = document.createElement('div')
     el.className = 'vervedocs-table-add-row'
+    el.title = viewTranslate(this.deps.translate, 'view.table.addRow')
+    el.setAttribute('aria-label', el.title)
     const icon = document.createElement('span')
     icon.className = 'material-symbols-outlined'
     icon.textContent = 'add'
@@ -255,6 +275,11 @@ export class TableWidget {
   update(): void {
     if (!this.deps.canEdit()) { this.resetInteraction(); return }
     if (!this.handle) return
+    for (const [el, key] of [[this.handle, 'select'], [this.addColHandle, 'addColumn'], [this.addRowHandle, 'addRow']] as const) {
+      if (!el) continue
+      el.title = viewTranslate(this.deps.translate, `view.table.${key}`)
+      el.setAttribute('aria-label', el.title)
+    }
     const layout = this.deps.getLayout()
     const range = this.deps.getRange()
     if (!layout || !range) { this.hideHandles(); return }
@@ -422,6 +447,19 @@ export class TableWidget {
       { label: '表格属性', icon: icons.tableProp, onClick: () => { if (this.deps.canEdit()) this.panel.show(pos) } },
     ]
 
+    const labels = new Map(Object.entries(viewText)
+      .filter(([key]) => key.startsWith('view.table.') || key === 'view.paragraph.link' || key.startsWith('view.common.'))
+      .map(([key, text]) => [text, key]))
+    const localize = (menu: MenuItem[]) => menu.forEach(item => {
+      const key = labels.get(item.label)
+      if (key) item.label = viewTranslate(this.deps.translate, key)
+      if (item.input) {
+        const unitKey = labels.get(item.input.unit)
+        if (unitKey) item.input.unit = viewTranslate(this.deps.translate, unitKey)
+      }
+      if (item.submenu) localize(item.submenu)
+    })
+    localize(items)
     this.contextMenu.show(clientX, clientY, items)
     return true
   }

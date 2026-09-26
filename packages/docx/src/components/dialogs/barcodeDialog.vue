@@ -1,6 +1,6 @@
 <template>
   <VdDialog v-model:open="visible" :title="t('dialog.barcode.title')" width="630px" :maskClosable="false" class="app-dialog">
-    <a-form :model="barcodeForm" :label-col="{ style: { width: '80px' } }">
+    <a-form :model="barcodeForm" :label-col="{ style: { width: 'max-content', flex: 'none', whiteSpace: 'nowrap' } }">
       <a-form-item :label="t('dialog.barcode.encoding')">
         <div style="display: flex; align-items: center; justify-content: space-between;width: 100%">
           <div style="display: flex; align-items: center; gap: 10px;">
@@ -28,7 +28,7 @@
             </VdButton>
             <template #overlay>
               <VdCard style="min-width: 260px">
-                <a-form :label-col="{ style: { width: '80px' } }" size="small">
+                <a-form :label-col="{ style: { width: 'max-content', flex: 'none', whiteSpace: 'nowrap' } }" size="small">
                   <a-form-item :label="t('dialog.barcode.barcodeColor')">
                     <input type="color" :value="barcodeStyle.lineColor" @change.stop="(e: Event) => barcodeStyle.lineColor = (e.target as HTMLInputElement).value" @click.stop style="width:40px;height:28px;border:1px solid #d9d9d9;border-radius:4px;cursor:pointer;padding:2px;" />
                   </a-form-item>

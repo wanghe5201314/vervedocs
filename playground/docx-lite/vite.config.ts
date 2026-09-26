@@ -18,6 +18,7 @@ export default defineConfig(() => {
       __APP_VERSION__: JSON.stringify(pkg.version || '')
     },
     base: './',
+    publicDir: 'public',
     resolve: {
       alias: [
         {
@@ -37,6 +38,13 @@ export default defineConfig(() => {
           litePackageDir,
           path.resolve(playgroundDir, '../..')
         ]
+      },
+      proxy: {
+        '/docx-api': {
+          target: 'http://127.0.0.1:1320',
+          changeOrigin: true,
+          rewrite: requestPath => requestPath.replace(/^\/docx-api/, '')
+        }
       }
     }
   }

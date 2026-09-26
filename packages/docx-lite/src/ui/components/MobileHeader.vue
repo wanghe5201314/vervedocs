@@ -24,6 +24,10 @@
       <span class="material-icons">folder_open</span>
       <span>导入文档</span>
     </div>
+    <div class="mobile-more-item" @click="$emit('exportDoc')">
+      <span class="material-icons">download</span>
+      <span>导出文档</span>
+    </div>
     <div class="mobile-more-item" @click="$emit('command', 'executePrint')">
       <span class="material-icons">print</span>
       <span>打印</span>
@@ -50,6 +54,7 @@ defineEmits<{
   save: []
   toggleMore: []
   importDoc: []
+  exportDoc: []
   command: [command: string, ...args: any[]]
   showPopup: [name: 'table' | 'link' | 'search' | 'shortcuts']
 }>()

@@ -194,7 +194,7 @@ import { inject, provide, onBeforeUnmount, ref, nextTick, watch, computed, type 
 import { message } from 'ant-design-vue'
 import type { InitialDocument } from '@/types/document'
 import type { DocxImportCallback, DocxExportCallback } from '@vervedoc/core'
-import { toDocxExportDocument } from '@vervedoc/docx-editor-schema'
+
 import type { IEditorSearchApi } from '@/composables/use-editor-search'
 import { t } from '@/i18n'
 import {
@@ -1039,7 +1039,7 @@ const handleExportDoc = async () => {
     await nextTick()
     const value = instance.command?.getValue?.()
     if (!value) return
-    const result = await exportCallback(toDocxExportDocument(value))
+    const result = await exportCallback(value)
     if (!result.success || !result.data) {
       message.error(`${t('editor.exportFailed')}: ${result.error || t('editor.unknownError')}`)
       return

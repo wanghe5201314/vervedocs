@@ -10,6 +10,7 @@
           @toggle-dropdown="toggleDropdown"
           @save="handleSave"
           @import-doc="handleImportDoc"
+          @export-doc="handleExportDoc"
           @command="runCommand"
           @show-popup="showPopup"
         />
@@ -38,6 +39,7 @@
         @save="handleSave"
         @toggle-more="moreMenuOpen = !moreMenuOpen"
         @import-doc="handleImportDoc"
+        @export-doc="handleExportDoc"
         @command="runCommand"
         @show-popup="showPopup"
       />
@@ -221,13 +223,29 @@
 
       <div class="import-notification" :class="{ show: importNotificationVisible }">
         <h4>导入文档</h4>
-        <p>{{ importInfoText }}</p>
+        <p>当前编辑器有未保存的内容，导入文档将会丢弃这些内容，是否继续？</p>
         <div class="import-actions">
-          <button class="import-btn import-btn-primary" @click="resolveImportMode('overwrite')">覆盖</button>
-          <button class="import-btn import-btn-secondary" @click="resolveImportMode('append')">追加</button>
+          <button class="import-btn import-btn-primary" @click="resolveImportMode('overwrite')">确定</button>
           <button class="import-btn import-btn-secondary" @click="resolveImportMode('cancel')">取消</button>
         </div>
       </div>
+
+      <div v-if="fileOperationLoading" class="file-operation-overlay">
+        <div class="file-operation-panel">
+          <span class="file-operation-spinner"></span>
+          <div class="file-operation-text">
+            <div>{{ fileOperationLoading }}</div>
+            <div class="file-operation-poem">{{ loadingPoems[loadingPoemIndex] }}</div>
+          </div>
+        </div>
+      </div>
+
+      <Transition name="toast-fade">
+        <div v-if="messageToast.visible" class="message-toast" :class="messageToast.type">
+          <span class="material-icons">{{ messageToast.type === 'error' ? 'error' : 'check_circle' }}</span>
+          <span>{{ messageToast.text }}</span>
+        </div>
+      </Transition>
     </div>
   </div>
 </template>
@@ -324,6 +342,42 @@ const saveIndicatorText = ref('')
 const saveIndicatorSaving = ref(false)
 const importNotificationVisible = ref(false)
 const importInfoText = ref('')
+const fileOperationLoading = ref('')
+const messageToast = ref<{ visible: boolean; text: string; type: 'success' | 'error' }>({
+  visible: false,
+  text: '',
+  type: 'success'
+})
+let messageToastTimer: ReturnType<typeof setTimeout> | null = null
+
+const showToast = (text: string, type: 'success' | 'error' = 'success') => {
+  if (messageToastTimer) clearTimeout(messageToastTimer)
+  messageToast.value = { visible: true, text, type }
+  messageToastTimer = setTimeout(() => {
+    messageToast.value = { ...messageToast.value, visible: false }
+  }, 3000)
+}
+
+const loadingPoems = [
+  '功崇惟志，业广惟勤。 —— 《尚书·周官》',
+  '锲而不舍，金石可镂。 —— 《荀子·劝学》',
+  '满招损，谦受益。 —— 《尚书·大禹谟》',
+  '千里之行，始于足下。 —— 《老子·第六十四章》',
+  '合抱之木，生于毫末。 —— 《老子·第六十四章》',
+  '生于忧患，死于安乐。 —— 《孟子·告子下》',
+  '天将降大任于是人也，必先苦其心志。 —— 《孟子·告子下》',
+  '三军可夺帅也，匹夫不可夺志也。 —— 《论语·子罕》'
+]
+const loadingPoemIndex = ref(0)
+
+watch(fileOperationLoading, (loading, _previous, onCleanup) => {
+  if (!loading) return
+  loadingPoemIndex.value = 0
+  const timer = setInterval(() => {
+    loadingPoemIndex.value = (loadingPoemIndex.value + 1) % loadingPoems.length
+  }, 2000)
+  onCleanup(() => clearInterval(timer))
+}, { flush: 'sync' })
 const tableRows = ref(3)
 const tableCols = ref(4)
 const linkText = ref('')
@@ -702,8 +756,44 @@ const handleSave = () => {
   }
 }
 
+const handleExportDoc = async () => {
+  closeDropdowns()
+  if (!props.exportCallback) {
+    showToast('未配置导出回调，导出功能不可用', 'error')
+    return
+  }
+  try {
+    const content = runCommand('getValue')
+    fileOperationLoading.value = '正在导出文档...'
+    const result = await props.exportCallback(content)
+    fileOperationLoading.value = ''
+    if (!result.success || !result.data) {
+      showToast(`导出失败: ${result.error || '未知错误'}`, 'error')
+      return
+    }
+    const blob = new Blob([result.data], {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${documentMeta.name || '文档'}.docx`
+    link.click()
+    URL.revokeObjectURL(url)
+    showToast('导出成功')
+  } catch (error) {
+    fileOperationLoading.value = ''
+    console.error('导出失败:', error)
+    showToast(`导出失败: ${(error as Error)?.message || '未知错误'}`, 'error')
+  }
+}
+
 const handleImportDoc = () => {
   closeDropdowns()
+  if (!props.importCallback) {
+    showToast('未配置导入回调，导入功能不可用', 'error')
+    return
+  }
   const input = document.createElement('input')
   input.type = 'file'
   input.accept = '.doc,.docx'
@@ -718,50 +808,57 @@ const handleImportDoc = () => {
         : `${(file.size / 1024 / 1024).toFixed(1)} MB`
 
     importInfoText.value = `${file.name} (${sizeLabel})`
+
+    const current = runCommand<any>('getValue')
+    const hasContent = current?.elements?.length > 0
+
+    if (!hasContent) {
+      importModeResolver.value = null
+      performImport(file)
+      return
+    }
+
     importNotificationVisible.value = true
 
     importModeResolver.value = (mode) => {
       importNotificationVisible.value = false
       if (mode === 'cancel') return
-
-      documentMeta.id = `DEU${randomId()}`
-      documentMeta.name = file.name.replace(/\.\w+$/, '') || '导入文档'
-
-      const reader = new FileReader()
-      reader.onload = async (loadEvent) => {
-        try {
-          const arrayBuffer = loadEvent.target?.result
-          if (!(arrayBuffer instanceof ArrayBuffer)) return
-          if (!props.importCallback) {
-            alert('未注入文档导入回调 importCallback，无法导入 .docx 文件')
-            return
-          }
-          const result = await props.importCallback(arrayBuffer)
-          if (!result.success || !result.elements?.length) {
-            alert(`文档解析失败: ${result.error || '未知错误'}`)
-            return
-          }
-
-          if (mode === 'overwrite') {
-            runCommand('executeSetValue', { elements: result.elements })
-          } else {
-            const current = runCommand<any>('getValue')
-            const currentElements = current?.elements || []
-            runCommand('executeSetValue', { elements: [...currentElements, ...result.elements] })
-          }
-
-          await updateWordCount()
-          await refreshToc()
-          handleSave()
-        } catch (error) {
-          console.error('导入失败:', error)
-          alert(`导入失败: ${(error as Error)?.message || '未知错误'}`)
-        }
-      }
-      reader.readAsArrayBuffer(file)
+      performImport(file)
     }
   }
   input.click()
+}
+
+const performImport = (file: File) => {
+  documentMeta.id = `DEU${randomId()}`
+  documentMeta.name = file.name.replace(/\.\w+$/, '') || '导入文档'
+
+  const reader = new FileReader()
+  reader.onload = async (loadEvent) => {
+    try {
+      const arrayBuffer = loadEvent.target?.result
+      if (!(arrayBuffer instanceof ArrayBuffer)) return
+      fileOperationLoading.value = '正在导入文档...'
+      const result = await props.importCallback!(arrayBuffer)
+      fileOperationLoading.value = ''
+      if (!result.success || !result.elements?.length) {
+        showToast(`文档解析失败: ${result.error || '未知错误'}`, 'error')
+        return
+      }
+
+      runCommand('executeSetValue', { ...result, main: result.elements })
+
+      await updateWordCount()
+      await refreshToc()
+      handleSave()
+      showToast('导入成功')
+    } catch (error) {
+      fileOperationLoading.value = ''
+      console.error('导入失败:', error)
+      showToast(`导入失败: ${(error as Error)?.message || '未知错误'}`, 'error')
+    }
+  }
+  reader.readAsArrayBuffer(file)
 }
 
 const resolveImportMode = (mode: ImportMode) => {
@@ -899,3 +996,103 @@ defineExpose<LiteEditorShellExposed>({
 
 <style src="@vervedoc/design/icons.css"></style>
 <style src="../object/word-editor.css"></style>
+
+<style>
+.file-operation-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.45);
+  cursor: wait;
+}
+
+.file-operation-panel {
+  box-sizing: border-box;
+  width: 320px;
+  min-height: 80px;
+  max-width: calc(100% - 32px);
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  border-radius: 8px;
+  background: #444;
+  color: #fff;
+  font-size: 14px;
+  line-height: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
+}
+
+.file-operation-text {
+  min-width: 0;
+}
+
+.file-operation-poem {
+  margin-top: 6px;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.file-operation-spinner {
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-right-color: #fff;
+  border-radius: 50%;
+  animation: file-operation-spin 0.8s linear infinite;
+}
+
+@keyframes file-operation-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.message-toast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+}
+
+.message-toast.success {
+  background: #52c41a;
+}
+
+.message-toast.error {
+  background: #f5222d;
+}
+
+.message-toast .material-icons {
+  font-size: 18px;
+}
+
+.toast-fade-enter-active,
+.toast-fade-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.toast-fade-enter-from,
+.toast-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-12px);
+}
+</style>

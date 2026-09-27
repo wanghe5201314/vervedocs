@@ -7,6 +7,8 @@ import { fileURLToPath } from 'url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
+  // Resolve emitted workers relative to the library, not the consuming site's root.
+  base: './',
   plugins: [
     cssInjectedByJsPlugin({
       styleId: 'vervedoc-core-style',

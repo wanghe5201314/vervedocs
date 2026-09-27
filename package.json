@@ -22,6 +22,8 @@
     "dev:server": "pnpm --filter @vervedoc/collaboration-server vervedocs-collaboration-server:dev",
     "dev:monitor": "pnpm --filter @vervedoc/monitor-server vervedocs-collaboration-server-monitor:dev",
     "build": "pnpm -r --if-present build",
+    "release:pack": "node scripts/pack-release.mjs",
+    "release:verify": "node scripts/verify-release.mjs",
     "typecheck": "pnpm -r --if-present type:check",
     "lint": "pnpm -r --if-present lint",
     "clean": "pnpm -r --if-present clean"

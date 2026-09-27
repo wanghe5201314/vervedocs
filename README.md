@@ -214,6 +214,34 @@ pnpm --filter @vervedoc/docx-playground dev
 pnpm --filter @vervedoc/core build
 ```
 
+### npm 发布
+
+必须用 pnpm 打包：本仓库依赖 `workspace:`、`catalog:` 和 `publishConfig` 的转换，
+不要在包目录直接执行 `npm publish`，也不要删除依赖后发布。
+
+```bash
+# 先构建，再生成并校验压缩包；多个包可在命令后依次列出
+pnpm --filter @vervedoc/core... build
+pnpm release:pack @vervedoc/core
+```
+
+校验脚本会检查压缩包内的版本号、工作区依赖版本、未转换协议及入口文件，
+全部通过后才生成 `.temp/release/verified.json`。发布时使用该清单中的 `.tgz`，
+并按清单顺序先发布依赖包。认证使用本机 npm 配置，不要将 token 写入仓库。
+已经发布的版本不能覆盖，修复时必须递增版本号；新版本验证成功后再弃用错误版本。
+
+```bash
+# 发布完成、registry 可查询后，校验版本、latest 标签及远端压缩包 SHA-512
+pnpm release:verify
+```
+
+发布前还应在独立目录安装压缩包及其依赖，然后运行消费者构建测试，
+避免 workspace 源码解析掩盖发布包的入口、Worker 或资源路径问题：
+
+```bash
+node scripts/smoke-release.mjs .temp/release/local-smoke
+```
+
 ## 浏览器兼容性
 
 - Chrome 80+

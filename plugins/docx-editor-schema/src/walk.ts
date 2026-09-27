@@ -80,7 +80,7 @@ export function walkTree(elements: IElement[], visitor: Visitor, parentPath: Pat
 
     if (isParagraphContainer(node)) {
       walkTree(node.valueList, visitor, [...path, 'valueList'])
-    } else if (isControl(node) && Array.isArray(node.valueList)) {
+    } else if ((isControl(node) || node.type === 'hyperlink') && Array.isArray(node.valueList)) {
       walkTree(node.valueList, visitor, [...path, 'valueList'])
     } else if (isTable(node)) {
       for (let tr = 0; tr < node.trList.length; tr++) {

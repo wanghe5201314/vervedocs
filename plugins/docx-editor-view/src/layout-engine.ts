@@ -868,23 +868,31 @@ export class LayoutEngine {
       isFirstLine = false
     }
 
-    const expandedRuns = runs.flatMap((rawRun, sourceIndex): { rawRun: IElement; sourceIndex: number; presentation?: ControlPresentation }[] =>
-      isControl(rawRun)
-        ? getControlPresentation(rawRun).map(presentation => ({ rawRun, sourceIndex, presentation }))
-        : [{ rawRun, sourceIndex }]
-    )
-    const layoutRuns = expandedRuns.map(({ rawRun, presentation }) => {
+    const expandedRuns = runs.flatMap((rawRun, sourceIndex): {
+      rawRun: IElement; sourceIndex: number; path: Path; hyperlink?: IElement & Record<string, unknown>; presentation?: ControlPresentation
+    }[] => {
+      const path: Path = [...runsParentPath, (paragraphKind === 'normal' ? startIndex : runStartIndex) + sourceIndex]
       if (rawRun.type === 'hyperlink') {
-        const vl = (rawRun as unknown as { valueList?: IElement[] }).valueList ?? []
-        const text = vl.map(r => r.type === 'tab' ? '\t' : String(r.value ?? '')).join('')
-        const base = (vl.find(r => r.type === 'text' && r.value) as unknown as Record<string, unknown>) ?? {}
-        const tocEntry = (rawRun.extension?.toc as { role?: string } | undefined)?.role === 'entry'
+        const children = (rawRun as IElement & { valueList?: IElement[] }).valueList ?? []
+        return children.map((child, index) => ({
+          rawRun: child, sourceIndex, path: [...path, 'valueList', index], hyperlink: rawRun
+        }))
+      }
+      return isControl(rawRun)
+        ? getControlPresentation(rawRun).map(presentation => ({ rawRun, sourceIndex, path, presentation }))
+        : [{ rawRun, sourceIndex, path }]
+    })
+    const layoutRuns = expandedRuns.map(({ rawRun, hyperlink, presentation }) => {
+      if (hyperlink && (rawRun.type === 'text' || rawRun.type === 'tab')) {
+        const tocEntry = (hyperlink.extension?.toc as { role?: string } | undefined)?.role === 'entry'
         return {
-          type: 'text', value: text,
-          font: base.font, size: base.size, bold: base.bold, italic: base.italic,
-          color: tocEntry ? base.color : '#0000FF', underline: tocEntry ? base.underline : true,
-          extension: rawRun.extension
-        } as unknown as IElement
+          ...rawRun,
+          type: rawRun.type === 'tab' ? 'text' : rawRun.type,
+          value: rawRun.type === 'tab' ? '\t' : rawRun.value,
+          color: rawRun.color ?? hyperlink.color ?? (tocEntry ? undefined : '#0000FF'),
+          underline: rawRun.underline ?? hyperlink.underline ?? (tocEntry ? undefined : true),
+          extension: { ...hyperlink.extension, ...rawRun.extension }
+        } as IElement
       }
       if (isControl(rawRun) && presentation) {
         return {
@@ -914,10 +922,10 @@ export class LayoutEngine {
     }
 
     for (let ri = 0; ri < expandedRuns.length; ri++) {
-      const { rawRun, sourceIndex, presentation } = expandedRuns[ri]
+      const { rawRun, sourceIndex, path: runPath, hyperlink, presentation } = expandedRuns[ri]
       const run = layoutRuns[ri]
       if (run.type !== 'text') continue
-      const hyperlinkUrl = rawRun.type === 'hyperlink' ? String(rawRun.url ?? rawRun.value ?? '') : undefined
+      const hyperlinkUrl = hyperlink ? String(hyperlink.url ?? hyperlink.value ?? '') : undefined
       const controlId = isControl(rawRun) ? String(rawRun.id ?? '') : undefined
       const controlPlaceholder = presentation?.placeholder
       const anyRun = run as unknown as Record<string, unknown>
@@ -936,10 +944,11 @@ export class LayoutEngine {
       if (!value) {
         if (rawRun.type === 'text' && !rawRun.extension?.fieldMarker && !rawRun.extension?.bookmarkMarker) {
           currentInlines.push({
-            run: rawRun,
-            path: [...runsParentPath, (paragraphKind === 'normal' ? startIndex : runStartIndex) + sourceIndex],
+            run,
+            path: runPath,
             startOffset: 0, endOffset: 0, text: '', x: currentLineWidth, y: 0,
-            width: 0, height: size, font, size, bold, italic, color, baseline: 0
+            width: 0, height: size, font, size, bold, italic, color, baseline: 0,
+            bgColor, strikeout, underline, groupIds, hyperlink: hyperlinkUrl
           })
           currentMaxSize = Math.max(currentMaxSize, size)
         }
@@ -948,12 +957,6 @@ export class LayoutEngine {
       // 跳过段落终止符（零宽字符），不产出 inline，但 ri 仍递进以保持索引对齐
       if (!controlId && /^[\u200B\uFEFF]+$/.test(value)) continue
 
-      // normal 段落用 elements 原索引（startIndex + ri）作为 path 末段，保证 path 唯一；
-      // title/list 的 runsParentPath 已含段索引，ri 是 valueList 切片内索引，需加 runStartIndex 还原原 valueList 索引。
-      // 表格单元格内 normal 段落需拼上 runsParentPath（contentPath）以保证 path 全局唯一。
-      const runPath: Path = paragraphKind === 'normal'
-        ? [...runsParentPath, startIndex + sourceIndex]
-        : [...runsParentPath, runStartIndex + sourceIndex]
       let cursorInRun = 0
       const charWidth = (ch: string): number =>
         presentation?.mark && ch === CONTROL_MARK ? size :
@@ -974,7 +977,8 @@ export class LayoutEngine {
           currentInlines.push({
             run, path: runPath, startOffset: cursorInRun, endOffset: cursorInRun + 1,
             text: '\t', x: currentLineWidth, y: 0, width, height: size,
-            font, size, bold, italic, color, baseline: 0
+            font, size, bold, italic, color, baseline: 0,
+            hyperlink: hyperlinkUrl
           })
           currentLineWidth += width
           currentMaxSize = Math.max(currentMaxSize, size)

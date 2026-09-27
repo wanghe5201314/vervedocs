@@ -23,13 +23,13 @@ export function toDocxExportDocument(document: IDocxDocumentMeta): IDocxDocument
     walkTree(elements, node => {
       if (node.type !== 'hyperlink' ||
         (node.extension?.toc as { role?: string } | undefined)?.role === 'entry') return
-      node.color = '#0000FF'
-      node.underline = true
+      node.color ??= '#0000FF'
+      node.underline ??= true
       const children = (node as IElement & { valueList?: IElement[] }).valueList
       for (const run of children ?? []) {
         if (run.type !== 'text') continue
-        run.color = '#0000FF'
-        run.underline = true
+        run.color ??= node.color
+        run.underline ??= node.underline
       }
     })
   }

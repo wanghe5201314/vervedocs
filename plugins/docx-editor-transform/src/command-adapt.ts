@@ -185,6 +185,7 @@ export class CommandAdapt {
     }
     this.mergeAdjacentDeletions(doc, runs, meta)
     this.range.setCaret(adjusted.start)
+    this.clearEmptyHyperlinks(doc)
     if (commit) this._commit(doc, 'text')
     return true
   }
@@ -472,6 +473,7 @@ export class CommandAdapt {
       }
     }
     this.range.setCaret(caret)
+    this.clearEmptyHyperlinks(doc)
     if (changed && commit) this._commit(doc)
     return changed
   }
@@ -525,6 +527,76 @@ export class CommandAdapt {
     }
   }
 
+  private isHyperlinkRun(doc: IDocxDocumentMeta, path: Path): boolean {
+    return path.length > 2 && getByPath(doc.elements, path.slice(0, -2))?.type === 'hyperlink'
+  }
+
+  /** Traverse inline runs without crossing a paragraph/list/table container. */
+  private adjacentInline(doc: IDocxDocumentMeta, path: Path, backward: boolean): { node: IElement; path: Path } | null {
+    const containerPath = this.isHyperlinkRun(doc, path) ? path.slice(0, -3) : path.slice(0, -1)
+    const parent = getParentContainer(doc.elements, [...containerPath, 0])
+    if (!parent) return null
+    const entries: { node: IElement; path: Path }[] = []
+    parent.forEach((node, index) => {
+      const nodePath: Path = [...containerPath, index]
+      if (node.type === 'hyperlink') {
+        const children = node.valueList as IElement[] | undefined
+        children?.forEach((child, childIndex) => entries.push({ node: child, path: [...nodePath, 'valueList', childIndex] }))
+      } else entries.push({ node, path: nodePath })
+    })
+    const current = entries.findIndex(entry => isSamePath(entry.path, path))
+    if (current < 0) return null
+    for (let index = current + (backward ? -1 : 1); index >= 0 && index < entries.length; index += backward ? -1 : 1) {
+      const entry = entries[index]
+      if (entry.node.type === 'text' && (entry.node.value === '' || entry.node.extension?.bookmarkMarker || entry.node.extension?.fieldMarker)) continue
+      return entry
+    }
+    return null
+  }
+
+  /** Keep an editable caret carrier, but never an empty clickable hyperlink. */
+  private clearEmptyHyperlinks(doc: IDocxDocumentMeta): void {
+    const focus = this.range.getFocus()
+    let caret = focus
+    walkTree(doc.elements, (node, ctx) => {
+      if (node.type !== 'hyperlink') return
+      const children = (node.valueList ?? []) as IElement[]
+      if (children.some(child => child.type !== 'text' || child.value !== '')) return
+      const text: ITextElement = { type: 'text', value: '', sourceParagraphId: node.sourceParagraphId }
+      ;(ctx.parent as IElement[])[ctx.index] = text
+      if (caret && isSamePath(caret.path.slice(0, ctx.path.length), ctx.path)) {
+        caret = { path: ctx.path.slice() as Path, offset: 0 }
+      }
+      return false
+    })
+    if (caret !== focus) this.range.setCaret(caret)
+  }
+
+  private deleteHyperlinkCharacter(backward: boolean): boolean {
+    const pos = this.range.getFocus()
+    if (!pos) return false
+    const doc = this.draw.getActiveDocument()
+    const node = getByPath(doc.elements, pos.path)
+    if (!node || node.type !== 'text') return false
+    const inside = this.isHyperlinkRun(doc, pos.path)
+    const atBoundary = backward ? pos.offset === 0 : pos.offset === node.value.length
+    const target = atBoundary ? this.adjacentInline(doc, pos.path, backward) : { node, path: pos.path }
+    if (!target || target.node.type !== 'text' || (!inside && !this.isHyperlinkRun(doc, target.path))) return false
+    const offset = atBoundary ? (backward ? target.node.value.length : 0) : pos.offset
+    const character = backward ? Array.from(target.node.value.slice(0, offset)).at(-1) : Array.from(target.node.value.slice(offset))[0]
+    if (!character) return false
+    const from = backward ? offset - character.length : offset
+    if (this.draw.getOptions().trackChanges) {
+      this.deleteTrackedRange(doc, { path: target.path, offset: from }, { path: target.path, offset: from + character.length }, false)
+    } else {
+      target.node.value = target.node.value.slice(0, from) + target.node.value.slice(from + character.length)
+      this.range.setCaret(backward ? { path: target.path, offset: from } : pos)
+    }
+    this.clearEmptyHyperlinks(doc)
+    this._commit(doc, 'text')
+    return true
+  }
+
   /** 删除当前选区内容（若已 collapsed 则不操作）。光标收缩到选区 start。返回是否实际删除。 */
   deleteSelection(commit = true): boolean {
     if (!this.getIsCanInput()) return false
@@ -552,6 +624,22 @@ export class CommandAdapt {
       if (isSamePath(runs[i].path, end.path)) endRunIdx = i
     }
     if (startRunIdx === -1 || endRunIdx === -1 || startRunIdx > endRunIdx) return false
+
+    const selected = runs.slice(startRunIdx, endRunIdx + 1)
+    if (selected.some(run => this.isHyperlinkRun(doc, run.path))) {
+      // Trim each run independently: surviving suffixes keep their formatting and link ownership.
+      for (const run of selected) {
+        const node = run.parent[run.idx]
+        if (node.type !== 'text') continue
+        const from = isSamePath(run.path, start.path) ? start.offset : 0
+        const to = isSamePath(run.path, end.path) ? end.offset : node.value.length
+        node.value = node.value.slice(0, from) + node.value.slice(to)
+      }
+      this.range.setCaret({ path: start.path.slice() as Path, offset: start.offset })
+      this.clearEmptyHyperlinks(doc)
+      if (commit) this._commit(doc, 'text')
+      return true
+    }
 
     if (startRunIdx === endRunIdx) {
       const node = getByPath(doc.elements, start.path)
@@ -686,6 +774,7 @@ export class CommandAdapt {
     if (!this.getIsCanInput()) return
     if (this.deleteSelection()) return
     if (!this.range.isCollapsed() || this.deleteControlBoundary(true)) return
+    if (this.deleteHyperlinkCharacter(true)) return
     if (this.draw.getOptions().trackChanges) {
       this.deleteTrackedCharacter(true)
       return
@@ -758,6 +847,7 @@ export class CommandAdapt {
     if (!this.getIsCanInput()) return
     if (this.deleteSelection()) return
     if (!this.range.isCollapsed() || this.deleteControlBoundary(false)) return
+    if (this.deleteHyperlinkCharacter(false)) return
     if (this.draw.getOptions().trackChanges) {
       this.deleteTrackedCharacter(false)
       return
@@ -824,6 +914,12 @@ export class CommandAdapt {
     }
     // 跨 run 向前
     const doc = this.draw.getActiveDocument()
+    const adjacent = this.adjacentInline(doc, pos.path, true)
+    if (adjacent && (this.isHyperlinkRun(doc, pos.path) || this.isHyperlinkRun(doc, adjacent.path)) &&
+      (adjacent.node.type === 'text' || isControl(adjacent.node))) {
+      this.range.setCaret({ path: adjacent.path, offset: isControl(adjacent.node) ? 1 : adjacent.node.value.length })
+      return
+    }
     const parent = getParentContainer(doc.elements, pos.path)
     const idx = pos.path[pos.path.length - 1] as number
     if (parent && idx > 0) {
@@ -860,6 +956,12 @@ export class CommandAdapt {
       }
     }
     // 跨 run 向后
+    const adjacent = this.adjacentInline(doc, pos.path, false)
+    if (adjacent && (this.isHyperlinkRun(doc, pos.path) || this.isHyperlinkRun(doc, adjacent.path)) &&
+      (adjacent.node.type === 'text' || isControl(adjacent.node))) {
+      this.range.setCaret({ path: adjacent.path, offset: 0 })
+      return
+    }
     const parent = getParentContainer(doc.elements, pos.path)
     const idx = pos.path[pos.path.length - 1] as number
     if (parent && idx < parent.length - 1) {

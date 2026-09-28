@@ -20,6 +20,8 @@ import {
 } from '@vervedoc/docx-editor-schema'
 import type { RangeManager, IRangeStyle, IEditorAbility, Listener } from '@vervedoc/docx-editor-state'
 
+const CONTROL_FORMAT_KEYS = ['font', 'size', 'bold', 'italic', 'color', 'highlight', 'strikeout', 'underline'] as const
+
 /** Heading sizes in layout pixels, matching the units used by text runs. */
 const HEADING_SIZES: Record<ITitleElement['level'], number> = {
   first: 26,
@@ -1188,17 +1190,43 @@ export class CommandAdapt {
     const adjusted = collapsed ? { start, end } : this.splitBoundaryRuns(doc, start, end)
     this.range.setRange({ anchor: adjusted.start, focus: adjusted.end })
     const node = collapsed ? getByPath(doc.elements, start.path) : null
-    const selectedRuns = (collapsed
-      ? node?.type === 'text' ? [node] : []
-      : this.collectRunsInRange(doc.elements, adjusted.start, adjusted.end)
-    ).filter(run => run.revisionType !== 'delete')
-    if (!selectedRuns.length) return
-    const allSet = toggleKey ? selectedRuns.every(r => Boolean(r[toggleKey])) : false
-    this.formatElements(selectedRuns, element => {
+    const selectedRuns: IElement[] = []
+    if (collapsed) {
+      if (node && (node.type === 'text' || isControl(node))) selectedRuns.push(node)
+    } else {
+      walkTree(doc.elements, (element, { path }) => {
+        if (element.type !== 'text' && !isControl(element)) return
+        const length = isControl(element) ? 1 : element.value.length
+        if (comparePosition({ path, offset: length }, adjusted.start) > 0 &&
+          comparePosition({ path, offset: 0 }, adjusted.end) < 0 && !element.extension?.bookmarkMarker) {
+          selectedRuns.push(element)
+        }
+        if (isControl(element)) return false
+      })
+    }
+    const runs = selectedRuns.filter(run => (run as ITextElement).revisionType !== 'delete')
+    if (!runs.length) return
+    const allSet = toggleKey ? runs.every(r => Boolean((r as ITextElement)[toggleKey])) : false
+    const format = {} as ITextElement
+    fn(format)
+    const changedKeys = CONTROL_FORMAT_KEYS.filter(key => Object.prototype.hasOwnProperty.call(format, key))
+    this.formatElements(runs, element => {
       const run = element as ITextElement
       fn(run)
       if (toggleKey && run[toggleKey] === undefined) {
         ;(run as unknown as Record<string, unknown>)[toggleKey] = !allSet
+      }
+      if (isControl(element) && element.valueList) {
+        const children: IElement[] = []
+        walkTree(element.valueList, child => {
+          if (child.type === 'text' || isControl(child)) children.push(child)
+        })
+        // 子内容也用于导出；只同步本次命令涉及的样式，保留其他格式。
+        this.formatElements(children, child => {
+          for (const key of changedKeys) {
+            ;(child as unknown as Record<string, unknown>)[key] = run[key]
+          }
+        })
       }
     })
     // 不可迁移：多个分支各自 commit
@@ -4328,6 +4356,11 @@ export class CommandAdapt {
 
     if (currentNode && currentNode.type === 'text') {
       const t = currentNode as ITextElement
+      for (const key of CONTROL_FORMAT_KEYS) {
+        if (t[key] !== undefined) {
+          ;(controlElement as unknown as Record<string, unknown>)[key] = t[key]
+        }
+      }
       const before = t.value.slice(0, pos.offset)
       const after = t.value.slice(pos.offset)
       if (before && after) {

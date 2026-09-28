@@ -40,25 +40,35 @@ export function toDocxExportDocument(document: IDocxDocumentMeta): IDocxDocument
 
   const normalizeParagraphRuns = (elements: IElement[]) => {
     for (const group of splitParagraphs(elements)) {
-      if (group.kind !== 'normal') continue
-      let first = true
-      for (const run of group.runs) {
-        if (run.extension?.bookmarkMarker || (run.type === 'text' && /^[\u200B\uFEFF]+$/.test(run.value))) continue
-        if (first) {
-          first = false
-          continue
+      if (group.kind === 'normal') {
+        let first = true
+        for (const run of group.runs) {
+          if (run.extension?.bookmarkMarker || (run.type === 'text' && /^[\u200B\uFEFF]+$/.test(run.value))) continue
+          if (first) {
+            first = false
+            continue
+          }
+          delete run.paragraphStyleId
+          delete run.rowFlex
+          delete run.paragraphFirstLineIndent
+          delete run.paragraphIndentLeft
+          delete run.paragraphIndentRight
+          delete run.paragraphSpacingBefore
+          delete run.paragraphSpacingAfter
+          delete run.lineHeight
+          delete run.lineHeightRule
+          delete (run as IElement & { paragraphColor?: string }).paragraphColor
         }
-        if (run.type !== 'text') continue
-        delete run.paragraphStyleId
-        delete run.rowFlex
-        delete run.paragraphFirstLineIndent
-        delete run.paragraphIndentLeft
-        delete run.paragraphIndentRight
-        delete run.paragraphSpacingBefore
-        delete run.paragraphSpacingAfter
-        delete run.lineHeight
-        delete run.lineHeightRule
-        delete run.paragraphColor
+      }
+    }
+    for (const node of elements) {
+      if (isParagraphContainer(node)) normalizeParagraphRuns(node.valueList)
+      else if (isTable(node)) {
+        for (const row of node.trList) {
+          for (const cell of row.tdList) normalizeParagraphRuns(cell.value)
+        }
+      } else if (Array.isArray((node as { valueList?: unknown }).valueList)) {
+        normalizeParagraphRuns((node as { valueList: IElement[] }).valueList)
       }
     }
   }

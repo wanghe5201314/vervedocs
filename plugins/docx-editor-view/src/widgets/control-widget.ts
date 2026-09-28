@@ -172,7 +172,7 @@ export class ControlWidget {
     panel.setAttribute('aria-label', info.element.control.title || info.element.control.placeholder || info.element.control.kind)
     panel.style.cssText = [
       'position:absolute', `width:${Math.min(320, Math.max(info.width, 220))}px`,
-      `font:${this.fontOf(info.inline)}`, 'color:#333',
+      'font:normal 400 14px/1.5 system-ui, sans-serif', 'color:#333',
       'border:1px solid #d9d9d9;border-radius:4px;background:#fff',
       'box-shadow:0 2px 8px rgba(0,0,0,.15);pointer-events:auto;box-sizing:border-box',
       'padding:8px;display:flex;flex-direction:column;gap:6px;overflow:auto'

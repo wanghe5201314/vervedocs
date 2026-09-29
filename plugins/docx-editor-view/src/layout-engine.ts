@@ -46,6 +46,8 @@ export interface LayoutOptions {
   scale: number
   /** 页首/尾垂直空白（渲染视觉上把纸张与边界隔开） */
   pageGap: number
+  /** 仅用于独立打印布局，不影响编辑器配置。 */
+  printing?: boolean
 }
 
 /** 块 id 自增序列（跨 layout 调用持续递增，保证全局唯一） */
@@ -879,7 +881,7 @@ export class LayoutEngine {
         }))
       }
       return isControl(rawRun)
-        ? getControlPresentation(rawRun).map(presentation => ({ rawRun, sourceIndex, path, presentation }))
+        ? getControlPresentation(rawRun, this.opts.printing).map(presentation => ({ rawRun, sourceIndex, path, presentation }))
         : [{ rawRun, sourceIndex, path }]
     })
     const layoutRuns = expandedRuns.map(({ rawRun, hyperlink, presentation }) => {
@@ -1044,7 +1046,10 @@ export class LayoutEngine {
           controlTextOffset: controlId ? cursorInRun : undefined,
           controlStart: controlId ? cursorInRun === 0 && expandedRuns[ri - 1]?.sourceIndex !== sourceIndex : undefined,
           controlEnd: controlId ? segEnd === value.length && expandedRuns[ri + 1]?.sourceIndex !== sourceIndex : undefined,
-          controlMark: cursorInRun === 0 ? presentation?.mark : undefined,
+          controlMark: text.includes(CONTROL_MARK) ? presentation?.mark : undefined,
+          controlBracketOffsets: presentation?.bracketOffsets
+            ?.filter(offset => offset >= cursorInRun && offset < segEnd)
+            .map(offset => offset - cursorInRun),
           controlOptionValue: presentation?.optionValue
         }
         currentInlines.push(inline)

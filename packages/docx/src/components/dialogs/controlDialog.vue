@@ -65,14 +65,8 @@
           <a-switch v-model:checked="form.readOnly" size="small" :aria-label="t('control.readOnly')" />
         </div>
       </div>
-      <details :key="settingsKey" class="control-more">
+      <details v-if="hasPlaceholder" :key="settingsKey" class="control-more">
         <summary>{{ t('control.guide.more') }}</summary>
-        <a-form-item>
-          <template #label>
-            <ControlFieldLabel :label="t('control.guide.name')" :help="t('control.guide.nameHelp')" />
-          </template>
-          <a-input v-model:value="form.title" :aria-label="t('control.guide.name')" />
-        </a-form-item>
         <a-form-item v-if="hasPlaceholder">
           <template #label>
             <ControlFieldLabel :label="t('control.placeholder')" :help="t('control.guide.placeholderHelp')" />
@@ -143,7 +137,6 @@ const handleOpenChange = (open: boolean) => {
 let nextRowId = 0
 
 interface ControlForm {
-  title: string
   placeholder: string
   required: boolean
   readOnly: boolean
@@ -157,7 +150,7 @@ interface ControlForm {
   options: (IControlOption & { rowId: number })[]
 }
 const createForm = (): ControlForm => ({
-  title: '', placeholder: '', required: false, readOnly: false, delimiter: ',',
+  placeholder: '', required: false, readOnly: false, delimiter: ',',
   dateMode: 'date', checkboxLabel: '', options: []
 })
 const form = ref<ControlForm>(createForm())
@@ -201,7 +194,6 @@ const handleConfirm = () => {
   if (validationError.value) return
   const config: IControlConfig = {
     kind: props.kind,
-    title: form.value.title || undefined,
     required: form.value.required,
     readOnly: form.value.readOnly,
     removable: true

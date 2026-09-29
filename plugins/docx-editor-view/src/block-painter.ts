@@ -7,6 +7,7 @@
 import type { ParagraphBlock, InlineBox } from './layout-types'
 import type { IGroupColor } from '@vervedoc/docx-editor-schema'
 import { getAuthorColor } from '@vervedoc/docx-editor-schema'
+import { CONTROL_MARK } from './control-presentation'
 
 /** 单条文本绘制命令（分桶合并绘制以减少 ctx.font 切换开销） */
 export interface DrawCommand {
@@ -23,6 +24,8 @@ export interface PaintOptions {
   groupColors?: Record<string, IGroupColor>
   activeGroupId?: string | null
   activeRevision?: { id: string; color: string } | null
+  /** 打印时跳过绑定控件自动括号的编辑态着色。 */
+  printing?: boolean
 }
 
 /** 绘制上下文类型（HTMLCanvasElement 或 OffscreenCanvas） */
@@ -121,13 +124,26 @@ export function paintParagraph(ctx: PaintCtx, b: ParagraphBlock, opts: PaintOpti
         continue
       }
       const font = fontOf(inl)
-      const key = `${font}||${textColor}`
-      addBucket(buckets, key, {
-        font, color: textColor,
-        x: inl.x + (inl.controlMark ? inl.size + (inl.letterSpacing ?? 0) : 0), y: inl.baseline,
-        text: inl.controlMark ? inl.text.slice(1) : inl.text,
-        letterSpacing: inl.letterSpacing
-      })
+      const text = inl.text
+      if (inl.controlMark || (!opts.printing && inl.controlBracketOffsets?.length)) {
+        ctx.font = font
+        const spacing = inl.letterSpacing ?? 0
+        let x = inl.x
+        const markOffset = inl.controlMark ? text.indexOf(CONTROL_MARK) : -1
+        for (let i = 0; i < text.length; i++) {
+          const ch = text[i]
+          if (i === markOffset) {
+            x += inl.size + spacing
+            continue
+          }
+          const color = !opts.printing && inl.controlBracketOffsets?.includes(i) ? '#1677ff' : textColor
+          addBucket(buckets, `${font}||${color}`, { font, color, x, y: inl.baseline, text: ch })
+          x += ctx.measureText(ch).width + spacing
+        }
+      } else {
+        const key = `${font}||${textColor}`
+        addBucket(buckets, key, { font, color: textColor, x: inl.x, y: inl.baseline, text, letterSpacing: inl.letterSpacing })
+      }
       // Review marks are visual overlays, never persisted as ordinary formatting.
       if (inserted || inl.underline) {
         strokes.push({
@@ -179,7 +195,13 @@ export function paintParagraph(ctx: PaintCtx, b: ParagraphBlock, opts: PaintOpti
       if (!inl.controlMark) continue
       const { kind, checked } = inl.controlMark
       const size = inl.size * 0.8
-      const x = inl.x + inl.size * 0.1
+      // 标记可能位于自动左括号之后，也可能被换行分到下一片段。
+      ctx.font = fontOf(inl)
+      const markOffset = inl.text.indexOf(CONTROL_MARK)
+      let x = inl.x + inl.size * 0.1
+      for (let i = 0; i < markOffset; i++) {
+        x += ctx.measureText(inl.text[i]).width + (inl.letterSpacing ?? 0)
+      }
       const y = inl.baseline - size
       ctx.save()
       ctx.strokeStyle = inl.color

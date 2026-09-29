@@ -66,8 +66,10 @@ export interface InlineBox {
   controlId?: string
   /** 若该 inline 是控件的占位提示文字（空值时显示 placeholder） */
   controlPlaceholder?: boolean
-  /** Vector selection mark at the beginning of this fragment. */
+  /** 当前片段包含的矢量勾选标记。 */
   controlMark?: { kind: 'checkbox' | 'radio'; checked: boolean }
+  /** 当前片段内自动展示括号的字符偏移。 */
+  controlBracketOffsets?: number[]
   /** Stable radio option value, including wrapped label fragments. */
   controlOptionValue?: string
   /** Only the outer fragments of an atomic control can host its caret. */

@@ -161,7 +161,7 @@ export class RulerWidget {
     const rect = this.deps.container.getBoundingClientRect()
     const pageX = this.deps.getPageOffsetX()
     const [mt, mr, mb, ml] = this.deps.getPageMargins()
-    const width = layout.pageWidth / scale
+    const width = (layout.pages[0]?.rect.width ?? layout.pageWidth) / scale
     const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(Math.max(min, max), value))
     if (INDENTS.includes(drag.side as IndentSide)) {
       if (!drag.indent) return
@@ -227,7 +227,7 @@ export class RulerWidget {
     const scale = this.deps.getScale()
     const [mt, mr, mb, ml] = this.deps.getPageMargins()
     const start = this.deps.getPageOffsetX() + ml * scale
-    const end = this.deps.getPageOffsetX() + (layout?.pageWidth ?? 0) - mr * scale
+    const end = this.deps.getPageOffsetX() + (layout?.pages[0]?.rect.width ?? layout?.pageWidth ?? 0) - mr * scale
     const indent = this.deps.getParagraphIndent()
     const positions: Record<Handle, number> = {
       left: start, right: end,
@@ -303,7 +303,7 @@ export class RulerWidget {
     if (!layout) return
     const scale = this.deps.getScale()
     const start = this.deps.getPageOffsetX()
-    const end = start + layout.pageWidth
+    const end = start + (layout.pages[0]?.rect.width ?? layout.pageWidth)
     const [, mr, , ml] = this.deps.getPageMargins()
     const origin = start + ml * scale
     const contentEnd = end - mr * scale

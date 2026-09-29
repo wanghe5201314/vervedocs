@@ -93,7 +93,7 @@
 
     <!-- 符号 -->
     <VdRibbonGroup :title="t('ribbon.insert.symbol')">
-      <a-dropdown :trigger="['click']">
+      <a-dropdown v-if="showControls" :trigger="['click']">
         <VdRibbonButton icon="select-all" :text="t('ribbon.insert.control')" :title="t('ribbon.insert.insertControl')" size="large" has-arrow />
         <template #overlay>
           <a-menu @click="({ key }: any) => emit('command', 'insertControl', { kind: key })">
@@ -130,9 +130,10 @@ const emit = defineEmits<{
   (e: 'command', cmd: string, ...args: any[]): void
 }>()
 
-defineProps<{
+withDefaults(defineProps<{
   hasSelection?: boolean
-}>()
+  showControls?: boolean
+}>(), { showControls: true })
 
 const FORMULA_CATEGORIES = computed(() => getFormulaCategories())
 

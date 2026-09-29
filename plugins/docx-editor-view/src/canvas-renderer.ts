@@ -116,6 +116,10 @@ export class CanvasRenderer {
 
   /** 当前帧的文档布局（供 drawChartInto 查找表格数据源） */
   private currentLayout: DocumentLayout | null = null
+  /** 当前是否处于独立打印渲染，控制打印样式与资源加载回调。 */
+  private printing = false
+  /** 预加载阶段收集的打印图片与图表资源，供正式绘制前等待解码。 */
+  private printResources: Set<HTMLImageElement> | null = null
 
 
   /** 水印 widget（可选，设置后在每页渲染完成后绘制水印） */
@@ -264,6 +268,72 @@ export class CanvasRenderer {
     const image = canvas.toDataURL('image/png', quality)
     this.trimCache()
     return image
+  }
+
+  /**
+   * 独立打印位图与布局；共享已加载资源，但不改动编辑缓存或屏幕图层。
+   * @param layout 按打印展示规则独立重排的完整文档布局
+   * @returns 按页序排列的打印图片 data URL 数组
+   */
+  async renderPrintPages(layout: DocumentLayout): Promise<string[]> {
+    // 复制图片缓存映射，复用已加载资源并隔离打印新增资源。
+    const images = new Map(this.imageCache)
+    // 保存本次打印使用的渲染选项快照。
+    const options = { ...this.opts }
+    // 收集本次打印依赖的图片与图表，统一等待解码完成。
+    const resources = new Set<HTMLImageElement>()
+    /** 临时切换打印状态执行同步回调并恢复现场；preload 为真时仅收集资源。 */
+    const withPrintState = <T>(render: () => T, preload = false): T => {
+      // 保存切换前的渲染状态，确保异常时也能恢复。
+      const previous = {
+        blockCache: this.blockCache, dirtyBlocks: this.dirtyBlocks,
+        currentLayout: this.currentLayout, imageCache: this.imageCache,
+        printing: this.printing, opts: this.opts, printResources: this.printResources
+      }
+      // 本次同步打印操作专用的块位图缓存，结束时释放位图。
+      const cache = new Map<number, BlockCache>()
+      this.blockCache = cache
+      this.dirtyBlocks = new Set()
+      this.currentLayout = layout
+      this.imageCache = images
+      this.printing = true
+      this.printResources = preload ? resources : null
+      this.opts = options
+      try {
+        return render()
+      } finally {
+        Object.assign(this, previous)
+        for (const entry of cache.values()) {
+          if (entry.bitmap instanceof ImageBitmap) entry.bitmap.close()
+        }
+      }
+    }
+    withPrintState(() => {
+      // 临时绘图上下文用于触发资源预加载，不挂载到屏幕。
+      const ctx = document.createElement('canvas').getContext('2d')!
+      /** 递归遍历表格和环绕图片，收集各块依赖的图片与图表资源。 */
+      const visit = (blocks: BlockNode[]) => {
+        for (const block of blocks) {
+          if (block.kind === 'table') {
+            for (const row of block.rows) for (const cell of row.cells) visit(cell.content)
+          } else if (block.kind === 'paragraph' && block.surroundImage) {
+            visit([block.surroundImage])
+          } else if (block.kind === 'image') {
+            this.drawImageInto(ctx, block, 0, 0)
+          } else if (block.kind === 'chart') {
+            this.drawChartInto(ctx, block, 0, 0)
+          }
+        }
+      }
+      for (const page of layout.pages) {
+        visit(page.blocks)
+        visit(page.headerBlocks ?? [])
+        visit(page.footerBlocks ?? [])
+      }
+    }, true)
+    // 等待异步操作前必须恢复打印前的状态，期间可能触发屏幕渲染。
+    await Promise.all([...resources].filter(image => !image.complete || image.naturalWidth === 0).map(image => image.decode()))
+    return withPrintState(() => layout.pages.map(page => this.renderPageThumbnail(page, 0.7, layout.pages.length)))
   }
 
   /** 标脏（下一帧只重建这些 block 的 bitmap） */
@@ -1023,7 +1093,7 @@ export class CanvasRenderer {
    * @param b 段落块
    */
   private drawParagraphInto(ctx: PaintCtx, b: ParagraphBlock): void {
-    paintParagraph(ctx, b, { groupColors: this.opts.groupColors, activeGroupId: this.opts.activeGroupId, activeRevision: this.activeRevision })
+    paintParagraph(ctx, b, { groupColors: this.opts.groupColors, activeGroupId: this.opts.activeGroupId, activeRevision: this.activeRevision, printing: this.printing })
   }
 
 
@@ -1041,13 +1111,17 @@ export class CanvasRenderer {
     if (!img) {
       img = new Image()
       img.crossOrigin = 'anonymous'
-      img.onload = () => {
+      if (!this.printing) img.onload = () => {
         // 图片加载完成 → 使该 block 失效 + 触发全局重绘
         this.invalidateAll()
         this.container.dispatchEvent(new CustomEvent('vervedocs:image-loaded', { detail: { url } }))
       }
       img.src = url
       this.imageCache.set(url, img)
+    }
+    if (this.printResources) {
+      this.printResources.add(img)
+      return
     }
     const image = b.block as IImageElement
     const transform = image.imageLayout?.transform?.attributes
@@ -1118,12 +1192,16 @@ export class CanvasRenderer {
       const height = Math.max(10, Math.round(b.rect.height))
       const dataUrl = renderer.renderToDataUrl(option, width, height, 2)
       img = new Image()
-      img.onload = () => {
+      if (!this.printing) img.onload = () => {
         this.invalidateAll()
         this.container.dispatchEvent(new CustomEvent('vervedocs:chart-loaded', { detail: { id: el.id } }))
       }
       img.src = dataUrl
       this.imageCache.set(cacheKey, img)
+    }
+    if (this.printResources) {
+      this.printResources.add(img)
+      return
     }
 
     if (img.complete && img.naturalWidth > 0) {

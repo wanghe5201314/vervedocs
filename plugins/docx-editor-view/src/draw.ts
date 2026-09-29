@@ -442,9 +442,16 @@ export class Draw {
       getWrapperWidth: () => this.wrapper.clientWidth,
       getWrapperHeight: () => this.wrapper.clientHeight,
       getPageOffsetX: () => this.getPageOffsetX(),
-      // Layout coordinates are already the renderer's page coordinates.
-      getScale: () => (this.layout?.pageWidth ?? Number(this.options.pageWidth ?? 794)) / Number(this.options.pageWidth ?? 794),
-      getPageMargins: () => (this.options.pageMargins as [number, number, number, number]) ?? [100, 120, 100, 120],
+      // 布局与渲染均直接使用未缩放的 CSS 像素，页面尺寸差异不代表缩放。
+      getScale: () => 1,
+      getPageMargins: () => {
+        const page = this.layout?.pages[0]
+        if (!page) return (this.options.pageMargins as [number, number, number, number]) ?? [100, 120, 100, 120]
+        const { rect, contentRect } = page
+        const top = contentRect.y - rect.y
+        const left = contentRect.x - rect.x
+        return [top, rect.width - left - contentRect.width, rect.height - top - contentRect.height, left]
+      },
       getParagraphIndent: () => {
         const pos = this.range?.getFocus()
         const paragraph = pos ? findParagraphByPos(this.layout, pos) : null
@@ -1015,7 +1022,11 @@ export class Draw {
    * @param margins 页边距 [top, right, bottom, left]
    */
   setPaperMargins(margins: [number, number, number, number]): void {
-    this.options.pageMargins = margins
+    this.options.pageMargins = [...margins]
+    this.document.margins = [...margins]
+    for (const section of this.document.sections ?? []) {
+      section.margins = [...margins]
+    }
     this.reformatWithInvalidation()
   }
 
@@ -1080,8 +1091,8 @@ export class Draw {
     this.reformatWithInvalidation()
   }
 
-  /** 打印完整分页，不依赖仅包含当前视口的 Canvas 图层。 */
-  print(): void {
+  /** 按控件打印展示规则独立重排并打印完整分页，不依赖当前视口的 Canvas 图层。 */
+  async print(): Promise<void> {
     if (!this.layout?.pages.length) return
     const frame = document.createElement('iframe')
     frame.title = '文档打印'
@@ -1089,14 +1100,26 @@ export class Draw {
     frame.tabIndex = -1
     frame.style.cssText = 'position:fixed;width:0;height:0;border:0;left:-10000px;top:0;'
     try {
-      const images = this.getPageThumbnails()
-      const pageStyles = this.layout.pages.map((page, index) =>
+      // 打印专用布局独立重排，不覆盖当前编辑态布局。
+      const printLayout = new LayoutEngine({ ...this.toLayoutOptions(), printing: true }).layout(
+        this.document.elements,
+        this.document.header ?? this.document.contentZones?.header,
+        this.document.footer ?? this.document.contentZones?.footer,
+        this.document
+      )
+      this.syncPageNumberToRenderer()
+      this.syncWatermarkToRenderer()
+      // 按打印重排后的页序生成完整页面图片，并等待资源解码。
+      const images = await this.renderer.renderPrintPages(printLayout)
+      // 每页使用对应纸张尺寸，保留文档中的页面尺寸差异。
+      const pageStyles = printLayout.pages.map((page, index) =>
         `@page docx-page-${index}{size:${page.rect.width}px ${page.rect.height}px;margin:0}`
       ).join('')
-      const pages = this.layout.pages.map((page, index) =>
+      // 将重排后的页面图片与逐页纸张设置按相同页序组合为打印内容。
+      const pages = printLayout.pages.map((page, index) =>
         `<div class="page" style="page:docx-page-${index};width:${page.rect.width}px;height:${page.rect.height}px"><img src="${images[index]}" alt=""/></div>`
       ).join('')
-      // Wait for every page image before opening the native print dialog.
+      // 页面图片加载完成后再打开系统打印对话框。
       frame.onload = () => {
         const w = frame.contentWindow
         if (!w) {

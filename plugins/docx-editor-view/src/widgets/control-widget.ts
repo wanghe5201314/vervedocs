@@ -175,13 +175,13 @@ export class ControlWidget {
       'font:normal 400 14px/1.5 system-ui, sans-serif', 'color:#333',
       'border:1px solid #d9d9d9;border-radius:4px;background:#fff',
       'box-shadow:0 2px 8px rgba(0,0,0,.15);pointer-events:auto;box-sizing:border-box',
-      'padding:8px;display:flex;flex-direction:column;gap:6px;overflow:auto'
+      'padding:8px;display:flex;flex-direction:column;gap:6px;min-width:0;overflow-y:auto;overflow-x:hidden'
     ].join(';')
     const search = document.createElement('input')
     search.type = 'search'
     search.style.cssText = 'width:100%;box-sizing:border-box;padding:4px 6px;font:inherit;border:1px solid #ddd;'
     const list = document.createElement('div')
-    list.style.cssText = 'max-height:200px;overflow:auto;flex-shrink:0;'
+    list.style.cssText = 'max-height:200px;min-width:0;width:100%;box-sizing:border-box;overflow-y:auto;overflow-x:hidden;flex-shrink:0;'
     const footer = document.createElement('div')
     footer.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;'
     panel.append(search, list, footer)
@@ -194,12 +194,13 @@ export class ControlWidget {
       for (const option of options) {
         if (!option.label.toLocaleLowerCase().includes(query) && !option.value.toLocaleLowerCase().includes(query)) continue
         const row = document.createElement('label')
-        row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 4px;cursor:pointer;overflow-wrap:anywhere;'
+        row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 4px;width:100%;box-sizing:border-box;min-width:0;cursor:pointer;overflow-wrap:anywhere;'
         const input = document.createElement('input')
         input.type = multi ? 'checkbox' : 'radio'
         input.checked = selected.has(option.value)
-        input.style.cssText = 'flex-shrink:0;margin:0;accent-color:#409eff;'
+        input.style.cssText = 'flex:0 0 16px;width:16px;height:16px;margin:0;accent-color:#409eff;'
         const label = document.createElement('span')
+        label.style.cssText = 'flex:1;min-width:0;white-space:normal;overflow-wrap:anywhere;text-align:left;'
         label.textContent = option.label
         row.append(input, label)
         input.addEventListener('change', () => {
@@ -284,21 +285,23 @@ export class ControlWidget {
     this.floatEl.style.top = `${Math.max(top, Math.min(y, bottom - height))}px`
   }
 
-  private submit(value: ControlDataValue): void {
+  private submit(value: ControlDataValue, restoreFocus = true): void {
     const id = this.activation?.element.id
     const readOnly = this.deps.isReadonly() || this.activation?.element.control.readOnly
     this.deactivate()
     if (id && !readOnly) this.deps.onCommand('executeUpdateControlValue', id, value)
-    this.deps.focusEditor?.()
+    if (restoreFocus) this.deps.focusEditor?.()
   }
 
-  private commitInput(): void {
+  private commitInput(restoreFocus = true): void {
     if (!this.activation || !(this.floatEl instanceof HTMLInputElement)) return
+    // 数字输入不合法时浏览器也会返回空字符串，不能将其当作主动清空。
+    if (this.floatEl.validity.badInput) return
     const raw = this.floatEl.value
     const kind = this.activation.element.control.kind
     const value = kind === 'number' ? (raw === '' ? null : Number(raw)) : raw || null
     if (typeof value === 'number' && !Number.isFinite(value)) return
-    this.submit(value)
+    this.submit(value, restoreFocus)
   }
 
   deactivate(): void {
@@ -328,6 +331,15 @@ export class ControlWidget {
     if (!fallback || fallback.element.control.readOnly ||
         fallback.element.control.kind !== current.element.control.kind) {
       this.deactivate()
+      return
+    }
+    if (this.overlay?.clientHeight && (fallback.y + fallback.height <= 0 || fallback.y >= this.overlay.clientHeight)) {
+      if (this.floatEl instanceof HTMLInputElement) {
+        this.commitInput(false)
+        if (this.activation) this.deactivate()
+      } else {
+        this.deactivate()
+      }
       return
     }
     this.activation = fallback

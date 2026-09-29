@@ -385,7 +385,7 @@ export class Command {
   /**
    * 打印文档。
    */
-  executePrint(): void { this.adapt.print() }
+  executePrint(): Promise<void> { return this.adapt.print() }
   /**
    * 获取所有页面缩略图。
    * @returns 缩略图 data URL 数组

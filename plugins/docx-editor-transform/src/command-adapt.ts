@@ -16,7 +16,7 @@ import {
   getByPath, getParentContainer, cloneTree, walkTree, isSamePath, splitParagraphs, comparePath, formatElementTree,
   DEFAULT_EDITOR_OPTION, applyImageLayout, updateImageLayout, TableBorder, BULLET_STYLES, NUMBER_STYLES, toDocxExportDocument,
   clearRevision, snapshotRevisionFormat, recordFormatRevision,
-  isControl, createControlElement, updateControlElementValue, validateControlValue, validateControlConfig, comparePosition
+  isControl, createControlElement, updateControlElementValue, validateControlValue, validateControlConfig, comparePosition, isEmptyValue
 } from '@vervedoc/docx-editor-schema'
 import type { RangeManager, IRangeStyle, IEditorAbility, Listener } from '@vervedoc/docx-editor-state'
 
@@ -79,7 +79,7 @@ export interface DrawLike {
   /** 切换编辑区域并设置初始光标到对应区域起始位置 */
   setZoneWithCaret(zone: Zone): void
   /** 打印文档 */
-  print(): void
+  print(): Promise<void>
   /** 获取所有页面缩略图（data URL 数组） */
   getPageThumbnails(): string[]
   /** 滚动到指定文档位置使其可见 */
@@ -422,7 +422,8 @@ export class CommandAdapt {
       this._commit(doc)
       return true
     }
-    if (atom || (node.type === 'text' && node.value === '' && target?.type === 'text')) {
+    // Delete 在文本末尾继续删除下一文本片段，跳过控件删除后留下的空载体。
+    if (atom || (node.type === 'text' && target?.type === 'text' && (!backward || node.value === ''))) {
       if (target?.type === 'text') {
         this.range.setCaret({
           path: [...pos.path.slice(0, -1), index],
@@ -2790,8 +2791,8 @@ export class CommandAdapt {
   }
 
   /** 打印文档。 */
-  print(): void {
-    this.draw.print()
+  print(): Promise<void> {
+    return this.draw.print()
   }
 
   /**
@@ -4400,7 +4401,10 @@ export class CommandAdapt {
       walkTree(doc.elements, (node) => {
         if (isControl(node) && node.id === controlId) {
           if (node.control.readOnly) return false
-          const validation = validateControlValue(node.control, newDataValue)
+          // 编辑时允许清空必填控件，配置及独立验证的必填约束保持不变。
+          const config = isEmptyValue(node.control.kind, newDataValue)
+            ? { ...node.control, required: false } : node.control
+          const validation = validateControlValue(config, newDataValue)
           if (!validation.valid) return false
           const updated = updateControlElementValue(node, newDataValue)
           Object.assign(node, updated)

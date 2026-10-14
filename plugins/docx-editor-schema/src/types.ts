@@ -56,6 +56,10 @@ export interface IDocxSection {
   headerDistance?: number
   footerDistance?: number
   gutter?: number
+  /** Word 文档网格类型，如 lines / linesAndChars。 */
+  docGridType?: string
+  /** Word 文档基线网格间距（px）。 */
+  docGridLinePitch?: number
   paperDirection?: 'vertical' | 'horizontal'
   breakType?: string
   titlePage?: boolean
@@ -84,6 +88,14 @@ export type ImgDisplay = 'inline' | 'block' | 'float-top' | 'float-bottom' | 'su
 
 /* ========== 段落级属性（可继承给同段 runs） ========== */
 
+/** 段落四边框样式 */
+export interface IParagraphBorderStyle {
+  top?: IBorderSide
+  right?: IBorderSide
+  bottom?: IBorderSide
+  left?: IBorderSide
+}
+
 /** 段落级属性集合，可被同段 run 继承 */
 export interface IParagraphAttrs {
   /** 段落水平对齐方式 */
@@ -104,6 +116,10 @@ export interface IParagraphAttrs {
   lineHeight?: number
   /** 行高规则 */
   lineHeightRule?: LineHeightRule
+  /** 段落是否贴合文档行网格（w:snapToGrid）。 */
+  snapToGrid?: boolean
+  /** 段落四边框（对应 OOXML w:pBdr） */
+  paragraphBorder?: IParagraphBorderStyle
   /** 所属批注组 ID 列表 */
   groupIds?: string[]
 }
@@ -113,6 +129,10 @@ export interface IParagraphAttrs {
 /** 元素基类：所有元素类型都共享 type 与 value 字段，并继承段落级属性 */
 export interface IElementBase extends IParagraphAttrs {
   sourceParagraphId?: string
+  /** 段落标记字号（px），仅参与空段和末行行高计算 */
+  paragraphMarkSize?: number
+  /** 段落标记自身的下划线，不应用于段内文字 run */
+  paragraphMarkUnderline?: boolean
   /** 元素类型 */
   type: ElementType
   /** 元素值（text 为文本内容，其他类型为占位或子类型标识） */
@@ -275,6 +295,8 @@ export interface ITdBorderStyle {
 export interface ITd {
   /** 单元格宽度（px） */
   width: number
+  /** 单元格文字方向（对应 OOXML w:textDirection）。 */
+  textDirection?: string
   /** 跨列数 */
   colspan: number
   /** 跨行数 */

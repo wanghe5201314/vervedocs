@@ -73,7 +73,7 @@ function parseOptionsToArgs(opts: ParseOptions): string[] {
   if (opts.defaultSize != null) args.push('--default-size', String(opts.defaultSize))
   if (opts.tableWidthMode != null) args.push('--table-width-mode', opts.tableWidthMode)
   if (opts.forceLineHeight != null) args.push('--force-line-height', String(opts.forceLineHeight))
-  if (opts.includeHeaderFooter) args.push('--include-header-footer')
+  args.push(`--include-header-footer=${opts.includeHeaderFooter ?? true}`)
   if (opts.includeFootnotes) args.push('--include-footnotes')
   if (opts.chartStrategy != null) args.push('--chart-strategy', opts.chartStrategy)
   if (opts.mathStrategy != null) args.push('--math-strategy', opts.mathStrategy)

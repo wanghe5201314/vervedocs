@@ -63,7 +63,7 @@ export function signParagraph(b: ParagraphBlock): string {
   const attrs = b.block ?? (b.lines[0]?.inlines[0]?.run) ?? null
   const a = attrs as unknown as Record<string, unknown> | null
   const paraKey = a
-    ? `${a.rowFlex ?? ''}|${a.paragraphStyleId ?? ''}|${a.lineHeight ?? ''}|${a.lineHeightRule ?? ''}|${a.paragraphFirstLineIndent ?? ''}|${a.paragraphIndentLeft ?? ''}|${a.paragraphIndentRight ?? ''}|${a.indentHanging ?? ''}|${a.paragraphSpacingBefore ?? ''}|${a.paragraphSpacingAfter ?? ''}`
+    ? `${a.rowFlex ?? ''}|${a.paragraphStyleId ?? ''}|${a.lineHeight ?? ''}|${a.lineHeightRule ?? ''}|${a.snapToGrid ?? ''}|${a.paragraphFirstLineIndent ?? ''}|${a.paragraphIndentLeft ?? ''}|${a.paragraphIndentRight ?? ''}|${a.indentHanging ?? ''}|${a.paragraphSpacingBefore ?? ''}|${a.paragraphSpacingAfter ?? ''}|${a.paragraphMarkSize ?? ''}|${JSON.stringify(a.paragraphBorder ?? null)}`
     : ''
   const runsKey: string[] = []
   for (const line of b.lines) {

@@ -229,4 +229,45 @@ export function paintParagraph(ctx: PaintCtx, b: ParagraphBlock, opts: PaintOpti
       ctx.restore()
     }
   }
+  paintParagraphBorders(ctx, b)
+}
+
+/** 绘制段落四边框；坐标沿用段落块本地坐标。 */
+function paintParagraphBorders(ctx: PaintCtx, block: ParagraphBlock): void {
+  const borders = block.paragraphBorder
+  if (!borders) return
+  const width = block.rect.width
+  const height = block.rect.height
+  ctx.save()
+  for (const [side, edge] of Object.entries(borders)) {
+    if (!edge || edge.style === 'none' || !Number.isFinite(edge.width) || edge.width <= 0) continue
+    const lineWidth = edge.width
+    const vertical = side === 'left' || side === 'right'
+    const x = side === 'left' ? lineWidth / 2 : width - lineWidth / 2
+    const y = side === 'top' ? lineWidth / 2 : height - lineWidth / 2
+    const x1 = vertical ? x : 0
+    const y1 = vertical ? 0 : y
+    const x2 = vertical ? x : width
+    const y2 = vertical ? height : y
+
+    ctx.strokeStyle = edge.color
+    ctx.lineCap = edge.style === 'dotted' ? 'round' : 'butt'
+    ctx.lineWidth = edge.style === 'double' ? Math.max(0.5, lineWidth / 3) : lineWidth
+    ctx.setLineDash(edge.style === 'dashed' ? [lineWidth * 3, lineWidth * 2] :
+      edge.style === 'dotted' ? [Math.max(0.5, lineWidth), Math.max(1.5, lineWidth * 1.5)] : [])
+    const stroke = (offset = 0) => {
+      ctx.beginPath()
+      ctx.moveTo(vertical ? x1 + offset : x1, vertical ? y1 : y1 + offset)
+      ctx.lineTo(vertical ? x2 + offset : x2, vertical ? y2 : y2 + offset)
+      ctx.stroke()
+    }
+    if (edge.style === 'double') {
+      const offset = Math.max(0.75, lineWidth / 3)
+      stroke(-offset)
+      stroke(offset)
+    } else {
+      stroke()
+    }
+  }
+  ctx.restore()
 }

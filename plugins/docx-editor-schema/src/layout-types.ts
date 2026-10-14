@@ -4,7 +4,7 @@
  * 纯类型定义，供 view 和 transform 共享，避免循环依赖。
  */
 
-import type { IElement, Path, ITd } from './types'
+import type { IElement, IParagraphBorderStyle, Path, ITd } from './types'
 
 /** 矩形区域描述 */
 export interface Rect {
@@ -121,6 +121,8 @@ export interface ParagraphBlock extends BlockBase {
   endIndex: number
   /** 父容器路径 */
   parentPath: Path
+  /** 段落四边框 */
+  paragraphBorder?: IParagraphBorderStyle
 
   /** 行盒列表 */
   lines: LineBox[]

@@ -1203,6 +1203,7 @@ export class CommandAdapt {
           selectedRuns.push(element)
         }
         if (isControl(element)) return false
+        return undefined
       })
     }
     const runs = selectedRuns.filter(run => (run as ITextElement).revisionType !== 'delete')

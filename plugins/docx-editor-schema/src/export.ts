@@ -49,6 +49,8 @@ export function toDocxExportDocument(document: IDocxDocumentMeta): IDocxDocument
             continue
           }
           delete run.paragraphStyleId
+          delete run.paragraphMarkSize
+          delete run.paragraphMarkUnderline
           delete run.rowFlex
           delete run.paragraphFirstLineIndent
           delete run.paragraphIndentLeft
@@ -57,6 +59,7 @@ export function toDocxExportDocument(document: IDocxDocumentMeta): IDocxDocument
           delete run.paragraphSpacingAfter
           delete run.lineHeight
           delete run.lineHeightRule
+          delete run.snapToGrid
           delete (run as IElement & { paragraphColor?: string }).paragraphColor
         }
       }

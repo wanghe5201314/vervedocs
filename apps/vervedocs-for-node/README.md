@@ -102,7 +102,7 @@ curl http://localhost:1320/health
 | `defaultSize` | number | 否 | 默认字号 px |
 | `tableWidthMode` | `fit`\|`word` | 否 | 表格宽度模式 |
 | `forceLineHeight` | number | 否 | 强制行高倍率 |
-| `includeHeaderFooter` | boolean | 否 | 包含页眉页脚 |
+| `includeHeaderFooter` | boolean | 否 | 是否包含页眉页脚，默认 `true` |
 | `includeFootnotes` | boolean | 否 | 包含脚注正文 |
 | `chartStrategy` | `preview`\|`xml`\|`skip` | 否 | 图表策略 |
 | `mathStrategy` | `text`\|`placeholder`\|`skip` | 否 | 公式策略 |

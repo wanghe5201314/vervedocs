@@ -94,7 +94,7 @@ function extractParseOptions(
   const forceLineHeight = toNumber(get('forceLineHeight'))
   if (forceLineHeight != null) options.forceLineHeight = forceLineHeight
   const includeHeaderFooter = toBoolean(get('includeHeaderFooter'))
-  if (includeHeaderFooter != null) options.includeHeaderFooter = includeHeaderFooter
+  options.includeHeaderFooter = includeHeaderFooter ?? true
   const includeFootnotes = toBoolean(get('includeFootnotes'))
   if (includeFootnotes != null) options.includeFootnotes = includeFootnotes
   const chartStrategy = get('chartStrategy')

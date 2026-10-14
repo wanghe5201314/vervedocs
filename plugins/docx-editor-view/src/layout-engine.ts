@@ -64,7 +64,9 @@ interface ParagraphInput {
   endIndex: number
   parentPath: Path
   availableWidth: number
+  docGridLinePitch?: number
   runStartIndex?: number
+  ignoreParagraphIndents?: boolean
   exclusions?: { rect: Rect; side: string; topBottom: boolean }[]
 }
 
@@ -167,13 +169,29 @@ export class LayoutEngine {
       if (element.type === 'pageBreak' && sectionBreaks.has(element.value)) columnSection++
     }
     const rawBlocks = this.layoutBlocks(elements, [], contentWidth, sectionWidths)
+    let gridSectionIndex = 0
     for (let index = 0; index < rawBlocks.length; index++) {
       const block = rawBlocks[index]
+      if (block.kind === 'pageBreak') {
+        if (sectionBreaks.has(String(block.block.value))) gridSectionIndex++
+        continue
+      }
       if (block.kind !== 'paragraph') continue
       const input = this.paragraphInputs.get(block)!
       const columnId = input.runs.find(run => (run as Record<string, unknown>).columnId)?.columnId as string | undefined
       const columns = columnId ? columnGroups.get(columnId) : undefined
-      if (columns) rawBlocks[index] = this.layoutParagraph({ ...input, availableWidth: columns.widths[0] })
+      const section = document?.sections?.[gridSectionIndex]
+      const gridType = section?.docGridType
+      const gridLinePitch = gridType === 'lines' || gridType === 'linesAndChars'
+        ? section?.docGridLinePitch
+        : undefined
+      if (columns || (gridLinePitch != null && gridLinePitch > 0)) {
+        rawBlocks[index] = this.layoutParagraph({
+          ...input,
+          availableWidth: columns?.widths[0] ?? input.availableWidth,
+          docGridLinePitch: gridLinePitch
+        })
+      }
     }
     const anchorParagraphs = new Map<string, ParagraphBlock>()
     for (const block of rawBlocks) {
@@ -221,6 +239,10 @@ export class LayoutEngine {
     let pageIndex = 0
     let cursorY = 0
     let currentBlocks: BlockNode[] = []
+    const hasVisiblePageContent = (blocks: BlockNode[]) => blocks.some(block => block.kind !== 'paragraph' ||
+      !!block.surroundImage || !!block.bulletText ||
+      block.lines.some(line => line.inlines.some(inline =>
+        !!inline.controlMark || !!inline.controlPlaceholder || inline.text.replace(/[\s\u200B\uFEFF]/g, '').length > 0)))
     let activeColumns: { widths: number[]; gap: number } | undefined
     let activeColumnId: string | undefined = undefined
     let columnIndex = 0
@@ -321,7 +343,16 @@ export class LayoutEngine {
         const nextSection = sectionBreaks.has(breakType) ? document?.sections?.[sectionIndex + 1] : undefined
         const geometryChanged = nextSection && (nextSection.pageWidth !== pageWidth || nextSection.pageHeight !== pageHeight ||
           nextSection.margins?.some((margin, index) => margin !== [mt, mr, mb, ml][index]))
-        if (breakType !== 'continuous' || geometryChanged) pushPage()
+        // 当前页已空时直接复用，避免 nextPage 再生成一张空白页。
+        const suppressEmptyNextPage = breakType === 'nextPage' && !hasVisiblePageContent(currentBlocks)
+        if ((breakType !== 'continuous' || geometryChanged) && !suppressEmptyNextPage) pushPage()
+        else if (suppressEmptyNextPage) {
+          currentBlocks = []
+          cursorY = 0
+          columnIndex = 0
+          columnTop = 0
+          columnBottom = 0
+        }
         if (sectionBreaks.has(breakType) && document?.sections) {
           sectionIndex++
           if (!document.sections[sectionIndex]) throw new TypeError('Java sections 与正文分节符数量不一致')
@@ -348,6 +379,42 @@ export class LayoutEngine {
           const height = end === b.lines.length ? b.rect.height - origin : lines.at(-1)!.y + lines.at(-1)!.height
           currentBlocks.push({ ...b, id: nextBlockId(), bulletText: start === 0 ? b.bulletText : undefined,
             rect: { ...b.rect, x: b.rect.x + columnX(), y: cursorY, height }, lines })
+          cursorY += height
+          start = end
+          if (start < b.lines.length) advanceColumn()
+        }
+        continue
+      }
+      // Word 的普通长段落可以跨页；保留首尾的段间距，并尽量避免单行孤行。
+      if (b.kind === 'paragraph' && b.lines.length > 1 && !b.surroundImage && !attachedImages.has(rawBlocks[i] as ParagraphBlock) &&
+        cursorY + b.rect.height > contentHeight + PAGE_FIT_EPSILON) {
+        let start = 0
+        while (start < b.lines.length) {
+          const origin = start === 0 ? 0 : b.lines[start].y
+          let end = start
+          while (end < b.lines.length && cursorY + b.lines[end].y + b.lines[end].height - origin <= contentHeight + PAGE_FIT_EPSILON) end++
+          if (end === start && currentBlocks.length > 0) {
+            advanceColumn()
+            continue
+          }
+          if (end === start) end = start + 1
+          const remainingLines = b.lines.length - end
+          if (currentBlocks.length > 0 && end < b.lines.length && end - start === 1 && b.lines.length >= 4) {
+            advanceColumn()
+            continue
+          }
+          if (remainingLines === 1 && end - start > 2) end--
+          const lines = b.lines.slice(start, end).map(line => ({
+            ...line,
+            y: line.y - origin,
+            baseline: line.baseline - origin,
+            inlines: line.inlines.map(inline => ({ ...inline, y: inline.y - origin, baseline: inline.baseline - origin }))
+          }))
+          const height = end === b.lines.length ? b.rect.height - origin : b.lines[end - 1].y + b.lines[end - 1].height - origin
+          currentBlocks.push({
+            ...b, id: nextBlockId(), bulletText: start === 0 ? b.bulletText : undefined,
+            rect: { ...b.rect, y: cursorY, height }, lines
+          })
           cursorY += height
           start = end
           if (start < b.lines.length) advanceColumn()
@@ -479,7 +546,13 @@ export class LayoutEngine {
   /**
    * 将 elements 数组转换为 BlockNode 列表（y 起始为 0，返回后由上层重新分配 y）。
    */
-  private layoutBlocks(elements: IElement[], parentPath: Path, availableWidth: number, sectionWidths?: number[]): BlockNode[] {
+  private layoutBlocks(
+    elements: IElement[],
+    parentPath: Path,
+    availableWidth: number,
+    sectionWidths?: number[],
+    ignoreParagraphIndents = false
+  ): BlockNode[] {
     let section = 0
     const paragraphs = splitParagraphs(elements)
 
@@ -554,7 +627,8 @@ export class LayoutEngine {
               endIndex: next.end,
               parentPath,
               availableWidth,
-              runStartIndex: next.runStartIndex ?? 0
+              runStartIndex: next.runStartIndex ?? 0,
+              ignoreParagraphIndents
             })
             pb.surroundImage = imgBlock
             if (imgBlock.rect.height > pb.rect.height) {
@@ -633,7 +707,8 @@ export class LayoutEngine {
           endIndex: g.end,
           parentPath,
           availableWidth,
-          runStartIndex: g.runStartIndex ?? 0
+          runStartIndex: g.runStartIndex ?? 0,
+          ignoreParagraphIndents
         }))
       }
     }
@@ -688,6 +763,9 @@ export class LayoutEngine {
       'indentHanging',
       'paragraphSpacingBefore',
       'paragraphSpacingAfter',
+      'paragraphMarkSize',
+      'snapToGrid',
+      'paragraphBorder',
       'lineHeight',
       'lineHeightRule'
     ] as const
@@ -706,17 +784,20 @@ export class LayoutEngine {
       containerAttrs[key] != null ? containerAttrs[key] : collectedRunAttrs[key]
 
     const rowFlex = (attr('rowFlex') as LineBox['rowFlex']) || 'left'
-    const firstIndent = Number(attr('paragraphFirstLineIndent') ?? 0)
+    const firstIndent = input.ignoreParagraphIndents ? 0 : Number(attr('paragraphFirstLineIndent') ?? 0)
     // 段落左右缩进：docx 可能出现负值（"悬入左边距"）。若不夹到 0，会使
     // usableWidth > availableWidth，行宽越过 block 边界，超出的字符会被
     // block bitmap 裁掉，表现为文字丢失。此处按可视排版约束夹到 [0, +inf)。
-    let indentLeft = Math.max(0, Number(attr('paragraphIndentLeft') ?? 0))
-    const indentRight = Math.max(0, Number(attr('paragraphIndentRight') ?? 0))
+    let indentLeft = input.ignoreParagraphIndents ? 0 : Math.max(0, Number(attr('paragraphIndentLeft') ?? 0))
+    const indentRight = input.ignoreParagraphIndents ? 0 : Math.max(0, Number(attr('paragraphIndentRight') ?? 0))
     // 悬挂缩进：正值表示首行相对后续行左移 hangIndent
-    const indentHanging = Number(attr('indentHanging') ?? 0)
+    const indentHanging = input.ignoreParagraphIndents ? 0 : Number(attr('indentHanging') ?? 0)
     const spacingBefore = Number(attr('paragraphSpacingBefore') ?? 0)
     const spacingAfter = Number(attr('paragraphSpacingAfter') ?? 0)
-    const rawLineHeight = Number(attr('lineHeight') ?? this.opts.defaultLineHeight)
+    const paragraphMarkSize = Number(attr('paragraphMarkSize') ?? 0)
+    const snapToGrid = attr('snapToGrid') !== false
+    const docGridLinePitch = Number(input.docGridLinePitch ?? 0)
+    const rawLineHeight = Number(attr('lineHeight') ?? (docGridLinePitch > 0 ? 1 : this.opts.defaultLineHeight))
     const lineHeightRule = (attr('lineHeightRule') as string) || 'auto'
 
     // 项目符号（跟随首个 run 的字体/字号/颜色/粗细）
@@ -796,7 +877,7 @@ export class LayoutEngine {
     const lines: LineBox[] = []
     let currentInlines: InlineBox[] = []
     let currentLineWidth = 0
-    let currentMaxSize = this.opts.defaultSize
+    let currentMaxSize = 0
     let isFirstLine = true
 
     // 首行偏移相对于文本前缩进，负值表示悬挂。
@@ -807,7 +888,7 @@ export class LayoutEngine {
       let right = availableWidth - indentRight
       for (const exclusion of input.exclusions ?? []) {
         const r = exclusion.rect
-        if (flowY >= r.y + r.height || flowY + computeLineHeight(currentMaxSize) <= r.y) continue
+        if (flowY >= r.y + r.height || flowY + computeLineHeight(currentMaxSize || this.opts.defaultSize) <= r.y) continue
         if (exclusion.topBottom || (r.x <= left && r.x + r.width >= right)) {
           flowY = r.y + r.height
           return lineRegion()
@@ -816,7 +897,7 @@ export class LayoutEngine {
         const useLeft = exclusion.side === 'left' || (exclusion.side !== 'right' && leftWidth >= rightWidth)
         if (useLeft) right = Math.min(right, r.x)
         else left = Math.max(left, r.x + r.width)
-        if (right - left < currentMaxSize) {
+        if (right - left < (currentMaxSize || this.opts.defaultSize)) {
           flowY = r.y + r.height
           return lineRegion()
         }
@@ -846,8 +927,12 @@ export class LayoutEngine {
     }
 
     const finalizeLine = (isLastLine: boolean) => {
-      const size = currentMaxSize
-      const lh = computeLineHeight(size)
+      const size = currentMaxSize || paragraphMarkSize || this.opts.defaultSize
+      const naturalLineHeight = computeLineHeight(size)
+      // 网格定义行距下限；固定行距由段落自己决定，不受文档网格抬高。
+      const lh = snapToGrid && docGridLinePitch > 0 && lineHeightRule !== 'exact'
+        ? Math.max(naturalLineHeight, docGridLinePitch)
+        : naturalLineHeight
       const region = lineRegion()
       const lineXBase = region.x
       // 把 inline.x 从"相对 line 起点"平移到"相对块起点"
@@ -866,7 +951,7 @@ export class LayoutEngine {
       flowY += lh
       currentInlines = []
       currentLineWidth = 0
-      currentMaxSize = this.opts.defaultSize
+      currentMaxSize = 0
       isFirstLine = false
     }
 
@@ -945,14 +1030,15 @@ export class LayoutEngine {
 
       if (!value) {
         if (rawRun.type === 'text' && !rawRun.extension?.fieldMarker && !rawRun.extension?.bookmarkMarker) {
+          const emptySize = Number(anyRun.size ?? (paragraphMarkSize || this.opts.defaultSize))
           currentInlines.push({
             run,
             path: runPath,
             startOffset: 0, endOffset: 0, text: '', x: currentLineWidth, y: 0,
-            width: 0, height: size, font, size, bold, italic, color, baseline: 0,
+            width: 0, height: emptySize, font, size: emptySize, bold, italic, color, baseline: 0,
             bgColor, strikeout, underline, groupIds, hyperlink: hyperlinkUrl
           })
-          currentMaxSize = Math.max(currentMaxSize, size)
+          currentMaxSize = Math.max(currentMaxSize, emptySize)
         }
         continue
       }
@@ -1085,7 +1171,7 @@ export class LayoutEngine {
         const pr = placeholderRun as unknown as Record<string, unknown>
         const rawFont = String(pr.font ?? this.opts.defaultFont)
         const font = FONT_FAMILY_CSS[rawFont] ?? rawFont
-        const size = Number(pr.size ?? this.opts.defaultSize)
+        const size = Number(pr.size ?? (paragraphMarkSize || this.opts.defaultSize))
         const runPath: Path = paragraphKind === 'normal'
           ? [...runsParentPath, startIndex + placeholderRi]
           : [...runsParentPath, runStartIndex + placeholderRi]
@@ -1113,7 +1199,10 @@ export class LayoutEngine {
         currentMaxSize = size
       }
     }
-    if (currentInlines.length > 0 || lines.length === 0) finalizeLine(true)
+    if (currentInlines.length > 0 || lines.length === 0) {
+      currentMaxSize = Math.max(currentMaxSize, paragraphMarkSize)
+      finalizeLine(true)
+    }
 
     // 分配行 y 与 inline y/baseline（相对块本地坐标）
     let yy = spacingBefore
@@ -1145,6 +1234,7 @@ export class LayoutEngine {
       id: nextBlockId(),
       paragraphKind,
       block,
+      paragraphBorder: attr('paragraphBorder') as ParagraphBlock['paragraphBorder'],
       startIndex,
       endIndex,
       parentPath,
@@ -1263,6 +1353,17 @@ export class LayoutEngine {
 
     for (let ri = 0; ri < table.trList.length; ri++) {
       const tr = table.trList[ri]
+      const legacyVerticalPeers = tr.tdList.filter(cell => {
+        const runs = cell.value.filter(run => run.type === 'text') as Array<IElement & {
+          size?: number
+          paragraphIndentLeft?: number
+        }>
+        const width = Number(cell.width ?? 0)
+        const size = runs.reduce((max, run) => Math.max(max, Number(run.size) || this.opts.defaultSize), 0) ||
+          this.opts.defaultSize
+        const indent = Number(runs.find(run => run.paragraphIndentLeft != null)?.paragraphIndentLeft ?? 0)
+        return width > 0 && width <= 60 && indent >= Math.max(width * 1.2, size * 3.5)
+      }).length
       let colCursor = 0
       for (let ci = 0; ci < tr.tdList.length; ci++) {
         // 跳过已被上方 rowspan 覆盖的位置
@@ -1284,9 +1385,39 @@ export class LayoutEngine {
         const cellX = sumUp(colWidths, colCursor)
         const [pt, pr, pb, pl] = td.padding
         const contentWidth = Math.max(10, cellWidth - pl - pr)
+        const textRuns = td.value.filter(run => run.type === 'text') as Array<IElement & {
+          size?: number
+          lineHeight?: number
+          paragraphIndentLeft?: number
+          value?: string
+        }>
+        const maxTextSize = textRuns.reduce((max, run) => Math.max(max, Number(run.size) || this.opts.defaultSize), 0) ||
+          this.opts.defaultSize
+        const firstIndent = Number(textRuns.find(run => run.paragraphIndentLeft != null)?.paragraphIndentLeft ?? 0)
+        const longestLineHeight = textRuns.reduce((max, run) => Math.max(max, Number(run.lineHeight) || 0), 0)
+        const textLength = textRuns.reduce((length, run) => length + (run.value?.replace(/[\s\u200B\uFEFF]/g, '').length ?? 0), 0)
+        const direction = String(td.textDirection ?? '').toLowerCase()
+        const hasVerticalIndent = cellWidth <= 60 &&
+          firstIndent >= Math.max(cellWidth * 0.9, maxTextSize * 2)
+        const hasVerticalLineMetrics = legacyVerticalPeers >= 4 &&
+          cellWidth <= 30 &&
+          longestLineHeight >= maxTextSize &&
+          textLength >= 12
+        const isVerticalText = direction.startsWith('tb') || direction.startsWith('bt') ||
+          (!td.textDirection && cellWidth <= 60 &&
+            (firstIndent >= Math.max(cellWidth * 1.2, maxTextSize * 3.5) ||
+              hasVerticalIndent ||
+              hasVerticalLineMetrics))
+        const verticalTextWidth = isVerticalText ? Math.min(contentWidth, maxTextSize) : contentWidth
         const cellPath: Path = [...parentPath, index, 'trList', ri, 'tdList', ci]
         const contentPath: Path = [...cellPath, 'value']
-        const content = this.layoutBlocks(td.value, contentPath, contentWidth)
+        const content = this.layoutBlocks(
+          td.value,
+          contentPath,
+          verticalTextWidth,
+          undefined,
+          isVerticalText
+        )
 
         // 内容 y 累加
         let innerY = 0
@@ -1303,7 +1434,7 @@ export class LayoutEngine {
           rect: { x: cellX, y: 0, width: cellWidth, height: 0 },
           content,
           contentPaddingTop: pt,
-          contentPaddingLeft: pl,
+          contentPaddingLeft: pl + (isVerticalText ? Math.max(0, contentWidth - verticalTextWidth) / 2 : 0),
           verticalOffset: 0
         }
         rowCells[ri].push(layout)

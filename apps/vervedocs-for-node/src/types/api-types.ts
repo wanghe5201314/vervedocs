@@ -33,7 +33,7 @@ export interface ParseOptions {
   tableWidthMode?: TableWidthMode
   /** 强制行高倍率，默认 1 */
   forceLineHeight?: number
-  /** 是否包含页眉页脚，默认 false */
+  /** 是否包含页眉页脚，默认 true */
   includeHeaderFooter?: boolean
   /** 是否包含脚注正文，默认 false */
   includeFootnotes?: boolean

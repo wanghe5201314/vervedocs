@@ -258,6 +258,12 @@ export async function writeDocx(
     const twips = (value: number | undefined) => value === undefined ? undefined : Math.round(value * 15)
     const doc = new Document({ sections: groups.map((elements, index) => {
       const section = metadata?.sections?.[index]
+      const pageWidth = section?.pageWidth ?? metadata?.pageWidth
+      const pageHeight = section?.pageHeight ?? metadata?.pageHeight
+      const paperDirection = pageWidth != null && pageHeight != null &&
+        pageWidth > 0 && pageHeight > 0 && pageWidth !== pageHeight
+        ? pageWidth > pageHeight ? 'horizontal' : 'vertical'
+        : section?.paperDirection ?? metadata?.paperDirection
       const margin = section?.margins ?? metadata?.margins
       const parts = (zone: 'header' | 'footer') => {
         const refs = section?.[zone === 'header' ? 'headers' : 'footers']
@@ -272,7 +278,7 @@ export async function writeDocx(
           type: (index ? breaks[index - 1] : section?.breakType) as any,
           titlePage: section?.titlePage,
           page: {
-            size: { width: twips(section?.pageWidth ?? metadata?.pageWidth), height: twips(section?.pageHeight ?? metadata?.pageHeight), orientation: (section?.paperDirection ?? metadata?.paperDirection) === 'horizontal' ? 'landscape' as const : 'portrait' as const },
+            size: { width: twips(pageWidth), height: twips(pageHeight), orientation: paperDirection === 'horizontal' ? 'landscape' as const : 'portrait' as const },
             margin: { top: twips(margin?.[0]), right: twips(margin?.[1]), bottom: twips(margin?.[2]), left: twips(margin?.[3]), header: twips(section?.headerDistance), footer: twips(section?.footerDistance), gutter: twips(section?.gutter) }
           }
         },

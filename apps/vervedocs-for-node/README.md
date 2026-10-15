@@ -14,13 +14,13 @@ Express (:1320)                       ← 本服务
     └ POST /documents/render            json → docx/pdf（?format=docx|pdf）
     │
     ▼
-child_process.spawn('java', ['-jar', 'vervedocs-for-java.jar', ...])
+child_process.spawn('java', ['-jar', 'vervedocs-for-java-1.0.0-all.jar', ...])
     │
     ▼
-vervedocs-for-java.jar                ← Java 端（Apache POI + docx4j）
+vervedocs-for-java-1.0.0-all.jar      ← Java 端（Apache POI + docx4j）
 ```
 
-底层通过 `child_process.spawn` 调用 `vervedocs-for-java.jar` 的 CLI，使用临时文件传递输入输出。  
+底层通过 `child_process.spawn` 调用 `vervedocs-for-java-1.0.0-all.jar` 的 CLI，使用临时文件传递输入输出。
 服务已启用 CORS，便于本地 playground 等浏览器前端直连。
 
 ## 环境要求
@@ -33,13 +33,13 @@ vervedocs-for-java.jar                ← Java 端（Apache POI + docx4j）
 
 ### 1. 准备 jar 包
 
-jar 包已内置在 `jars/vervedocs-for-java.jar`。如需更新：
+jar 包已内置在 `jars/vervedocs-for-java-1.0.0-all.jar`。如需更新：
 
 ```bash
 # 在 vervedocs-for-java 目录下打包
 mvn package
-# 复制到本服务
-cp vervedocs-for-java/target/vervedocs-for-java.jar apps/vervedocs-for-node/jars/
+# 复制包含依赖和 Main-Class 的 JAR 到本服务
+cp vervedocs-for-java/target/vervedocs-for-java-1.0.0-all.jar apps/vervedocs-for-node/jars/
 ```
 
 ### 2. 安装依赖
@@ -74,7 +74,7 @@ pnpm --filter @vervedoc/for-node start
 |------|------|--------|
 | `PORT` | 服务端口 | `1320` |
 | `JAVA_BIN` | Java 可执行文件路径 | `java` |
-| `JAR_PATH` | jar 包路径（绝对或相对项目根） | `./jars/vervedocs-for-java.jar` |
+| `JAR_PATH` | jar 包路径（绝对或相对项目根） | `./jars/vervedocs-for-java-1.0.0-all.jar` |
 | `JAVA_OPTS` | JVM 参数 | `-Xmx512m` |
 | `TEMP_DIR` | 临时文件目录 | 系统临时目录 |
 | `TEMP_TTL` | 临时文件保留时长（毫秒） | `300000` |
@@ -201,7 +201,7 @@ apps/vervedocs-for-node/
 ├── tsconfig.json
 ├── .env.example
 ├── jars/                           # 内置 jar 包
-│   └── vervedocs-for-java.jar
+│   └── vervedocs-for-java-1.0.0-all.jar
 └── src/
     ├── index.ts                    # HTTP 服务入口
     ├── config.ts                   # 配置

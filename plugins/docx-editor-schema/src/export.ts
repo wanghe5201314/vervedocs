@@ -52,6 +52,7 @@ export function toDocxExportDocument(document: IDocxDocumentMeta): IDocxDocument
           delete run.paragraphMarkSize
           delete run.paragraphMarkUnderline
           delete run.rowFlex
+          delete run.paragraphFrame
           delete run.paragraphFirstLineIndent
           delete run.paragraphIndentLeft
           delete run.paragraphIndentRight

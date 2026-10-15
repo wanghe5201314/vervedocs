@@ -122,11 +122,18 @@ export class LayoutEngine {
     this.nextParagraphCache = new Map()
     this.layoutZone = 'main'
     const { pageGap } = this.opts
+    // 缺失区域仅生成布局占位，不写入文档；进入编辑后沿用相同位置。
+    const emptyZoneElements: IElement[] = [{ type: 'text', value: '' }]
+    const zoneElements = (elements?: IElement[]) => elements?.length ? elements : emptyZoneElements
+    const isDefaultEmptyZone = (elements: IElement[]) => elements.length === 1 &&
+      elements[0].type === 'text' && elements[0].value === '' &&
+      Object.keys(elements[0]).every(key => ['type', 'value', 'font', 'size'].includes(key))
     let sectionIndex = 0
     let sectionFirstPage = 0
     let pageWidth = this.opts.pageWidth
     let pageHeight = this.opts.pageHeight
     let [mt, mr, mb, ml] = this.opts.pageMargins
+    let footerAreaHeight = mb
     let contentWidth = pageWidth - ml - mr
     let contentHeight = pageHeight - mt - mb
     const setSection = (index: number) => {
@@ -144,7 +151,33 @@ export class LayoutEngine {
         ;[mt, mr, mb, ml] = document.margins ?? this.opts.pageMargins
       }
       contentWidth = pageWidth - ml - mr
-      contentHeight = pageHeight - mt - mb
+      // 页脚距底部可能大于下页边距，需在分页前预留内容高度，避免负偏移侵入正文。
+      const footerPartIds = document?.sections
+        ? new Set([
+          resolveHeaderFooterPart(document, 'footer', index, 0, true),
+          resolveHeaderFooterPart(document, 'footer', index, 0, false),
+          resolveHeaderFooterPart(document, 'footer', index, 1, false)
+        ])
+        : new Set([undefined])
+      footerAreaHeight = mb
+      const previousZone = this.layoutZone
+      const previousCounters = new Map(this.counters)
+      try {
+        for (const partId of footerPartIds) {
+          const pageFooterElements = zoneElements(document?.sections
+            ? partId ? document.headerFooterParts?.[partId] : undefined
+            : footerElements)
+          this.layoutZone = `footer:${partId ?? ''}`
+          const blocks = this.layoutBlocks(pageFooterElements, [], contentWidth)
+          const height = blocks.reduce((max, block) => Math.max(max, block.rect.y + block.rect.height), 0)
+          const distance = isDefaultEmptyZone(pageFooterElements) ? 0 : section?.footerDistance ?? 0
+          footerAreaHeight = Math.max(footerAreaHeight, distance + height)
+        }
+      } finally {
+        this.layoutZone = previousZone
+        this.counters = previousCounters
+      }
+      contentHeight = pageHeight - mt - footerAreaHeight
     }
     setSection(0)
     const sectionBreaks = new Set(['continuous', 'nextPage', 'evenPage', 'oddPage'])
@@ -217,13 +250,6 @@ export class LayoutEngine {
     }
     const placedAnchors = new Map<string, { paragraph: ParagraphBlock; column: Rect }>()
 
-    // 缺失区域仅生成布局占位，不写入文档；进入编辑后补出的默认空段落沿用相同位置。
-    const emptyZoneElements: IElement[] = [{ type: 'text', value: '' }]
-    const zoneElements = (elements?: IElement[]) => elements?.length ? elements : emptyZoneElements
-    const isDefaultEmptyZone = (elements: IElement[]) => elements.length === 1 &&
-      elements[0].type === 'text' && elements[0].value === '' &&
-      Object.keys(elements[0]).every(key => ['type', 'value', 'font', 'size'].includes(key))
-
     // 页眉/页脚 block 预布局（rect.y 相对各自区域原点）
     this.layoutZone = 'header'
     const headerBlocks = this.layoutBlocks(zoneElements(headerElements), [], contentWidth)
@@ -282,7 +308,7 @@ export class LayoutEngine {
       const headerOffsetY = !isDefaultEmptyZone(pageHeaderElements) && section?.headerDistance !== undefined
         ? section.headerDistance : Math.max(0, mt - headerHeight)
       const footerOffsetY = !isDefaultEmptyZone(pageFooterElements) && section?.footerDistance !== undefined
-        ? mb - section.footerDistance - footerHeight : 0
+        ? footerAreaHeight - section.footerDistance - footerHeight : 0
       const pageRect: Rect = { x: 0, y: pageOriginY, width: pageWidth, height: pageHeight }
       const contentRect: Rect = {
         x: ml,
@@ -291,7 +317,7 @@ export class LayoutEngine {
         height: contentHeight
       }
       const headerRect: Rect = { x: ml, y: pageOriginY, width: contentWidth, height: mt }
-      const footerRect: Rect = { x: ml, y: pageOriginY + mt + contentHeight, width: contentWidth, height: mb }
+      const footerRect: Rect = { x: ml, y: pageOriginY + mt + contentHeight, width: contentWidth, height: footerAreaHeight }
       pages.push({
         index: pageIndex, sectionIndex, headerPartId, footerPartId, rect: pageRect, contentRect, blocks: currentBlocks,
         headerRect,
@@ -757,14 +783,16 @@ export class LayoutEngine {
   private computeParagraph(input: ParagraphInput): ParagraphBlock {
     const {
       paragraphKind, block, runs, runsParentPath,
-      startIndex, endIndex, parentPath, availableWidth,
+      startIndex, endIndex, parentPath,
       runStartIndex = 0
     } = input
+    let availableWidth = input.availableWidth
 
     // 段落属性优先级：block（title/list 容器） > 段内任一 run（docx-parser 会把 pPr 附在 run 上，未必是第 1 个）
     // 段落级属性字段集合
     const PARA_KEYS = [
       'rowFlex',
+      'paragraphFrame',
       'paragraphStyleId',
       'paragraphFirstLineIndent',
       'paragraphIndentLeft',
@@ -792,6 +820,13 @@ export class LayoutEngine {
     const attr = (key: string): unknown =>
       containerAttrs[key] != null ? containerAttrs[key] : collectedRunAttrs[key]
 
+    // 页眉页脚的页码框按页边距区域定位，框内文字仍使用自己的段落对齐属性。
+    const frame = attr('paragraphFrame') as IElement['paragraphFrame']
+    const positionedFrame = frame?.hAnchor === 'margin' &&
+      ['left', 'center', 'right'].includes(frame.xAlign) &&
+      /^(header|footer)(:|$)/.test(this.layoutZone)
+    const frameWidth = positionedFrame ? Number(frame?.w) / 15 : 0
+    if (frameWidth > 0) availableWidth = Math.min(availableWidth, frameWidth)
     const rowFlex = (attr('rowFlex') as LineBox['rowFlex']) || 'left'
     const firstIndent = input.ignoreParagraphIndents ? 0 : Number(attr('paragraphFirstLineIndent') ?? 0)
     // 段落左右缩进：docx 可能出现负值（"悬入左边距"）。若不夹到 0，会使
@@ -1213,6 +1248,15 @@ export class LayoutEngine {
       finalizeLine(true)
     }
 
+    // 未指定宽度的框架随内容收缩，再整体居左/居中/居右，避免与框内 rowFlex 混淆。
+    if (positionedFrame && !(frameWidth > 0)) {
+      availableWidth = Math.min(availableWidth, Math.max(1, ...lines.map(line =>
+        Math.max(line.x, ...line.inlines.map(inline => inline.x + inline.width)) + indentRight)))
+    }
+    if (positionedFrame) {
+      for (const line of lines) line.width = Math.max(1, availableWidth - indentRight - line.x)
+    }
+
     // 分配行 y 与 inline y/baseline（相对块本地坐标）
     let yy = spacingBefore
     // 跟踪块内内容实际右边缘（含 rowFlex 平移后的最大 x），用于兜底 bitmap 宽度
@@ -1225,7 +1269,7 @@ export class LayoutEngine {
         inl.y = yy
         inl.baseline = yy + line.baseline
       }
-      applyRowFlex(line, input.exclusions?.length ? line.width : usableWidth)
+      applyRowFlex(line, positionedFrame || input.exclusions?.length ? line.width : usableWidth)
       for (const inl of line.inlines) {
         const r = inl.x + inl.width
         if (r > contentRight) contentRight = r
@@ -1237,7 +1281,9 @@ export class LayoutEngine {
     // rect.width 必须能覆盖实际内容最大右边缘，避免行末字符被 bitmap 裁掉
     // （浮点误差 / rowFlex 分散对齐 / 负缩进兜底后仍可能微超 availableWidth）
     const rectWidth = Math.max(availableWidth, Math.ceil(contentRight))
-    const rect: Rect = { x: 0, y: 0, width: rectWidth, height: yy }
+    const frameX = !positionedFrame || frame?.xAlign === 'left' ? 0
+      : (input.availableWidth - availableWidth) / (frame?.xAlign === 'center' ? 2 : 1)
+    const rect: Rect = { x: frameX, y: 0, width: rectWidth, height: yy }
     return {
       kind: 'paragraph',
       id: nextBlockId(),

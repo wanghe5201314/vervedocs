@@ -100,6 +100,8 @@ export interface IParagraphBorderStyle {
 export interface IParagraphAttrs {
   /** 段落水平对齐方式 */
   rowFlex?: RowFlex
+  /** OOXML w:framePr 原始属性；框架对齐独立于 rowFlex，尺寸和距离单位为 twip。 */
+  paragraphFrame?: Record<string, string>
   /** 引用的段落样式 ID（对应 styles 表中的项） */
   paragraphStyleId?: string
   /** 首行缩进（px） */

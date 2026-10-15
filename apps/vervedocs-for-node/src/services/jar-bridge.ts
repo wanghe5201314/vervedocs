@@ -13,7 +13,7 @@ import type {
 /**
  * vervedocs-for-java jar 调用桥接
  *
- * 通过 child_process.spawn 调用 `java -jar vervedocs-for-java.jar`，
+ * 通过 child_process.spawn 调用 `java -jar vervedocs-for-java-1.0.0-all.jar`，
  * 使用临时文件传递输入输出，避免 stdin/stdout 二进制流问题。
  *
  * 退出码契约（来自 VervedocsDocx4j.java）：
@@ -174,7 +174,7 @@ function describeFailure(exitCode: number, stderr: string): string {
 /**
  * 解析 docx → json
  *
- * 对应 CLI: `java -jar vervedocs-for-java.jar -i input.docx -o output.json --pretty [解析选项]`
+ * 对应 CLI: `java -jar vervedocs-for-java-1.0.0-all.jar -i input.docx -o output.json --pretty [解析选项]`
  *
  * @param docxPath 输入 .docx 文件绝对路径
  * @param jsonPath 输出 .json 文件绝对路径
@@ -220,8 +220,8 @@ export async function parseDocx(
  * 导出 json → docx/pdf
  *
  * 对应 CLI:
- *   docx: `java -jar vervedocs-for-java.jar --export -i input.json -o output.docx [导出选项]`
- *   pdf:  `java -jar vervedocs-for-java.jar --pdf    -i input.json -o output.pdf  [导出选项]`
+ *   docx: `java -jar vervedocs-for-java-1.0.0-all.jar --export -i input.json -o output.docx [导出选项]`
+ *   pdf:  `java -jar vervedocs-for-java-1.0.0-all.jar --pdf    -i input.json -o output.pdf  [导出选项]`
  *
  * @param jsonPath 输入 .json 文件绝对路径
  * @param outputPath 输出文件绝对路径

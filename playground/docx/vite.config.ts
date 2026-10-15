@@ -63,7 +63,7 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           rewrite: requestPath => requestPath.replace(/^\/docx-api/, '')
         },
-        '/api': {
+        '^/api(/|$)': {
           target: env.VITE_BIZ_PROXY_TARGET || env.VITE_API_BASE_URL || 'http://127.0.0.1:8090',
           changeOrigin: true
         },

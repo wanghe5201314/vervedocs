@@ -17,7 +17,7 @@ function resolveJarPath(raw: string): string {
   return path.resolve(projectRoot, raw)
 }
 
-const jarPathRaw = process.env.JAR_PATH || './jars/vervedocs-for-java.jar'
+const jarPathRaw = process.env.JAR_PATH || './jars/vervedocs-for-java-1.0.0-all.jar'
 const jarPath = resolveJarPath(jarPathRaw)
 
 if (!fs.existsSync(jarPath)) {

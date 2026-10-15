@@ -17,7 +17,7 @@ const log = logger.child({ module: 'server' })
  *     ├ /documents/translate/word    docx → json
  *     └ /documents/render            json → docx/pdf（format 参数）
  *
- *   底层通过 child_process.spawn 调用 vervedocs-for-java.jar
+ *   底层通过 child_process.spawn 调用 vervedocs-for-java-1.0.0-all.jar
  */
 const app = express()
 

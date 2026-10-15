@@ -386,6 +386,7 @@ function applyParagraphStyleId(node: IElement, ctx: FormatTreeContext): void {
 function inheritParagraphAttrsToChildren(container: ITitleElement | IListElement): void {
   const PARA_KEYS = [
     'rowFlex',
+    'paragraphFrame',
     'paragraphStyleId',
     'paragraphFirstLineIndent',
     'paragraphIndentLeft',

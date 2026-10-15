@@ -16,7 +16,8 @@ export type { Options } from './word-editor'
 // 明确再导出导入/导出契约，便于宿主与实现方对齐
 export type {
   DocxImportCallback,
-  DocxExportCallback
+  DocxExportCallback,
+  DocxExportCallbackOptions
 } from '@vervedoc/core'
 
 // 导出版本号
@@ -40,7 +41,13 @@ export {
 
 export type {
   CollaborationOptions,
-  DocxEditorUiInitialDocument
+  DocxEditorUiInitialDocument,
+  ExportDocxErrorCode,
+  ExportDocxOptions,
+  ExportDocxResult,
+  ImportJsonFromUrlErrorCode,
+  ImportJsonFromUrlOptions,
+  ImportJsonFromUrlResult
 } from './types'
 
 // 导出 i18n 国际化 API

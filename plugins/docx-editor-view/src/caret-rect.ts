@@ -20,7 +20,7 @@ export interface CaretRect {
   /** 文档坐标（未减 scrollY） */
   x: number
   y: number
-  /** 光标高度 = line.height */
+  /** 光标高度取行高与文字高度的较大值 */
   height: number
 }
 
@@ -43,18 +43,22 @@ export interface SelectionRect {
  * @param layout 文档布局
  * @param pos 光标位置
  * @param zone 当前编辑区域，默认 'main'；'header'/'footer' 时在对应区域块中定位
+ * @param pageIndex 页眉/页脚的活动页索引，避免相同路径命中其他页面
  * @returns 光标矩形；未找到返回 null
  */
-export function locateCaret(layout: DocumentLayout, pos: IPosition, zone: Zone = 'main'): CaretRect | null {
+export function locateCaret(layout: DocumentLayout, pos: IPosition, zone: Zone = 'main', pageIndex?: number | null): CaretRect | null {
   for (const page of layout.pages) {
+    if (zone !== 'main' && pageIndex != null && page.index !== pageIndex) continue
     let blocks: BlockNode[]
     let originX: number
     let originY: number
-    if (zone === 'header' && page.headerBlocks && page.headerRect) {
+    if (zone === 'header') {
+      if (!page.headerBlocks || !page.headerRect) continue
       blocks = page.headerBlocks
       originX = page.headerRect.x
       originY = page.headerRect.y
-    } else if (zone === 'footer' && page.footerBlocks && page.footerRect) {
+    } else if (zone === 'footer') {
+      if (!page.footerBlocks || !page.footerRect) continue
       blocks = page.footerBlocks
       originX = page.footerRect.x
       originY = page.footerRect.y
@@ -107,11 +111,12 @@ function locateInParagraph(b: ParagraphBlock, pos: IPosition, bx: number, by: nu
       if (inl.controlId && !(pos.offset === 0 ? inl.controlStart : inl.controlEnd)) continue
       if (pos.offset < inl.startOffset || pos.offset > inl.endOffset) continue
       const localX = charOffsetToX(inl, pos.offset - inl.startOffset)
-      // 光标高度按行高，顶部对齐行顶
+      // 极小行距的空段落仍需可见光标；向行顶上方扩展，避免页脚光标超出纸张。
+      const height = Math.max(line.height, inl.height)
       return {
         x: bx + localX,
-        y: by + line.y,
-        height: line.height
+        y: by + line.y + line.height - height,
+        height
       }
     }
   }
@@ -183,19 +188,23 @@ function charOffsetToX(inl: InlineBox, offsetInInline: number): number {
  * @param start 选区起点
  * @param end 选区终点
  * @param zone 当前编辑区域，默认 'main'；'header'/'footer' 时在对应区域块中收集
+ * @param pageIndex 页眉/页脚的活动页索引，选区仅绘制在当前编辑页
  * @returns 选区矩形列表
  */
-export function computeSelectionRects(layout: DocumentLayout, start: IPosition, end: IPosition, zone: Zone = 'main'): SelectionRect[] {
+export function computeSelectionRects(layout: DocumentLayout, start: IPosition, end: IPosition, zone: Zone = 'main', pageIndex?: number | null): SelectionRect[] {
   const rects: SelectionRect[] = []
   for (const page of layout.pages) {
+    if (zone !== 'main' && pageIndex != null && page.index !== pageIndex) continue
     let blocks: BlockNode[]
     let originX: number
     let originY: number
-    if (zone === 'header' && page.headerBlocks && page.headerRect) {
+    if (zone === 'header') {
+      if (!page.headerBlocks || !page.headerRect) continue
       blocks = page.headerBlocks
       originX = page.headerRect.x
       originY = page.headerRect.y
-    } else if (zone === 'footer' && page.footerBlocks && page.footerRect) {
+    } else if (zone === 'footer') {
+      if (!page.footerBlocks || !page.footerRect) continue
       blocks = page.footerBlocks
       originX = page.footerRect.x
       originY = page.footerRect.y

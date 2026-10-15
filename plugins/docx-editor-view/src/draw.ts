@@ -167,6 +167,8 @@ export class Draw {
 
   /** 当前编辑区域：正文 / 页眉 / 页脚 */
   private zone: Zone = 'main'
+  /** 当前页眉/页脚编辑对应的页面索引 */
+  private activeZonePageIndex: number | null = null
   /** zone 变化回调（由 core 装配，用于驱动 UI 标签显示） */
   private onZoneChange?: (zone: Zone) => void
 
@@ -339,6 +341,7 @@ export class Draw {
       getRange: () => this.range ?? null,
       getDocument: () => this.document,
       getZone: () => this.zone,
+      getActivePageIndex: () => this.activeZonePageIndex,
       getScrollY: () => this.scrollY,
       getPageOffsetX: () => this.getPageOffsetX(),
       getViewportWidth: () => this.viewportWidth,
@@ -367,14 +370,16 @@ export class Draw {
     this.headerFooterWidget = new HeaderFooterWidget({
       translate: this.translate,
       getLayout: () => this.layout,
+      getContainer: () => this.canvasHost,
       getContainerRect: () => this.canvasHost.getBoundingClientRect(),
       getScrollY: () => this.scrollY,
       getWrapperWidth: () => this.wrapper.clientWidth,
-      getScrollLeft: () => this.wrapper.scrollLeft,
+      getWrapperHeight: () => this.wrapper.clientHeight,
       getPageOffsetX: () => this.getPageOffsetX(),
       getZone: () => this.zone,
+      getActivePageIndex: () => this.activeZonePageIndex,
       setZone: (zone: Zone) => this.setZone(zone),
-      setZoneWithCaret: (zone: Zone) => this.setZoneWithCaret(zone),
+      setZoneWithCaret: (zone: Zone, pageIndex?: number) => this.setZoneWithCaret(zone, pageIndex),
       focusInput: () => this.focusInput(),
       drawZoneBorder: (layout, scrollY, zone, pageOffsetX) => this.renderer.drawZoneBorder(layout, scrollY, zone, pageOffsetX),
       onInsertPageNumber: (options) => {
@@ -496,6 +501,7 @@ export class Draw {
       getLayout: () => this.layout,
       getRange: () => this.range ?? null,
       getZone: () => this.zone,
+      getActivePageIndex: () => this.activeZonePageIndex,
       findInlineByPos: (pos) => this.findInlineByPos(pos),
       findParagraphByPos: (pos) => this.findParagraphByPos(pos),
       findLineByPos: (pos) => this.findLineByPos(pos),
@@ -506,9 +512,21 @@ export class Draw {
     })
 
     this.zoneManager = new ZoneManager({
-      getPage: () => this.layout?.pages.find(page => this.scrollY < page.rect.y + page.rect.height),
+      getLayout: () => this.layout,
+      getPage: () => {
+        const pages = this.layout?.pages
+        if (this.activeZonePageIndex != null) {
+          const activePage = pages?.find(page => page.index === this.activeZonePageIndex)
+          if (activePage) return activePage
+        }
+        return pages?.find(page => this.scrollY < page.rect.y + page.rect.height)
+      },
       getZone: () => this.zone,
-      setZoneState: (zone: Zone) => { this.zone = zone },
+      setZoneState: (zone: Zone) => {
+        this.zone = zone
+        this.renderer.updateActiveZone(zone)
+        this.forceFullRender = true
+      },
       getDocument: () => this.document,
       getRange: () => this.range ?? null,
       focusInput: () => this.focusInput(),
@@ -855,7 +873,7 @@ export class Draw {
     if (!this.range) return
     const pos = this.range.getFocus()
     if (!pos || !this.layout) { this.inputEl.focus(); return }
-    const rect = locateCaret(this.layout, pos, this.zone)
+    const rect = locateCaret(this.layout, pos, this.zone, this.activeZonePageIndex)
     if (rect) {
       const pageOffsetX = this.getPageOffsetX()
       this.inputEl.style.left = `${Math.round(rect.x + pageOffsetX)}px`
@@ -888,7 +906,7 @@ export class Draw {
       if (tableRects) {
         this.renderer.drawSelection(tableRects, this.scrollY)
       } else {
-        const selRects = computeSelectionRects(this.layout, ordered.start, ordered.end, this.zone)
+        const selRects = computeSelectionRects(this.layout, ordered.start, ordered.end, this.zone, this.activeZonePageIndex)
         this.renderer.drawSelection(selRects, this.scrollY)
       }
     }
@@ -898,7 +916,7 @@ export class Draw {
       this.caretWidget?.hide()
       return
     }
-    const rect = locateCaret(this.layout, pos, this.zone)
+    const rect = locateCaret(this.layout, pos, this.zone, this.activeZonePageIndex)
     if (rect) {
       this.caretWidget?.update(rect, this.scrollY, this.getPageOffsetX(), this.caretVisible)
     } else {
@@ -913,7 +931,8 @@ export class Draw {
    * @returns 单元格矩形数组；非整表选区返回 null
    */
   private computeTableSelectionRects(ordered: { start: IPosition; end: IPosition }): { x: number; y: number; width: number; height: number }[] | null {
-    if (!this.layout) return null
+    // 页眉页脚的表格路径与正文相互独立，交由当前区域的选区计算处理。
+    if (!this.layout || this.zone !== 'main') return null
     const { start, end } = ordered
     if (start.path.length < 5 || end.path.length < 5) return null
     if (start.path[1] !== 'trList' || end.path[1] !== 'trList') return null
@@ -1209,7 +1228,7 @@ export class Draw {
    */
   scrollPositionIntoView(pos: IPosition): void {
     if (!this.layout) return
-    const rect = locateCaret(this.layout, pos, this.zone)
+    const rect = locateCaret(this.layout, pos, this.zone, this.activeZonePageIndex)
     if (!rect) return
     const anchor = document.createElement('div')
     anchor.style.position = 'absolute'
@@ -1240,6 +1259,11 @@ export class Draw {
 
   /** 切换编辑区域（main/header/footer） */
   setZone(zone: Zone): void {
+    if (zone === 'main') {
+      this.activeZonePageIndex = null
+    } else {
+      this.activeZonePageIndex ??= this.getViewportPageIndex()
+    }
     this.zoneManager?.setZone(zone)
   }
 
@@ -1249,8 +1273,24 @@ export class Draw {
    * 切回正文时清空选区。
    * @param zone 目标区域
    */
-  setZoneWithCaret(zone: Zone): void {
-    this.zoneManager?.setZoneWithCaret(zone)
+  setZoneWithCaret(zone: Zone, pageIndex?: number): void {
+    const previousPageIndex = this.activeZonePageIndex
+    if (zone === 'main') {
+      this.activeZonePageIndex = null
+    } else if (pageIndex != null) {
+      this.activeZonePageIndex = pageIndex
+    } else {
+      this.activeZonePageIndex ??= this.getViewportPageIndex()
+    }
+    const pageChanged = pageIndex != null && previousPageIndex !== pageIndex
+    this.zoneManager?.setZoneWithCaret(zone, pageChanged)
+    this.caretVisible = true
+    this.renderCaretIfAny()
+  }
+
+  /** 获取当前视口顶部所在的页面索引 */
+  private getViewportPageIndex(): number {
+    return this.layout?.pages.find(page => this.scrollY < page.rect.y + page.rect.height)?.index ?? 0
   }
 
   /** 获取当前活动区域的文档（zone=header/footer 时 elements 指向对应区域） */

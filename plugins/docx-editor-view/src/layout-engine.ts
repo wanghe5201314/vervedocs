@@ -217,22 +217,19 @@ export class LayoutEngine {
     }
     const placedAnchors = new Map<string, { paragraph: ParagraphBlock; column: Rect }>()
 
+    // 缺失区域仅生成布局占位，不写入文档；进入编辑后补出的默认空段落沿用相同位置。
+    const emptyZoneElements: IElement[] = [{ type: 'text', value: '' }]
+    const zoneElements = (elements?: IElement[]) => elements?.length ? elements : emptyZoneElements
+    const isDefaultEmptyZone = (elements: IElement[]) => elements.length === 1 &&
+      elements[0].type === 'text' && elements[0].value === '' &&
+      Object.keys(elements[0]).every(key => ['type', 'value', 'font', 'size'].includes(key))
+
     // 页眉/页脚 block 预布局（rect.y 相对各自区域原点）
     this.layoutZone = 'header'
-    const headerBlocks = headerElements?.length ? this.layoutBlocks(headerElements, [], contentWidth) : []
+    const headerBlocks = this.layoutBlocks(zoneElements(headerElements), [], contentWidth)
     this.layoutZone = 'footer'
-    const footerBlocks = footerElements?.length ? this.layoutBlocks(footerElements, [], contentWidth) : []
+    const footerBlocks = this.layoutBlocks(zoneElements(footerElements), [], contentWidth)
     this.paragraphCache = this.nextParagraphCache
-
-    // 页眉内容在上边距区域内靠下排列（底部贴近正文顶部），避免紧贴页面顶部
-    let headerOffsetY = 0
-    if (headerBlocks.length > 0) {
-      const last = headerBlocks[headerBlocks.length - 1]
-      const headerContentHeight = last.rect.y + last.rect.height
-      headerOffsetY = Math.max(0, mt - headerContentHeight)
-    }
-    // 页脚内容在下边距区域内靠上排列（顶部贴近正文底部），偏移为 0
-    const footerOffsetY = 0
 
     // 分页
     const pages: PageLayout[] = []
@@ -268,12 +265,24 @@ export class LayoutEngine {
       const section = document?.sections?.[sectionIndex]
       const headerPartId = document?.sections ? resolveHeaderFooterPart(document, 'header', sectionIndex, pageIndex, pageIndex === sectionFirstPage) : undefined
       const footerPartId = document?.sections ? resolveHeaderFooterPart(document, 'footer', sectionIndex, pageIndex, pageIndex === sectionFirstPage) : undefined
+      const pageHeaderElements = zoneElements(document?.sections
+        ? headerPartId ? document.headerFooterParts?.[headerPartId] : undefined
+        : headerElements)
+      const pageFooterElements = zoneElements(document?.sections
+        ? footerPartId ? document.headerFooterParts?.[footerPartId] : undefined
+        : footerElements)
       this.layoutZone = `header:${headerPartId ?? ''}`
-      const pageHeaders = document?.sections ? this.layoutBlocks(headerPartId ? document.headerFooterParts?.[headerPartId] ?? [] : [], [], contentWidth) : headerBlocks
+      const pageHeaders = document?.sections ? this.layoutBlocks(pageHeaderElements, [], contentWidth) : headerBlocks
       this.layoutZone = `footer:${footerPartId ?? ''}`
-      const pageFooters = document?.sections ? this.layoutBlocks(footerPartId ? document.headerFooterParts?.[footerPartId] ?? [] : [], [], contentWidth) : footerBlocks
+      const pageFooters = document?.sections ? this.layoutBlocks(pageFooterElements, [], contentWidth) : footerBlocks
       this.layoutZone = 'main'
+      const headerHeight = pageHeaders.reduce((height, block) => Math.max(height, block.rect.y + block.rect.height), 0)
       const footerHeight = pageFooters.reduce((height, block) => Math.max(height, block.rect.y + block.rect.height), 0)
+      // 只有默认空段落忽略导入距离；含边框、域或段落格式的空内容仍保留原始布局。
+      const headerOffsetY = !isDefaultEmptyZone(pageHeaderElements) && section?.headerDistance !== undefined
+        ? section.headerDistance : Math.max(0, mt - headerHeight)
+      const footerOffsetY = !isDefaultEmptyZone(pageFooterElements) && section?.footerDistance !== undefined
+        ? mb - section.footerDistance - footerHeight : 0
       const pageRect: Rect = { x: 0, y: pageOriginY, width: pageWidth, height: pageHeight }
       const contentRect: Rect = {
         x: ml,
@@ -287,11 +296,11 @@ export class LayoutEngine {
         index: pageIndex, sectionIndex, headerPartId, footerPartId, rect: pageRect, contentRect, blocks: currentBlocks,
         headerRect,
         headerBlocks: pageHeaders.length
-          ? pageHeaders.map(b => ({ ...b, rect: { ...b.rect, y: b.rect.y + (section?.headerDistance ?? headerOffsetY) } }))
+          ? pageHeaders.map(b => ({ ...b, rect: { ...b.rect, y: b.rect.y + headerOffsetY } }))
           : undefined,
         footerRect,
         footerBlocks: pageFooters.length
-          ? pageFooters.map(b => ({ ...b, rect: { ...b.rect, y: b.rect.y + (section?.footerDistance !== undefined ? mb - section.footerDistance - footerHeight : footerOffsetY) } }))
+          ? pageFooters.map(b => ({ ...b, rect: { ...b.rect, y: b.rect.y + footerOffsetY } }))
           : undefined
       })
       pageIndex++

@@ -23,6 +23,8 @@ export interface CaretNavigationDeps {
   getRange: () => RangeManager | null
   /** 获取当前编辑区域 */
   getZone: () => Zone
+  /** 获取当前页眉/页脚编辑所在页 */
+  getActivePageIndex: () => number | null
   /** 按 position 查找所属 inline */
   findInlineByPos: (pos: IPosition) => InlineBox | null
   /** 按 position 查找所属段落块 */
@@ -125,7 +127,7 @@ export class CaretNavigation {
     if (!layout || !range) return
     const pos = range.getFocus()
     if (!pos) return
-    const rect = locateCaret(layout, pos, this.deps.getZone())
+    const rect = locateCaret(layout, pos, this.deps.getZone(), this.deps.getActivePageIndex())
     if (!rect) return
     // 目标 y = 当前光标 y ± 行高（估算上一/下一行中部）
     const targetY = rect.y + dir * rect.height

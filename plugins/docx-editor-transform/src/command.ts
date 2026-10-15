@@ -675,12 +675,6 @@ export class Command {
    */
   executeSetMode(mode: string): void { this.adapt.setMode(mode) }
   /**
-   * 导出为 docx 文档。
-   * @param payload 导出参数
-   * @returns 完成时 resolve 的 Promise
-   */
-  async executeExportDocx(payload: any): Promise<void> { await this.adapt.exportDocx(payload) }
-  /**
    * 预览 HTML 内容。
    * @param payload 预览参数
    */

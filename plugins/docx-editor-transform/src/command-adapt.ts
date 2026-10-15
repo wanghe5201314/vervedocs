@@ -14,7 +14,7 @@ import type {
 } from '@vervedoc/docx-editor-schema'
 import {
   getByPath, getParentContainer, cloneTree, walkTree, isSamePath, splitParagraphs, comparePath, formatElementTree,
-  DEFAULT_EDITOR_OPTION, applyImageLayout, updateImageLayout, TableBorder, BULLET_STYLES, NUMBER_STYLES, toDocxExportDocument,
+  DEFAULT_EDITOR_OPTION, applyImageLayout, updateImageLayout, TableBorder, BULLET_STYLES, NUMBER_STYLES,
   clearRevision, snapshotRevisionFormat, recordFormatRevision,
   isControl, createControlElement, updateControlElementValue, validateControlValue, validateControlConfig, comparePosition, isEmptyValue
 } from '@vervedoc/docx-editor-schema'
@@ -385,15 +385,34 @@ export class CommandAdapt {
     }
   }
 
+  /** 导入的书签与域标记只记录位置，不是可编辑字符。 */
+  private isInvisibleText(node?: IElement | null): node is ITextElement {
+    return node?.type === 'text' && !!(node.extension?.bookmarkMarker || node.extension?.fieldMarker)
+  }
+
   /** Controls have two caret positions (0 before, 1 after), never editable display-text offsets. */
   private ensureTextCaret(doc: IDocxDocumentMeta): void {
     const pos = this.range.getFocus()
     if (!pos) return
     const node = getByPath(doc.elements, pos.path)
-    if (!node || !isControl(node)) return
+    if (!node || (!isControl(node) && !this.isInvisibleText(node))) return
     const parent = getParentContainer(doc.elements, pos.path)!
     const index = Number(pos.path.at(-1)) + (pos.offset > 0 ? 1 : 0)
-    parent.splice(index, 0, this.controlText(node))
+    const carrier: ITextElement = isControl(node)
+      ? this.controlText(node)
+      : { type: 'text', value: '', font: node.font, size: node.size }
+    parent.splice(index, 0, carrier)
+    if (this.isInvisibleText(node)) {
+      const parentPath = pos.path.slice(0, -1)
+      this.mapBookmarkPositions(doc, point => {
+        if (!isSamePath(point.path.slice(0, parentPath.length), parentPath) ||
+          typeof point.path[parentPath.length] !== 'number' ||
+          Number(point.path[parentPath.length]) < index) return point
+        const path = [...point.path] as Path
+        path[parentPath.length] = Number(path[parentPath.length]) + 1
+        return { path, offset: point.offset }
+      })
+    }
     this.range.setCaret({ path: [...pos.path.slice(0, -1), index], offset: 0 })
   }
 
@@ -410,7 +429,8 @@ export class CommandAdapt {
     const current = Number(pos.path.at(-1))
     const onAtom = atom && (backward ? pos.offset > 0 : pos.offset === 0)
     let index = onAtom ? current : current + (backward ? -1 : 1)
-    while (index >= 0 && index < parent.length && parent[index].type === 'text' && parent[index].value === '') {
+    while (index >= 0 && index < parent.length &&
+      (this.isInvisibleText(parent[index]) || (parent[index].type === 'text' && parent[index].value === ''))) {
       index += backward ? -1 : 1
     }
     const target = parent[index]
@@ -422,6 +442,7 @@ export class CommandAdapt {
       this._commit(doc)
       return true
     }
+    if (target && this.deleteAtomicAtCaret(doc, { path: [...pos.path.slice(0, -1), index], offset: 0 })) return true
     // Delete 在文本末尾继续删除下一文本片段，跳过控件删除后留下的空载体。
     if (atom || (node.type === 'text' && target?.type === 'text' && (!backward || node.value === ''))) {
       if (target?.type === 'text') {
@@ -435,6 +456,76 @@ export class CommandAdapt {
       return true
     }
     return false
+  }
+
+  /** 光标意外落在导入标记上时，转到相邻可见元素再执行删除。 */
+  private deleteAtInvisibleCaret(backward: boolean): boolean {
+    const pos = this.range.getFocus()
+    if (!pos) return false
+    const doc = this.draw.getActiveDocument()
+    if (!this.isInvisibleText(getByPath(doc.elements, pos.path))) return false
+    const adjacent = this.adjacentInline(doc, pos.path, backward)
+    if (adjacent) {
+      if (adjacent.node.type === 'text' || isControl(adjacent.node)) {
+        this.range.setCaret({
+          path: adjacent.path,
+          offset: backward ? (isControl(adjacent.node) ? 1 : adjacent.node.value.length) : 0
+        })
+        if (backward) this.deleteBackward()
+        else this.deleteForward()
+      } else {
+        this.deleteAtomicAtCaret(doc, { path: adjacent.path, offset: 0 })
+      }
+    }
+    return true
+  }
+
+  /** 图片等独立节点可直接通过键盘删除，删除后保留可输入的光标位置。 */
+  private deleteAtomicAtCaret(doc: IDocxDocumentMeta, pos: IPosition, commit = true): boolean {
+    const node = getByPath(doc.elements, pos.path)
+    if (!node || !['image', 'pageBreak', 'columnBreak', 'block', 'table', 'separator'].includes(node.type)) return false
+    const parent = getParentContainer(doc.elements, pos.path)
+    const index = pos.path.at(-1)
+    if (!parent || typeof index !== 'number') return false
+    this.updateBookmarksAfterDeletion(doc, { path: pos.path, offset: 0 }, { path: pos.path, offset: 1 })
+    if (parent === doc.elements) {
+      this.removeSectionBoundaries(doc, index, index)
+      this.spliceBodyWithBookmarks(doc, index, 1)
+    } else {
+      parent.splice(index, 1)
+      if (!parent.length) parent.push({ type: 'text', value: '' })
+      this.mapBookmarkPositions(doc, point => {
+        const depth = pos.path.length - 1
+        if (!isSamePath(point.path.slice(0, depth), pos.path.slice(0, depth)) ||
+          typeof point.path[depth] !== 'number' || Number(point.path[depth]) <= index) return point
+        const path = [...point.path] as Path
+        path[depth] = Number(path[depth]) - 1
+        return { path, offset: point.offset }
+      })
+    }
+    let caretIndex = Math.min(index, parent.length - 1)
+    if (parent[caretIndex]?.type !== 'text' || this.isInvisibleText(parent[caretIndex])) {
+      if (caretIndex > 0 && parent[caretIndex - 1]?.type === 'text' && !this.isInvisibleText(parent[caretIndex - 1])) {
+        caretIndex--
+      } else {
+        parent.splice(caretIndex, 0, { type: 'text', value: '' })
+        const parentPath = pos.path.slice(0, -1)
+        this.mapBookmarkPositions(doc, point => {
+          if (!isSamePath(point.path.slice(0, parentPath.length), parentPath) ||
+            typeof point.path[parentPath.length] !== 'number' ||
+            Number(point.path[parentPath.length]) < caretIndex) return point
+          const path = [...point.path] as Path
+          path[parentPath.length] = Number(path[parentPath.length]) + 1
+          return { path, offset: point.offset }
+        })
+      }
+    }
+    this.range.setCaret({
+      path: [...pos.path.slice(0, -1), caretIndex],
+      offset: caretIndex < index && parent[caretIndex].type === 'text' ? parent[caretIndex].value.length : 0
+    })
+    if (commit) this._commit(doc, 'text')
+    return true
   }
 
   private deleteRangeWithControls(doc: IDocxDocumentMeta, start: IPosition, end: IPosition, commit: boolean): boolean | null {
@@ -476,6 +567,7 @@ export class CommandAdapt {
       }
     }
     this.range.setCaret(caret)
+    if (changed && !this.draw.getOptions().trackChanges) this.updateBookmarksAfterDeletion(doc, start, end)
     this.clearEmptyHyperlinks(doc)
     if (changed && commit) this._commit(doc)
     return changed
@@ -593,6 +685,8 @@ export class CommandAdapt {
       this.deleteTrackedRange(doc, { path: target.path, offset: from }, { path: target.path, offset: from + character.length }, false)
     } else {
       target.node.value = target.node.value.slice(0, from) + target.node.value.slice(from + character.length)
+      this.updateBookmarksAfterDeletion(doc,
+        { path: target.path, offset: from }, { path: target.path, offset: from + character.length })
       this.range.setCaret(backward ? { path: target.path, offset: from } : pos)
     }
     this.clearEmptyHyperlinks(doc)
@@ -608,6 +702,8 @@ export class CommandAdapt {
     if (!ordered) return false
     const { start, end } = ordered
     const doc = this.draw.getActiveDocument()
+    if (isSamePath(start.path, end.path) && start.offset === 0 && end.offset === 1 &&
+      this.deleteAtomicAtCaret(doc, start, commit)) return true
     const controlResult = this.deleteRangeWithControls(doc, start, end, commit)
     if (controlResult !== null) return controlResult
     if (this.draw.getOptions().trackChanges) {
@@ -639,6 +735,7 @@ export class CommandAdapt {
         node.value = node.value.slice(0, from) + node.value.slice(to)
       }
       this.range.setCaret({ path: start.path.slice() as Path, offset: start.offset })
+      this.updateBookmarksAfterDeletion(doc, start, end)
       this.clearEmptyHyperlinks(doc)
       if (commit) this._commit(doc, 'text')
       return true
@@ -650,6 +747,7 @@ export class CommandAdapt {
         const t = node as ITextElement
         t.value = t.value.slice(0, start.offset) + t.value.slice(end.offset)
         this.range.setCaret({ path: start.path.slice() as Path, offset: start.offset })
+        this.updateBookmarksAfterDeletion(doc, start, end)
         if (commit) this._commit(doc, 'text')
         return true
       }
@@ -665,6 +763,7 @@ export class CommandAdapt {
     const before = startNode.value.slice(0, start.offset)
     const after = endNode.value.slice(end.offset)
     startNode.value = before + after
+    this.updateBookmarksAfterDeletion(doc, start, end, true)
 
     if (start.path.length === 1 && end.path.length === 1) {
       const first = Number(start.path[0]), last = Number(end.path[0])
@@ -776,6 +875,7 @@ export class CommandAdapt {
   deleteBackward(): void {
     if (!this.getIsCanInput()) return
     if (this.deleteSelection()) return
+    if (this.deleteAtInvisibleCaret(true)) return
     if (!this.range.isCollapsed() || this.deleteControlBoundary(true)) return
     if (this.deleteHyperlinkCharacter(true)) return
     if (this.draw.getOptions().trackChanges) {
@@ -787,6 +887,7 @@ export class CommandAdapt {
     const doc = this.draw.getActiveDocument()
     const node = getByPath(doc.elements, pos.path)
     if (!node) return
+    if (this.deleteAtomicAtCaret(doc, pos)) return
     if (pos.offset === 0) {
       const listPath = this.getListPath(doc.elements, pos.path)
       if (listPath) {
@@ -809,6 +910,8 @@ export class CommandAdapt {
       const t = node as ITextElement
       if (pos.offset > 0) {
         t.value = t.value.slice(0, pos.offset - 1) + t.value.slice(pos.offset)
+        this.updateBookmarksAfterDeletion(doc,
+          { path: pos.path, offset: pos.offset - 1 }, pos)
         this.range.setCaret({ path: pos.path.slice() as Path, offset: pos.offset - 1 })
         // 不可迁移：多个 _commit 在不同分支
         this._commit(doc, 'text')
@@ -817,6 +920,20 @@ export class CommandAdapt {
         const parent = getParentContainer(doc.elements, pos.path)
         const idx = pos.path[pos.path.length - 1] as number
         if (parent && idx > 0) {
+          let previousIndex = idx - 1
+          while (previousIndex >= 0 && this.isInvisibleText(parent[previousIndex])) previousIndex--
+          if (previousIndex !== idx - 1) {
+            const previous = parent[previousIndex]
+            if (previous?.type === 'text' && previous.value.length > 0) {
+              const path = [...pos.path.slice(0, -1), previousIndex] as Path
+              const offset = previous.value.length - 1
+              previous.value = previous.value.slice(0, offset)
+              this.updateBookmarksAfterDeletion(doc, { path, offset }, { path, offset: offset + 1 })
+              this.range.setCaret({ path, offset })
+              this._commit(doc, 'text')
+            }
+            return
+          }
           const prev = parent[idx - 1]
           if (parent === doc.elements && prev && this.isSectionBoundary(prev)) {
             this.removeSectionBoundaries(doc, idx - 1, idx - 1)
@@ -828,8 +945,28 @@ export class CommandAdapt {
           if (prev && prev.type === 'text') {
             const p = prev as ITextElement
             const newOffset = p.value.length > 0 ? p.value.length - 1 : 0
-            if (p.value.length > 0) p.value = p.value.slice(0, -1)
+            if (p.value.length > 0) {
+              this.updateBookmarksAfterDeletion(doc,
+                { path: [...pos.path.slice(0, -1), idx - 1], offset: p.value.length - 1 },
+                { path: [...pos.path.slice(0, -1), idx - 1], offset: p.value.length })
+              p.value = p.value.slice(0, -1)
+            }
             // 合并 current 到 prev
+            const previousPath = [...pos.path.slice(0, -1), idx - 1] as Path
+            const prefixLength = p.value.length
+            this.mapBookmarkPositions(doc, point => {
+              if (isSamePath(point.path, pos.path)) {
+                return { path: previousPath, offset: prefixLength + point.offset }
+              }
+              const depth = pos.path.length - 1
+              if (isSamePath(point.path.slice(0, depth), pos.path.slice(0, depth)) &&
+                typeof point.path[depth] === 'number' && Number(point.path[depth]) > idx) {
+                const path = [...point.path] as Path
+                path[depth] = Number(path[depth]) - 1
+                return { path, offset: point.offset }
+              }
+              return point
+            })
             p.value += t.value
             parent.splice(idx, 1)
             const newPath = pos.path.slice() as Path
@@ -849,12 +986,15 @@ export class CommandAdapt {
   deleteForward(): void {
     if (!this.getIsCanInput()) return
     if (this.deleteSelection()) return
+    if (this.deleteAtInvisibleCaret(false)) return
     if (!this.range.isCollapsed() || this.deleteControlBoundary(false)) return
     if (this.deleteHyperlinkCharacter(false)) return
     if (this.draw.getOptions().trackChanges) {
       this.deleteTrackedCharacter(false)
       return
     }
+    const pos = this.range.getFocus()
+    if (pos && this.deleteAtomicAtCaret(this.draw.getActiveDocument(), pos)) return
     this.execute(doc => {
       const pos = this.range.getFocus()
       if (!pos) return false
@@ -869,6 +1009,7 @@ export class CommandAdapt {
         return
       }
       t.value = t.value.slice(0, pos.offset) + t.value.slice(pos.offset + 1)
+      this.updateBookmarksAfterDeletion(doc, pos, { path: pos.path, offset: pos.offset + 1 })
       return
     }, 'text')
   }
@@ -911,12 +1052,19 @@ export class CommandAdapt {
   moveCaretLeft(): void {
     const pos = this.range.getFocus()
     if (!pos) return
+    const doc = this.draw.getActiveDocument()
+    if (this.isInvisibleText(getByPath(doc.elements, pos.path))) {
+      const previous = this.adjacentInline(doc, pos.path, true)
+      if (previous?.node.type === 'text' || (previous && isControl(previous.node))) {
+        this.range.setCaret({ path: previous.path, offset: isControl(previous.node) ? 1 : previous.node.value.length })
+      }
+      return
+    }
     if (pos.offset > 0) {
       this.range.setCaret({ path: pos.path.slice() as Path, offset: pos.offset - 1 })
       return
     }
     // 跨 run 向前
-    const doc = this.draw.getActiveDocument()
     const adjacent = this.adjacentInline(doc, pos.path, true)
     if (adjacent && (this.isHyperlinkRun(doc, pos.path) || this.isHyperlinkRun(doc, adjacent.path)) &&
       (adjacent.node.type === 'text' || isControl(adjacent.node))) {
@@ -928,7 +1076,7 @@ export class CommandAdapt {
     if (parent && idx > 0) {
       for (let i = idx - 1; i >= 0; i--) {
         const p = parent[i]
-        if (p && (p.type === 'text' || isControl(p))) {
+        if (p && !this.isInvisibleText(p) && (p.type === 'text' || isControl(p))) {
           const newPath = pos.path.slice() as Path
           newPath[newPath.length - 1] = i
           const t = p as ITextElement
@@ -947,6 +1095,13 @@ export class CommandAdapt {
     if (!pos) return
     const doc = this.draw.getActiveDocument()
     const node = getByPath(doc.elements, pos.path)
+    if (this.isInvisibleText(node)) {
+      const next = this.adjacentInline(doc, pos.path, false)
+      if (next?.node.type === 'text' || (next && isControl(next.node))) {
+        this.range.setCaret({ path: next.path, offset: 0 })
+      }
+      return
+    }
     if (node && isControl(node) && pos.offset === 0) {
       this.range.setCaret({ path: pos.path.slice() as Path, offset: 1 })
       return
@@ -970,7 +1125,7 @@ export class CommandAdapt {
     if (parent && idx < parent.length - 1) {
       for (let i = idx + 1; i < parent.length; i++) {
         const p = parent[i]
-        if (p && (p.type === 'text' || isControl(p))) {
+        if (p && !this.isInvisibleText(p) && (p.type === 'text' || isControl(p))) {
           const newPath = pos.path.slice() as Path
           newPath[newPath.length - 1] = i
           this.range.setCaret({ path: newPath, offset: 0 })
@@ -1233,6 +1388,55 @@ export class CommandAdapt {
     })
     // 不可迁移：多个分支各自 commit
     this._commit(doc)
+  }
+
+  /** 删除范围书签的全部文字后移除它，并同步调整保留书签的端点。 */
+  private updateBookmarksAfterDeletion(doc: IDocxDocumentMeta, start: IPosition, end: IPosition, mergeRuns = false): void {
+    if (doc.elements !== this.draw.getDocument().elements || !doc.bookmarks?.length) return
+    const sameRun = isSamePath(start.path, end.path)
+    const removedLength = end.offset - start.offset
+    const sameParent = mergeRuns && start.path.length === end.path.length &&
+      isSamePath(start.path.slice(0, -1), end.path.slice(0, -1))
+    doc.bookmarks = doc.bookmarks.filter(bookmark => {
+      const { anchor, focus } = bookmark.range
+      const [first, last] = comparePosition(anchor, focus) <= 0 ? [anchor, focus] : [focus, anchor]
+      const isRange = !bookmark.collapsed && comparePosition(first, last) < 0
+      if (isRange && comparePosition(start, first) <= 0 && comparePosition(last, end) <= 0) {
+        return false
+      }
+      const map = (point: IPosition): IPosition => {
+        if (sameRun) {
+          if (!isSamePath(point.path, start.path) || point.offset <= start.offset) return point
+          return { path: point.path, offset: point.offset < end.offset ? start.offset : point.offset - removedLength }
+        }
+        if (!sameParent) {
+          if (isSamePath(point.path, start.path) && point.offset > start.offset) {
+            return { path: point.path, offset: start.offset }
+          }
+          if (isSamePath(point.path, end.path)) {
+            return { path: point.path, offset: Math.max(0, point.offset - end.offset) }
+          }
+          return point
+        }
+        if (comparePosition(point, start) <= 0) return point
+        if (comparePosition(point, end) <= 0) return { path: [...start.path], offset: start.offset }
+        if (isSamePath(point.path, end.path)) {
+          return { path: [...start.path], offset: start.offset + point.offset - end.offset }
+        }
+        const depth = start.path.length - 1
+        if (isSamePath(point.path.slice(0, depth), start.path.slice(0, depth)) &&
+          typeof point.path[depth] === 'number' && Number(point.path[depth]) > Number(end.path[depth])) {
+          const path = [...point.path] as Path
+          path[depth] = Number(path[depth]) - Number(end.path[depth]) + Number(start.path[depth])
+          return { path, offset: point.offset }
+        }
+        return point
+      }
+      bookmark.range = { anchor: map(anchor), focus: map(focus) }
+      // 原范围被部分删到零长度时，同样不能留下位置书签。
+      if (isRange && comparePosition(bookmark.range.anchor, bookmark.range.focus) === 0) return false
+      return true
+    })
   }
 
   /** Map body bookmark endpoints before notifying layout or recording history. */
@@ -3994,18 +4198,6 @@ export class CommandAdapt {
     // 模式切换后通知能力变更（readonly/disabled 状态可能变化）
     this.listener?.emit('formatChange', this.getRangeStyle())
     this.listener?.emit('abilityChange', this.getAbility())
-  }
-
-  /**
-   * 导出为 docx 文档（调用 options.exportCallback）。
-   * @param payload 导出参数
-   * @returns 完成时 resolve 的 Promise
-   */
-  async exportDocx(payload: any): Promise<void> {
-    const cb = this.draw.getOptions().exportCallback as ((data: any, opts?: any) => Promise<any>) | undefined
-    if (cb) {
-      await cb(toDocxExportDocument(this.draw.getDocument()), payload)
-    }
   }
 
   /**

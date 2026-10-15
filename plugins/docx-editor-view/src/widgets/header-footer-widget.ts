@@ -26,12 +26,23 @@ export type PageNumberStyle =
   | '第一页'
   | '第一页共X页'
   | '1, 2, 3 ...'
+  | '-1-, -2-, -3- ...'
+  | '—1—, —2—, —3— ...'
+  | '①, ②, ③ ...'
   | 'I, II, III ...'
   | 'i, ii, iii ...'
   | 'A, B, C ...'
   | 'a, b, c ...'
   | '一, 二, 三 ...'
   | '壹, 贰, 叁 ...'
+  | '甲, 乙, 丙 ...'
+  | '子, 丑, 寅 ...'
+  | '壱, 弐, 参 ...'
+  | 'α, β, γ ...'
+  | 'Ⅰ, Ⅱ, Ⅲ ...'
+  | '1st, 2nd, 3rd ...'
+  | 'One, Two, Three ...'
+  | 'First, Second, Third ...'
 
 /** 插入页码的配置选项 */
 export interface PageNumberOptions {
@@ -46,22 +57,26 @@ export interface HeaderFooterWidgetDeps {
   translate?: ViewTranslate
   /** 获取当前文档布局 */
   getLayout: () => DocumentLayout | null
+  /** 获取浮层挂载容器，与画布使用相同坐标原点 */
+  getContainer: () => HTMLElement
   /** 获取容器元素的矩形位置 */
   getContainerRect: () => DOMRect
   /** 获取当前垂直滚动偏移 */
   getScrollY: () => number
   /** 获取编辑区可视宽度 */
   getWrapperWidth: () => number
-  /** 获取水平滚动偏移 */
-  getScrollLeft: () => number
+  /** 获取编辑区可视高度 */
+  getWrapperHeight: () => number
   /** 获取页面在容器中的水平偏移 */
   getPageOffsetX: () => number
   /** 获取当前所处区域 */
   getZone: () => Zone
+  /** 获取当前页眉/页脚编辑所在页 */
+  getActivePageIndex: () => number | null
   /** 设置当前所处区域 */
   setZone: (zone: Zone) => void
   /** 切换区域并设置初始光标到对应区域起始位置 */
-  setZoneWithCaret: (zone: Zone) => void
+  setZoneWithCaret: (zone: Zone, pageIndex?: number) => void
   /** 让编辑区获取焦点 */
   focusInput: () => void
   /** 绘制页眉/页脚区域虚线边框 */
@@ -72,6 +87,8 @@ export interface HeaderFooterWidgetDeps {
 
 /** 页眉页脚交互 widget，负责双击进入/退出编辑、虚线边框、标签栏及插入页码面板 */
 export class HeaderFooterWidget {
+  /** 编辑区内的裁剪层，避免滚动时控件覆盖外部工具栏 */
+  private layerEl: HTMLDivElement | null = null
   /** 页眉标签栏容器 */
   private headerLabelEl: HTMLDivElement | null = null
   /** 页脚标签栏容器 */
@@ -88,7 +105,7 @@ export class HeaderFooterWidget {
   /** 面板内当前选中的页码位置 */
   private selectedPosition: PageNumberPosition = 'center'
   /** 面板内当前选中的页码样式 */
-  private selectedStyle: PageNumberStyle = '第1页'
+  private selectedStyle: PageNumberStyle = '1, 2, 3 ...'
   private t(key: string): string { return viewTranslate(this.deps.translate, key) }
 
   /** 点击面板外部时隐藏 popup 的全局 mousedown 监听 */
@@ -110,6 +127,10 @@ export class HeaderFooterWidget {
 
   /** 创建所有 DOM 元素并绑定全局监听 */
   create(): void {
+    this.layerEl = document.createElement('div')
+    this.layerEl.className = 'vervedocs-header-footer-layer'
+    this.layerEl.style.cssText = 'position:absolute;left:0;top:0;overflow:hidden;pointer-events:none;z-index:5;display:none;'
+    this.deps.getContainer().appendChild(this.layerEl)
     this.createLabel()
     this.createInsertButton()
     this.createPopup()
@@ -141,6 +162,8 @@ export class HeaderFooterWidget {
     this.footerLabelEl?.remove()
     this.insertBtnEl?.remove()
     this.popupEl?.remove()
+    this.layerEl?.remove()
+    this.layerEl = null
     this.headerLabelEl = null
     this.footerLabelEl = null
     this.insertBtnEl = null
@@ -155,7 +178,7 @@ export class HeaderFooterWidget {
       const el = document.createElement('div')
       el.className = 'vervedocs-zone-label'
       Object.assign(el.style, {
-        position: 'fixed',
+        position: 'absolute',
         display: 'none',
         zIndex: '100',
         alignItems: 'center',
@@ -174,7 +197,7 @@ export class HeaderFooterWidget {
       const textEl = document.createElement('span')
       textEl.textContent = text
       el.appendChild(textEl)
-      document.body.appendChild(el)
+      this.layerEl!.appendChild(el)
       return { el, textEl }
     }
 
@@ -191,7 +214,7 @@ export class HeaderFooterWidget {
     btn.title = this.t('view.pageNumber.insert')
     btn.setAttribute('aria-label', btn.title)
     Object.assign(btn.style, {
-      position: 'fixed',
+      position: 'absolute',
       display: 'none',
       zIndex: '100',
       alignItems: 'center',
@@ -241,7 +264,7 @@ export class HeaderFooterWidget {
     })
 
     this.insertBtnEl = btn
-    document.body.appendChild(btn)
+    this.layerEl!.appendChild(btn)
   }
 
   /** 创建插入页码弹出面板 DOM（样式选择 + 位置预览 + 确定按钮） */
@@ -249,7 +272,7 @@ export class HeaderFooterWidget {
     const popup = document.createElement('div')
     popup.className = 'ce-zone-pagenumber-menu'
     Object.assign(popup.style, {
-      position: 'fixed',
+      position: 'absolute',
       display: 'none',
       zIndex: '1000',
       width: '244px',
@@ -260,6 +283,7 @@ export class HeaderFooterWidget {
       boxShadow: '0 4px 14px rgba(0, 0, 0, 0.12)',
       fontFamily: '"Microsoft YaHei", "PingFang SC", sans-serif',
       userSelect: 'none',
+      pointerEvents: 'auto',
     } as CSSStyleDeclaration)
 
     // -------- 样式 --------
@@ -296,18 +320,29 @@ export class HeaderFooterWidget {
       cursor: 'pointer',
     } as CSSStyleDeclaration)
     const styleOptions: PageNumberStyle[] = [
+      '1, 2, 3 ...',
+      '-1-, -2-, -3- ...',
+      '—1—, —2—, —3— ...',
+      'I, II, III ...',
       '第1页',
       '第1页共x页',
       '1/x',
       '第一页',
       '第一页共X页',
-      '1, 2, 3 ...',
-      'I, II, III ...',
+      '①, ②, ③ ...',
+      '一, 二, 三 ...',
+      '壹, 贰, 叁 ...',
       'i, ii, iii ...',
       'A, B, C ...',
       'a, b, c ...',
-      '一, 二, 三 ...',
-      '壹, 贰, 叁 ...',
+      '甲, 乙, 丙 ...',
+      '子, 丑, 寅 ...',
+      '壱, 弐, 参 ...',
+      'α, β, γ ...',
+      'Ⅰ, Ⅱ, Ⅲ ...',
+      '1st, 2nd, 3rd ...',
+      'One, Two, Three ...',
+      'First, Second, Third ...',
     ]
     styleOptions.forEach((s) => {
       const opt = document.createElement('option')
@@ -342,7 +377,7 @@ export class HeaderFooterWidget {
     Object.assign(posRow.style, {
       display: 'flex',
       gap: '12px',
-      justifyContent: 'flex-start',
+      justifyContent: 'center',
       marginBottom: '12px',
     } as CSSStyleDeclaration)
 
@@ -485,7 +520,7 @@ export class HeaderFooterWidget {
     popup.appendChild(footer)
 
     this.popupEl = popup
-    document.body.appendChild(popup)
+    this.layerEl!.appendChild(popup)
   }
 
 
@@ -506,11 +541,12 @@ export class HeaderFooterWidget {
     if (!layout) return false
     const rect = this.deps.getContainerRect()
     const docY = e.clientY - rect.top + this.deps.getScrollY()
+    const page = this.pageAtY(docY)
     const hitZone = this.hitZone(docY)
     const currentZone = this.deps.getZone()
     // 双击页眉/页脚：进入对应区域编辑
     if (e.detail === 2 && (hitZone === 'header' || hitZone === 'footer')) {
-      this.deps.setZoneWithCaret(hitZone)
+      this.deps.setZoneWithCaret(hitZone, page?.index)
       return true
     }
     // 双击正文 + 当前在页眉/页脚：切回正文
@@ -524,9 +560,9 @@ export class HeaderFooterWidget {
     if (currentZone !== 'main') {
       // 单击页眉/页脚区域：切换到对应区域，让后续 hit 在对应 zone 中命中
       if (hitZone === 'header' || hitZone === 'footer') {
-        if (hitZone !== currentZone) {
-          this.deps.setZoneWithCaret(hitZone)
-          return true
+        // 双击的第一次单击也必须同步重置选区，不能只提前改掉活动页码。
+        if (hitZone !== currentZone || page?.index !== this.deps.getActivePageIndex()) {
+          this.deps.setZoneWithCaret(hitZone, page?.index)
         }
         return false
       }
@@ -545,13 +581,18 @@ export class HeaderFooterWidget {
   hitZone(docY: number): Zone {
     const layout = this.deps.getLayout()
     if (!layout) return 'main'
-    for (const page of layout.pages) {
-      if (docY < page.rect.y || docY > page.rect.y + page.rect.height) continue
-      if (page.headerRect && docY >= page.headerRect.y && docY <= page.headerRect.y + page.headerRect.height) return 'header'
-      if (page.footerRect && docY >= page.footerRect.y && docY <= page.footerRect.y + page.footerRect.height) return 'footer'
-      return 'main'
-    }
+    const page = this.pageAtY(docY)
+    if (!page) return 'main'
+    if (page.headerRect && docY >= page.headerRect.y && docY <= page.headerRect.y + page.headerRect.height) return 'header'
+    if (page.footerRect && docY >= page.footerRect.y && docY <= page.footerRect.y + page.footerRect.height) return 'footer'
     return 'main'
+  }
+
+  /** 根据文档纵坐标查找命中的页面 */
+  private pageAtY(docY: number) {
+    return this.deps.getLayout()?.pages.find(page =>
+      docY >= page.rect.y && docY <= page.rect.y + page.rect.height
+    )
   }
 
   /**
@@ -561,14 +602,19 @@ export class HeaderFooterWidget {
   renderBorder(): void {
     const layout = this.deps.getLayout()
     const zone = this.deps.getZone()
-    if (!layout) return
+    if (!this.layerEl) return
 
-    if (zone === 'main') {
+    if (!layout || zone === 'main') {
+      this.layerEl.style.display = 'none'
       this.hideLabel()
       this.hideInsertButton()
       this.hidePopup()
       return
     }
+
+    this.layerEl.style.width = `${this.deps.getWrapperWidth()}px`
+    this.layerEl.style.height = `${this.deps.getWrapperHeight()}px`
+    this.layerEl.style.display = 'block'
 
     // 同时绘制页眉和页脚的虚线边框
     this.deps.drawZoneBorder(layout, this.deps.getScrollY(), 'header', this.deps.getPageOffsetX())
@@ -592,28 +638,28 @@ export class HeaderFooterWidget {
     const el = zone === 'header' ? this.headerLabelEl : this.footerLabelEl
     if (!el) return
     el.querySelector('span')!.textContent = this.t(`view.pageNumber.${zone}`)
-    const page = layout.pages[0]
-    if (!page) return
-    const rect = zone === 'header' ? page.headerRect : page.footerRect
-    if (!rect) { el.style.display = 'none'; return }
+    const page = this.getActivePage(layout)
+    const rect = zone === 'header' ? page?.headerRect : page?.footerRect
+    if (!page || !rect) { el.style.display = 'none'; return }
 
-    const containerRect = this.deps.getContainerRect()
     const pageOffsetX = this.deps.getPageOffsetX()
     const scrollY = this.deps.getScrollY()
 
     // 分隔虚线的 y（页眉：headerRect 下沿；页脚：footerRect 上沿）
     const dividerDocY = zone === 'header' ? rect.y + rect.height : rect.y
-    const dividerScreenY = dividerDocY - scrollY + containerRect.top
+    const dividerY = dividerDocY - scrollY
 
     // 标签贴在页面左边缘（页边距之外）并向右微移，与虚线对齐
-    const screenX = page.rect.x + pageOffsetX + containerRect.left + 24
-    const labelY = zone === 'header'
-      ? dividerScreenY + 1
-      : dividerScreenY - el.offsetHeight - 1
-
-    el.style.left = `${screenX}px`
-    el.style.top = `${labelY}px`
+    const x = page.rect.x + pageOffsetX + 24
+    // 先显示再测量，避免首次显示页脚标签时高度为零。
     el.style.display = 'flex'
+    const labelY = zone === 'header'
+      ? dividerY + 1
+      : dividerY - el.offsetHeight - 1
+
+    el.style.left = `${x}px`
+    el.style.top = `${labelY}px`
+    if (!this.isInsideViewport(el)) el.style.display = 'none'
   }
 
   /**
@@ -627,12 +673,14 @@ export class HeaderFooterWidget {
     this.insertBtnEl.children[1].textContent = label
     this.insertBtnEl.title = label
     this.insertBtnEl.setAttribute('aria-label', label)
-    const page = layout.pages[0]
-    if (!page) return
-    const rect = zone === 'header' ? page.headerRect : page.footerRect
-    if (!rect) return
+    const page = this.getActivePage(layout)
+    const rect = zone === 'header' ? page?.headerRect : page?.footerRect
+    if (!rect) {
+      this.hideInsertButton()
+      this.hidePopup()
+      return
+    }
 
-    const containerRect = this.deps.getContainerRect()
     const pageOffsetX = this.deps.getPageOffsetX()
     const scrollY = this.deps.getScrollY()
 
@@ -640,20 +688,39 @@ export class HeaderFooterWidget {
     this.insertBtnEl.style.display = 'inline-flex'
 
     // 居中于页面（沿页面横向中点）
-    const pageCenterX = rect.x + pageOffsetX + containerRect.left + rect.width / 2
+    const pageCenterX = rect.x + pageOffsetX + rect.width / 2
     const btnWidth = this.insertBtnEl.offsetWidth
     const left = pageCenterX - btnWidth / 2
 
     // 与虚线对齐：按钮紧贴虚线（页眉时在下方，页脚时在上方）
     const dividerDocY = zone === 'header' ? rect.y + rect.height : rect.y
-    const dividerScreenY = dividerDocY - scrollY + containerRect.top
+    const dividerY = dividerDocY - scrollY
     const btnHeight = this.insertBtnEl.offsetHeight
     const top = zone === 'header'
-      ? dividerScreenY + 1
-      : dividerScreenY - btnHeight - 1
+      ? dividerY + 1
+      : dividerY - btnHeight - 1
 
     this.insertBtnEl.style.left = `${left}px`
     this.insertBtnEl.style.top = `${top}px`
+    if (!this.isInsideViewport(this.insertBtnEl)) {
+      this.hideInsertButton()
+      this.hidePopup()
+    }
+  }
+
+  /** 控件必须完整处于编辑视口内，滚出后不保留可点击的残片。 */
+  private isInsideViewport(el: HTMLElement): boolean {
+    return el.offsetLeft >= 0 && el.offsetTop >= 0 &&
+      el.offsetLeft + el.offsetWidth <= this.deps.getWrapperWidth() &&
+      el.offsetTop + el.offsetHeight <= this.deps.getWrapperHeight()
+  }
+
+  /** 获取当前激活页，未设置时回退到第一页 */
+  private getActivePage(layout: DocumentLayout) {
+    const pageIndex = this.deps.getActivePageIndex()
+    return pageIndex == null
+      ? layout.pages[0]
+      : layout.pages.find(page => page.index === pageIndex) ?? layout.pages[0]
   }
 
   /** 隐藏所有标签栏 */
@@ -677,7 +744,7 @@ export class HeaderFooterWidget {
 
   /** 显示弹出面板并定位 */
   private showPopup(): void {
-    if (!this.popupEl) return
+    if (!this.popupEl || !this.insertBtnEl || this.insertBtnEl.style.display === 'none') return
     for (const node of Array.from(this.popupEl.querySelectorAll<HTMLElement>('[data-i18n-key]'))) {
       node.textContent = this.t(node.dataset.i18nKey!)
     }
@@ -697,22 +764,27 @@ export class HeaderFooterWidget {
   /** 根据按钮位置计算弹出面板坐标，含越界翻转处理 */
   private positionPopup(): void {
     if (!this.popupEl || !this.insertBtnEl) return
-    const btnRect = this.insertBtnEl.getBoundingClientRect()
+    if (this.insertBtnEl.style.display === 'none' || !this.isInsideViewport(this.insertBtnEl)) {
+      this.hidePopup()
+      return
+    }
+    const btn = this.insertBtnEl
     const popupWidth = this.popupEl.offsetWidth
     const popupHeight = this.popupEl.offsetHeight
 
-    let left = btnRect.left + btnRect.width / 2 - popupWidth / 2
-    let top = btnRect.bottom + 6
+    let left = btn.offsetLeft + btn.offsetWidth / 2 - popupWidth / 2
+    let top = btn.offsetTop + btn.offsetHeight + 6
 
-    // 越界处理
-    const vw = window.innerWidth
-    const vh = window.innerHeight
-    if (left < 4) left = 4
-    if (left + popupWidth > vw - 4) left = vw - popupWidth - 4
+    // 以编辑区而非浏览器窗口为边界，空间不足时关闭面板。
+    const vw = this.deps.getWrapperWidth()
+    const vh = this.deps.getWrapperHeight()
+    if (popupWidth > vw - 8) { this.hidePopup(); return }
+    left = Math.max(4, Math.min(left, vw - popupWidth - 4))
     if (top + popupHeight > vh - 4) {
       // 若下方空间不足，则显示在按钮上方
-      top = btnRect.top - popupHeight - 6
+      top = btn.offsetTop - popupHeight - 6
     }
+    if (top < 4) { this.hidePopup(); return }
 
     this.popupEl.style.left = `${left}px`
     this.popupEl.style.top = `${top}px`

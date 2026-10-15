@@ -6,6 +6,7 @@
 
 import type { IDocxDocumentMeta, IElement, IPosition } from '@vervedoc/docx-editor-schema'
 import type { RangeManager } from '@vervedoc/docx-editor-state'
+import type { DocumentLayout } from './layout-types'
 import type { Zone } from './widgets/header-footer-widget'
 
 /**
@@ -20,6 +21,8 @@ export interface ZoneManagerDeps {
   setZoneState: (zone: Zone) => void
   /** 获取当前文档元数据 */
   getDocument: () => IDocxDocumentMeta
+  /** 获取布局，用于判断当前页是否为本节首页 */
+  getLayout: () => DocumentLayout | null
   getPage: () => import('@vervedoc/docx-editor-schema').PageLayout | undefined
   /** 获取当前选区管理器，可能为 null */
   getRange: () => RangeManager | null
@@ -48,10 +51,50 @@ export class ZoneManager {
 
   /** 切换编辑区域（main/header/footer） */
   setZone(zone: Zone): void {
-    if (this.deps.getZone() === zone) return
+    const initialized = zone !== 'main' && this.ensureZoneContent(zone)
+    const changed = this.deps.getZone() !== zone
     this.deps.setZoneState(zone)
-    this.deps.onZoneChange(zone)
+    if (initialized) this.deps.reformatAndRender()
+    if (changed) this.deps.onZoneChange(zone)
     this.deps.scheduleRender()
+  }
+
+  /**
+   * 用户显式进入空区域时补齐可编辑段落及分节引用，不在读取文档时隐式创建。
+   * 已有引用（包括继承引用）直接复用，首页及奇偶页引用分别保留。
+   */
+  private ensureZoneContent(zone: 'header' | 'footer'): boolean {
+    const doc = this.deps.getDocument()
+    let elements: IElement[]
+    let initialized = false
+    if (doc.sections) {
+      const page = this.deps.getPage()
+      const sectionIndex = page?.sectionIndex
+      const section = sectionIndex == null ? undefined : doc.sections[sectionIndex]
+      if (!page || !section) throw new TypeError('当前页缺少分节信息，无法编辑页眉页脚')
+      const parts = doc.headerFooterParts ??= {}
+      let partId = zone === 'header' ? page.headerPartId : page.footerPartId
+      if (!partId) {
+        const firstPage = this.deps.getLayout()?.pages.find(p => p.sectionIndex === sectionIndex)
+        const kind = section.titlePage && firstPage?.index === page.index
+          ? 'first'
+          : doc.evenAndOddHeaders && (page.index + 1) % 2 === 0 ? 'even' : 'default'
+        const baseId = `editor-${zone}-${sectionIndex}-${kind}`
+        partId = baseId
+        for (let suffix = 1; parts[partId] !== undefined; suffix++) partId = `${baseId}-${suffix}`
+        const refs = zone === 'header' ? (section.headers ??= {}) : (section.footers ??= {})
+        refs[kind] = partId
+        initialized = true
+      }
+      elements = parts[partId] ??= []
+    } else {
+      elements = doc[zone] ?? doc.contentZones?.[zone] ?? (doc[zone] = [])
+    }
+    if (elements.length === 0) {
+      elements.push({ type: 'text', value: '' })
+      initialized = true
+    }
+    return initialized
   }
 
   /**
@@ -60,10 +103,10 @@ export class ZoneManager {
    * 切回正文时清空选区。
    * @param zone 目标区域
    */
-  setZoneWithCaret(zone: Zone): void {
+  setZoneWithCaret(zone: Zone, resetCaret = false): void {
     const changed = this.deps.getZone() !== zone
     this.setZone(zone)
-    if (!changed) return
+    if (!changed && !resetCaret) return
     const range = this.deps.getRange()
     if (!range) return
     if (zone === 'header' || zone === 'footer') {

@@ -600,10 +600,6 @@ const executeCommand = (command: string, ...args: any[]) => {
     // 导入 JSON
     importJsonFile: importJsonFileFn,
 
-    exportDocx: async (payload: any) => {
-      await editorInstance.command.execute('exportDocx', payload)
-    },
-
     previewHtml: (payload: any) => {
       editorInstance.command.execute('previewHtml', payload)
     },

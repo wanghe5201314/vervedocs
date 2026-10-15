@@ -21,6 +21,7 @@
           @keydown.enter.prevent="handleAdd"
         />
         <VdButton
+          class="bookmark-add-button"
           type="primary"
           size="small"
           :disabled="!canAdd"
@@ -238,6 +239,16 @@ watch(
   display: flex;
   gap: 6px;
   align-items: center;
+}
+
+.bookmark-add-bar :deep(.ant-input-affix-wrapper) {
+  flex: 1;
+  min-width: 0;
+}
+
+.bookmark-add-button {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .bookmark-tip {

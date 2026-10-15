@@ -4,6 +4,7 @@ import {
   EditorComponent,
   type IElementPosition
 } from './constants'
+import './assets/css/date-picker.css'
 import type { Draw } from '@vervedoc/docx-editor-view'
 
 /** 日期选择器多语言文案接口 */

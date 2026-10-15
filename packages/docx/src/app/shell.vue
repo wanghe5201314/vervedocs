@@ -11,8 +11,18 @@ import { applyUiConstants } from '@/config/helpers'
 import { uiThemeStore } from '@/stores/ui-theme'
 import { externalApi, onExternalEvent, type ExternalEventName } from '@/composables/use-external-events'
 import { antLocale, t } from '@/i18n'
-import type { CollaborationOptions, DocxEditorUiInitialDocument } from '@/editor/types'
+import type {
+  CollaborationOptions,
+  DocxEditorUiInitialDocument,
+  ExportDocxOptions,
+  ExportDocxResult
+} from '@/editor/types'
 import type { DocxImportCallback, DocxExportCallback } from '@vervedoc/core'
+
+interface EditorPageApi {
+  executeCommand?: (command: string, ...args: unknown[]) => unknown
+  exportDocument?: (options?: ExportDocxOptions) => Promise<ExportDocxResult>
+}
 
 const props = defineProps<{
   initialDocument?: DocxEditorUiInitialDocument | null
@@ -144,14 +154,21 @@ onBeforeUnmount(() => {
 })
 
 /** 编辑器视图组件引用 */
-const editorViewRef = ref<any>(null)
+const editorViewRef = ref<EditorPageApi | null>(null)
 /**
  * 执行编辑器命令，转发至内部编辑器实例的 executeCommand 方法
  * @param command - 命令名称
  * @param args - 命令参数
  * @returns 编辑器命令执行结果
  */
-const executeCommand = (command: string, ...args: any[]) => {
+const executeCommand = (command: string, ...args: unknown[]) => {
+  if (command === 'exportDocx') {
+    const exportDocument = editorViewRef.value?.exportDocument
+    if (typeof exportDocument === 'function') {
+      return exportDocument(args[0] as ExportDocxOptions | undefined)
+    }
+    return
+  }
   const fn = editorViewRef.value?.executeCommand
   if (typeof fn !== 'function') return
   return fn(command, ...args)

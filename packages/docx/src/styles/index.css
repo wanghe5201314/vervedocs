@@ -118,16 +118,6 @@ ul {
   margin: 0 auto;
 }
 
-.ce-page-container canvas {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
-  /* 字体渲染优化：更圆润平滑 */
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  image-rendering: auto;
-  /* 新增：圆角设计 */
-  border-radius: 4px;
-}
-
 /* 编辑器字体渲染优化 */
 .editor,
 .editor * {
@@ -151,13 +141,6 @@ ul {
   height: 35px !important;
   line-height: 35px !important;
   margin: 0 !important;
-}
-
-.gdocs-menu-popper .ant-menu-item .mdi-icon,
-.gdocs-menu-popper .ant-menu-submenu-title .mdi-icon {
-  margin-right: 8px;
-  color: #5f6368;
-  flex-shrink: 0;
 }
 
 .gdocs-menu-popper .shortcut {
@@ -203,11 +186,6 @@ ul {
   display: block !important;
   background: transparent !important;
 }
-.gdocs-size-popper .size-panel .size-item {
-  height: auto !important;
-  line-height: normal !important;
-}
-
 /* 子菜单统一字号 */
 .gdocs-menu-popper .ant-menu-item,
 .gdocs-menu-popper .ant-menu-submenu-title {
@@ -342,7 +320,6 @@ ul {
 .list-preview { display: flex; flex-direction: column; gap: 3px; width: 100%; }
 .list-preview-row { display: flex; align-items: center; gap: 4px; }
 .list-symbol { font-size: 12px; line-height: 1; flex-shrink: 0; }
-.list-num { font-size: 11px; line-height: 1; flex-shrink: 0; white-space: nowrap; }
 .list-line { flex: 1; height: 1px; background: #999; min-width: 12px; }
 
 /* 表格选择器标题 */

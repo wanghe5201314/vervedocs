@@ -7,7 +7,14 @@ import '@vervedoc/design/styles.css'
 
 import WordEditorComponent from '@/app/shell.vue'
 import { initLocale, type DocxLocale } from '@/i18n'
-import type { CollaborationOptions, DocxEditorUiInitialDocument } from '@/editor/types'
+import type {
+  CollaborationOptions,
+  DocxEditorUiInitialDocument,
+  ExportDocxOptions,
+  ExportDocxResult,
+  ImportJsonFromUrlOptions,
+  ImportJsonFromUrlResult
+} from '@/editor/types'
 import type { ExternalEditorApi } from '@/composables/use-external-events'
 import type {
   DocxImportCallback,
@@ -50,7 +57,8 @@ export interface Options {
   /**
    * 文档导出回调（IElement JSON → .docx）
    *
-   * 取编辑器 JSON → exportCallback(json) → 返回 ArrayBuffer → 编辑器触发浏览器下载。
+   * 取编辑器 JSON → exportCallback(json, { fileName }) → 返回 ArrayBuffer → 编辑器触发浏览器下载。
+   * 回调第二个参数为可选参数，旧式只接收文档数据的回调仍可使用。
    * 未注入时导出不可用。实现示例：createDocxExportCallback()。
    */
   exportCallback?: DocxExportCallback
@@ -141,13 +149,60 @@ export class WordEditor {
   }
 
   /**
-   * 执行编辑器命令
-   * @param command 命令名称
-   * @param args 命令参数
-   * @returns 命令执行结果
+   * 执行兼容命令入口。
+   * 文档导入、导出和打印建议使用下方具名方法，以获得明确的参数与结果类型。
    */
-  executeCommand(command: string, ...args: any[]) {
+  executeCommand(
+    command: 'importJsonFile',
+    options: ImportJsonFromUrlOptions
+  ): Promise<ImportJsonFromUrlResult> | undefined
+  executeCommand(
+    command: 'exportDocx',
+    options?: ExportDocxOptions
+  ): Promise<ExportDocxResult> | undefined
+  executeCommand(command: 'print'): Promise<void> | undefined
+  executeCommand(command: string, ...args: unknown[]): unknown
+  executeCommand(command: string, ...args: unknown[]): unknown {
     return this.editorRef?.executeCommand?.(command, ...args)
+  }
+
+  /**
+   * 从 URL 导入 JSON 文档。
+   * @param options 文档 URL、请求配置与进度回调
+   * @returns 明确的成功或失败结果；编辑器未就绪时返回 EDITOR_NOT_READY
+   */
+  importJsonFromUrl(options: ImportJsonFromUrlOptions): Promise<ImportJsonFromUrlResult> {
+    return this.executeCommand('importJsonFile', options) ?? Promise.resolve({
+      success: false,
+      error: {
+        code: 'EDITOR_NOT_READY',
+        message: 'Editor is not ready'
+      }
+    })
+  }
+
+  /**
+   * 使用宿主注入的导出回调生成并下载 DOCX。
+   * @param options 导出选项，可指定回调和下载使用的文件名
+   * @returns 下载结果；导出失败时返回带错误码的结果
+   */
+  exportDocx(options?: ExportDocxOptions): Promise<ExportDocxResult> {
+    return this.executeCommand('exportDocx', options) ?? Promise.resolve({
+      success: false,
+      error: {
+        code: 'EDITOR_NOT_READY',
+        message: 'Editor is not ready'
+      }
+    })
+  }
+
+  /**
+   * 重新排版并打开浏览器打印对话框。
+   * @returns 打印准备完成后 resolve；编辑器未就绪或打印失败时 reject
+   */
+  print(): Promise<void> {
+    const result = this.executeCommand('print')
+    return result ?? Promise.reject(new Error('Editor is not ready'))
   }
 
   /**

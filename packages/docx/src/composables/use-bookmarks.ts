@@ -1,4 +1,4 @@
-import { ref, nextTick, type Ref } from 'vue'
+import { ref, onBeforeUnmount, type Ref } from 'vue'
 import type { IRange } from '@vervedoc/docx-editor-schema'
 
 /**
@@ -88,9 +88,13 @@ export function useBookmarks(options: {
       executeDeleteBookmark: (payload: { name: string }) => void
       executeGotoBookmark: (payload: { name: string }) => void
     }
+    listener?: {
+      on: (event: 'contentChange' | 'documentSet' | 'rangeChange', handler: () => void) => () => void
+    }
   } | null
 }) {
   const { getEditorInstance } = options
+  let unsubscribeListeners: (() => void)[] = []
 
   /** 书签列表 */
   const bookmarkList = ref<BookmarkItem[]>([])
@@ -142,6 +146,25 @@ export function useBookmarks(options: {
       .sort((a: any, b: any) => a.name.localeCompare(b.name, 'zh-CN'))
   }
 
+  /** 释放旧实例的监听，避免重新就绪或卸载后重复刷新。 */
+  function unbindBookmarkEvents() {
+    unsubscribeListeners.forEach(unsubscribe => unsubscribe())
+    unsubscribeListeners = []
+  }
+
+  /** 就绪后直接订阅核心事件，删除和整文档替换不等待内容通知的防抖。 */
+  function bindBookmarkEvents() {
+    unbindBookmarkEvents()
+    const listener = getEditorInstance()?.listener
+    if (listener) {
+      unsubscribeListeners = (['contentChange', 'documentSet', 'rangeChange'] as const)
+        .map(event => listener.on(event, refreshBookmarks))
+    }
+    refreshBookmarks()
+  }
+
+  onBeforeUnmount(unbindBookmarkEvents)
+
   /**
    * 添加书签并刷新书签列表
    * @param name 书签名称
@@ -149,7 +172,7 @@ export function useBookmarks(options: {
   function add(name: string) {
     const instance = getEditorInstance()
     instance?.command?.executeAddBookmark({ name })
-    nextTick(() => refreshBookmarks())
+    refreshBookmarks()
   }
 
   /**
@@ -159,7 +182,7 @@ export function useBookmarks(options: {
   function remove(name: string) {
     const instance = getEditorInstance()
     instance?.command?.executeDeleteBookmark({ name })
-    nextTick(() => refreshBookmarks())
+    refreshBookmarks()
   }
 
   /**
@@ -184,6 +207,7 @@ export function useBookmarks(options: {
   }
 
   return {
-    bookmarkAPI
+    bookmarkAPI,
+    bindBookmarkEvents
   }
 }

@@ -762,10 +762,20 @@ export type DocxImportCallback = (
   options?: { [key: string]: unknown }
 ) => Promise<Partial<IDocxDocumentMeta> & { success: boolean; error?: string }>
 
+/** DOCX 导出回调选项。 */
+export interface DocxExportCallbackOptions {
+  /** 最终下载文件名，包含 .docx 扩展名。 */
+  fileName?: string
+  /** 默认字体。 */
+  defaultFont?: string
+  /** 默认字号。 */
+  defaultSize?: number
+}
+
 /** docx 导出回调类型：将文档元数据序列化为 ArrayBuffer */
 export type DocxExportCallback = (
   data: IDocxDocumentMeta | IElement[],
-  options?: { defaultFont?: string; defaultSize?: number }
+  options?: DocxExportCallbackOptions
 ) => Promise<{ success: boolean; data?: ArrayBuffer; error?: string }>
 
 /* ========== 自动目录 ========== */

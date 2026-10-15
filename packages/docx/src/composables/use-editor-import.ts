@@ -2,6 +2,11 @@ import { nextTick } from 'vue'
 import { adjustFloatImagePositions } from '@vervedoc/core'
 import { replaceDocument } from '@/composables/use-replace-document'
 import { t } from '@/i18n'
+import type {
+  ImportJsonFromUrlErrorCode,
+  ImportJsonFromUrlOptions,
+  ImportJsonFromUrlResult
+} from '@/editor/types'
 
 /**
  * 编辑器实例接口（导入所需的最小能力）
@@ -30,62 +35,123 @@ export function useEditorImport(options: {
 }) {
   const { getEditorInstance } = options
 
-  /**
-   * 导入 JSON 文件并整文档替换到编辑器
-   * @param payload 导入参数，可包含 url、onProgress、onComplete
-   * @returns 无返回值
-   */
-  async function importJsonFile(payload?: any) {
-    const url = String(payload?.url || '').trim()
-    const onProgress: ((progress: number, status: string) => void) | undefined = payload?.onProgress
-    const onComplete: ((success: boolean, message?: string) => void) | undefined = payload?.onComplete
-    if (!url) {
-      onComplete?.(false, t('editor.missingUrl'))
-      return
-    }
-    try {
-      onProgress?.(10, t('editor.requesting'))
-      const resp = await fetch(url, { cache: 'no-store' })
-      if (!resp.ok) {
-        onComplete?.(false, `${t('editor.requestFailed')}: ${resp.status}`)
-        return
-      }
-      onProgress?.(30, t('editor.parsing'))
-      const json = await resp.json()
-      // 只认扁平文档 JSON（根数组 / elements / main），HTTP { data } 信封由 importCallback 拆包
-      const main = Array.isArray(json) ? json
-        : Array.isArray(json?.elements) ? json.elements
-        : Array.isArray(json?.main) ? json.main
-        : null
-      if (!Array.isArray(main) || main.length === 0) {
-        onComplete?.(false, t('editor.dataInvalid'))
-        return
-      }
-      const comments = Array.isArray(json?.comments) ? json.comments : []
-      const header = Array.isArray(json?.header) ? json.header : []
-      const footer = Array.isArray(json?.footer) ? json.footer : []
+  /** 导入失败时统一返回可分支处理的错误结果。 */
+  const failure = (
+    code: ImportJsonFromUrlErrorCode,
+    message: string,
+    status?: number
+  ): ImportJsonFromUrlResult => ({
+    success: false,
+    error: { code, message, ...(status === undefined ? {} : { status }) }
+  })
 
-      onProgress?.(60, t('editor.rendering'))
+  /**
+   * 导入 JSON 文档并替换编辑器当前内容。
+   * @param options JSON URL、请求选项与可选生命周期回调
+   * @returns 导入结果；网络、数据与编辑器错误均通过结果返回
+   */
+  async function importJsonFile(
+    options: ImportJsonFromUrlOptions
+  ): Promise<ImportJsonFromUrlResult> {
+    const url = String(options?.url || '').trim()
+    const onProgress = options?.onProgress
+    const onComplete = options?.onComplete
+    const reportProgress = (progress: number, status: string) => {
+      try {
+        onProgress?.(progress, status)
+      } catch (error) {
+        console.error('[docx] import progress callback failed', error)
+      }
+    }
+    const finish = (result: ImportJsonFromUrlResult) => {
+      try {
+        onComplete?.(result.success, result.success ? undefined : result.error.message)
+      } catch (error) {
+        console.error('[docx] import completion callback failed', error)
+      }
+      return result
+    }
+
+    if (!url) {
+      return finish(failure('INVALID_URL', t('editor.missingUrl')))
+    }
+
+    try {
+      reportProgress(10, t('editor.requesting'))
+
+      let resp: Awaited<ReturnType<typeof fetch>>
+      try {
+        resp = await fetch(url, {
+          cache: 'no-store',
+          headers: options.headers,
+          signal: options.signal
+        })
+      } catch (error) {
+        if (options.signal?.aborted || (error instanceof Error && error.name === 'AbortError')) {
+          return finish(failure('ABORTED', t('editor.loadFailed')))
+        }
+        return finish(failure('REQUEST_FAILED', error instanceof Error ? error.message : t('editor.loadFailed')))
+      }
+
+      if (!resp.ok) {
+        return finish(failure('HTTP_ERROR', `${t('editor.requestFailed')}: ${resp.status}`, resp.status))
+      }
+
+      reportProgress(30, t('editor.parsing'))
+      let responseData: unknown
+      try {
+        responseData = await resp.json()
+      } catch (error) {
+        if (options.signal?.aborted || (error instanceof Error && error.name === 'AbortError')) {
+          return finish(failure('ABORTED', t('editor.loadFailed')))
+        }
+        const message = error instanceof Error ? error.message : t('editor.dataInvalid')
+        return finish(failure('INVALID_JSON', `${t('editor.dataInvalid')}: ${message}`))
+      }
+
+      // 兼容直接文档、数组及常见的 { data: document } 服务端响应。
+      const documentData =
+        responseData && typeof responseData === 'object' && !Array.isArray(responseData) && 'data' in responseData
+          ? (responseData as { data: unknown }).data
+          : responseData
+      const documentRecord =
+        documentData && typeof documentData === 'object' && !Array.isArray(documentData)
+          ? documentData as Record<string, unknown>
+          : undefined
+      const main = Array.isArray(documentData) ? documentData
+        : Array.isArray(documentRecord?.elements) ? documentRecord.elements
+        : Array.isArray(documentRecord?.main) ? documentRecord.main
+        : null
+
+      if (!Array.isArray(main) || main.length === 0) {
+        return finish(failure('INVALID_DATA', t('editor.dataInvalid')))
+      }
+
+      const comments = Array.isArray(documentRecord?.comments) ? documentRecord.comments : []
+      const header = Array.isArray(documentRecord?.header) ? documentRecord.header : []
+      const footer = Array.isArray(documentRecord?.footer) ? documentRecord.footer : []
+
+      reportProgress(60, t('editor.rendering'))
       const inst = getEditorInstance()
       if (!inst) {
-        onComplete?.(false, t('editor.editorNotReady'))
-        return
+        return finish(failure('EDITOR_NOT_READY', t('editor.editorNotReady')))
       }
+
       const editorOptions = inst.command.getOptions?.()
       adjustFloatImagePositions(main, editorOptions)
 
       // Java 已解析元素的有效样式；保留原始文档元数据，导出仍需其继承链和单位。
       await replaceDocument(
         { getEditorInstance },
-        { ...(Array.isArray(json) ? {} : json), main, header, footer, comments }
+        { ...(documentRecord ?? {}), main, header, footer, comments }
       )
 
-      onProgress?.(100, t('editor.loadComplete'))
-      onComplete?.(true)
       await nextTick()
+      reportProgress(100, t('editor.loadComplete'))
+      return finish({ success: true, elementCount: main.length })
     } catch (e) {
       const msg = e instanceof Error ? e.message : t('editor.loadFailed')
-      onComplete?.(false, msg)
+      return finish(failure('IMPORT_FAILED', msg))
     }
   }
 

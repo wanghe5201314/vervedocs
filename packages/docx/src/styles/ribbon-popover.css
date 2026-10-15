@@ -78,7 +78,6 @@
   font-size: 11px;
 }
 .list-symbol { color: #3c4043; }
-.list-num { color: #3c4043; min-width: 16px; }
 .list-line {
   flex: 1;
   height: 1px;

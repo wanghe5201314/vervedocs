@@ -70,6 +70,9 @@ interface BlockCache {
  * 负责 block 位图缓存、增量重绘、光标/选区/页眉页脚分隔线绘制。
  */
 export class CanvasRenderer {
+  /** 当前编辑区域；编辑页眉/页脚时淡化正文内容。 */
+  private activeZone: 'main' | 'header' | 'footer' = 'main'
+
   /** 背景层 DOM 容器（每页背景 div，z-index:0） */
   private bgLayer: HTMLDivElement
   /** 内容层 canvas（绘制 block 位图） */
@@ -458,6 +461,11 @@ export class CanvasRenderer {
     this.opts.pageNumber = cfg
   }
 
+  /** 更新编辑区域，页眉/页脚编辑时降低正文块的不透明度。 */
+  updateActiveZone(zone: 'main' | 'header' | 'footer'): void {
+    this.activeZone = zone
+  }
+
   /** 设置水印 widget */
   setWatermarkWidget(widget: { drawWatermark(ctx: CanvasRenderingContext2D, page: import('./layout-types').PageLayout, scrollY: number): void; drawWatermarkForThumbnail(ctx: CanvasRenderingContext2D, page: import('./layout-types').PageLayout): void } | null): void {
     this.watermarkWidget = widget
@@ -472,6 +480,93 @@ export class CanvasRenderer {
       while (num >= v) { result += s; num -= v }
     }
     return result
+  }
+
+  /** 按字母表生成从 1 开始的连续编号（A...Z, AA...）。 */
+  private toAlphabetic(num: number, alphabet: string[]): string {
+    if (num <= 0) return String(num)
+    let result = ''
+    while (num > 0) {
+      num--
+      result = alphabet[num % alphabet.length] + result
+      num = Math.floor(num / alphabet.length)
+    }
+    return result
+  }
+
+  /** 将罗马数字转换为全角罗马数字字符。 */
+  private toUnicodeRoman(num: number): string {
+    const map: [number, string][] = [
+      [1000, 'Ⅿ'], [900, 'ⅭⅯ'], [500, 'Ⅾ'], [400, 'ⅭⅮ'],
+      [100, 'Ⅽ'], [90, 'ⅩⅭ'], [50, 'Ⅼ'], [40, 'ⅩⅬ'],
+      [10, 'Ⅹ'], [9, 'Ⅸ'], [5, 'Ⅴ'], [4, 'Ⅳ'], [1, 'Ⅰ']
+    ]
+    let result = ''
+    for (const [value, symbol] of map) {
+      while (num >= value) { result += symbol; num -= value }
+    }
+    return result
+  }
+
+  /** 转换为英文基数词，支持到万亿级页码。 */
+  private toEnglishNumber(num: number): string {
+    const small = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen']
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
+    const scales = ['', 'Thousand', 'Million', 'Billion', 'Trillion']
+    if (!Number.isSafeInteger(num) || num < 0) return String(num)
+    if (num === 0) return 'Zero'
+    if (num >= 1_000_000_000_000_000) return String(num)
+
+    const underThousand = (value: number): string => {
+      if (value < 20) return small[value]
+      if (value < 100) return `${tens[Math.floor(value / 10)]}${value % 10 ? `-${small[value % 10]}` : ''}`
+      return `${small[Math.floor(value / 100)]} Hundred${value % 100 ? ` ${underThousand(value % 100)}` : ''}`
+    }
+
+    const groups: string[] = []
+    let scale = 0
+    while (num > 0) {
+      const group = num % 1000
+      if (group) groups.unshift(`${underThousand(group)}${scales[scale] ? ` ${scales[scale]}` : ''}`)
+      num = Math.floor(num / 1000)
+      scale++
+    }
+    return groups.join(' ')
+  }
+
+  /** 将英文基数词最后一个单词变为序数词。 */
+  private toEnglishOrdinal(num: number): string {
+    const words = this.toEnglishNumber(num)
+    const irregular: Record<string, string> = {
+      one: 'first', two: 'second', three: 'third', five: 'fifth',
+      eight: 'eighth', nine: 'ninth', twelve: 'twelfth'
+    }
+    return words.replace(/[A-Za-z]+$/, word => {
+      const lower = word.toLowerCase()
+      const ordinal = irregular[lower] ?? (lower.endsWith('y')
+        ? `${lower.slice(0, -1)}ieth`
+        : `${lower}th`)
+      return ordinal[0].toUpperCase() + ordinal.slice(1)
+    })
+  }
+
+  /** 转换为英文数字序数形式，并处理 11th、12th、13th 等例外。 */
+  private toEnglishNumericOrdinal(num: number): string {
+    const remainder100 = num % 100
+    const suffix = remainder100 >= 11 && remainder100 <= 13
+      ? 'th'
+      : num % 10 === 1 ? 'st' : num % 10 === 2 ? 'nd' : num % 10 === 3 ? 'rd' : 'th'
+    return `${num}${suffix}`
+  }
+
+  /** 将中文数字转换为日文常用大字形式。 */
+  private toJapaneseFinancialNumber(num: number): string {
+    const replacements: Record<string, string> = {
+      一: '壱', 二: '弐', 三: '参', 四: '肆', 五: '伍',
+      六: '陸', 七: '漆', 八: '捌', 九: '玖', 十: '拾',
+      百: '佰', 千: '仟', 万: '萬', 亿: '億'
+    }
+    return this.toChineseNumber(num).replace(/[一二三四五六七八九十百千万亿]/g, char => replacements[char])
   }
 
   /** 将数字转为中文数字字符串（支持大写） */
@@ -600,6 +695,7 @@ export class CanvasRenderer {
    */
   private formatPageNumber(index: number, totalPages: number, style: string): string {
     const n = index + 1
+    const greekLower = ['α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ', 'λ', 'μ', 'ν', 'ξ', 'ο', 'π', 'ρ', 'σ', 'τ', 'υ', 'φ', 'χ', 'ψ', 'ω']
     switch (style) {
       case '第1页': return `第${n}页`
       case '第1页共x页': return `第${n}页共${totalPages}页`
@@ -607,12 +703,27 @@ export class CanvasRenderer {
       case '第一页': return `第${this.toChineseNumber(n)}页`
       case '第一页共X页': return `第${this.toChineseNumber(n)}页共${this.toChineseNumber(totalPages)}页`
       case '1, 2, 3 ...': return String(n)
+      case '-1-, -2-, -3- ...': return `-${n}-`
+      case '—1—, —2—, —3— ...': return `—${n}—`
+      case '①, ②, ③ ...':
+        if (n <= 20) return String.fromCodePoint(0x245f + n)
+        if (n <= 35) return String.fromCodePoint(0x3250 + n - 20)
+        if (n <= 50) return String.fromCodePoint(0x32b0 + n - 35)
+        return String(n)
       case 'I, II, III ...': return this.toRoman(n).toUpperCase()
       case 'i, ii, iii ...': return this.toRoman(n).toLowerCase()
-      case 'A, B, C ...': return String.fromCharCode(64 + n)
-      case 'a, b, c ...': return String.fromCharCode(96 + n)
+      case 'Ⅰ, Ⅱ, Ⅲ ...': return this.toUnicodeRoman(n)
+      case 'A, B, C ...': return this.toAlphabetic(n, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''))
+      case 'a, b, c ...': return this.toAlphabetic(n, 'abcdefghijklmnopqrstuvwxyz'.split(''))
       case '一, 二, 三 ...': return this.toChineseNumber(n)
       case '壹, 贰, 叁 ...': return this.toChineseNumber(n, true)
+      case '甲, 乙, 丙 ...': return '甲乙丙丁戊己庚辛壬癸'[(n - 1) % 10]
+      case '子, 丑, 寅 ...': return '子丑寅卯辰巳午未申酉戌亥'[(n - 1) % 12]
+      case '壱, 弐, 参 ...': return this.toJapaneseFinancialNumber(n)
+      case 'α, β, γ ...': return this.toAlphabetic(n, greekLower)
+      case '1st, 2nd, 3rd ...': return this.toEnglishNumericOrdinal(n)
+      case 'One, Two, Three ...': return this.toEnglishNumber(n)
+      case 'First, Second, Third ...': return this.toEnglishOrdinal(n)
       default: return String(n)
     }
   }
@@ -677,29 +788,35 @@ export class CanvasRenderer {
       // - 页眉：顶部在内容上方 4px，底部对齐边距区域下沿（正文顶部）
       // - 页脚：顶部对齐边距区域上沿（正文底部），底部在内容下方 4px
       const PADDING = 20
+      const pageTop = page.rect.y
+      const clampY = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
       let top: number
       let bottom: number
       if (zone === 'header') {
-        bottom = rect.y + rect.height
+        bottom = clampY(rect.y + rect.height, pageTop, pageBottom)
         if (blocks && blocks.length > 0) {
           const contentTop = Math.min(...blocks.map(b => b.rect.y))
-          top = rect.y + contentTop - PADDING
+          top = clampY(rect.y + contentTop - PADDING, pageTop, bottom)
         } else {
-          top = rect.y
+          top = clampY(rect.y, pageTop, bottom)
         }
       } else {
-        top = rect.y
+        top = clampY(rect.y, pageTop, pageBottom)
         if (blocks && blocks.length > 0) {
           const contentBottom = Math.max(...blocks.map(b => b.rect.y + b.rect.height))
-          bottom = rect.y + contentBottom + PADDING
+          bottom = clampY(rect.y + contentBottom + PADDING, top, pageBottom)
         } else {
-          bottom = rect.y + rect.height
+          bottom = clampY(rect.y + rect.height, top, pageBottom)
         }
       }
 
-      const x = Math.round(rect.x + pageOffsetX) + 0.5
+      const pageLeft = page.rect.x
+      const pageRight = page.rect.x + page.rect.width
+      const left = Math.max(pageLeft, Math.min(pageRight, rect.x))
+      const right = Math.max(left, Math.min(pageRight, rect.x + rect.width))
+      const x = Math.round(left + pageOffsetX) + 0.5
       const y = Math.round(top - scrollY) + 0.5
-      const w = Math.round(rect.width) - 1
+      const w = Math.max(0, Math.round(right - left) - 1)
       const h = Math.max(0, Math.round(bottom - top) - 1)
 
       // 只绘制三边虚线（靠近正文的一侧由贯穿整页的分隔虚线代替，避免重叠）：
@@ -869,9 +986,12 @@ export class CanvasRenderer {
     const contentOriginY = page.contentRect.y - scrollY
     const layer = (block: BlockNode): number => block.kind === 'image'
       ? ((block.block as IImageElement).imgDisplay === 'float-bottom' ? -1 : (block.block as IImageElement).imageLayout?.anchored ? 1 : 0) : 0
+    ct.save()
+    if (this.activeZone !== 'main') ct.globalAlpha *= 0.42
     for (const b of [...page.blocks].sort((a, b) => layer(a) - layer(b))) {
       this.renderBlockOnMain(ct, b, contentOriginX, contentOriginY, aliveIds)
     }
+    ct.restore()
     if (page.headerBlocks && page.headerRect) {
       const hx = page.headerRect.x + this.opts.pageOffsetX
       const hy = page.headerRect.y - scrollY

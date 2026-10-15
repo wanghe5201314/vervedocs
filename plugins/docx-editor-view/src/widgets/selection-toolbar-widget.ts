@@ -28,6 +28,8 @@ export interface SelectionToolbarWidgetDeps {
   getDocument: () => IDocxDocumentMeta
   /** 获取当前编辑区域 */
   getZone: () => Zone
+  /** 获取当前页眉/页脚编辑所在页 */
+  getActivePageIndex: () => number | null
   /** 获取当前垂直滚动偏移量（像素） */
   getScrollY: () => number
   /** 获取页面水平偏移量（像素） */
@@ -223,7 +225,7 @@ export class SelectionToolbarWidget {
       tb.style.display = 'none'
       return
     }
-    const rect = locateCaret(layout, ordered.start, this.deps.getZone())
+    const rect = locateCaret(layout, ordered.start, this.deps.getZone(), this.deps.getActivePageIndex())
     if (!rect) { tb.style.display = 'none'; return }
     const pageOffsetX = this.deps.getPageOffsetX()
     const x = Math.round(rect.x + pageOffsetX)

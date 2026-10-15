@@ -253,7 +253,11 @@ import PasswordCard from '@/components/editor/passwordCard.vue'
 
 import UnifiedTopHeader from '@/components/layout/unifiedTopHeader.vue'
 
-import type { CollaborationOptions } from '@/editor/types'
+import type {
+  CollaborationOptions,
+  ExportDocxOptions,
+  ExportDocxResult
+} from '@/editor/types'
 
 import { useDocumentMeta } from '@/composables/use-document-meta'
 import { useDock } from '@/composables/use-dock'
@@ -539,7 +543,7 @@ const {
 } = useAIActions({ getEditorInstance })
 
 /** 书签 API */
-const { bookmarkAPI } = useBookmarks({ getEditorInstance })
+const { bookmarkAPI, bindBookmarkEvents } = useBookmarks({ getEditorInstance })
 /** 批注 API */
 const { commentAPI } = useEditorComments({
   getEditorInstance,
@@ -810,6 +814,7 @@ const normalizeContent = (content: any): any => {
  * @param args - 编辑器就绪事件参�?
  */
 const handleReady = (...args: any[]) => {
+  bindBookmarkEvents()
   hasEditorMounted.value = true
   isAppReady.value = true
   emitExternalEvent('ready', args[0] ?? null)
@@ -1041,25 +1046,47 @@ const handleImportDoc = async () => {
 }
 
 /** 处理文档导出：获取编辑器内容并调用导出回调，触发浏览器下�?*/
-const handleExportDoc = async () => {
-  if (fileOperationPending) return
+const handleExportDoc = async (
+  options?: ExportDocxOptions
+): Promise<ExportDocxResult> => {
+  if (fileOperationPending) {
+    return { success: false, error: { code: 'BUSY', message: t('editor.exporting') } }
+  }
   if (!exportCallback) {
-    message.warning(t('editor.exportNoCallback'))
-    return
+    const error = { code: 'CALLBACK_MISSING' as const, message: t('editor.exportNoCallback') }
+    message.warning(error.message)
+    return { success: false, error }
   }
   const instance = getEditorInstance()
-  if (!instance) return
+  if (!instance) {
+    return {
+      success: false,
+      error: { code: 'EDITOR_NOT_READY', message: t('editor.editorNotReady') }
+    }
+  }
   fileOperationPending = true
   try {
     fileOperationLoading.value = t('editor.exporting')
     await nextTick()
     const value = instance.command?.getValue?.()
-    if (!value) return
-    const result = await exportCallback(toDocxExportDocument(value))
-    if (!result.success || !result.data) {
-      message.error(`${t('editor.exportFailed')}: ${result.error || t('editor.unknownError')}`)
-      return
+    if (!value) {
+      return {
+        success: false,
+        error: { code: 'EDITOR_NOT_READY', message: t('editor.editorNotReady') }
+      }
     }
+    const requestedFileName =
+      typeof options?.fileName === 'string' ? options.fileName.trim() : ''
+    const baseFileName = requestedFileName || String(documentMeta.name || t('common.fileName'))
+    const normalizedFileName = baseFileName.replace(/\.docx$/i, '').trim() || t('common.fileName')
+    const fileName = `${normalizedFileName}.docx`
+    const result = await exportCallback(toDocxExportDocument(value), { fileName })
+    if (!result.success || !result.data) {
+      const error = result.error || t('editor.unknownError')
+      message.error(`${t('editor.exportFailed')}: ${error}`)
+      return { success: false, error: { code: 'EXPORT_FAILED', message: error } }
+    }
+
     const blob = new Blob([result.data], {
       type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     })
@@ -1067,13 +1094,16 @@ const handleExportDoc = async () => {
     try {
       const a = document.createElement('a')
       a.href = url
-      a.download = `${documentMeta.name || t('common.fileName')}.docx`
+      a.download = fileName
       a.click()
     } finally {
       URL.revokeObjectURL(url)
     }
+    return { success: true, fileName }
   } catch (e) {
-    message.error(`${t('editor.exportFailed')}: ${(e as Error)?.message || t('editor.unknownError')}`)
+    const error = e instanceof Error ? e.message : t('editor.unknownError')
+    message.error(`${t('editor.exportFailed')}: ${error}`)
+    return { success: false, error: { code: 'EXPORT_FAILED', message: error } }
   } finally {
     fileOperationLoading.value = ''
     fileOperationPending = false
@@ -1324,7 +1354,7 @@ const handleCommand = (command: string, ...args: any[]) => {
   }
 
   const fn = editorRef.value?.executeCommand
-  if (typeof fn === 'function') fn(command, ...args)
+  if (typeof fn === 'function') return fn(command, ...args)
 }
 
 /**
@@ -1351,7 +1381,8 @@ const getExternalAPI = () => externalApi
 
 defineExpose({
   executeCommand,
-  getExternalAPI
+  getExternalAPI,
+  exportDocument: handleExportDoc
 })
 </script>
 

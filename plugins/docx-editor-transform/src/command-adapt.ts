@@ -16,6 +16,7 @@ import {
   getByPath, getParentContainer, cloneTree, walkTree, isSamePath, splitParagraphs, comparePath, formatElementTree,
   DEFAULT_EDITOR_OPTION, applyImageLayout, updateImageLayout, TableBorder, BULLET_STYLES, NUMBER_STYLES,
   clearRevision, snapshotRevisionFormat, recordFormatRevision,
+  collectPageFields, updatePageFields,
   isControl, createControlElement, updateControlElementValue, validateControlValue, validateControlConfig, comparePosition, isEmptyValue
 } from '@vervedoc/docx-editor-schema'
 import type { RangeManager, IRangeStyle, IEditorAbility, Listener } from '@vervedoc/docx-editor-state'
@@ -3522,19 +3523,31 @@ export class CommandAdapt {
   }
 
   /**
-   * 设置页码配置（与现有配置合并）。
+   * 原位更新当前页眉/页脚中的真实页码域，兼容仅传样式或位置的调用。
    * @param payload 页码配置对象
    */
   setPageNumber(payload: Record<string, unknown>): void {
     if (!this.getIsCanInput()) return
-    const currentOptions = this.draw.getOptions() || {}
-    this.draw.updateOptions({
-      ...currentOptions,
-      pageNumber: {
-        ...((currentOptions as any).pageNumber || {}),
-        ...payload
-      }
-    } as Partial<IEditorOption>)
+    const previousZone = this.draw.getZone()
+    const previous = this.draw.getOptions().pageNumber as Record<string, unknown> | undefined
+    const zone = payload.zone ?? previous?.zone ?? (previousZone === 'header' ? 'header' : 'footer')
+    if (zone !== 'header' && zone !== 'footer') return
+    this.draw.setZone(zone)
+    const doc = this.draw.getActiveDocument()
+    const current = collectPageFields(doc.elements).find(field => field.type === 'PAGE')
+    const requestedStyle = payload.style ?? previous?.style
+    const style = requestedStyle == null ? undefined : String(requestedStyle)
+    const position = payload.position ?? previous?.position ?? current?.results[0]?.rowFlex ?? 'center'
+    if (position !== 'left' && position !== 'center' && position !== 'right') {
+      this.draw.setZone(previousZone)
+      return
+    }
+    // 旧配置属于独立绘制层；转为真实文档域后必须关闭，避免重复显示。
+    if (previous) this.draw.updateOptions({ pageNumber: null })
+    updatePageFields(doc.elements, style, position)
+    this.range.clear()
+    this._commit(doc)
+    if (previousZone !== zone) this.draw.setZone(previousZone)
   }
 
   /**

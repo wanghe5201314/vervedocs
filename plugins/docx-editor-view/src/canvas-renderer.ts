@@ -473,7 +473,7 @@ export class CanvasRenderer {
 
 
   /** 将数字转为罗马数字字符串 */
-  private toRoman(num: number): string {
+  private static toRoman(num: number): string {
     const map: [number, string][] = [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']]
     let result = ''
     for (const [v, s] of map) {
@@ -483,7 +483,7 @@ export class CanvasRenderer {
   }
 
   /** 按字母表生成从 1 开始的连续编号（A...Z, AA...）。 */
-  private toAlphabetic(num: number, alphabet: string[]): string {
+  private static toAlphabetic(num: number, alphabet: string[]): string {
     if (num <= 0) return String(num)
     let result = ''
     while (num > 0) {
@@ -495,7 +495,7 @@ export class CanvasRenderer {
   }
 
   /** 将罗马数字转换为全角罗马数字字符。 */
-  private toUnicodeRoman(num: number): string {
+  private static toUnicodeRoman(num: number): string {
     const map: [number, string][] = [
       [1000, 'Ⅿ'], [900, 'ⅭⅯ'], [500, 'Ⅾ'], [400, 'ⅭⅮ'],
       [100, 'Ⅽ'], [90, 'ⅩⅭ'], [50, 'Ⅼ'], [40, 'ⅩⅬ'],
@@ -509,7 +509,7 @@ export class CanvasRenderer {
   }
 
   /** 转换为英文基数词，支持到万亿级页码。 */
-  private toEnglishNumber(num: number): string {
+  private static toEnglishNumber(num: number): string {
     const small = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen']
     const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
     const scales = ['', 'Thousand', 'Million', 'Billion', 'Trillion']
@@ -535,7 +535,7 @@ export class CanvasRenderer {
   }
 
   /** 将英文基数词最后一个单词变为序数词。 */
-  private toEnglishOrdinal(num: number): string {
+  private static toEnglishOrdinal(num: number): string {
     const words = this.toEnglishNumber(num)
     const irregular: Record<string, string> = {
       one: 'first', two: 'second', three: 'third', five: 'fifth',
@@ -551,7 +551,7 @@ export class CanvasRenderer {
   }
 
   /** 转换为英文数字序数形式，并处理 11th、12th、13th 等例外。 */
-  private toEnglishNumericOrdinal(num: number): string {
+  private static toEnglishNumericOrdinal(num: number): string {
     const remainder100 = num % 100
     const suffix = remainder100 >= 11 && remainder100 <= 13
       ? 'th'
@@ -560,7 +560,7 @@ export class CanvasRenderer {
   }
 
   /** 将中文数字转换为日文常用大字形式。 */
-  private toJapaneseFinancialNumber(num: number): string {
+  private static toJapaneseFinancialNumber(num: number): string {
     const replacements: Record<string, string> = {
       一: '壱', 二: '弐', 三: '参', 四: '肆', 五: '伍',
       六: '陸', 七: '漆', 八: '捌', 九: '玖', 十: '拾',
@@ -570,7 +570,7 @@ export class CanvasRenderer {
   }
 
   /** 将数字转为中文数字字符串（支持大写） */
-  private toChineseNumber(num: number, uppercase = false): string {
+  private static toChineseNumber(num: number, uppercase = false): string {
     const digits = uppercase
       ? ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖']
       : ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九']
@@ -627,7 +627,7 @@ export class CanvasRenderer {
     if (!cfg) return
     const rect = cfg.zone === 'header' ? page.headerRect : page.footerRect
     if (!rect) return
-    const text = this.formatPageNumber(page.index, totalPages, cfg.style)
+    const text = CanvasRenderer.formatPageNumber(page.index, totalPages, cfg.style)
     ct.save()
     ct.fillStyle = '#333333'
     ct.font = '12px "Microsoft YaHei", "PingFang SC", sans-serif'
@@ -662,7 +662,7 @@ export class CanvasRenderer {
     if (!cfg) return
     const rect = cfg.zone === 'header' ? page.headerRect : page.footerRect
     if (!rect) return
-    const text = this.formatPageNumber(page.index, totalPages, cfg.style)
+    const text = CanvasRenderer.formatPageNumber(page.index, totalPages, cfg.style)
     ct.save()
     ct.fillStyle = '#333333'
     ct.font = '12px "Microsoft YaHei", "PingFang SC", sans-serif'
@@ -693,7 +693,7 @@ export class CanvasRenderer {
    * @param style 页码样式
    * @returns 格式化后的页码字符串
    */
-  private formatPageNumber(index: number, totalPages: number, style: string): string {
+  static formatPageNumber(index: number, totalPages: number, style: string): string {
     const n = index + 1
     const greekLower = ['α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ', 'λ', 'μ', 'ν', 'ξ', 'ο', 'π', 'ρ', 'σ', 'τ', 'υ', 'φ', 'χ', 'ψ', 'ω']
     switch (style) {

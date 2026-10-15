@@ -18,6 +18,21 @@ export function toDocxExportDocument(document: IDocxDocumentMeta): IDocxDocument
   result.header ??= contentZones?.header
   result.footer ??= contentZones?.footer
 
+  // 只转换导出副本：Java 元素协议不接受顶层 indentHanging，
+  // 悬挂缩进以负的首行缩进传递；listNumbering 内同名字段仍是合法协议。
+  const normalizeIndentation = (elements: IElement[]) => {
+    walkTree(elements, node => {
+      const run = node as IElement & { indentHanging?: number }
+      const hanging = run.indentHanging
+      if (typeof hanging === 'number' && Number.isFinite(hanging) && hanging >= 0) {
+        if (hanging > 0 || run.paragraphFirstLineIndent == null) {
+          run.paragraphFirstLineIndent = -hanging
+        }
+      }
+      delete run.indentHanging
+    })
+  }
+
   // 将渲染层的链接默认样式写入导出副本，目录链接仍沿用自己的样式。
   const normalizeHyperlinks = (elements: IElement[]) => {
     walkTree(elements, node => {
@@ -35,7 +50,10 @@ export function toDocxExportDocument(document: IDocxDocumentMeta): IDocxDocument
   }
   for (const elements of [result.elements, result.header, result.footer,
     ...Object.values(result.headerFooterParts ?? {})]) {
-    if (elements) normalizeHyperlinks(elements)
+    if (elements) {
+      normalizeIndentation(elements)
+      normalizeHyperlinks(elements)
+    }
   }
 
   const normalizeParagraphRuns = (elements: IElement[]) => {

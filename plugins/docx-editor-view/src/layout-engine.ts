@@ -18,7 +18,7 @@ import type {
   ITableElement,
   Path
 } from '@vervedoc/docx-editor-schema'
-import { splitParagraphs, FONT_FAMILY_CSS, resolveHeaderFooterPart, isControl } from '@vervedoc/docx-editor-schema'
+import { splitParagraphs, FONT_FAMILY_CSS, resolveHeaderFooterPart, isControl, collectPageFields, getPageFieldStyle } from '@vervedoc/docx-editor-schema'
 import { CONTROL_MARK, getControlPresentation, type ControlPresentation } from './control-presentation'
 import type {
   DocumentLayout, PageLayout, BlockNode, ParagraphBlock,
@@ -27,6 +27,7 @@ import type {
 } from './layout-types'
 import { TextMeasure, getSharedMeasure } from './text-measure'
 import { resolveBullet, BULLET_FONT_STACK, BULLET_FONT_STACK_FALLBACK, detectWingdings } from './list-bullet'
+import { CanvasRenderer } from './canvas-renderer'
 
 /** 排版引擎配置选项 */
 export interface LayoutOptions {
@@ -90,6 +91,8 @@ export class LayoutEngine {
   private paragraphCache = new Map<string, ParagraphCache>()
   private nextParagraphCache = new Map<string, ParagraphCache>()
   private layoutZone = 'main'
+  /** 每页独立求值，绝不把动态结果写回共享的页眉页脚模板。 */
+  private pageFieldValues = new WeakMap<IElement, string>()
   private diagnostics: NonNullable<DocumentLayout['diagnostics']> = []
   private paragraphInputs = new WeakMap<ParagraphBlock, ParagraphInput>()
 
@@ -121,6 +124,7 @@ export class LayoutEngine {
     this.diagnostics = []
     this.nextParagraphCache = new Map()
     this.layoutZone = 'main'
+    this.pageFieldValues = new WeakMap()
     const { pageGap } = this.opts
     // 缺失区域仅生成布局占位，不写入文档；进入编辑后沿用相同位置。
     const emptyZoneElements: IElement[] = [{ type: 'text', value: '' }]
@@ -255,7 +259,6 @@ export class LayoutEngine {
     const headerBlocks = this.layoutBlocks(zoneElements(headerElements), [], contentWidth)
     this.layoutZone = 'footer'
     const footerBlocks = this.layoutBlocks(zoneElements(footerElements), [], contentWidth)
-    this.paragraphCache = this.nextParagraphCache
 
     // 分页
     const pages: PageLayout[] = []
@@ -573,6 +576,51 @@ export class LayoutEngine {
     if (currentBlocks.length > 0) pushPage()
     else if (pages.length === 0 || rawBlocks.at(-1)?.block?.type === 'pageBreak' && rawBlocks.at(-1)?.block?.value === 'manual') pushPage()
 
+    // 正文分页完成后再计算 PAGE / NUMPAGES，按真实文字宽度重新排版，
+    // 同时覆盖编辑画布、打印和缩略图，避免共享位图把所有页都画成第一页。
+    const fieldCache = new Map<IElement[], ReturnType<typeof collectPageFields>>()
+    const sectionPageCounts = new Map<number | undefined, number>()
+    for (const page of pages) {
+      sectionPageCounts.set(page.sectionIndex, (sectionPageCounts.get(page.sectionIndex) ?? 0) + 1)
+    }
+    for (const page of pages) {
+      for (const zone of ['header', 'footer'] as const) {
+        const partId = zone === 'header' ? page.headerPartId : page.footerPartId
+        const source = document?.sections
+          ? partId ? document.headerFooterParts?.[partId] : undefined
+          : zone === 'header' ? headerElements : footerElements
+        if (!source) continue
+        let fields = fieldCache.get(source)
+        if (!fields) {
+          fields = collectPageFields(source)
+          fieldCache.set(source, fields)
+        }
+        if (!fields.length) continue
+        this.pageFieldValues = new WeakMap()
+        for (const field of fields) {
+          const number = field.type === 'PAGE' ? page.index + 1
+            : field.type === 'SECTIONPAGES' ? sectionPageCounts.get(page.sectionIndex)! : pages.length
+          const results = field.results.length ? field.results : [field.separator]
+          results.forEach((run, index) => this.pageFieldValues.set(run, index === 0
+            ? CanvasRenderer.formatPageNumber(number - 1, pages.length, getPageFieldStyle(field)) : ''))
+        }
+        this.layoutZone = `${zone}:${partId ?? ''}:${page.index}:${pages.length}`
+        const rect = zone === 'header' ? page.headerRect : page.footerRect
+        if (!rect) continue
+        const blocks = this.layoutBlocks(source, [], rect.width)
+        const height = blocks.reduce((max, block) => Math.max(max, block.rect.y + block.rect.height), 0)
+        const section = document?.sections?.[page.sectionIndex ?? 0]
+        const offset = zone === 'header'
+          ? section?.headerDistance ?? Math.max(0, rect.height - height)
+          : section?.footerDistance !== undefined ? rect.height - section.footerDistance - height : 0
+        const positioned = blocks.map(block => ({ ...block, rect: { ...block.rect, y: block.rect.y + offset } }))
+        if (zone === 'header') page.headerBlocks = positioned
+        else page.footerBlocks = positioned
+      }
+    }
+    this.pageFieldValues = new WeakMap()
+    this.layoutZone = 'main'
+    this.paragraphCache = this.nextParagraphCache
     const lastPage = pages[pages.length - 1]
     const totalHeight = lastPage.rect.y + lastPage.rect.height + pageGap
     return { pages, totalHeight, pageWidth: Math.max(...pages.map(page => page.rect.width)), diagnostics: this.diagnostics }
@@ -764,7 +812,7 @@ export class LayoutEngine {
       return result
     }
     const key = JSON.stringify([this.layoutZone, input.runsParentPath, input.startIndex, input.runStartIndex])
-    const signature = JSON.stringify(input)
+    const signature = JSON.stringify([input, input.runs.map(run => this.pageFieldValues.get(run))])
     const cached = this.paragraphCache.get(key)
     // Undo/document replacement may have identical text but different source refs.
     const sameSources = cached?.input.block === input.block &&
@@ -1070,7 +1118,7 @@ export class LayoutEngine {
       const strikeout = !!anyRun.strikeout
       const underline = !!anyRun.underline
       const groupIds = Array.isArray(anyRun.groupIds) ? anyRun.groupIds as string[] : undefined
-      const value = String(anyRun.value ?? '')
+      const value = this.pageFieldValues.get(rawRun) ?? String(anyRun.value ?? '')
 
       if (!value) {
         if (rawRun.type === 'text' && !rawRun.extension?.fieldMarker && !rawRun.extension?.bookmarkMarker) {

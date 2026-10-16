@@ -3,7 +3,7 @@
  */
 
 import type { CommandAdapt } from './command-adapt'
-import type { IElement, Path, IAutoTocResult, IBookmark, IEditorOption, IRange, IDocxDocumentMeta, IControlConfig, ControlDataValue, IControlElement } from '@vervedoc/docx-editor-schema'
+import type { IElement, Path, IAutoTocResult, IBookmark, IEditorOption, IRange, IDocxDocumentMeta, IControlConfig, ControlDataValue, IControlElement, IPosition, CellTextDirection } from '@vervedoc/docx-editor-schema'
 import type { IRangeStyle, IEditorAbility } from '@vervedoc/docx-editor-state'
 
 /**
@@ -193,9 +193,25 @@ export class Command {
    */
   executeSetCellBackground(color: string): void { this.adapt.setCellBackground(color) }
   /**
+   * 设置单元格文字方向。
+   * @param direction 横排 lrTb 或竖排 tbRlV
+   * @param target 可选的目标单元格位置；未提供时使用当前光标
+   */
+  executeSetCellTextDirection(direction: CellTextDirection, target?: IPosition): void {
+    this.adapt.setCellTextDirection(direction, target)
+  }
+  /**
    * 切换表格重复表头状态。
    */
-  executeToggleRepeatHeader(): void { this.adapt.toggleRepeatHeader() }
+  executeToggleRepeatHeader(target?: IPosition): void { this.adapt.toggleRepeatHeader(target) }
+  /**
+   * 设置单元格四边内边距。
+   * @param padding [上, 右, 下, 左]，单位为像素
+   * @param target 可选的目标单元格位置
+   */
+  executeSetCellPadding(padding: [number, number, number, number], target?: IPosition): void {
+    this.adapt.setCellPadding(padding, target)
+  }
   /**
    * 设置表格列宽。
    * @param tableIndex 表格索引
@@ -698,7 +714,9 @@ export class Command {
    * @param type 边框类型字符串
    */
   executeSetTableBorderType(type: string): void { this.adapt.setTableBorderType(type) }
-  getCellProperties() { return this.adapt.getCellProperties() }
+  getCellProperties(target?: IPosition) { return this.adapt.getCellProperties(target) }
+  getTableRowProperties(target?: IPosition) { return this.adapt.getTableRowProperties(target) }
+  getTableColumnProperties(target?: IPosition) { return this.adapt.getTableColumnProperties(target) }
   getTableBorders() { return this.adapt.getTableBorders() }
   executeSetTableBorders(patch: Parameters<CommandAdapt['setTableBorders']>[0]): void { this.adapt.setTableBorders(patch) }
   /**

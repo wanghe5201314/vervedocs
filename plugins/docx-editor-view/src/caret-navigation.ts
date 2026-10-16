@@ -6,7 +6,7 @@
 
 import type { DocumentLayout, InlineBox, LineBox, ParagraphBlock } from './layout-types'
 import type { RangeManager } from '@vervedoc/docx-editor-state'
-import type { IPosition } from '@vervedoc/docx-editor-schema'
+import { isSamePath, type IPosition } from '@vervedoc/docx-editor-schema'
 import { locateCaret } from './caret-rect'
 import { hitTest } from './hit-test'
 import type { Zone } from './widgets/header-footer-widget'
@@ -127,6 +127,11 @@ export class CaretNavigation {
     if (!layout || !range) return
     const pos = range.getFocus()
     if (!pos) return
+    const paragraph = this.deps.findParagraphByPos(pos)
+    if (paragraph?.verticalText) {
+      this.moveCaretInVerticalText(paragraph, pos, dir)
+      return
+    }
     const rect = locateCaret(layout, pos, this.deps.getZone(), this.deps.getActivePageIndex())
     if (!rect) return
     // 目标 y = 当前光标 y ± 行高（估算上一/下一行中部）
@@ -139,6 +144,40 @@ export class CaretNavigation {
     }
   }
 
+  /** 竖排时，上下方向键沿字符流移动，而不是按横排行盒做几何跳转。 */
+  private moveCaretInVerticalText(paragraph: ParagraphBlock, pos: IPosition, dir: 1 | -1): void {
+    const range = this.deps.getRange()
+    if (!range) return
+    const inlines = paragraph.lines.flatMap(line => line.inlines)
+    const index = inlines.findIndex(inline =>
+      isSamePath(inline.path, pos.path) &&
+      pos.offset >= inline.startOffset &&
+      pos.offset <= inline.endOffset)
+    if (index < 0) return
+
+    const current = inlines[index]
+    let target: IPosition | undefined
+    if (dir > 0) {
+      target = pos.offset < current.endOffset
+        ? { path: current.path, offset: pos.offset + 1 }
+        : inlines[index + 1] && {
+          path: inlines[index + 1].path,
+          offset: Math.min(inlines[index + 1].startOffset + 1, inlines[index + 1].endOffset)
+        }
+    } else {
+      target = pos.offset > current.startOffset
+        ? { path: current.path, offset: pos.offset - 1 }
+        : inlines[index - 1] && {
+          path: inlines[index - 1].path,
+          offset: Math.max(inlines[index - 1].endOffset - 1, inlines[index - 1].startOffset)
+        }
+    }
+    if (!target) return
+    range.setCaret(target)
+    this.deps.setCaretVisible(true)
+    this.deps.renderCaretIfAny()
+  }
+
   /** 当前行首 */
   moveCaretToLineStart(): void {
     const layout = this.deps.getLayout()
@@ -146,6 +185,15 @@ export class CaretNavigation {
     if (!layout || !range) return
     const pos = range.getFocus()
     if (!pos) return
+    const paragraph = this.deps.findParagraphByPos(pos)
+    if (paragraph?.verticalText) {
+      const first = paragraph.lines.flatMap(line => line.inlines)[0]
+      if (!first) return
+      range.setCaret({ path: first.path, offset: first.startOffset })
+      this.deps.setCaretVisible(true)
+      this.deps.renderCaretIfAny()
+      return
+    }
     const line = this.deps.findLineByPos(pos)
     if (!line) return
     const first = line.inlines[0]
@@ -163,6 +211,16 @@ export class CaretNavigation {
     if (!layout || !range) return
     const pos = range.getFocus()
     if (!pos) return
+    const paragraph = this.deps.findParagraphByPos(pos)
+    if (paragraph?.verticalText) {
+      const inlines = paragraph.lines.flatMap(line => line.inlines)
+      const last = inlines[inlines.length - 1]
+      if (!last) return
+      range.setCaret({ path: last.path, offset: last.endOffset })
+      this.deps.setCaretVisible(true)
+      this.deps.renderCaretIfAny()
+      return
+    }
     const line = this.deps.findLineByPos(pos)
     if (!line) return
     const last = line.inlines[line.inlines.length - 1]

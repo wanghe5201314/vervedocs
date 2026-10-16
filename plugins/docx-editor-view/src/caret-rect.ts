@@ -22,6 +22,9 @@ export interface CaretRect {
   y: number
   /** 光标高度取行高与文字高度的较大值 */
   height: number
+  /** 竖排文字使用横向光标线；宽度为当前字格宽度。 */
+  orientation?: 'horizontal' | 'vertical'
+  width?: number
 }
 
 /**
@@ -110,6 +113,17 @@ function locateInParagraph(b: ParagraphBlock, pos: IPosition, bx: number, by: nu
       if (!isSamePath(inl.path, pos.path)) continue
       if (inl.controlId && !(pos.offset === 0 ? inl.controlStart : inl.controlEnd)) continue
       if (pos.offset < inl.startOffset || pos.offset > inl.endOffset) continue
+      if (b.verticalText) {
+        const charCount = Math.max(1, inl.endOffset - inl.startOffset)
+        const charHeight = line.height / charCount
+        return {
+          x: bx + inl.x,
+          y: by + line.y + charHeight * (pos.offset - inl.startOffset),
+          height: line.height,
+          orientation: 'horizontal',
+          width: Math.max(1, inl.width)
+        }
+      }
       const localX = charOffsetToX(inl, pos.offset - inl.startOffset)
       // 极小行距的空段落仍需可见光标；向行顶上方扩展，避免页脚光标超出纸张。
       const height = Math.max(line.height, inl.height)

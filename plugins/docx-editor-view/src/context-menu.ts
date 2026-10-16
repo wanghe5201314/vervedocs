@@ -82,7 +82,13 @@ const SVG = {
   valignBottom: 'vertical_align_bottom',
   cellBackground: 'format_color_fill',
   repeatHeader: 'repeat',
+  textDirection: 'text_rotation_none',
+  horizontalText: 'format_textdirection_l_to_r',
+  verticalText: 'text_rotate_vertical',
+  check: 'check',
   deleteTable: 'delete',
+  cellOperations: 'grid_view',
+  borderStyle: 'border_all',
   arrow: 'chevron_right'
 }
 

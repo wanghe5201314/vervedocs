@@ -62,6 +62,8 @@ export interface InlineBox {
   letterSpacing?: number
   /** 兼容布局调整后的单字占宽；只用于等宽空格片段或单个压缩标点。 */
   glyphAdvance?: number
+  /** 文字定宽的水平字形缩放，仅用于绘制，不改变字号和行高。 */
+  glyphScale?: number
   /** 压缩标点左侧留白时的绘制偏移，不改变光标逻辑边界。 */
   glyphOffset?: number
   /** 若该 inline 属于超链接，存其 URL（用于命中跳转） */
@@ -97,6 +99,8 @@ export interface LineBox {
   baseline: number
   /** 该行包含的 inline 列表 */
   inlines: InlineBox[]
+  /** 源文字起点，空白换行也保留，用于不等宽栏的接续排版。 */
+  startPosition?: { path: Path; offset: number }
   /** 段落对齐方式 */
   rowFlex: 'left' | 'center' | 'right' | 'alignment' | 'justify' | 'distribute'
   /** 是否是段落最后一行（影响两端对齐） */
@@ -117,6 +121,8 @@ export interface ParagraphBlock extends BlockBase {
   kind: 'paragraph'
   /** 段落类型：normal=普通段、title=标题、list=列表 */
   paragraphKind: 'normal' | 'title' | 'list'
+  /** 所属单元格使用竖排方向；用于纵向命中和光标处理。 */
+  verticalText?: boolean
   /** 对应的源节点（normal 段为 null） */
   block: IElement | null
   /** 段落在父数组中的起始索引 */

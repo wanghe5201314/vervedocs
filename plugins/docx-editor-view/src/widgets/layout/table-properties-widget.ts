@@ -13,6 +13,7 @@ export class TablePropertiesWidget {
   private root: HTMLElement | null = null
   private initial: Record<string, string> = {}
   private target: IPosition | null = null
+  private columnIndex: number | null = null
 
   constructor(private deps: Deps) {}
 
@@ -21,19 +22,49 @@ export class TablePropertiesWidget {
     this.target = { path: [...target.path], offset: target.offset }
     const cmd = this.deps.onCommand
     const selection = cmd('getRange')
-    cmd('executeReplaceRange', { anchor: this.target, focus: this.target })
-    const borders = cmd('getTableBorders')
-    const cell = cmd('getCellProperties')
-    cmd('executeReplaceRange', selection)
-    if (!borders || !cell) return
+    let borders: Record<string, unknown> | null = null
+    let cell: Record<string, unknown> | null = null
+    let row: Record<string, unknown> | null = null
+    let column: { index: number; width: number; colspan: number } | null = null
+    try {
+      cmd('executeReplaceRange', { anchor: this.target, focus: this.target })
+      borders = cmd('getTableBorders')
+      cell = cmd('getCellProperties')
+      row = cmd('getTableRowProperties')
+      column = cmd('getTableColumnProperties')
+    } finally {
+      cmd('executeReplaceRange', selection)
+    }
     const container = document.createElement('div')
     container.innerHTML = panelHtml
     this.root = container.firstElementChild as HTMLElement
     translatePanel(this.root, this.deps.translate, 'view.tableDialog.')
     document.body.appendChild(this.root)
     this.initial = {}
-    for (const [name, value] of Object.entries({ ...borders, ...cell })) {
-      const input = this.root.querySelector<HTMLInputElement | HTMLSelectElement>(`[name="${name}"]`)!
+    this.columnIndex = Number.isFinite(column?.index) ? column!.index : null
+    const values = {
+      ...(borders ?? {}),
+      ...(cell ?? {
+        verticalAlign: 'top',
+        backgroundColor: '',
+        textDirection: '',
+        paddingTop: 5,
+        paddingRight: 5,
+        paddingBottom: 5,
+        paddingLeft: 5
+      }),
+      columnWidth: column?.width,
+      ...(row ?? { pagingRepeat: false })
+    }
+    for (const [name, value] of Object.entries(values)) {
+      const input = this.root.querySelector<HTMLInputElement | HTMLSelectElement>(`[name="${name}"]`)
+      if (!input) continue
+      if (name === 'columnWidth' && column && column.colspan > 1) input.disabled = true
+      if (input instanceof HTMLInputElement && input.type === 'checkbox') {
+        input.checked = Boolean(value)
+        this.initial[name] = String(input.checked)
+        continue
+      }
       input.value = value === undefined ? '' : String(value)
       if (name === 'color' || name === 'backgroundColor') {
         input.value = input.value.replace(/^#([\da-f])([\da-f])([\da-f])$/i, '#$1$1$2$2$3$3')
@@ -96,7 +127,8 @@ export class TablePropertiesWidget {
     this.root.querySelector('form')!.addEventListener('submit', event => {
       event.preventDefault()
       const invalid = Array.from(this.root!.querySelectorAll<HTMLInputElement>('input'))
-        .find(input => !input.validity.valid)
+        .find(input => !input.disabled && input.name in this.initial &&
+          input.value !== this.initial[input.name] && !input.validity.valid)
       if (invalid) {
         this.selectTab(invalid.closest<HTMLElement>('[data-pane]')!.dataset.pane!)
         invalid.focus()
@@ -106,7 +138,7 @@ export class TablePropertiesWidget {
       this.apply()
       this.close()
     })
-    this.root.querySelector<HTMLElement>('[data-tab="table"]')!.focus()
+    this.root.focus({ preventScroll: true })
   }
 
   refreshTranslations(): void {
@@ -165,9 +197,35 @@ export class TablePropertiesWidget {
       }
     }
     if (Object.keys(patch).length) cmd('executeSetTableBorders', patch)
+    const columnWidth = this.root.querySelector<HTMLInputElement>('[name="columnWidth"]')!.value
+    if (columnWidth !== '' && this.columnIndex !== null &&
+      Number(columnWidth) !== Number(this.initial.columnWidth)) {
+      cmd('executeSetTableColWidth', Number(this.target.path[0]), this.columnIndex, Number(columnWidth))
+    }
     for (const [name, command] of [['verticalAlign', 'executeSetCellVerticalAlign'], ['backgroundColor', 'executeSetCellBackground']]) {
       const value = this.root.querySelector<HTMLInputElement>(`[name="${name}"]`)!.value
       if (value !== this.initial[name]) cmd(command, value)
+    }
+    const horizontalAlign = this.root.querySelector<HTMLSelectElement>('[name="horizontalAlign"]')!.value
+    if (horizontalAlign) cmd('executeSetRowFlex', horizontalAlign)
+    const textDirection = this.root.querySelector<HTMLSelectElement>('[name="textDirection"]')!.value
+    if (textDirection && textDirection !== this.initial.textDirection) {
+      cmd('executeSetCellTextDirection', textDirection, this.target)
+    }
+    const paddingNames = ['paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft']
+    const paddingValues = paddingNames.map(name =>
+      Number(this.root!.querySelector<HTMLInputElement>(`[name="${name}"]`)!.value)
+    ) as [number, number, number, number]
+    if (paddingNames.some((name, index) => String(paddingValues[index]) !== this.initial[name])) {
+      cmd('executeSetCellPadding', paddingValues, this.target)
+    }
+    const rowHeight = this.root.querySelector<HTMLInputElement>('[name="rowHeight"]')!.value
+    if (rowHeight !== '' && Number(rowHeight) !== Number(this.initial.rowHeight)) {
+      cmd('executeSetTableRowHeight', Number(this.target.path[0]), Number(this.target.path[2]), Number(rowHeight))
+    }
+    const repeatHeader = this.root.querySelector<HTMLInputElement>('[name="pagingRepeat"]')!.checked
+    if (String(repeatHeader) !== this.initial.pagingRepeat) {
+      cmd('executeToggleRepeatHeader', this.target)
     }
   }
 
@@ -180,5 +238,6 @@ export class TablePropertiesWidget {
     this.root?.remove()
     this.root = null
     this.target = null
+    this.columnIndex = null
   }
 }

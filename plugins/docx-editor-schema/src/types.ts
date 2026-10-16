@@ -47,9 +47,13 @@ export type ListTypeName = 'ol' | 'ul'
 export type PageBreakValue = 'manual' | 'auto' | 'continuous' | 'nextPage' | 'evenPage' | 'oddPage'
 
 export interface IDocxSection {
-  /** 等宽栏数，缺省继承文档设置。 */
+  /** 栏数，缺省继承文档设置。 */
   columnCount?: number
   columnGap?: number
+  /** 不等宽栏宽（px）；缺省使用等宽栏。 */
+  columnWidths?: number[]
+  /** 每栏右侧间距（px），末栏忽略。 */
+  columnGaps?: number[]
   pageWidth?: number
   pageHeight?: number
   margins?: [number, number, number, number]
@@ -186,6 +190,10 @@ export interface ITextElement extends IElementBase {
   rowMargin?: number
   /** 字符间距（px） */
   letterSpacing?: number
+  /** w:fitText 同组文本的总目标宽度（px）。 */
+  fitTextWidth?: number
+  /** 相邻同标识 Run 共用目标宽度，不对每个 Run 单独拉伸。 */
+  fitTextId?: string
   /** 文本装饰样式（solid/double/dashed/dotted/wavy） */
   textDecoration?: string
   /** 修订 ID */
@@ -299,11 +307,14 @@ export interface ITdBorderStyle {
   left: IBorderSide
 }
 
+/** 单元格文字方向：横排或从上到下、从右向左的竖排。 */
+export type CellTextDirection = 'lrTb' | 'tbRlV'
+
 /** 表格单元格 */
 export interface ITd {
   /** 单元格宽度（px） */
   width: number
-  /** 单元格文字方向（对应 OOXML w:textDirection）。 */
+  /** 单元格文字方向（OOXML w:textDirection，如 lrTb、tbRlV）。 */
   textDirection?: string
   /** 跨列数 */
   colspan: number

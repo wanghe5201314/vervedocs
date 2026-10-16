@@ -55,7 +55,11 @@ export function hitTest(layout: DocumentLayout, docX: number, docY: number, zone
  * @returns 命中位置；未命中返回 null
  */
 function hitBlocks(blocks: BlockNode[], x: number, y: number, ox: number, oy: number): IPosition | null {
-  for (const b of blocks) {
+  // 分栏中多个段落可占用相同纵坐标，优先命中鼠标所在的栏，而非文档顺序中的左栏。
+  const distanceX = (block: BlockNode) => Math.max(ox + block.rect.x - x, x - ox - block.rect.x - block.rect.width, 0)
+  const candidates = blocks.filter(block => y >= oy + block.rect.y && y <= oy + block.rect.y + block.rect.height)
+    .sort((left, right) => distanceX(left) - distanceX(right))
+  for (const b of candidates) {
     const bx = ox + b.rect.x
     const by = oy + b.rect.y
     if (y < by || y > by + b.rect.height) continue
@@ -98,10 +102,10 @@ function hitBlocks(blocks: BlockNode[], x: number, y: number, ox: number, oy: nu
 function hitParagraph(b: ParagraphBlock, lx: number, ly: number, _pb: ParagraphBlock): IPosition | null {
   for (const line of b.lines) {
     if (ly < line.y || ly > line.y + line.height) continue
-    return hitLine(line, lx)
+    return hitLine(line, lx, ly - line.y, b.verticalText)
   }
   const last = b.lines[b.lines.length - 1]
-  if (last) return hitLine(last, lx)
+  if (last) return hitLine(last, lx, ly - last.y, b.verticalText)
   return null
 }
 
@@ -111,8 +115,14 @@ function hitParagraph(b: ParagraphBlock, lx: number, ly: number, _pb: ParagraphB
  * @param lx 相对块本地 X 坐标
  * @returns 命中位置；空行返回 null
  */
-function hitLine(line: LineBox, lx: number): IPosition | null {
+function hitLine(line: LineBox, lx: number, ly: number, verticalText = false): IPosition | null {
   if (line.inlines.length === 0) return null
+  if (verticalText) {
+    const inl = line.inlines[0]
+    const after = ly >= line.height / 2
+    if (inl.controlId) return { path: inl.path, offset: after ? 1 : 0 }
+    return { path: inl.path, offset: after ? inl.endOffset : inl.startOffset }
+  }
   const measure = getSharedMeasure()
   for (const inl of line.inlines) {
     if (lx >= inl.x && lx <= inl.x + inl.width) {
@@ -150,13 +160,14 @@ function hitLine(line: LineBox, lx: number): IPosition | null {
  */
 function hitTable(b: TableBlock, x: number, y: number, tbx: number, tby: number): IPosition | null {
   for (const row of b.rows) {
-    const ry = tby + row.rect.y
-    if (y < ry || y > ry + row.rect.height) continue
     for (const cell of row.cells) {
       const cx = tbx + cell.rect.x
-      if (x < cx || x > cx + cell.rect.width) continue
+      const cy = tby + cell.rect.y
+      // 合并格只登记在起始行，命中范围应覆盖它自己的完整 rowspan 矩形。
+      if (x < cx || x > cx + cell.rect.width ||
+        y < cy || y > cy + cell.rect.height) continue
       const contentOX = cx + cell.contentPaddingLeft
-      const contentOY = ry + cell.contentPaddingTop + cell.verticalOffset
+      const contentOY = cy + cell.contentPaddingTop + cell.verticalOffset
       const r = hitBlocks(cell.content, x, y, contentOX, contentOY)
       if (r) return r
       return { path: cell.contentPath.concat(0), offset: 0 }

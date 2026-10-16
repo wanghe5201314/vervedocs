@@ -18,6 +18,7 @@ export interface DrawCommand {
   text: string
   letterSpacing?: number
   glyphAdvance?: number
+  glyphScale?: number
 }
 
 /** 段落绘制选项 */
@@ -145,7 +146,7 @@ export function paintParagraph(ctx: PaintCtx, b: ParagraphBlock, opts: PaintOpti
         const key = `${font}||${textColor}`
         addBucket(buckets, key, {
           font, color: textColor, x: inl.x + (inl.glyphOffset ?? 0), y: inl.baseline, text,
-          letterSpacing: inl.letterSpacing, glyphAdvance: inl.glyphAdvance
+          letterSpacing: inl.letterSpacing, glyphAdvance: inl.glyphAdvance, glyphScale: inl.glyphScale
         })
       }
       // Review marks are visual overlays, never persisted as ordinary formatting.
@@ -174,13 +175,21 @@ export function paintParagraph(ctx: PaintCtx, b: ParagraphBlock, opts: PaintOpti
     ctx.font = font
     ctx.fillStyle = color
     for (const c of list) {
-      if (!c.letterSpacing && c.glyphAdvance == null) {
+      if (!c.letterSpacing && c.glyphAdvance == null && c.glyphScale == null) {
         ctx.fillText(c.text, c.x, c.y)
       } else {
         let cx = c.x
         for (let i = 0; i < c.text.length; i++) {
           const ch = c.text[i]
-          ctx.fillText(ch, cx, c.y)
+          if (c.glyphScale != null) {
+            ctx.save()
+            ctx.translate(cx, c.y)
+            ctx.scale(c.glyphScale, 1)
+            ctx.fillText(ch, 0, 0)
+            ctx.restore()
+          } else {
+            ctx.fillText(ch, cx, c.y)
+          }
           cx += (c.glyphAdvance ?? ctx.measureText(ch).width) + (c.letterSpacing ?? 0)
         }
       }

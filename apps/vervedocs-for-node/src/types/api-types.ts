@@ -60,6 +60,9 @@ export interface DocxElement {
   type: string
   value?: string
   characterStyleId?: string
+  /** 同一定宽组的总宽度（px）和原始标识。 */
+  fitTextWidth?: number
+  fitTextId?: string
   imageLayout?: ImageLayout
   [key: string]: unknown
 }
@@ -81,6 +84,11 @@ export interface ImageLayout {
 }
 
 export interface DocxSection {
+  columnCount?: number
+  columnGap?: number
+  /** 不等宽栏的宽度和各栏右侧间距（px）。 */
+  columnWidths?: number[]
+  columnGaps?: number[]
   pageWidth?: number
   pageHeight?: number
   margins?: number[]

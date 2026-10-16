@@ -1,7 +1,7 @@
 /**
  * CaretWidget —— DOM 光标 widget
  *
- * 用一个 position:absolute 的 div 绘制文本光标（1px 竖线），替代 canvas overlay 绘制。
+ * 用一个 position:absolute 的 div 绘制横排或竖排文本光标，替代 canvas overlay 绘制。
  *  - 挂载于 canvasHost（覆盖 container 视口，pointer-events:none）
  *  - 增量更新 style.left/top/height + display，不每帧重建 DOM
  *  - 显隐由外部 visible 开关驱动（沿用原 setInterval 闪烁机制）
@@ -77,7 +77,13 @@ export class CaretWidget {
     const y = Math.round(rect.y - scrollY)
     el.style.left = `${x}px`
     el.style.top = `${y}px`
-    el.style.height = `${rect.height}px`
+    if (rect.orientation === 'horizontal') {
+      el.style.width = `${rect.width ?? 1}px`
+      el.style.height = '1px'
+    } else {
+      el.style.width = '1px'
+      el.style.height = `${rect.height}px`
+    }
     el.style.display = 'block'
   }
 

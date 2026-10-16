@@ -1239,8 +1239,8 @@ export class Draw {
     anchor.style.position = 'absolute'
     anchor.style.left = `${rect.x}px`
     anchor.style.top = `${rect.y}px`
-    anchor.style.width = '1px'
-    anchor.style.height = `${rect.height}px`
+    anchor.style.width = rect.orientation === 'horizontal' ? `${rect.width ?? 1}px` : '1px'
+    anchor.style.height = rect.orientation === 'horizontal' ? '1px' : `${rect.height}px`
     this.scroller.append(anchor)
     anchor.scrollIntoView({ block: 'center' })
     anchor.remove()

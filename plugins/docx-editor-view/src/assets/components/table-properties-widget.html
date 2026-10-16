@@ -1,8 +1,9 @@
 <div class="pw-panel-mask tp-mask">
-  <form class="pw-panel tp-panel" role="dialog" aria-modal="true" aria-labelledby="tp-title" novalidate>
+  <form class="pw-panel tp-panel" role="dialog" aria-modal="true" aria-labelledby="tp-title" tabindex="-1" novalidate>
     <div class="pw-panel-title" id="tp-title">表格属性</div>
     <div class="tp-tabs" role="tablist" aria-label="属性类别">
       <button type="button" id="tp-table-tab" role="tab" aria-selected="true" aria-controls="tp-table-pane" data-tab="table">表格</button>
+      <button type="button" id="tp-row-tab" role="tab" aria-selected="false" aria-controls="tp-row-pane" data-tab="row" tabindex="-1">行</button>
       <button type="button" id="tp-cell-tab" role="tab" aria-selected="false" aria-controls="tp-cell-pane" data-tab="cell" tabindex="-1">单元格</button>
     </div>
     <div class="tp-body">
@@ -44,9 +45,54 @@
             </div>
           </div>
         </fieldset>
+        <fieldset class="tp-group">
+          <legend>列宽</legend>
+          <div class="tp-settings">
+            <label class="tp-label" for="tp-column-width">当前列宽</label>
+            <div class="tp-with-unit"><input id="tp-column-width" name="columnWidth" class="pw-ctrl" type="number" min="20" step="1" placeholder="保持原样"><span>px</span></div>
+          </div>
+          <p class="tp-field-help">跨列合并单元格的列宽请通过表格边框拖拽调整。</p>
+        </fieldset>
+      </section>
+      <section id="tp-row-pane" role="tabpanel" aria-labelledby="tp-row-tab" data-pane="row" hidden>
+        <p class="tp-hint">行高和重复表头设置应用于右键位置所在行。</p>
+        <fieldset class="tp-group">
+          <legend>行高</legend>
+          <div class="tp-settings">
+            <label class="tp-label" for="tp-row-height">高度</label>
+            <div class="tp-with-unit"><input id="tp-row-height" name="rowHeight" class="pw-ctrl" type="number" min="20" step="1" placeholder="保持原样"><span>px</span></div>
+          </div>
+        </fieldset>
+        <fieldset class="tp-group">
+          <legend>重复标题</legend>
+          <label class="tp-checkbox"><input type="checkbox" name="pagingRepeat"><span>在跨页时重复此行</span></label>
+        </fieldset>
       </section>
       <section id="tp-cell-pane" role="tabpanel" aria-labelledby="tp-cell-tab" data-pane="cell" hidden>
-        <p class="tp-hint">以下设置仅应用于当前单元格（右键所在格）。</p>
+        <p class="tp-hint">文字方向、底色、边距和垂直对齐应用于当前单元格；文字对齐应用于当前段落。</p>
+        <fieldset class="tp-group">
+          <legend>文字方向</legend>
+          <div class="tp-cell-align">
+            <label class="tp-label" for="tp-text-direction">方向</label>
+            <select id="tp-text-direction" name="textDirection" class="pw-ctrl">
+              <option value="">保持原样</option>
+              <option value="lrTb">横排</option>
+              <option value="tbRlV">竖排</option>
+            </select>
+          </div>
+        </fieldset>
+        <fieldset class="tp-group">
+          <legend>文字对齐</legend>
+          <div class="tp-cell-align">
+            <label class="tp-label" for="tp-horizontal-align">对齐方式</label>
+            <select id="tp-horizontal-align" name="horizontalAlign" class="pw-ctrl">
+              <option value="">保持原样</option>
+              <option value="left">左对齐</option>
+              <option value="center">居中</option>
+              <option value="right">右对齐</option>
+            </select>
+          </div>
+        </fieldset>
         <fieldset class="tp-group">
           <legend>底色</legend>
           <div class="tp-cell-fill">
@@ -58,6 +104,15 @@
             <button type="button" data-clear-background>清除底色</button>
           </div>
           <p id="tp-background-help" class="tp-hint">颜色格式：#RRGGBB；留空表示无底色。</p>
+        </fieldset>
+        <fieldset class="tp-group">
+          <legend>单元格边距</legend>
+          <div class="tp-cell-padding">
+            <label class="tp-padding-field" for="tp-padding-top"><span>上</span><input id="tp-padding-top" name="paddingTop" class="pw-ctrl" type="number" min="0" step="1"></label>
+            <label class="tp-padding-field" for="tp-padding-right"><span>右</span><input id="tp-padding-right" name="paddingRight" class="pw-ctrl" type="number" min="0" step="1"></label>
+            <label class="tp-padding-field" for="tp-padding-bottom"><span>下</span><input id="tp-padding-bottom" name="paddingBottom" class="pw-ctrl" type="number" min="0" step="1"></label>
+            <label class="tp-padding-field" for="tp-padding-left"><span>左</span><input id="tp-padding-left" name="paddingLeft" class="pw-ctrl" type="number" min="0" step="1"></label>
+          </div>
         </fieldset>
         <fieldset class="tp-group">
           <legend>垂直对齐</legend>

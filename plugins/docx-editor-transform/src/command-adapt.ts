@@ -7,7 +7,7 @@
 
 import type {
   IDocxDocumentMeta, IElement, IImageElement, Path, ITextElement,
-  ITitleElement, ITableElement, IListElement, ListTypeName, IPosition, IRange, ITd, VerticalAlign,
+  ITitleElement, ITableElement, IListElement, ListTypeName, IPosition, IRange, ITd, VerticalAlign, CellTextDirection,
   IAutoTocItem, IAutoTocResult, DocumentLayout, IBookmark, IEditorOption, BlockNode,
   HistorySnapshot, IHistoryManager, TableBorderPreset, RevisionMeta,
   IControlElement, IControlConfig, ControlDataValue
@@ -1850,8 +1850,8 @@ export class CommandAdapt {
    * 获取当前光标所在的表格上下文信息。
    * @returns 包含 doc/table/tableIndex/trIndex/tdIndex 的对象；光标不在表格内时返回 null
    */
-  private getTableContext(): { doc: IDocxDocumentMeta; table: ITableElement; tableIndex: number; trIndex: number; tdIndex: number } | null {
-    const pos = this.range.getFocus()
+  private getTableContext(position?: IPosition): { doc: IDocxDocumentMeta; table: ITableElement; tableIndex: number; trIndex: number; tdIndex: number } | null {
+    const pos = position ?? this.range.getFocus()
     if (!pos) return null
     const p = pos.path
     if (p.length < 5 || p[1] !== 'trList' || p[3] !== 'tdList') return null
@@ -1862,6 +1862,33 @@ export class CommandAdapt {
     const table = doc.elements[tableIndex]
     if (!table || table.type !== 'table') return null
     return { doc, table: table as ITableElement, tableIndex, trIndex, tdIndex }
+  }
+
+  /** 按表格网格占用关系计算单元格起始列，兼容跨行、跨列合并。 */
+  private getLogicalColumnIndex(table: ITableElement, targetRow: number, targetCell: number): number | null {
+    const columnCount = table.colgroup.length
+    if (!columnCount) return null
+    const occupied = table.trList.map(() => new Array(columnCount).fill(false))
+    for (let ri = 0; ri <= targetRow; ri++) {
+      const row = table.trList[ri]
+      if (!row) return null
+      let column = 0
+      for (let ci = 0; ci < row.tdList.length; ci++) {
+        while (column < columnCount && occupied[ri][column]) column++
+        if (column >= columnCount) break
+        const cell = row.tdList[ci]
+        if (ri === targetRow && ci === targetCell) return column
+        const colspan = Math.max(1, Number(cell.colspan) || 1)
+        const rowspan = Math.max(1, Number(cell.rowspan) || 1)
+        for (let rr = ri; rr < Math.min(ri + rowspan, table.trList.length); rr++) {
+          for (let cc = column; cc < Math.min(column + colspan, columnCount); cc++) {
+            if (rr !== ri || cc !== column) occupied[rr][cc] = true
+          }
+        }
+        column += colspan
+      }
+    }
+    return null
   }
 
   /**
@@ -2068,10 +2095,39 @@ export class CommandAdapt {
   }
 
   /** 获取当前单元格的垂直对齐与底纹颜色（默认顶部对齐、空颜色），无单元格时返回 null。 */
-  getCellProperties() {
-    const ctx = this.getTableContext()
+  getCellProperties(position?: IPosition) {
+    const ctx = this.getTableContext(position)
     const cell = ctx?.table.trList[ctx.trIndex]?.tdList[ctx.tdIndex]
-    return cell ? { verticalAlign: cell.verticalAlign ?? 'top', backgroundColor: cell.backgroundColor ?? '' } : null
+    return cell ? {
+      verticalAlign: cell.verticalAlign ?? 'top',
+      backgroundColor: cell.backgroundColor ?? '',
+      textDirection: cell.textDirection,
+      paddingTop: cell.padding?.[0] ?? 5,
+      paddingRight: cell.padding?.[1] ?? 5,
+      paddingBottom: cell.padding?.[2] ?? 5,
+      paddingLeft: cell.padding?.[3] ?? 5
+    } : null
+  }
+
+  /** 获取目标行高和重复表头状态。 */
+  getTableRowProperties(position?: IPosition) {
+    const ctx = this.getTableContext(position)
+    const row = ctx?.table.trList[ctx.trIndex]
+    return row ? { height: row.height, pagingRepeat: Boolean(row.pagingRepeat) } : null
+  }
+
+  /** 获取目标单元格起始列的宽度及跨列信息。 */
+  getTableColumnProperties(position?: IPosition) {
+    const ctx = this.getTableContext(position)
+    if (!ctx) return null
+    const cell = ctx.table.trList[ctx.trIndex]?.tdList[ctx.tdIndex]
+    const index = this.getLogicalColumnIndex(ctx.table, ctx.trIndex, ctx.tdIndex)
+    if (!cell || index == null) return null
+    return {
+      index,
+      width: ctx.table.colgroup[index]?.width ?? cell.width,
+      colspan: Math.max(1, Number(cell.colspan) || 1)
+    }
   }
 
   /** 设置当前单元格垂直对齐 */
@@ -2083,6 +2139,32 @@ export class CommandAdapt {
       const td = table.trList[trIndex]?.tdList[tdIndex]
       if (!td) return false
       td.verticalAlign = align
+      return
+    })
+  }
+
+  /** 设置指定单元格的文字方向；默认修改当前光标所在单元格。 */
+  setCellTextDirection(direction: CellTextDirection, position?: IPosition): void {
+    this.execute(_doc => {
+      const ctx = this.getTableContext(position)
+      if (!ctx) return false
+      const td = ctx.table.trList[ctx.trIndex]?.tdList[ctx.tdIndex]
+      if (!td || td.textDirection === direction) return false
+      td.textDirection = direction
+      return
+    })
+  }
+
+  /** 设置指定单元格的四边内边距；默认修改当前光标所在单元格。 */
+  setCellPadding(padding: ITd['padding'], position?: IPosition): void {
+    this.execute(_doc => {
+      const ctx = this.getTableContext(position)
+      if (!ctx) return false
+      const td = ctx.table.trList[ctx.trIndex]?.tdList[ctx.tdIndex]
+      if (!td) return false
+      const next = padding.map(value => Math.max(0, Math.round(Number(value) || 0))) as ITd['padding']
+      if (td.padding?.every((value, index) => value === next[index])) return false
+      td.padding = next
       return
     })
   }
@@ -2101,9 +2183,9 @@ export class CommandAdapt {
   }
 
   /** 切换当前行重复表头 */
-  toggleRepeatHeader(): void {
+  toggleRepeatHeader(position?: IPosition): void {
     this.execute(_doc => {
-      const ctx = this.getTableContext()
+      const ctx = this.getTableContext(position)
       if (!ctx) return false
       const { table, trIndex } = ctx
       const tr = table.trList[trIndex]
@@ -2120,20 +2202,28 @@ export class CommandAdapt {
    * @param width 列宽
    */
   setTableColWidth(tableIndex: number, colIndex: number, width: number): void {
-    if (!this.getIsCanInput()) return
-    const doc = this.draw.getDocument()
-    const table = doc.elements[tableIndex]
-    if (!table || table.type !== 'table') return
-    const t = table as ITableElement
-    if (colIndex < 0 || colIndex >= t.colgroup.length) return
-    const w = Math.max(20, Math.round(width))
-    t.colgroup[colIndex].width = w
-    for (const tr of t.trList) {
-      const td = tr.tdList[colIndex]
-      if (td && !td.merged) td.width = w
-    }
-    // 不可迁移：doc 来自 this.draw.getDocument() 而非 getActiveDocument()
-    this._commit(doc)
+    this.execute(doc => {
+      const table = doc.elements[tableIndex]
+      if (!table || table.type !== 'table') return false
+      const t = table as ITableElement
+      if (!Number.isFinite(width) || colIndex < 0 || colIndex >= t.colgroup.length) return false
+      const widthValue = Math.max(20, Math.round(width))
+      if (t.colgroup[colIndex].width === widthValue) return false
+      t.colgroup[colIndex].width = widthValue
+      for (let ri = 0; ri < t.trList.length; ri++) {
+        const row = t.trList[ri]
+        for (let ci = 0; ci < row.tdList.length; ci++) {
+          const td = row.tdList[ci]
+          const startColumn = this.getLogicalColumnIndex(t, ri, ci)
+          if (startColumn == null || td.merged) continue
+          const span = Math.max(1, Number(td.colspan) || 1)
+          if (colIndex < startColumn || colIndex >= startColumn + span) continue
+          td.width = t.colgroup.slice(startColumn, startColumn + span)
+            .reduce((sum, column) => sum + column.width, 0)
+        }
+      }
+      return
+    })
   }
 
   /**
@@ -2143,15 +2233,16 @@ export class CommandAdapt {
    * @param height 行高
    */
   setTableRowHeight(tableIndex: number, rowIndex: number, height: number): void {
-    if (!this.getIsCanInput()) return
-    const doc = this.draw.getDocument()
-    const table = doc.elements[tableIndex]
-    if (!table || table.type !== 'table') return
-    const t = table as ITableElement
-    if (rowIndex < 0 || rowIndex >= t.trList.length) return
-    t.trList[rowIndex].height = Math.max(20, Math.round(height))
-    // 不可迁移：doc 来自 this.draw.getDocument() 而非 getActiveDocument()
-    this._commit(doc)
+    this.execute(doc => {
+      const table = doc.elements[tableIndex]
+      if (!table || table.type !== 'table' || !Number.isFinite(height)) return false
+      const targetRow = (table as ITableElement).trList[rowIndex]
+      if (!targetRow) return false
+      const nextHeight = Math.max(20, Math.round(height))
+      if (targetRow.height === nextHeight) return false
+      targetRow.height = nextHeight
+      return
+    })
   }
 
   /* -------------------- 图片 / 分页 -------------------- */
@@ -2953,6 +3044,9 @@ export class CommandAdapt {
       if (section) {
         section.columnCount = value
         section.columnGap ??= doc.columnGap ?? 20
+        // 工具栏选择的是等宽栏，清除导入文档的自定义栏宽。
+        delete section.columnWidths
+        delete section.columnGaps
       } else {
         doc.columnCount = value
         doc.columnGap ??= 20

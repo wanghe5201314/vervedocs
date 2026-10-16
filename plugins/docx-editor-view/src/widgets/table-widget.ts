@@ -57,8 +57,8 @@ export interface TableWidgetDeps {
   getScrollY: () => number
   /** 获取页面水平偏移量（像素） */
   getPageOffsetX: () => number
-  /** 触发编辑器命令的回调 */
-  onCommand: (cmd: string, ...args: any[]) => void
+  /** 触发编辑器命令；getter 命令会同步返回属性值 */
+  onCommand: (cmd: string, ...args: any[]) => any
   /** 根据客户端坐标命中测试，返回位置信息或 null */
   hit: (clientX: number, clientY: number) => IPosition | null
   /** 让编辑器输入区获取焦点 */
@@ -97,7 +97,8 @@ export class TableWidget {
     this.contextMenu = new ContextMenu(deps.translate)
     this.panel = new TablePropertiesWidget({
       onCommand: (cmd, ...args) => {
-        if (this.deps.canEdit()) this.deps.onCommand(cmd, ...args)
+        if (!this.deps.canEdit()) return undefined
+        return this.deps.onCommand(cmd, ...args)
       },
       focusInput: () => this.deps.focusInput(),
       translate: deps.translate
@@ -353,7 +354,7 @@ export class TableWidget {
   /**
    * 在指定客户端坐标处显示表格右键上下文菜单
    *
-   * 菜单包含插入、拆分/合并单元格、删除、对齐方式、底纹颜色、表格属性等操作。
+   * 菜单保留结构性操作；格式设置集中在表格属性弹框内。
    *
    * @param clientX 客户端横坐标
    * @param clientY 客户端纵坐标
@@ -387,6 +388,9 @@ export class TableWidget {
     const fire = (cmd: string, ...args: any[]) => {
       if (this.deps.canEdit()) this.deps.onCommand(cmd, ...args)
     }
+    const textDirection = String(this.deps.onCommand('getCellProperties', pos)?.textDirection ?? '').toLowerCase()
+    const hasExplicitDirection = Boolean(textDirection)
+    const isVerticalText = textDirection.startsWith('tb') || textDirection.startsWith('bt') || textDirection.endsWith('v')
 
     const items: MenuItem[] = [
       {
@@ -401,8 +405,6 @@ export class TableWidget {
           { label: '单元格(E)...', onClick: () => fire('executeInsertTableCell') },
         ]
       },
-      { label: '拆分单元格', icon: icons.splitCell, onClick: () => fire('executeSplitTableCell') },
-      { label: '合并单元格', icon: icons.mergeCell, onClick: () => fire('executeMergeTableCells') },
       {
         label: '删除',
         icon: icons.deleteRow,
@@ -414,41 +416,44 @@ export class TableWidget {
           { label: '删除整个表格', icon: icons.deleteTable, danger: true, onClick: () => fire('executeDeleteTable') },
         ]
       },
-      { label: '---' },
+      { label: '合并单元格', icon: icons.mergeCell, onClick: () => fire('executeMergeTableCells') },
       { label: '全选表格', icon: icons.selectAll, onClick: () => fire('executeSelectTable') },
-      { label: '---' },
+      { label: '拆分单元格', icon: icons.splitCell, onClick: () => fire('executeSplitTableCell') },
       {
-        label: '水平对齐方式',
-        icon: icons.alignLeft,
+        label: '边框样式',
+        icon: icons.borderStyle,
         submenu: [
-          { label: '左对齐', icon: icons.alignLeft, onClick: () => fire('executeRowFlex', 'left') },
-          { label: '居中对齐', icon: icons.alignCenter, onClick: () => fire('executeRowFlex', 'center') },
-          { label: '右对齐', icon: icons.alignRight, onClick: () => fire('executeRowFlex', 'right') },
+          { label: '全部边框', icon: icons.borderStyle, onClick: () => fire('executeSetTableBorders', { type: 'all' }) },
+          { label: '外侧边框', icon: icons.borderStyle, onClick: () => fire('executeSetTableBorders', { type: 'outside' }) },
+          { label: '无边框', icon: icons.borderStyle, onClick: () => fire('executeSetTableBorders', { type: 'none' }) },
+          { label: '内部边框', icon: icons.borderStyle, onClick: () => fire('executeSetTableBorders', { type: 'inside' }) },
+          { label: '内部横线', icon: icons.borderStyle, onClick: () => fire('executeSetTableBorders', { type: 'inside-horizontal' }) },
+          { label: '内部竖线', icon: icons.borderStyle, onClick: () => fire('executeSetTableBorders', { type: 'inside-vertical' }) },
         ]
       },
+      { label: '---' },
       {
-        label: '垂直对齐方式',
-        icon: icons.valignMiddle,
+        label: '文字方向',
+        icon: icons.textDirection,
         submenu: [
-          { label: '顶端对齐', icon: icons.valignTop, onClick: () => fire('executeSetCellVerticalAlign', 'top') },
-          { label: '垂直居中', icon: icons.valignMiddle, onClick: () => fire('executeSetCellVerticalAlign', 'middle') },
-          { label: '底端对齐', icon: icons.valignBottom, onClick: () => fire('executeSetCellVerticalAlign', 'bottom') },
+          {
+            label: '横排',
+            icon: hasExplicitDirection && !isVerticalText ? icons.check : icons.horizontalText,
+            onClick: () => fire('executeSetCellTextDirection', 'lrTb', pos)
+          },
+          {
+            label: '竖排',
+            icon: hasExplicitDirection && isVerticalText ? icons.check : icons.verticalText,
+            onClick: () => fire('executeSetCellTextDirection', 'tbRlV', pos)
+          },
         ]
       },
-      {
-        label: '底纹颜色',
-        icon: icons.cellBackground,
-        colorPicker: { defaultColor: '#ffffff', allowClear: true },
-        onClick: (v) => fire('executeSetCellBackground', String(v ?? ''))
-      },
-      { label: '重复表头行', icon: icons.repeatHeader, onClick: () => fire('executeToggleRepeatHeader') },
       { label: '---' },
-      { label: '超链接', icon: icons.link, shortcut: 'Ctrl+K', onClick: () => fire('executeHyperlink') },
-      { label: '表格属性', icon: icons.tableProp, onClick: () => { if (this.deps.canEdit()) this.panel.show(pos) } },
+      { label: '表格属性...', icon: icons.tableProp, onClick: () => { if (this.deps.canEdit()) this.panel.show(pos) } },
     ]
 
     const labels = new Map(Object.entries(viewText)
-      .filter(([key]) => key.startsWith('view.table.') || key === 'view.paragraph.link' || key.startsWith('view.common.'))
+      .filter(([key]) => key.startsWith('view.table.') || key.startsWith('view.common.'))
       .map(([key, text]) => [text, key]))
     const localize = (menu: MenuItem[]) => menu.forEach(item => {
       const key = labels.get(item.label)

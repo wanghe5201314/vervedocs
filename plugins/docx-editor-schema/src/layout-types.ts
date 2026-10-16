@@ -60,6 +60,10 @@ export interface InlineBox {
   groupIds?: string[]
   /** 两端对齐时按字分摊的额外字距（每个字符后附加的像素），默认 0 */
   letterSpacing?: number
+  /** 兼容布局调整后的单字占宽；只用于等宽空格片段或单个压缩标点。 */
+  glyphAdvance?: number
+  /** 压缩标点左侧留白时的绘制偏移，不改变光标逻辑边界。 */
+  glyphOffset?: number
   /** 若该 inline 属于超链接，存其 URL（用于命中跳转） */
   hyperlink?: string
   /** 若该 inline 属于内置控件，存其控件实例 ID（用于命中激活） */

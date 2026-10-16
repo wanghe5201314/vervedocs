@@ -549,6 +549,7 @@ export class Draw {
 
     // 键盘事件在 inputEl 上
     this.inputEl.addEventListener('keydown', (e) => {
+      if (this.imageWidget?.handleKeyDown(e)) return
       // 光标可见性重置（阻止闪烁在打字时消失）
       this.caretVisible = true
       this.renderCaretIfAny()
@@ -744,6 +745,10 @@ export class Draw {
 
     // 命中超链接时通知 UI 显示超链接右键菜单
     const pos = this.hit(e.clientX, e.clientY)
+    const target = pos
+      ? getByPath(this.getActiveDocument().elements, pos.path) as unknown as { imgToolDisabled?: boolean } | undefined
+      : undefined
+    if (target?.imgToolDisabled) return
     if (pos && this.findHyperlinkByPos(pos)) {
       this.eventBus?.emit('hyperlinkMenuClick')
       return

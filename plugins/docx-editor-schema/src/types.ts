@@ -158,6 +158,12 @@ export interface ITextElement extends IElementBase {
   type: 'text'
   /** 字体名 */
   font?: string
+  /** DOCX 按字符范围指定的原始字体，导出时保留中西文差异。 */
+  fontFamilies?: Partial<Record<'ascii' | 'hAnsi' | 'eastAsia' | 'cs', string>>
+  /** 导入时的字体名；font 改变后不再使用原始字体映射。 */
+  sourceFont?: string
+  /** DOCX 字体选择提示，配合东亚兼容设置解释空格宽度。 */
+  fontHint?: 'default' | 'eastAsia' | 'cs'
   /** 字号（pt） */
   size?: number
   /** 是否加粗 */
@@ -373,6 +379,20 @@ export interface IImgFloatPosition {
 }
 
 /** 图片元素 */
+export interface IWordArtData {
+  /** 艺术字原始文本，保留换行 */
+  text: string
+  /** 字体名称 */
+  fontFamily: string
+  /** 字号（px） */
+  fontSize: number
+  /** 填充颜色 */
+  fillColor: string
+  /** 原始 VML w:pict XML，供 DOCX 原生导出 */
+  vmlXml: string
+}
+
+/** 图片元素 */
 export interface IImageElement extends IElementBase {
   /** 元素类型固定为 'image' */
   type: 'image'
@@ -387,6 +407,8 @@ export interface IImageElement extends IElementBase {
   imgFloatPosition?: IImgFloatPosition
   /** 禁用图片工具 */
   imgToolDisabled?: boolean
+  /** 原生 WordArt 元数据，不通过图片或 SVG 渲染 */
+  wordArt?: IWordArtData
   /** 旋转角度（度） */
   rotate?: number
 }
@@ -616,12 +638,21 @@ export interface IComment {
   anchor?: { startX: number; startY: number; endX: number; endY: number; lineHeight?: number; endLineHeight?: number; glyphHeight?: number; startGlyphTop?: number; endGlyphTop?: number }
 }
 
+/** 文档级东亚排版设置，导出时写回 settings.xml。 */
+export interface IDocxTypography {
+  characterSpacingControl?: 'doNotCompress' | 'compressPunctuation' | 'compressPunctuationAndJapaneseKana'
+  useFELayout?: boolean
+  balanceSingleByteDoubleByteWidth?: boolean
+  compatibilityMode?: string
+}
+
 /** 顶层文档元数据，对应整个 docx 文档的解析结果 */
 export interface IDocxDocumentMeta {
   /** 解析是否成功 */
   success: boolean
   /** 文档元素列表（正文） */
   elements: IElement[]
+  typography?: IDocxTypography
   sections?: IDocxSection[]
   /** 文档默认等宽栏设置。 */
   columnCount?: number

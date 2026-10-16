@@ -174,7 +174,7 @@ function charOffsetToX(inl: InlineBox, offsetInInline: number): number {
   let x = inl.x
   const ls = inl.letterSpacing ?? 0
   for (let i = 0; i < offsetInInline; i++) {
-    x += measure.charWidth(inl.text[i], inl.font, inl.size, inl.bold, inl.italic) + ls
+    x += (inl.glyphAdvance ?? measure.charWidth(inl.text[i], inl.font, inl.size, inl.bold, inl.italic)) + ls
   }
   return x
 }

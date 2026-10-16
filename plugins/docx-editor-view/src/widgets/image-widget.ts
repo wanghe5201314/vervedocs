@@ -10,7 +10,7 @@
  */
 
 import type { DocumentLayout, ImageBlock } from '../layout-types'
-import type { Path } from '@vervedoc/docx-editor-schema'
+import type { IImageElement, Path } from '@vervedoc/docx-editor-schema'
 import { createSelectionLayer, positionSelectionToolbar, updateSelectionLayer } from './selection-layer'
 
 
@@ -142,9 +142,10 @@ export class ImageWidget {
     const bar = document.createElement('div')
     bar.style.cssText = 'position:absolute;pointer-events:auto;box-sizing:border-box;overflow-x:auto;display:none;z-index:102;background:#f5f5f5;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.15);padding:4px 6px;align-items:center;gap:2px;font-family:sans-serif;'
 
-    const mkBtn = (icon: string, title: string, onClick: () => void): HTMLButtonElement => {
+    const mkBtn = (icon: string, title: string, action: string, onClick: () => void): HTMLButtonElement => {
       const btn = document.createElement('button')
       btn.title = title
+      btn.dataset.imageAction = action
       btn.style.cssText = 'border:none;background:transparent;cursor:pointer;padding:5px;border-radius:4px;display:flex;align-items:center;justify-content:center;transition:background .15s;'
       const sp = document.createElement('span')
       sp.className = 'material-symbols-outlined'
@@ -159,25 +160,26 @@ export class ImageWidget {
     }
     const mkSep = (): HTMLDivElement => {
       const sep = document.createElement('div')
+      sep.dataset.imageAction = 'separator'
       sep.style.cssText = 'width:1px;height:20px;background:#ccc;margin:0 3px;'
       return sep
     }
 
-    bar.appendChild(mkBtn('restore', '重置大小', () => this.fire('executeResetImageSize')))
-    bar.appendChild(mkBtn('rotate_right', '旋转 90°', () => this.fire('executeRotateImage')))
-    bar.appendChild(mkBtn('zoom_in', '预览', () => this.showPreview()))
+    bar.appendChild(mkBtn('restore', '重置大小', 'resize', () => this.fire('executeResetImageSize')))
+    bar.appendChild(mkBtn('rotate_right', '旋转 90°', 'rotate', () => this.fire('executeRotateImage')))
+    bar.appendChild(mkBtn('zoom_in', '预览', 'preview', () => this.showPreview()))
     bar.appendChild(mkSep())
-    bar.appendChild(mkBtn('format_align_left', '左对齐', () => this.fire('executeImageAlign', 'left')))
-    bar.appendChild(mkBtn('format_align_center', '居中对齐', () => this.fire('executeImageAlign', 'center')))
-    bar.appendChild(mkBtn('format_align_right', '右对齐', () => this.fire('executeImageAlign', 'right')))
+    bar.appendChild(mkBtn('format_align_left', '左对齐', 'align', () => this.fire('executeImageAlign', 'left')))
+    bar.appendChild(mkBtn('format_align_center', '居中对齐', 'align', () => this.fire('executeImageAlign', 'center')))
+    bar.appendChild(mkBtn('format_align_right', '右对齐', 'align', () => this.fire('executeImageAlign', 'right')))
     bar.appendChild(mkSep())
-    bar.appendChild(mkBtn('wrap_text', '文字环绕', () => this.fire('executeImageWrap', 'surround')))
-    bar.appendChild(mkBtn('flip_to_front', '浮于文字上方', () => this.fire('executeImageWrap', 'float-top')))
-    bar.appendChild(mkBtn('flip_to_back', '浮于文字下方', () => this.fire('executeImageWrap', 'float-bottom')))
+    bar.appendChild(mkBtn('wrap_text', '文字环绕', 'wrap', () => this.fire('executeImageWrap', 'surround')))
+    bar.appendChild(mkBtn('flip_to_front', '浮于文字上方', 'wrap', () => this.fire('executeImageWrap', 'float-top')))
+    bar.appendChild(mkBtn('flip_to_back', '浮于文字下方', 'wrap', () => this.fire('executeImageWrap', 'float-bottom')))
     bar.appendChild(mkSep())
-    bar.appendChild(mkBtn('image', '替换图片', () => this.fire('executeReplaceImage')))
-    bar.appendChild(mkBtn('download', '保存图片', () => this.fire('executeSaveImage')))
-    const delBtn = mkBtn('delete', '删除图片', () => this.fire('executeDeleteImage'))
+    bar.appendChild(mkBtn('image', '替换图片', 'replace', () => this.fire('executeReplaceImage')))
+    bar.appendChild(mkBtn('download', '保存图片', 'save', () => this.fire('executeSaveImage')))
+    const delBtn = mkBtn('delete', '删除图片', 'delete', () => this.fire('executeDeleteImage'))
     const delIcon = delBtn.querySelector('.material-symbols-outlined') as HTMLElement
     delBtn.addEventListener('mouseenter', () => { delIcon.style.color = '#e53935' })
     delBtn.addEventListener('mouseleave', () => { delIcon.style.color = '#333' })
@@ -249,6 +251,16 @@ export class ImageWidget {
     e.preventDefault()
     e.stopPropagation()
     this.selectImage(hit)
+    return true
+  }
+
+  /** 艺术字仅响应删除键，其他图片继续沿用原有键盘行为。 */
+  handleKeyDown(e: KeyboardEvent): boolean {
+    if (!this.selection || !(this.selection.block.block as IImageElement).imgToolDisabled) return false
+    if (e.key !== 'Backspace' && e.key !== 'Delete') return false
+    e.preventDefault()
+    e.stopPropagation()
+    this.fire('executeDeleteImage')
     return true
   }
 
@@ -364,6 +376,7 @@ export class ImageWidget {
   private updateSelectionUI(): void {
     if (!this.selection || !this.selectionBox || !this.selectionLayer) return
     const { block, pageOriginX, pageOriginY } = this.selection
+    const deleteOnly = Boolean((block.block as IImageElement).imgToolDisabled)
     const viewport = this.deps.getContainerRect()
     const x = pageOriginX + block.rect.x - viewport.left
     const y = pageOriginY + block.rect.y - viewport.top
@@ -379,12 +392,20 @@ export class ImageWidget {
     for (let i = 0; i < this.handleEls.length; i++) {
       const el = this.handleEls[i]
       const hd = HANDLES[i]
+      if (deleteOnly) el.style.display = 'none'
+      else el.style.removeProperty('display')
       el.style.left = `${Math.round(x + w * hd.x - HANDLE_OFFSET)}px`
       el.style.top = `${Math.round(y + h * hd.y - HANDLE_OFFSET)}px`
     }
 
     // 悬浮工具栏：定位在图片上方居中，空间不足时放下方
     if (this.toolbar) {
+      for (const child of Array.from(this.toolbar.children) as HTMLElement[]) {
+        const action = child.dataset.imageAction
+        if (deleteOnly && action !== 'delete') child.style.display = 'none'
+        else if (action === 'separator') child.style.removeProperty('display')
+        else child.style.display = 'flex'
+      }
       positionSelectionToolbar(this.toolbar, bounds, this.selectionLayer)
     }
   }
@@ -397,6 +418,7 @@ export class ImageWidget {
    */
   private onHandleMouseDown(e: MouseEvent, dir: string): void {
     if (!this.selection) return
+    if ((this.selection.block.block as IImageElement).imgToolDisabled) return
     e.preventDefault()
     e.stopPropagation()
     const { block } = this.selection

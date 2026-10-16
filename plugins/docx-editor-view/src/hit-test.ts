@@ -126,7 +126,7 @@ function hitLine(line: LineBox, lx: number): IPosition | null {
       const ls = inl.letterSpacing ?? 0
       for (let i = 0; i < inl.text.length; i++) {
         const ch = inl.text[i]
-        const cw = measure.charWidth(ch, inl.font, inl.size, inl.bold, inl.italic) + ls
+        const cw = (inl.glyphAdvance ?? measure.charWidth(ch, inl.font, inl.size, inl.bold, inl.italic)) + ls
         if (lx < cursor + cw / 2) return { path: inl.path, offset: inl.startOffset + i }
         cursor += cw
       }

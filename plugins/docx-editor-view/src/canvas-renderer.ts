@@ -1218,14 +1218,20 @@ export class CanvasRenderer {
 
 
   /**
-   * 将图片块绘制到目标 ctx：异步加载图片，加载完成后触发重绘；支持 90/180/270 旋转。
+   * 绘制图片块；WordArt 直接使用 Canvas 文本接口，其余图片异步加载。
    * @param ctx 目标 2d 上下文
    * @param b 图片块
    * @param x 绘制左上角 x
    * @param y 绘制左上角 y
    */
   private drawImageInto(ctx: PaintCtx, b: ImageBlock, x: number, y: number): void {
-    const url = String((b.block as unknown as { value?: string }).value ?? '')
+    const image = b.block as IImageElement
+    if (image.wordArt) {
+      this.drawWordArtInto(ctx, b, x, y, image.wordArt)
+      return
+    }
+
+    const url = String(image.value ?? '')
     if (!url) return
     let img = this.imageCache.get(url)
     if (!img) {
@@ -1243,7 +1249,6 @@ export class CanvasRenderer {
       this.printResources.add(img)
       return
     }
-    const image = b.block as IImageElement
     const transform = image.imageLayout?.transform?.attributes
     const rotate = Number(transform?.rot ?? (image.rotate ?? 0) * 60000) / 60000
     if (img.complete && img.naturalWidth > 0) {
@@ -1274,6 +1279,34 @@ export class CanvasRenderer {
       ctx.strokeRect(x + 0.5, y + 0.5, b.rect.width - 1, b.rect.height - 1)
       ctx.fillStyle = '#f5f5f5'
       ctx.fillRect(x, y, b.rect.width, b.rect.height)
+    }
+  }
+
+  /** 直接绘制 VML WordArt 文本，不经过 SVG 或图片解码。 */
+  private drawWordArtInto(
+    ctx: PaintCtx,
+    b: ImageBlock,
+    x: number,
+    y: number,
+    wordArt: NonNullable<IImageElement['wordArt']>,
+  ): void {
+    const lines = wordArt.text.split(/\r\n|\r|\n/)
+    const fontSize = wordArt.fontSize || b.rect.width
+    const height = (b.block as IImageElement).height || b.rect.height
+    const top = Math.max(0, (height - lines.length * fontSize) / 2)
+    const fontFamily = wordArt.fontFamily.replace(/["\\]/g, '\\$&')
+
+    ctx.save()
+    try {
+      ctx.font = `${fontSize}px "${fontFamily}", serif`
+      ctx.fillStyle = wordArt.fillColor || '#000000'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'alphabetic'
+      lines.forEach((line, index) => {
+        if (line) ctx.fillText(line, x + b.rect.width / 2, y + top + (index + 1) * fontSize)
+      })
+    } finally {
+      ctx.restore()
     }
   }
 

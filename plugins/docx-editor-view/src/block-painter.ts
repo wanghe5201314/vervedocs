@@ -17,6 +17,7 @@ export interface DrawCommand {
   y: number
   text: string
   letterSpacing?: number
+  glyphAdvance?: number
 }
 
 /** 段落绘制选项 */
@@ -137,12 +138,15 @@ export function paintParagraph(ctx: PaintCtx, b: ParagraphBlock, opts: PaintOpti
             continue
           }
           const color = !opts.printing && inl.controlBracketOffsets?.includes(i) ? '#1677ff' : textColor
-          addBucket(buckets, `${font}||${color}`, { font, color, x, y: inl.baseline, text: ch })
-          x += ctx.measureText(ch).width + spacing
+          addBucket(buckets, `${font}||${color}`, { font, color, x: x + (inl.glyphOffset ?? 0), y: inl.baseline, text: ch })
+          x += (inl.glyphAdvance ?? ctx.measureText(ch).width) + spacing
         }
       } else {
         const key = `${font}||${textColor}`
-        addBucket(buckets, key, { font, color: textColor, x: inl.x, y: inl.baseline, text, letterSpacing: inl.letterSpacing })
+        addBucket(buckets, key, {
+          font, color: textColor, x: inl.x + (inl.glyphOffset ?? 0), y: inl.baseline, text,
+          letterSpacing: inl.letterSpacing, glyphAdvance: inl.glyphAdvance
+        })
       }
       // Review marks are visual overlays, never persisted as ordinary formatting.
       if (inserted || inl.underline) {
@@ -170,14 +174,14 @@ export function paintParagraph(ctx: PaintCtx, b: ParagraphBlock, opts: PaintOpti
     ctx.font = font
     ctx.fillStyle = color
     for (const c of list) {
-      if (!c.letterSpacing) {
+      if (!c.letterSpacing && c.glyphAdvance == null) {
         ctx.fillText(c.text, c.x, c.y)
       } else {
         let cx = c.x
         for (let i = 0; i < c.text.length; i++) {
           const ch = c.text[i]
           ctx.fillText(ch, cx, c.y)
-          cx += ctx.measureText(ch).width + c.letterSpacing
+          cx += (c.glyphAdvance ?? ctx.measureText(ch).width) + (c.letterSpacing ?? 0)
         }
       }
     }
@@ -200,7 +204,7 @@ export function paintParagraph(ctx: PaintCtx, b: ParagraphBlock, opts: PaintOpti
       const markOffset = inl.text.indexOf(CONTROL_MARK)
       let x = inl.x + inl.size * 0.1
       for (let i = 0; i < markOffset; i++) {
-        x += ctx.measureText(inl.text[i]).width + (inl.letterSpacing ?? 0)
+        x += (inl.glyphAdvance ?? ctx.measureText(inl.text[i]).width) + (inl.letterSpacing ?? 0)
       }
       const y = inl.baseline - size
       ctx.save()

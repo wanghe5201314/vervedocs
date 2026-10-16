@@ -38,8 +38,16 @@ export function signBlock(b: BlockNode, layout?: DocumentLayout): string {
   }
   if (b.kind === 'paragraph') return signParagraph(b)
   if (b.kind === 'image') {
-    const img = b.block as unknown as { value?: string; rotate?: number; imgDisplay?: string }
-    return `img|${img.value ?? ''}|${b.rect.width}x${b.rect.height}|r${img.rotate ?? 0}|d${img.imgDisplay ?? 'block'}`
+    const img = b.block as unknown as {
+      value?: string
+      rotate?: number
+      imgDisplay?: string
+      wordArt?: { text?: string; fontFamily?: string; fontSize?: number; fillColor?: string }
+    }
+    const wordArtKey = img.wordArt
+      ? JSON.stringify([img.wordArt.text, img.wordArt.fontFamily, img.wordArt.fontSize, img.wordArt.fillColor])
+      : ''
+    return `img|${img.value ?? ''}|${b.rect.width}x${b.rect.height}|r${img.rotate ?? 0}|d${img.imgDisplay ?? 'block'}|wa${wordArtKey}`
   }
   if (b.kind === 'pageBreak') return `pb|${b.parentPath.join('.')}|${b.indexInParent}`
   if (b.kind === 'separator') return JSON.stringify([b.kind, b.block, b.rect.width, b.rect.height])

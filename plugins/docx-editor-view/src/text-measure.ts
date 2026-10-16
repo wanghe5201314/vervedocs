@@ -5,6 +5,37 @@
  * 采用一个隐藏 canvas 的 ctx 做 measureText，主线程即可用。
  */
 
+import { FONT_FAMILY_CSS, type ITextElement } from '@vervedoc/docx-editor-schema'
+
+/**
+ * 按字符范围选择 DOCX 字体。与导出端一样，用户改过 font 后停用原始映射。
+ * 字体选择与占宽分开：东亚兼容规则可能调整空格占宽，不能直接用西文字体宽度代替。
+ */
+export function resolveTextFont(
+  run: Pick<ITextElement, 'font' | 'fontFamilies' | 'sourceFont'>,
+  ch: string,
+  defaultFont: string
+): string {
+  const base = run.font ?? defaultFont
+  const fallback = FONT_FAMILY_CSS[base] ?? base
+  const families = run.sourceFont === run.font ? run.fontFamilies : undefined
+  if (!families || !ch) return fallback
+  const code = ch.codePointAt(0)!
+  const eastAsia = (code >= 0x1100 && code <= 0x11ff) ||
+    (code >= 0x2e80 && code <= 0xa4cf) ||
+    (code >= 0xac00 && code <= 0xd7af) ||
+    (code >= 0xf900 && code <= 0xfaff) ||
+    (code >= 0xfe10 && code <= 0xfe6f) ||
+    (code >= 0xff00 && code <= 0xffef) ||
+    (code >= 0x20000 && code <= 0x323af)
+  const complex = (code >= 0x0590 && code <= 0x08ff) ||
+    (code >= 0xfb1d && code <= 0xfdff) || (code >= 0xfe70 && code <= 0xfeff)
+  const family = code <= 0x7f ? families.ascii :
+    eastAsia ? families.eastAsia : complex ? families.cs : families.hAnsi
+  // 原始字体（如仿宋_GB2312）未安装时，继续使用已归一化字体的回退栈。
+  return family ? (FONT_FAMILY_CSS[family] ?? `${JSON.stringify(family)}, ${fallback}`) : fallback
+}
+
 /**
  * LRU 双向链表节点。
  */
@@ -98,6 +129,7 @@ export class TextMeasure {
   private ctx: CanvasRenderingContext2D
   /** 字形宽度 LRU 缓存 */
   private glyphCache = new LRU<string, number>(10000)
+  private inkCache = new LRU<string, { left: number; right: number }>(2000)
 
   /**
    * 创建度量器，初始化隐藏 canvas 及其 2d 上下文。
@@ -134,6 +166,21 @@ export class TextMeasure {
     let w = 0
     for (const ch of text) w += this.charWidth(ch, family, size, bold, italic)
     return w
+  }
+
+  /** 字形左右墨迹边界，用于压缩留白而不压缩或重叠字形。 */
+  inkBounds(ch: string, family: string, size: number, bold?: boolean, italic?: boolean): { left: number; right: number } {
+    const key = `${ch}|${family}|${size}|${bold ? 1 : 0}|${italic ? 1 : 0}`
+    const hit = this.inkCache.get(key)
+    if (hit) return hit
+    this.ctx.font = TextMeasure.font(family, size, bold, italic)
+    const metrics = this.ctx.measureText(ch)
+    const bounds = {
+      left: Number.isFinite(metrics.actualBoundingBoxLeft) ? -metrics.actualBoundingBoxLeft : 0,
+      right: Number.isFinite(metrics.actualBoundingBoxRight) ? metrics.actualBoundingBoxRight : metrics.width
+    }
+    this.inkCache.set(key, bounds)
+    return bounds
   }
 }
 

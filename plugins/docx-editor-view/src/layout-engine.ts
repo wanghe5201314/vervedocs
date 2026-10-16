@@ -16,6 +16,8 @@ import type {
   IDocxDocumentMeta,
   IListElement,
   ITableElement,
+  ITextElement,
+  IDocxTypography,
   Path
 } from '@vervedoc/docx-editor-schema'
 import { splitParagraphs, FONT_FAMILY_CSS, resolveHeaderFooterPart, isControl, collectPageFields, getPageFieldStyle } from '@vervedoc/docx-editor-schema'
@@ -25,7 +27,8 @@ import type {
   ImageBlock, PageBreakBlock, SeparatorBlock, TableBlock, TableRowLayout, TableCellLayout,
   EmbedBlock, ChartBlock, LineBox, InlineBox, Rect
 } from './layout-types'
-import { TextMeasure, getSharedMeasure } from './text-measure'
+import { TextMeasure, getSharedMeasure, resolveTextFont } from './text-measure'
+import { balancedSpaceWidth, punctuationCompression, type CompressionMetrics } from './east-asian-layout'
 import { resolveBullet, BULLET_FONT_STACK, BULLET_FONT_STACK_FALLBACK, detectWingdings } from './list-bullet'
 import { CanvasRenderer } from './canvas-renderer'
 
@@ -66,6 +69,7 @@ interface ParagraphInput {
   parentPath: Path
   availableWidth: number
   docGridLinePitch?: number
+  typography?: IDocxTypography
   runStartIndex?: number
   ignoreParagraphIndents?: boolean
   exclusions?: { rect: Rect; side: string; topBottom: boolean }[]
@@ -91,6 +95,7 @@ export class LayoutEngine {
   private paragraphCache = new Map<string, ParagraphCache>()
   private nextParagraphCache = new Map<string, ParagraphCache>()
   private layoutZone = 'main'
+  private typography?: IDocxTypography
   /** 每页独立求值，绝不把动态结果写回共享的页眉页脚模板。 */
   private pageFieldValues = new WeakMap<IElement, string>()
   private diagnostics: NonNullable<DocumentLayout['diagnostics']> = []
@@ -124,6 +129,7 @@ export class LayoutEngine {
     this.diagnostics = []
     this.nextParagraphCache = new Map()
     this.layoutZone = 'main'
+    this.typography = document?.typography
     this.pageFieldValues = new WeakMap()
     const { pageGap } = this.opts
     // 缺失区域仅生成布局占位，不写入文档；进入编辑后沿用相同位置。
@@ -805,6 +811,7 @@ export class LayoutEngine {
    * @returns 段落块（含 lines/inlines 与 rect）
    */
   private layoutParagraph(input: ParagraphInput): ParagraphBlock {
+    input = { ...input, typography: this.typography }
     // Numbered lists depend on preceding counters and must still be evaluated.
     if (input.paragraphKind === 'list') {
       const result = this.computeParagraph(input)
@@ -968,6 +975,7 @@ export class LayoutEngine {
     const lines: LineBox[] = []
     let currentInlines: InlineBox[] = []
     let currentLineWidth = 0
+    let compressionCandidates: { inline: InlineBox; originalWidth: number; metrics: CompressionMetrics }[] = []
     let currentMaxSize = 0
     let isFirstLine = true
 
@@ -996,6 +1004,26 @@ export class LayoutEngine {
       return { x: left, width: Math.max(1, right - left) }
     }
     const currentLineMaxWidth = (): number => lineRegion().width
+
+    // 只有整段所需空间都能从标点留白中取得时才收缩，避免失败后留下半压缩状态。
+    const compressLine = (needed: number): boolean => {
+      const capacity = compressionCandidates.reduce((sum, item) => sum + item.inline.width - item.metrics.minWidth, 0)
+      if (needed <= 0) return true
+      if (capacity + 0.001 < needed || capacity <= 0) return false
+      const ratio = Math.min(1, needed / capacity)
+      for (const item of compressionCandidates) {
+        const shrink = (item.inline.width - item.metrics.minWidth) * ratio
+        item.inline.width -= shrink
+        item.inline.glyphAdvance = item.inline.width
+        item.inline.glyphOffset = -(item.originalWidth - item.inline.width) * item.metrics.leadingRatio
+      }
+      currentLineWidth = 0
+      for (const inline of currentInlines) {
+        inline.x = currentLineWidth
+        currentLineWidth += inline.width
+      }
+      return true
+    }
 
     // Word 行距 4 种模式：
     //   'auto'    → lineHeight 是倍数（1.0 单倍；1.5 一倍半；2.0 双倍；数值任意）
@@ -1042,6 +1070,7 @@ export class LayoutEngine {
       flowY += lh
       currentInlines = []
       currentLineWidth = 0
+      compressionCandidates = []
       currentMaxSize = 0
       isFirstLine = false
     }
@@ -1087,12 +1116,11 @@ export class LayoutEngine {
         const run = layoutRuns[i]
         if (run.type !== 'text' || run.extension?.fieldMarker || run.extension?.bookmarkMarker) continue
         const text = String(run.value ?? '').slice(i === runIndex ? offset : 0)
-        const family = String(run.font ?? this.opts.defaultFont)
-        const font = FONT_FAMILY_CSS[family] ?? family
         const size = Number(run.size ?? this.opts.defaultSize)
         for (const ch of text) {
           if (ch === '\n' || ch === '\t') return width
           if (ch === '\u200B' || ch === '\uFEFF') continue
+          const font = resolveTextFont(run as ITextElement, ch, this.opts.defaultFont)
           width += this.measure.charWidth(ch, font, size, !!run.bold, !!run.italic)
         }
       }
@@ -1107,8 +1135,9 @@ export class LayoutEngine {
       const controlId = isControl(rawRun) ? String(rawRun.id ?? '') : undefined
       const controlPlaceholder = presentation?.placeholder
       const anyRun = run as unknown as Record<string, unknown>
-      const rawFont = String(anyRun.font ?? this.opts.defaultFont)
-      const font = FONT_FAMILY_CSS[rawFont] ?? rawFont
+      const fontForChar = (ch: string): string =>
+        resolveTextFont(run as ITextElement, ch, this.opts.defaultFont)
+      const font = fontForChar('')
       const size = Number(anyRun.size ?? this.opts.defaultSize)
       const bold = !!anyRun.bold
       const italic = !!anyRun.italic
@@ -1137,14 +1166,36 @@ export class LayoutEngine {
       if (!controlId && /^[\u200B\uFEFF]+$/.test(value)) continue
 
       let cursorInRun = 0
+      const spaceWidth = balancedSpaceWidth(run as ITextElement, input.typography, this.measure, this.opts.defaultFont, size)
+      const compressions = value.split('').map(ch => controlId ? undefined :
+        punctuationCompression(ch, fontForChar(ch), size, bold, italic, input.typography, this.measure))
       const charWidth = (ch: string): number =>
         presentation?.mark && ch === CONTROL_MARK ? size :
         controlId && value === '\u200B' ? 20 :
-        this.measure.charWidth(ch, font, size, bold, italic)
+        ch === ' ' && spaceWidth != null ? spaceWidth :
+        this.measure.charWidth(ch, fontForChar(ch), size, bold, italic)
 
       while (cursorInRun < value.length) {
+        const font = fontForChar(value[cursorInRun])
         const maxLineWidth = currentLineMaxWidth()
-        const remaining = maxLineWidth - currentLineWidth
+        let remaining = maxLineWidth - currentLineWidth
+        // 段末普通空格可挂在行末，不能单独挤出一个空白行；不改动源文本。
+        const trailingSpace = /^ +$/.test(value.slice(cursorInRun)) &&
+          layoutRuns.slice(ri + 1).every(next => next.type === 'text' && /^[ \u200B\uFEFF]*$/.test(next.value))
+        const advance = trailingSpace ? Math.max(0, Math.min(charWidth(' '), remaining / (value.length - cursorInRun))) :
+          value[cursorInRun] === ' ' ? spaceWidth : undefined
+        // 数字和拉丁词优先整体放置；超过整行宽度的长串仍允许紧急折行。
+        const word = /^[A-Za-z0-9]+/.exec(value.slice(cursorInRun))?.[0]
+        if (word && currentLineWidth > 0) {
+          const wordWidth = [...word].reduce((sum, ch) => sum + charWidth(ch), 0)
+          if (wordWidth > remaining + 0.001 && wordWidth <= maxLineWidth) {
+            if (!compressLine(wordWidth - remaining)) {
+              finalizeLine(false)
+              continue
+            }
+            remaining = maxLineWidth - currentLineWidth
+          }
+        }
         const tocEntry = (run.extension?.toc as { role?: string } | undefined)?.role === 'entry'
         if (tocEntry && value[cursorInRun] === '\t') {
           const pageWidth = tocPageWidth(ri, cursorInRun + 1)
@@ -1166,10 +1217,13 @@ export class LayoutEngine {
         }
         // 若当前行已有内容且首个字符放不下 → 先换行再试，避免溢出被裁
         if (currentLineWidth > 0 && value[cursorInRun] !== '\n') {
-          const firstW = charWidth(value[cursorInRun])
+          const firstW = advance ?? charWidth(value[cursorInRun])
           if (firstW > remaining + 0.001) {
-            finalizeLine(false)
-            continue
+            if (!compressLine(firstW - remaining)) {
+              finalizeLine(false)
+              continue
+            }
+            remaining = maxLineWidth - currentLineWidth
           }
         }
         let take = 0
@@ -1177,7 +1231,12 @@ export class LayoutEngine {
         for (let i = cursorInRun; i < value.length; i++) {
           const ch = value[i]
           if (tocEntry && ch === '\t') break
-          const w = charWidth(ch)
+          // 仅拆分布局片段，不拆分文档 Run，确保绘制、光标和导出沿用同一字符偏移。
+          if (take > 0 && fontForChar(ch) !== font) break
+          if (take > 0 && (compressions[cursorInRun] || compressions[i])) break
+          if (take > 0 && (ch === ' ') !== (value[cursorInRun] === ' ')) break
+          if (take > 0 && /[A-Za-z0-9]/.test(ch) && !/[A-Za-z0-9]/.test(value[i - 1])) break
+          const w = advance ?? charWidth(ch)
           if (ch === '\n') { take = i - cursorInRun; break }
           if (takenWidth + w > remaining + 0.001 && take > 0) break
           takenWidth += w
@@ -1206,6 +1265,7 @@ export class LayoutEngine {
           x: currentLineWidth, // 暂存为"相对 line 起点"，finalizeLine 会平移
           y: 0,
           width: segWidth,
+          glyphAdvance: advance,
           height: size,
           font,
           size,
@@ -1230,14 +1290,14 @@ export class LayoutEngine {
           controlOptionValue: presentation?.optionValue
         }
         currentInlines.push(inline)
+        const compression = compressions[cursorInRun]
+        if (compression) compressionCandidates.push({ inline, originalWidth: segWidth, metrics: compression })
         currentLineWidth += segWidth
         if (size > currentMaxSize) currentMaxSize = size
         cursorInRun = segEnd
         if (cursorInRun < value.length && value[cursorInRun] === '\n') {
           finalizeLine(false)
           cursorInRun++ // 消费换行符
-        } else if (cursorInRun < value.length && currentLineWidth >= maxLineWidth) {
-          finalizeLine(false)
         }
       }
     }

@@ -965,7 +965,6 @@ export class LayoutEngine {
 
     // 每行可用宽度：Word 悬挂模型下编号在悬挂区不占行宽；否则编号占 bulletWidth
     const bulletWidthForLine = useWordHanging ? 0 : bulletWidth
-    const usableWidth = Math.max(20, availableWidth - indentLeft - indentRight - bulletWidthForLine)
     const lines: LineBox[] = []
     let currentInlines: InlineBox[] = []
     let currentLineWidth = 0
@@ -1317,7 +1316,7 @@ export class LayoutEngine {
         inl.y = yy
         inl.baseline = yy + line.baseline
       }
-      applyRowFlex(line, positionedFrame || input.exclusions?.length ? line.width : usableWidth)
+      applyRowFlex(line, line.width)
       for (const inl of line.inlines) {
         const r = inl.x + inl.width
         if (r > contentRight) contentRight = r
